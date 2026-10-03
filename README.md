@@ -1,8 +1,14 @@
-# Onderstation Simulator: OS Zuidwolde 110/10 kV
+# Onderstation Simulator: OS Zuidwolde 110/10/20 kV
 
 Een 3D-onderstationsimulator die in de browser draait (Three.js, geen installatie nodig).
 
+![Overzicht van OS Zuidwolde bij avondzon, met het SCADA-eénlijnschema](docs/overzicht.jpg)
+
 **Spelen:** dubbelklik op `index.html` (internet nodig voor Three.js en lettertypen via CDN).
+
+| Transformatorvelden T1–T4 | 20 kV-schakelinstallatie binnen | 's Nachts met terreinverlichting |
+|---|---|---|
+| ![Transformatorvelden](docs/transformatoren.jpg) | ![20 kV-binnenruimte](docs/binnen-20kv.jpg) | ![Nachtbeeld](docs/nacht.jpg) |
 
 ## Bediening
 - Klik op een schakelaar in 3D of in het SCADA-schema en kies vervolgens IN/UIT of SLUITEN/OPENEN.
