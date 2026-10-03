@@ -74,6 +74,16 @@ const TESTS = [
       assert(r.na === 0, `na herinschakelen nog ${r.na} klanten uit (fout ${r.sec})`);
       assert(r.flags.length > 0, 'geen kortsluitverklikkers aangesproken');
   } },
+  { name: 'ringkabels: stroom, spanningsval en overbelasting bij terugvoeding', query: '?autostart&t=18.6', async run(p) {
+      const r = await p.evaluate(() => { T.quiet(); T.step(0.5); const sec = id => OS.RING.secs.find(s => s.id === id);
+        const normaal = { kop: Math.round(sec('F3').I), ms3: OS.FLOW.UN.M3 };
+        OS.operate('MS3-R', 1); OS.operate('V-F4', 0); T.step(0.5);   // hele ring 1 via V-F3
+        return { normaal, kop: Math.round(sec('F3').I), ms1: OS.FLOW.UN.M1, ms5: OS.FLOW.UN.M5, ovl: OS.RING.secs.some(s => s.load > 1), off: OS.SIM.off }; });
+      assert(r.normaal.kop > 50, `geen stroom in kopkabel: ${r.normaal.kop}`);
+      assert(r.kop > r.normaal.kop * 1.5, `kopstroom steeg niet bij terugvoeding: ${r.normaal.kop} → ${r.kop}`);
+      assert(r.ms5 < r.ms1, `geen spanningsval langs de ring: MS1 ${r.ms1} MS5 ${r.ms5}`);
+      assert(r.off === 0, `klanten uit bij terugvoeding: ${r.off}`);
+  } },
   { name: 'spanningsregelaar brengt rail A terug in de band', query: '?autostart&t=18', async run(p) {
       const r = await p.evaluate(async () => { T.quiet(); T.step(0.5); OS.setAVR('T1', 'hand');
         for (let i = 0; i < 3; i++) { OS.tapStep('T1', 1); await T.sleep(1700); } T.step(0.2); const hoog = OS.FLOW.U.RA;

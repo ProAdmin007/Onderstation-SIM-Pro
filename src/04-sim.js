@@ -133,11 +133,12 @@ function computeFlows(){
   let P110=0;
   TR.forEach(T=>{const t=D[T];t.P=t.S*0.95*(t.rev?-1:1);if(EN.has(T+'h'))P110+=t.P*1.006+0.02;const I=t.S*5.25;D[T+'-Q0'].I=I;D[T+'-Q1'].I=I;});
   FLOW.P110=P110;
+  ringFlows();
   const feeding=['L1','L2'].filter(L=>SIM.lines[L].avail&&D[L+'-Q9'].state&&D[L+'-Q0'].state&&D[L+'-Q1'].state);
   ['L1','L2'].forEach(L=>{const p=feeding.includes(L)?P110/feeding.length:0;FLOW.lineP[L]=p;const I=Math.abs(p)/0.95*5.25;[L+'-Q9',L+'-Q0',L+'-Q1'].forEach(id=>D[id].I=I);});
 }
 function nodeU(n){if(!EN.has(n))return 0;const L=lvl(n);if(L===110)return FLOW.U110;if(FLOW.U[n]!=null)return FLOW.U[n];
-  if(RING_LV.has(n)||RING_MV.has(n)){const s=RING.stations.find(s=>n===s.node+'v'||n.startsWith(s.id+'-'));const t=FLOW.TAG[s?s.node:n]||FLOW.TAG[n];if(!t)return 0;return L===0.4?FLOW.U[t.bus]*0.039:FLOW.U[t.bus]-0.02;}
+  if(RING_LV.has(n)||RING_MV.has(n)){const s=RING.stations.find(s=>n===s.node+'v'||n.startsWith(s.id+'-'));const t=FLOW.TAG[s?s.node:n]||FLOW.TAG[n];if(!t)return 0;const sn=s?s.node:n;return L===0.4?(FLOW.UN?.[sn]??FLOW.U[t.bus])*0.039:(FLOW.UN?.[n]??FLOW.U[t.bus]);}
   const f=FEEDERS.find(f=>f.node===n);if(f)return FLOW.U[f.bus];return D[n.slice(0,2)].Ulv;}
 
 // ---------------------------------------------------------- bediening
@@ -260,7 +261,7 @@ function feederTick(dm){
     else if(c.offSince!=null){const dur=SIM.t-c.offSince;c.offSince=null;
       if(dur>5&&!c.gen){c.clp=Math.max(c.clp,1+0.6*Math.min(1,dur/90));if(c.clp>1.12&&!c.st)pushAlarm(`${c.id} ${c.name}: koude-lastopname na ${Math.round(dur)} min uitval – belasting +${Math.round((c.clp-1)*100)}%`,'info');}}
     c.clp=1+(c.clp-1)*Math.exp(-dm/18);});
-  ringProtection();}
+  ringProtection(dm);}
 
 // ---------------------------------------------------------- storingen
 function randomEvent(){const r=Math.random();if(r<0.3)return lineFault();if(r<0.75)return feederFault();return trafoFault();}

@@ -38,8 +38,9 @@ function buildSLD(){
   out.R=[];o=out.R;const HS=(id,x,y)=>{o.push(`<g class="dev ds" data-id="${id}" transform="translate(${x} ${y}) rotate(-90)"><title>${id} · ${D[id].label}</title>${hit(26,26)}<line class="tick" x1="-6" y1="-11" x2="6" y2="-11"/><line class="blade" x1="0" y1="11" x2="0" y2="-11" style="transform-origin:0px 11px"/><circle class="piv" cx="0" cy="11" r="2.4"/></g>`);};
   const drawRing=(rg,oy)=>{const st=rg.stations,n=st.length,RY=oy+92,x0=(470-(n-1)*84)/2,XS=st.map((s,i)=>x0+i*84),fb=F(rg.from).bus,tb=F(rg.to).bus;
     T(235,oy+16,`${rg.name.toUpperCase()} · normaal-open punt ${rg.nop}`,'middle','h');
-    W(14,oy+24,14,oy+36,fb);CB('V-'+rg.from,14,oy+44);W(14,oy+52,14,RY,rg.from);T(24,oy+33,`V-${rg.from} · rail ${fb.slice(1)}`,'start','fs');
-    W(456,oy+24,456,oy+36,tb);CB('V-'+rg.to,456,oy+44);W(456,oy+52,456,RY,rg.to);T(446,oy+33,`rail ${tb.slice(1)} · V-${rg.to}`,'end','fs');
+    M('fa'+rg.from,24,oy+33,'start','fs');M('fa'+rg.to,446,oy+33,'end','fs');
+    W(14,oy+24,14,oy+36,fb);CB('V-'+rg.from,14,oy+44);W(14,oy+52,14,RY,rg.from);
+    W(456,oy+24,456,oy+36,tb);CB('V-'+rg.to,456,oy+44);W(456,oy+52,456,RY,rg.to);
     st.forEach((s,i)=>{const x=XS[i],n2=s.node,Y=RY;
       o.push(`<rect x="${x-38}" y="${oy+58}" width="76" height="196" rx="7" fill="rgba(255,255,255,0.025)" stroke="rgba(255,255,255,0.09)"/>`);
       o.push(`<g class="dev kiosk" data-id="${s.id}"><title>${s.id} · ${s.name}</title><rect class="hit" x="${x-38}" y="${oy+58}" width="76" height="27" rx="6"/></g>`);
@@ -51,13 +52,13 @@ function buildSLD(){
       s.groups.forEach((g,j)=>{const gx=x-32+(j+0.5)*64/s.groups.length;W(gx,Y+74,gx,Y+84,n2+'v');
         o.push(`<g class="dev cb lvs" data-id="${g.id}" transform="translate(${gx} ${Y+90})"><title>${g.id} · ${g.name}</title>${hit(14,18)}<rect class="body" x="-4.5" y="-4.5" width="9" height="9" rx="1.5"/></g>`);
         W(gx,Y+95,gx,Y+104,g.node);o.push(`<polygon class="w arrow" data-n="${g.node}" data-c="w arrow" points="${gx-4},${Y+104} ${gx+4},${Y+104} ${gx},${Y+111}"/>`);T(gx,Y+121,'G'+(j+1),'middle','fs');});
-      M('stc'+s.id,x,Y+136);M('stp'+s.id,x,Y+148,'middle','');
+      M('stc'+s.id,x,Y+133);M('stp'+s.id,x,Y+144);M('stu'+s.id,x,Y+155,'middle','');
       if(s.id+'-R'===rg.nop)T(x+24,Y+20,'NOP','middle','mh fs');});
     RING.secs.filter(c=>c.ring===rg).forEach((sec,i)=>{const x1=i?XS[i-1]+35:14,x2=i<n?XS[i]-35:456;W(x1,RY,x2,RY,sec.node);M('flt'+sec.id,(x1+x2)/2,RY-8,'middle','bad');});};
   RINGS.forEach((rg,k)=>drawRing(rg,k*262));
   T(235,540,'⚑ verklikker aangesproken · ⚡ kabelfout','middle','fs');T(235,553,'klik op een station voor alle schakelaars','middle','fs');
   const svg=$('#sld');svg.innerHTML=`<g data-tab="10">${out[10].join('')}</g><g data-tab="20" style="display:none">${out[20].join('')}</g><g data-tab="R" style="display:none">${out.R.join('')}</g>`;
-  SLD.nodes=[...svg.querySelectorAll('[data-n]')];
+  SLD.nodes=[...svg.querySelectorAll('[data-n]')];SLD.byNode={};SLD.nodes.forEach(el=>(SLD.byNode[el.dataset.n]??=[]).push(el));
   svg.querySelectorAll('.dev').forEach(el=>{const id=el.dataset.id,tab=el.closest('[data-tab]').dataset.tab;(SLD.devs[id]??=[]).push(el);(SLD.devTab[id]??=new Set()).add(tab);
     el.addEventListener('click',()=>selectDevice(id));});
   svg.querySelectorAll('[data-m]').forEach(el=>(SLD.meas[el.dataset.m]??=[]).push(el));
@@ -80,7 +81,9 @@ function updateSLD(){
     setM('to'+Tn,t.blocked?'86 BLOKKADE':`${Math.round(t.oil)}°C · t${t.tap}${t.avr==='auto'?'A':'H'}`,t.blocked||t.oil>90?'bad':'m');});
   setM('rt'+RES,`stand ${D[RES].ratio} kV${D[RES].ratioBusy?'…':''}`);
   ['RA','RB','RC'].forEach(b=>setM(b,`${fx(FLOW.U[b],2)} kV`));
-  RING.stations.forEach(s=>{const on=EN.has(s.node);setM('fi'+s.id,s.flag?'⚑':'');setM('stc'+s.id,`${s.cust>=1000?fx(s.cust/1000)+'k':s.cust} kl`);setM('stp'+s.id,on?`${fx(s.P,2)} MW`:'UIT',on?'m':'bad');});
+  RING.stations.forEach(s=>{const on=EN.has(s.node),u=nodeU(s.node);setM('fi'+s.id,s.flag?'⚑':'');setM('stc'+s.id,`${s.cust>=1000?fx(s.cust/1000)+'k':s.cust} kl`);setM('stp'+s.id,on?`${fx(s.P,2)} MW`:'UIT',on?'m':'bad');setM('stu'+s.id,on?`${fx(u,2)} kV`:'',u<9.9?'bad':'');});
+  RING.secs.forEach(s=>(SLD.byNode[s.node]||[]).forEach(el=>{el.classList.toggle('ovl',s.load>0.85&&s.load<=1);el.classList.toggle('ovl2',s.load>1);}));
+  FEEDERS.filter(f=>f.ring).forEach(f=>setM('fa'+f.id,`V-${f.id} · rail ${f.bus.slice(1)} · ${Math.round(D[f.cb].I)} A`));
   RING.secs.forEach(s=>setM('flt'+s.id,s.fault?'⚡':''));
   FEEDERS.forEach(f=>{const on=EN.has(f.node);setM('f'+f.id,on?`${fx(f.P)} MW`:'UIT',on?(f.gen?'mh':'m'):'bad');setM('fc'+f.id,f.ring?'ring':f.gen?'productie':f.cust>=1000?`${fx(f.cust/1000)}k kl`:`${f.cust} kl`);});
 }
@@ -129,10 +132,12 @@ function rowsFor(d){const r=[],A=(k,f)=>r.push([k,f]);
   if(d.type==='lvs')A('Belasting',()=>`${(d.lvg.Pc*1000).toFixed(0)} kW`);
   if(d.type==='kiosk'){const s=d.st;A('Klanten',()=>s.cust.toLocaleString('nl-NL'));A('Straatverlichting',()=>`${s.lamps||0} lantaarns · ${EN.has(s.ovl)?(profile('ovl',hourOf())?'<span class="warnc">brandt</span>':'uit (dag)'):'<span class="bad">geen spanning</span>'}`);A('Belasting',()=>`${s.P.toFixed(2)} MW`);
     A('Gevoed via',()=>{const t=FLOW.TAG[s.node];return t&&t.cb?`${t.cb} (rail ${t.bus.slice(1)})`:'<span class="bad">geen voeding</span>';});
+    const kab=sec=>()=>sec?(EN.has(sec.node)?`<span class="${sec.load>1?'bad':sec.load>0.85?'warnc':''}">${Math.round(sec.I)} A · ${Math.round(sec.load*100)}%</span>`:'spanningsloos'):'—';
+    A('Kabel links',kab(RING.secs.find(x=>x.b===s.id)));A('Kabel rechts',kab(RING.secs.find(x=>x.a===s.id)));
     A('Kortsluitverklikker',()=>s.flag?'<span class="warnc">⚑ AANGESPROKEN</span>':'normaal');}
   if(d.type==='es')A(d.cb?'Spanning kabelzijde':'Spanning lijnzijde',()=>fmtKV(nodeU(d.a)));
   if(['ct','sa','bb','line','kiosk'].includes(d.type))A('Spanning',()=>fmtKV(nodeU(d.node)));
-  if(d.type==='cb'||d.type==='ds'||d.type==='ct')A('Stroom',()=>`${Math.round(D[d.ref||d.id].I)} A`);
+  if(['cb','ds','ct','lbs'].includes(d.type))A('Stroom',()=>`${Math.round(D[d.ref||d.id].I)} A`);
   if(d.type==='cb'){A('Inschakelveer',()=>springOk(d)?'geladen':'<span class="warnc">laden…</span>');A('Schakelingen',()=>d.ops);}
   if(d.line)A('Herinschakeling (AR)',()=>SIM.lines[d.line].ar?'IN bedrijf':'<span class="warnc">UIT bedrijf</span>');
   if(d.id==='V-K')A('Spanningsverschil',()=>EN.has('RA')&&EN.has('RB')?`<span class="${Math.abs(FLOW.U.RA-FLOW.U.RB)>0.25?'bad':''}">${Math.abs(FLOW.U.RA-FLOW.U.RB).toFixed(2).replace('.',',')} kV</span>`:'—');
