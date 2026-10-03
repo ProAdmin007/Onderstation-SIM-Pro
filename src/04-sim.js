@@ -239,9 +239,9 @@ function regulate(dm){
     else if(U>=lo+m&&U<=hi-m)SIM[k]=false;});
 }
 function thermal(dm){const h=hourOf(),amb=ambient(h);
-  TR.forEach(T=>{const t=D[T],on=EN.has(T+'h'),k=t.S/(t.fans?t.rAF:t.rON);
+  TR.forEach(T=>{const t=D[T],on=EN.has(T+'h'),k=t.S/(t.fans&&!t.fanFail?t.rAF:t.rON);
     const target=amb+(on?8:0)+62*k*k;t.oil+=(target-t.oil)*(1-Math.exp(-dm/32));
-    if(!t.fans&&on&&t.oil>65){t.fans=true;pushAlarm(`${T}: olie ${t.oil.toFixed(0)} °C – koeling ONAF, ventilatoren aan`,'info');}
+    if(!t.fans&&on&&t.oil>65&&!t.fanFail){t.fans=true;pushAlarm(`${T}: olie ${t.oil.toFixed(0)} °C – koeling ONAF, ventilatoren aan`,'info');}
     if(t.fans&&(t.oil<57||!on))t.fans=false;
     if(t.oil>90&&!t.hot){t.hot=true;pushAlarm(`${T}: olietemperatuur hoog (${t.oil.toFixed(0)} °C) – overbelast! Verlaag de belasting`,'warn');}
     if(t.oil<85)t.hot=false;

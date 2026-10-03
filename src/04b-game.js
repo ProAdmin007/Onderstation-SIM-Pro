@@ -12,7 +12,7 @@ const MODES={
   free:{name:'Vrije dienst',tag:'Eindeloos',start:9,desc:'Speel zo lang je wilt. Storingen en werkopdrachten komen vanzelf.'},
   day:{name:'Dagdienst',tag:'Dienst · 8 uur',start:7,dur:480,desc:'07:00–15:00. Ochtendpiek, werkopdrachten en storingen. Afsluiten met een dienstrapport.'},
   eve:{name:'Avonddienst',tag:'Dienst · 8 uur',start:15,dur:480,desc:'15:00–23:00. De zware avondpiek en kassen die ’s avonds gaan belichten.'},
-  zkh:{scen:true,name:'Kabelstoring ziekenhuis',tag:'Scenario · makkelijk',start:10,dur:50,
+  zkh:{scen:true,name:'Kabelstoring ziekenhuis',tag:'Scenario · makkelijk',start:10,dur:50,season:'herfst',weather:'bewolkt',
     desc:'Een rustige ochtend… tot T1 uitvalt en het ziekenhuis op noodstroom overgaat.',
     setup(){pushAlarm('Rustige ochtend in OS Zuidwolde. Fijne dienst!','info');
       at(1,()=>{feederFault('F5',14);trafoFault('T1');GAME.flags.tripAt=SIM.t;GAME.flags.fuelEnd=SIM.t+25;
@@ -21,7 +21,7 @@ const MODES={
       {t:'Ziekenhuis terug op het net vóór de noodstroom op is',check:()=>GAME.flags.fuelEnd==null?null:EN.has('F5')?'done':SIM.t>GAME.flags.fuelEnd?'fail':null},
       {t:'Ring (V-F3 en V-F4) binnen 5 min na de trip weer gevoed',check:()=>GAME.flags.tripAt==null?null:EN.has('F3')&&EN.has('F4')?'done':SIM.t>GAME.flags.tripAt+5?'fail':null},
       {t:'Niet inschakelen op de kabelfout',check:()=>GAME.stats.recloseFault?'fail':null,final:()=>true},noIncidents]},
-  storm:{scen:true,name:'Storm boven Drenthe',tag:'Scenario · gemiddeld',start:16,dur:90,
+  storm:{scen:true,name:'Storm boven Drenthe',tag:'Scenario · gemiddeld',start:16,dur:90,season:'herfst',
     desc:'Onweersbuien trekken over de lijnen en het AR-relais van L2 is defect. Houd het licht aan.',
     weather:'onweer',setup(){Object.assign(SIM.lines.L2,{ar:false,arBroken:true});
       pushAlarm('KNMI: code oranje – zware onweersbuien met windstoten boven Drenthe','warn');
@@ -31,7 +31,7 @@ const MODES={
     obj:()=>[{t:'Overleef 90 minuten storm',final:()=>true},
       {t:'Ziekenhuis nooit langer dan 5 min zonder net',check:()=>GAME.flags.hospRun>5?'fail':null,final:()=>true},
       {t:'Minder dan 40.000 klantminuten',check:()=>SIM.cml>40000?'fail':null,final:()=>SIM.cml<=40000},noIncidents]},
-  piek:{scen:true,name:'Avondpiek op één poot',tag:'Scenario · gemiddeld',start:16.5,dur:150,
+  piek:{scen:true,name:'Avondpiek op één poot',tag:'Scenario · gemiddeld',start:16.5,dur:150,season:'herfst',weather:'helder',
     desc:'T1 staat in onderhoud en reservetrafo T3 (25 MVA) draagt de hele 10 kV. De avondpiek komt eraan: houd T3 heel, de kassen hebben een afschakelbaar contract.',
     setup(){setCB('T1-Q0',0);setCB('V-T1',0);setCB('T1-Q1',0);setCB('V-T3',1);setCB('V-K',1);
       Object.assign(D.T1,{blocked:true,resettable:false,blockText:'onderhoud trappenschakelaar',blockKind:'maint'});D.T3.oil=62;FEEDERS[5].interruptible=true;
@@ -42,7 +42,7 @@ const MODES={
       {t:'Ziekenhuis (F5) blijft onder spanning',check:()=>GAME.flags.hospRun>1?'fail':null,final:()=>true},
       {t:'T1 vóór 18:30 weer in bedrijf',check:()=>EN.has('T1l')&&D['V-T1'].state?'done':SIM.t>18.5*60?'fail':null},
       {t:'Minder dan 15.000 klantminuten',check:()=>SIM.cml>15000?'fail':null,final:()=>SIM.cml<=15000}]},
-  blackout:{scen:true,name:'Black-out',tag:'Scenario · moeilijk',start:6.33,dur:45,
+  blackout:{scen:true,name:'Black-out',tag:'Scenario · moeilijk',start:6.33,dur:45,season:'herfst',weather:'mist',
     desc:'Landelijke storing: het station is volledig zwart. Bouw alles weer op, veld voor veld.',
     setup(){for(const L of['L1','L2'])Object.assign(SIM.lines[L],{avail:false,reason:'landelijke storing (black-out)'});
       Object.values(D).forEach(d=>{if(d.type==='cb')d.state=0;});D.T1.oil=D.T2.oil=24;
@@ -55,6 +55,33 @@ const MODES={
     obj:()=>[{t:'Ziekenhuis (F5) binnen 12 min terug',check:()=>EN.has('F5')?'done':SIM.t>GAME.t0+12?'fail':null},
       {t:'Alle klanten binnen 30 min terug',check:()=>SIM.off===0?'done':SIM.t>GAME.t0+30?'fail':null},
       {t:'Geen beveiligingsafschakeling tijdens herstel',check:()=>GAME.stats.clpTrips||GAME.stats.thermal||GAME.stats.recloseFault?'fail':null,final:()=>true},noIncidents]},
+  dubbel:{scen:true,name:'Dubbele kabelfout in de woonwijk',tag:'Scenario · moeilijk',start:17.5,dur:80,season:'herfst',weather:'regen',
+    desc:'Twee kabelfouten tegelijk in de ring van de woonwijk. Een deel van de wijk ligt op een eiland tussen de fouten.',
+    setup(){pushAlarm('Graafwerkzaamheden op twee plekken in de woonwijk vandaag – extra alert op kabelschade','info');
+      at(1,()=>{const sec=id=>RING.secs.find(s=>s.id===id),f=id=>FEEDERS.find(x=>x.id===id);
+        ringFault(f('F3'),sec('K12'),35);ringFault(f('F4'),sec('K45'),65);GAME.flags.tripAt=SIM.t;
+        pushAlarm('Tip: met twee fouten blijft het stuk tussen de fouten spanningsloos tot de eerste reparatie klaar is.','info');});},
+    obj:()=>[{t:'MS1 en MS5 binnen 10 min weer gevoed',check:()=>GAME.flags.tripAt==null?null:EN.has('M1')&&EN.has('M5')?'done':SIM.t>GAME.flags.tripAt+10?'fail':null},
+      {t:'Niet inschakelen op een kabelfout',check:()=>GAME.stats.recloseFault?'fail':null,final:()=>true},
+      {t:'Alle stations van de woonwijk weer gevoed vóór het einde',check:()=>GAME.flags.tripAt!=null&&SIM.t>GAME.flags.tripAt+40&&RINGS[0].stations.every(s=>EN.has(s.node))?'done':null,final:()=>RINGS[0].stations.every(s=>EN.has(s.node))},
+      noIncidents]},
+  hitte:{scen:true,name:'Hittegolf',tag:'Scenario · gemiddeld',start:13,dur:120,season:'zomer',weather:'hitte',
+    desc:'36 graden, airco’s op vol en het zonnepark levert terug. Dan valt de koeling van T1 uit.',
+    setup(){D.T1.oil=74;D.T2.oil=58;pushAlarm('KNMI: code oranje voor extreme hitte – let op de transformatortemperaturen','warn');
+      at(20,()=>{D.T1.fanFail=true;D.T1.fans=false;pushAlarm('T1: ventilatorgroep defect – alleen natuurlijke koeling (31,5 MVA). Tip: zet reservetrafo T3 parallel met V-T3','crit');});
+      at(55,()=>{const f=FEEDERS.find(x=>x.id==='F1');ringFault(f,RING.secs.find(s=>s.id==='K67'),45);pushAlarm('Storingsdienst: kabel in het centrum bezweken door de hitte','info');});},
+    obj:()=>[{t:'T1 wordt niet thermisch afgeschakeld',check:()=>GAME.stats.thermal?'fail':null,final:()=>true},
+      {t:'Geen spanningsafwijkingen op de rails',check:()=>GAME.stats.volt?'fail':null,final:()=>true},
+      {t:'Minder dan 12.000 klantminuten',check:()=>SIM.cml>12000?'fail':null,final:()=>SIM.cml<=12000},noIncidents]},
+  winter:{scen:true,name:'Winteravond met sneeuw',tag:'Scenario · gemiddeld',start:16.5,dur:110,season:'winter',weather:'sneeuw',
+    desc:'Koud, donker en iedereen thuis: de belasting is hoog. Een kabelfout in de ring dwingt je tot terugvoeden – pas op voor overbelaste kabels.',
+    setup(){D.T1.oil=60;pushAlarm('Sneeuw en vorst: hoge belasting verwacht, storingsdienst rijdt langzamer','info');
+      at(12,()=>{ringFault(FEEDERS.find(x=>x.id==='F3'),RING.secs.find(s=>s.id==='K23'),70);});
+      at(50,()=>lineFault('L1',true));},
+    obj:()=>[{t:'Geen kabel doorgebrand door overbelasting',check:()=>GAME.stats.burn?'fail':null,final:()=>true},
+      {t:'T1 wordt niet thermisch afgeschakeld',check:()=>GAME.stats.thermal?'fail':null,final:()=>true},
+      {t:'Ziekenhuis (F5) blijft onder spanning',check:()=>GAME.flags.hospRun>1?'fail':null,final:()=>true},
+      {t:'Minder dan 25.000 klantminuten',check:()=>SIM.cml>25000?'fail':null,final:()=>SIM.cml<=25000}]},
 };
 
 function award(pts,text){GAME.score+=pts;if(!text)return;const el=document.createElement('div');el.className='sf '+(pts>=0?'plus':'min');
@@ -125,7 +152,7 @@ $('#report').addEventListener('click',e=>{const b=e.target.closest('[data-r]');i
 function renderMenu(){
   const card=id=>{const m=MODES[id],b=getBest(id,GAME.diff);return `<button class="mode" data-mode="${id}"><span class="mt">${m.tag}</span><b>${m.name}</b><span class="md">${m.desc}</span>${b?`<span class="mb">Beste: ${b.toLocaleString('nl-NL')} (${grade(b)[0]})</span>`:''}</button>`;};
   $('#menu').innerHTML=`<div class="mh">Dienst draaien</div><div class="mgrid">${['free','day','eve'].map(card).join('')}</div>
-    <div class="mh">Scenario's</div><div class="mgrid">${['zkh','storm','piek','blackout'].map(card).join('')}</div>`;
+    <div class="mh">Scenario's</div><div class="mgrid">${['zkh','storm','piek','hitte','winter','blackout','dubbel'].map(card).join('')}</div>`;
   document.querySelectorAll('#diff button').forEach(b=>b.classList.toggle('on',b.dataset.d===GAME.diff));
   document.querySelectorAll('#season button').forEach(b=>b.classList.toggle('on',b.dataset.s===GAME.season));
 }

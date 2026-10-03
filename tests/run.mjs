@@ -124,6 +124,20 @@ const TESTS = [
       assert(!r.fout && r.goed && r.approved, `controle klopt niet: fout ${r.fout} goed ${r.goed}`);
       assert(r.straf >= 25, `geen straf voor afwijking: ${r.straf}`);
   } },
+  { name: 'scenario dubbele kabelfout: eiland en gedeeltelijk herstel', query: '?play=dubbel', async run(p) {
+      const r = await p.evaluate(() => { T.step(1.5); const uit = OS.SIM.off;
+        ['MS1-R', 'MS2-L', 'MS4-R', 'MS5-L'].forEach(id => OS.operate(id, 0)); OS.operate('MS3-R', 1); OS.operate('V-F3', 1); OS.operate('V-F4', 1); T.step(0.5);
+        const aan = OS.RINGS[0].stations.filter(s => OS.EN().has(s.node)).map(s => s.id);
+        return { uit, aan, obj: OS.GAME.obj.map(o => o.state), season: OS.WX.type }; });
+      assert(r.uit > 5000, `te weinig uitval: ${r.uit}`);
+      assert(r.aan.join() === 'MS1,MS5', `verwacht MS1 en MS5 aan, kreeg ${r.aan}`);
+      assert(r.obj[0] === 'done', `doel MS1/MS5 niet gehaald: ${r.obj}`);
+  } },
+  { name: 'scenario hittegolf start met juist seizoen, weer en storing', query: '?play=hitte', async run(p) {
+      const r = await p.evaluate(() => { T.step(25); return { wx: OS.WX.type, amb: OS.ambient(), fan: OS.D.T1.fanFail }; });
+      assert(r.wx === 'hitte' && r.amb > 30, `geen hittegolf: ${r.wx} ${r.amb}`);
+      assert(r.fan === true, 'ventilatorstoring T1 trad niet op');
+  } },
   { name: 'Esc opent pauzemenu en pauzeert', query: '?autostart', async run(p) {
       await p.keyboard.press('Escape'); await sleep(800);
       const r = await p.evaluate(() => ({ menu: !document.querySelector('#pauseMenu').classList.contains('hidden'), paused: OS.SIM.paused }));

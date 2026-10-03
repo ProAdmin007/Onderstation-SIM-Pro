@@ -28,7 +28,7 @@ const isoSwitches=s=>[s.a&&s.a+'-R',s.b&&s.b+'-L'].filter(Boolean);
 function ringPathStations(from,to){const prev={[from]:null},q=[from];
   for(let i=0;i<q.length&&!(to in prev);i++){const n=q[i];for(const d of ADJ[n]||[]){if(d.type==='tr'||!conducts(d))continue;const m=d.a===n?d.b:d.a;if(m in prev)continue;prev[m]=n;q.push(m);}}
   const out=[];if(!(to in prev))return out;for(let n=to;n!=null;n=prev[n]){const s=RING.stations.find(s=>s.node===n);if(s)out.unshift(s.id);}return out;}
-function ringFault(f,forced){
+function ringFault(f,forced,repairMin){
   const c=forced?[forced]:RING.secs.filter(s=>!s.fault&&EN.has(s.node)&&FLOW.TAG[s.node]?.cb===f.cb);if(!c.length)return;
   const s=pick(c),flagged=ringPathStations(f.node,s.node);
   s.fault=true;s.located=false;RING.stations.forEach(x=>x.flag=flagged.includes(x.id));
@@ -39,14 +39,14 @@ function ringFault(f,forced){
     readyNotice(`Storingsdienst: kabelfout gevonden tussen ${secName(s)}${open.length?` – isoleer met ${open.join(' en ')}`:' – kabel is al geïsoleerd'}, herstel daarna via het normaal-open punt`,
       open[0]||null,()=>!!open[0]&&D[open[0]].state===1);
     const st=RING.stations.find(x=>x.id===(s.a||s.b));if(st)crewDispatch({box:VIEWS[st.id].box,say:`Kabelfout ${secName(s)} graven`,until:()=>!s.fault,from:V3(st.pos[0]+6,0,st.pos[1]-8),rel:isoSwitches(s).concat(s.a?[]:['V-'+s.ring.from],s.b?[]:['V-'+s.ring.to])});});
-  addTimer(rnd(70,130),()=>{s.fault=false;s.located=false;RING.stations.forEach(x=>x.flag=false);
+  addTimer(repairMin||rnd(70,130)*(WX.cur.snow>0.5?1.4:1),()=>{s.fault=false;s.located=false;RING.stations.forEach(x=>x.flag=false);
     pushAlarm(`Storingsdienst: kabel ${secName(s)} gerepareerd – normaliseer de ring (normaal-open punt ${s.ring.nop} weer open)`,'ok');refreshAll();});
   refreshAll();}
 // een kabel met fout die weer onder spanning komt: beveiliging schakelt direct af
 function ringProtection(dm=0){
   RING.secs.forEach(s=>{
     if(s.load>1){if(!s.ovl){s.ovl=true;award(-20,'Kabel overbelast');pushAlarm(`Kabel ${secName(s)} overbelast: ${Math.round(s.I)} A (${Math.round(s.load*100)}% van ${s.rate} A) – verleg het normaal-open punt of verlaag de belasting`,'warn');}
-      if(s.load>1.3&&!s.fault){s.ot+=dm;if(s.ot>8){s.ot=0;const cb=FLOW.TAG[s.node]?.cb,f=FEEDERS.find(x=>x.cb===cb);pushAlarm(`Kabel ${secName(s)} door langdurige overbelasting doorgebrand!`,'crit');if(f)ringFault(f,s);}}}
+      if(s.load>1.3&&!s.fault){s.ot+=dm;if(s.ot>8){s.ot=0;const cb=FLOW.TAG[s.node]?.cb,f=FEEDERS.find(x=>x.cb===cb);GAME.stats.burn=(GAME.stats.burn||0)+1;pushAlarm(`Kabel ${secName(s)} door langdurige overbelasting doorgebrand!`,'crit');if(f)ringFault(f,s);}}}
     else{if(s.load<0.9)s.ovl=false;s.ot=Math.max(0,s.ot-dm*0.5);}});
   RING.stations.forEach(st=>{const u=nodeU(st.node);if(u>0&&u<9.9){if(!st.uAl){st.uAl=true;award(-10,'Spanning te laag');pushAlarm(`${st.id} ${st.name}: spanning te laag (${u.toFixed(2).replace('.',',')} kV) – lange voedingsroute`,'warn');}}else if(u>10.0)st.uAl=false;});
   RING.secs.forEach(s=>{if(!s.fault||!EN.has(s.node))return;const t=FLOW.TAG[s.node];tripFrom(s.node);GAME.stats.recloseFault++;award(-40,'Ingeschakeld op kabelfout');
