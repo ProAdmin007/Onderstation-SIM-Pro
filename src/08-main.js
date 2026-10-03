@@ -1,9 +1,9 @@
 
 // ============================================================ HUD + bediening
-const START_DATE=new Date(2026,9,3);
 function updateHUD(){
   $('#clock').textContent=fmtClock(SIM.t);
-  const dt=new Date(START_DATE.getTime()+Math.floor(SIM.t/1440)*864e5);
+  $('#wx').textContent=wxLabel();
+  const dt=new Date(SEASON.date.getTime()+Math.floor(SIM.t/1440)*864e5);
   $('#date').textContent=dt.toLocaleDateString('nl-NL',{weekday:'short',day:'numeric',month:'short'})+(SIM.paused&&!$('#intro').classList.contains('hidden')?'':SIM.paused?' · PAUZE':'');
   $('#kOff').textContent=SIM.off.toLocaleString('nl-NL');$('#kpiOff').classList.toggle('bad',SIM.off>0);
   $('#kCml').textContent=Math.round(SIM.cml).toLocaleString('nl-NL');
@@ -48,20 +48,22 @@ function startGame(id){$('#intro').classList.add('hidden');AudioSys.init();contr
   const v=VIEWPOS[0];flyTo(v[0].clone(),v[1].clone(),2);}
 $('#menu').addEventListener('click',e=>{const b=e.target.closest('[data-mode]');if(b)startGame(b.dataset.mode);});
 $('#diff').addEventListener('click',e=>{const b=e.target.closest('[data-d]');if(b){GAME.diff=b.dataset.d;renderMenu();}});
+$('#season').addEventListener('click',e=>{const b=e.target.closest('[data-s]');if(b){GAME.season=b.dataset.s;setSeason(GAME.season);updateSky(hourOf());renderMenu();}});
 addEventListener('pointerdown',()=>AudioSys.init(),{once:true});
 
 // ============================================================ start
 buildSLD();buildLabels();buildColliders();initTaps();updateSky(hourOf());updateSLD();updateHUD();renderTasks();
 document.querySelectorAll('#speed button').forEach(b=>b.classList.remove('on'));
 $('#loading').remove();
-if(DIFFS[params.get('diff')])GAME.diff=params.get('diff');
+if(DIFFS[params.get('diff')])GAME.diff=params.get('diff');if(SEASONS[params.get('season')])GAME.season=params.get('season');setSeason(GAME.season);
+if(params.get('weer')&&WX_TYPES[params.get('weer')])setWeather(params.get('weer'),true,true);
 if(params.has('play'))startGame(params.get('play'));
 else if(params.has('autostart')){$('#intro').classList.add('hidden');applyMode('free');setSpeed(60);}
 else{renderMenu();$('#intro').classList.remove('hidden');controls.autoRotate=true;controls.autoRotateSpeed=0.35;}
 if(params.has('night'))updateSky(22);
 if(params.has('view')){const v=VIEWPOS[+params.get('view')];camera.position.copy(v[0]);controls.target.copy(v[1]);controls.autoRotate=false;controls.update();}
 
-window.OS={SIM,D,enterKiosk,ROOMS,blockedAt,RING,NPCS,crewDispatch,ringFault,FP,enterFP,exitFP,pickCenter,camera,camInside,setRatio,setTab,GAME,MODES,applyMode,endGame,EN:()=>EN,FLOW,operate,tapStep,setAVR,resetLockout,toggleAR,regulate,computeFlows,randomEvent,lineFault,feederFault,trafoFault,offerTask,simStep,FEEDERS};
+window.OS={SIM,D,WX,setWeather,setSeason,SEASONS,ambient,enterKiosk,ROOMS,blockedAt,RING,NPCS,crewDispatch,ringFault,FP,enterFP,exitFP,pickCenter,camera,camInside,setRatio,setTab,GAME,MODES,applyMode,endGame,EN:()=>EN,FLOW,operate,tapStep,setAVR,resetLockout,toggleAR,regulate,computeFlows,randomEvent,lineFault,feederFault,trafoFault,offerTask,simStep,FEEDERS};
 const clock=new THREE.Clock();let hudT=0,skyT=0;
 renderer.setAnimationLoop(()=>{
   const dt=Math.min(0.1,clock.getDelta());

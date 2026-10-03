@@ -227,6 +227,7 @@ body.menu #fpPause{display:none!important}
 .swr span{color:var(--muted);line-height:1.25}.swr span b{color:var(--text);font-family:var(--mono);margin-right:6px}
 .swr button{padding:4px 0;font-size:11px;font-weight:700}.swr .cur{opacity:.35}
 .npc{position:absolute;left:0;top:0;background:rgba(242,140,26,.92);color:#1a1206;font:600 11px Inter;padding:3px 8px;border-radius:10px;white-space:nowrap;will-change:transform}
+.wx{font-size:12px;color:var(--text);background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:8px;padding:5px 10px;white-space:nowrap}
 #loading{position:fixed;inset:0;display:grid;place-items:center;color:var(--muted);font-family:var(--mono);z-index:20;background:var(--bg)}
 @media (max-width:1250px){#tasks{width:290px}#devpanel{left:314px}#scada{width:min(calc(400px * var(--sldz,1)),64vw)}.kpi{min-width:90px;padding:3px 9px}}
 @media (max-width:1050px){.kpis .kpi:nth-child(n+3){display:none}#views{left:12px;bottom:calc(var(--alarmH) + 24px)}}
@@ -242,6 +243,7 @@ body.menu #fpPause{display:none!important}
     <div><div class="t">OS Zuidwolde</div><div class="s">110/10 kV · Bedrijfsvoering</div></div>
   </div>
   <div class="clock"><div id="clock">09:00</div><div id="date">za 3 okt</div></div>
+  <div id="wx" class="wx" title="Weer en buitentemperatuur"></div>
   <div class="speed" id="speed">
     <button data-s="0" title="Pauze (spatie)">❚❚</button>
     <button data-s="1">1×</button>
@@ -304,6 +306,8 @@ body.menu #fpPause{display:none!important}
         <li><b>Volgorde:</b> eerst de vermogenschakelaar (Q0) uit, dan pas scheiders openen. Andersom geeft een vlamboog.</li>
         <li><b>Score:</b> snel herstel en behaalde doelen leveren punten op; klantminuten, incidenten en overbelasting kosten punten.</li>
       </ul>
+      <div class="mh">Seizoen</div>
+      <div class="seg" id="season"><button data-s="lente">Lente</button><button data-s="zomer">Zomer</button><button data-s="herfst" class="on">Herfst</button><button data-s="winter">Winter</button></div>
       <div class="mh">Moeilijkheid</div>
       <div class="seg" id="diff"><button data-d="rustig">Rustig</button><button data-d="normaal" class="on">Normaal</button><button data-d="zwaar">Zwaar</button></div>
       <div class="keys">slepen: draaien · rechts: schuiven · scroll: zoom<br>1–9 camera · V rondlopen · spatie/P pauze · Esc menu · L labels · M geluid</div>
@@ -874,9 +878,9 @@ const stars=(()=>{const n=1800,p=new Float32Array(n*3);for(let i=0;i<n;i++){cons
   const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(p,3));const s=new THREE.Points(g,new THREE.PointsMaterial({color:0xffffff,size:1.6,sizeAttenuation:false,transparent:true,opacity:0,fog:false,depthWrite:false}));scene.add(s);return s;})();
 const fogDay=new THREE.Color(0xc3cfd9),fogDusk=new THREE.Color(0xc9a184),fogNight=new THREE.Color(0x0b1119),tmpC=new THREE.Color();
 let NIGHT=0;
-function sunAngles(h){const rise=7.85,set=19.2,len=set-rise;let el;
-  if(h>=rise&&h<=set)el=33*Math.sin(Math.PI*(h-rise)/len);else{const d=h<rise?rise-h:h-set;el=-Math.min(45,d*13);}
-  const az=105+(h-rise)/len*150;return {el,az};}
+function sunAngles(h){const S=SEASON,rise=S.rise,set=S.set,len=set-rise;let el;
+  if(h>=rise&&h<=set)el=S.maxEl*Math.sin(Math.PI*(h-rise)/len);else{const d=h<rise?rise-h:h-set;el=-Math.min(45,d*13);}
+  const az=S.az[0]+(h-rise)/len*(S.az[1]-S.az[0]);return {el,az};}
 function updateSky(h){
   const {el,az}=sunAngles(h);const e=THREE.MathUtils.degToRad(el),a=THREE.MathUtils.degToRad(az);
   const dir=V3(Math.sin(a)*Math.cos(e),Math.sin(e),-Math.cos(a)*Math.cos(e));
@@ -891,9 +895,13 @@ function updateSky(h){
   envGroundMat.color.setRGB(0.3*day+0.01,0.32*day+0.012,0.27*day+0.015);
   stars.material.opacity=NIGHT;
   SPOTS.forEach(s=>s.intensity=NIGHT>0.35?900:0);MAT.lamp.emissiveIntensity=NIGHT>0.35?6:0;
-  if(GAME.storm){sun.intensity*=0.15;hemi.intensity*=0.8;scene.environmentIntensity*=0.5;scene.fog.density=0.0026;scene.fog.color.multiplyScalar(0.6);su.turbidity.value=20;su.rayleigh.value=0.6;su.mieCoefficient.value=0.03;}
-  else{scene.fog.density=0.0008;su.turbidity.value=5.5;su.rayleigh.value=1.5;su.mieCoefficient.value=0.004;}
-  if(Math.abs(el-lastEnvElev)>0.6){lastEnvElev=el;updateEnv();}
+  // weer: bewolking dempt de zon, neerslag en mist maken het zicht korter
+  const W=WX.cur,cl=W.cloud;
+  sun.intensity*=1-0.85*cl;hemi.intensity*=1-0.2*cl;scene.environmentIntensity*=1-0.5*cl;
+  scene.fog.density=0.0008+0.0016*cl*(0.3+W.rain+W.snow)+0.006*W.fog;scene.fog.color.multiplyScalar(1-0.35*cl*(1-W.fog));
+  su.turbidity.value=5.5+14.5*cl;su.rayleigh.value=1.5-0.9*cl;su.mieCoefficient.value=0.004+0.026*cl;
+  applySnowCover();
+  if(Math.abs(el-lastEnvElev)>0.6||Math.abs(cl-lastEnvCloud)>0.08){lastEnvElev=el;lastEnvCloud=cl;updateEnv();}
 }
 
 
@@ -1074,6 +1082,52 @@ function buildDistrict(){
 }
 
 
+// ============================================================ seizoenen en weer
+const SEASONS={
+  lente:{name:'Lente',date:new Date(2026,3,18),rise:6.6,set:20.6,maxEl:45,az:[80,280],amb:[11,6],pv:0.85,
+    load:{res:0.98,city:1.0,ind:1,hosp:1,green:0.9},wx:{helder:4,bewolkt:3,regen:3,onweer:1,mist:1}},
+  zomer:{name:'Zomer',date:new Date(2026,6,18),rise:5.6,set:21.9,maxEl:59,az:[55,305],amb:[21,7],pv:1.0,
+    load:{res:0.88,city:1.1,ind:1.05,hosp:1.08,green:0.7},wx:{helder:6,bewolkt:2,regen:2,onweer:2,hitte:2}},
+  herfst:{name:'Herfst',date:new Date(2026,9,3),rise:7.85,set:19.2,maxEl:33,az:[105,255],amb:[11,5],pv:0.6,
+    load:{res:1.0,city:1,ind:1,hosp:1,green:1},wx:{helder:3,bewolkt:4,regen:4,onweer:1,mist:2}},
+  winter:{name:'Winter',date:new Date(2026,0,15),rise:8.7,set:16.9,maxEl:15,az:[125,235],amb:[3,3],pv:0.25,
+    load:{res:1.22,city:1.12,ind:1.02,hosp:1.05,green:1.15},wx:{helder:3,bewolkt:4,regen:2,sneeuw:3,mist:2}}};
+let SEASON=SEASONS.herfst;
+const WX_TYPES={
+  helder:{icon:'☀',name:'Helder',cloud:0.1},bewolkt:{icon:'☁',name:'Bewolkt',cloud:0.75},
+  regen:{icon:'🌧',name:'Regen',cloud:0.92,rain:0.8},onweer:{icon:'⛈',name:'Onweer',cloud:1,rain:1,thunder:1},
+  sneeuw:{icon:'❄',name:'Sneeuw',cloud:0.85,snow:1,dT:-3},mist:{icon:'🌫',name:'Mist',cloud:0.6,fog:1},
+  hitte:{icon:'🔥',name:'Hittegolf',cloud:0,dT:8}};
+const WX={type:'bewolkt',lock:false,next:0,cur:{cloud:0.5,rain:0,snow:0,thunder:0,fog:0,dT:0},cover:0};
+function setSeason(id){SEASON=SEASONS[id]||SEASONS.herfst;lastEnvElev=-999;}
+function setWeather(type,lock=false,instant=false){const t=WX_TYPES[type]||WX_TYPES.helder;WX.type=type;WX.lock=lock;WX.next=SIM.t+rnd(90,240);
+  if(instant){Object.assign(WX.cur,{cloud:t.cloud,rain:t.rain||0,snow:t.snow||0,thunder:t.thunder||0,fog:t.fog||0,dT:t.dT||0});WX.cover=t.snow?0.8:0;}lastEnvElev=-999;}
+function pickWeather(){const w=SEASON.wx;let tot=0;for(const k in w)tot+=w[k];let r=Math.random()*tot;for(const k in w){r-=w[k];if(r<=0)return k;}return 'helder';}
+const ambient=(h=hourOf())=>SEASON.amb[0]+SEASON.amb[1]*Math.sin((h-9)/24*2*Math.PI)+WX.cur.dT-WX.cur.cloud*2;
+const isDark=(h,m=0.3)=>h<SEASON.rise-m||h>SEASON.set+m;
+// belastingfactor per soort afnemer: seizoen, en extra verwarming bij kou
+const seasonMul=kind=>(SEASON.load[kind]??1)*(kind==='res'?1+Math.max(0,(5-ambient())/40):1)*(kind==='city'||kind==='ind'?1+Math.max(0,(ambient()-24)/60):1);
+function weatherTick(dm){
+  if(!WX.lock&&SIM.t>=WX.next){const n=pickWeather();WX.next=SIM.t+rnd(90,240);if(n!==WX.type){setWeather(n);pushAlarm(`KNMI: ${WX_TYPES[n].name.toLowerCase()} op komst`,'info');}}
+  const t=WX_TYPES[WX.type],k=1-Math.exp(-dm/20);
+  for(const key of['cloud','rain','snow','thunder','fog','dT'])WX.cur[key]+=((t[key]||0)-WX.cur[key])*k;
+  WX.cover=clamp(WX.cover+(WX.cur.snow>0.3?dm/120:-dm/(ambient()>2?120:600)),0,1);   // sneeuwdek groeit en smelt
+}
+// sneeuwdek op gras, grind en daken
+const SNOW_WHITE=new THREE.Color(0xe9eef2);
+const SNOWMATS=[MAT.grass,MAT.grassLight,MAT.grassDark,MAT.stubble,MAT.soil,MAT.gravel,MAT.gravelDark,MAT.roof,MAT.roofTile,...DM.roof];
+SNOWMATS.forEach(m=>{m.userData.c0=m.color.clone();m.userData.map0=m.map;});
+const SNOWTEX=(()=>{const s=256,c=cnv(s),g=c.getContext('2d');g.fillStyle='#eef2f5';g.fillRect(0,0,s,s);
+  for(let i=0;i<2600;i++){g.fillStyle=`rgba(${R()<0.5?'170,185,200':'255,255,255'},${0.25+R()*0.4})`;g.fillRect(R()*s,R()*s,1+R()*2,1+R()*2);}
+  for(let i=0;i<120;i++){g.fillStyle='rgba(90,105,80,0.18)';g.fillRect(R()*s,R()*s,1.5,1.5);}
+  const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=MAXANISO;return t;})();
+let lastCover=-1,lastEnvCloud=-1;
+function applySnowCover(){if(Math.abs(WX.cover-lastCover)<0.02)return;lastCover=WX.cover;const snowy=WX.cover>0.3;
+  SNOWMATS.forEach(m=>{if(m.userData.map0){m.map=snowy?SNOWTEX:m.userData.map0;m.color.copy(snowy?SNOW_WHITE:m.userData.c0);if(snowy)m.color.multiplyScalar(0.8+0.2*WX.cover);}
+    else m.color.copy(m.userData.c0).lerp(SNOW_WHITE,WX.cover*0.85);});}
+function wxLabel(){const t=WX_TYPES[WX.type];return `${t.icon} ${t.name} · ${Math.round(ambient())} °C`;}
+
+
 // ============================================================ simulatie
 const SIM={t:9*60,speed:60,paused:true,interlock:true,cml:0,incidents:0,tasksDone:0,off:0,
   nextEvent:9*60+16,nextTaskAt:9*60+3,timers:[],
@@ -1175,16 +1229,16 @@ function profile(k,h){const g=(m,s)=>Math.exp(-(((h-m)/s)**2));
     case 'city':return 0.42+0.35*g(10.5,3)+0.25*g(15,3)+0.35*g(18.5,2);
     case 'ind':return h>6.5&&h<17.5?0.85+0.08*Math.sin(h*1.3):0.33;
     case 'hosp':return 0.72+0.18*g(11,4);
-    case 'green':return (h<6.5||h>17.5)?1.0:0.32+0.1*g(12,3);
-    case 'ovl':return (h<7.7||h>19.1)?1:0;   // schemerschakeling straatverlichting
-    case 'pv':return -Math.max(0,Math.sin(Math.PI*(h-8)/11))*(0.75+0.25*Math.sin(SIM.t*0.011));}return 1;}
+    case 'green':return (h<SEASON.rise+1||h>SEASON.set-1)?1.0:0.32+0.1*g(12,3);   // assimilatiebelichting als het donker is
+    case 'ovl':return isDark(h,0.25)||WX.cur.fog>0.6?1:0;   // schemerschakeling straatverlichting
+    case 'pv':{const r=SEASON.rise+0.5,s=SEASON.set-0.5;return -Math.max(0,Math.sin(Math.PI*(h-r)/(s-r)))*SEASON.pv*(1-0.8*WX.cur.cloud)*(1-0.85*WX.cover)*(0.88+0.12*Math.sin(SIM.t*0.011));}}return 1;}
 let EN=new Set(),ER=new Set();
 const FLOW={P110:0,U110:110,U:{RA:0,RB:0,RC:0},lineP:{L1:0,L2:0},load:0,load20:0,groups:[]};
 const TAP_STEP=0.0125,Z_DROP=0.05;
 function computeFlows(){
   EN=energized();ER=earthed();const h=hourOf();const busLoad={RA:0,RB:0,RC:0};
   FLOW.TAG=supplyTags();const feederP={};
-  CONS.forEach(c=>{c.demand=c.base*profile(c.kind,h)*(1+c.noise)*(c.gen?1:c.clp);c.Pc=EN.has(c.node)?c.demand*(1-c.outFrac):0;
+  CONS.forEach(c=>{c.demand=c.base*profile(c.kind,h)*(c.gen?1:seasonMul(c.kind))*(1+c.noise)*(c.gen?1:c.clp);c.Pc=EN.has(c.node)?c.demand*(1-c.outFrac):0;
     const t=FLOW.TAG[c.node];if(t&&c.Pc){busLoad[t.bus]+=c.Pc;if(t.cb)feederP[t.cb]=(feederP[t.cb]||0)+c.Pc;}});
   FEEDERS.forEach(f=>{f.P=feederP[f.cb]||0;D[f.cb].I=Math.abs(f.P)*kA(f.bus);});
   RING.stations.forEach(s=>{s.P=s.groups.reduce((a,g)=>a+g.Pc,0);});
@@ -1311,7 +1365,7 @@ function regulate(dm){
     if(U>0&&(U<lo||U>hi)){if(!SIM[k]){SIM[k]=true;GAME.stats.volt++;award(-20,'Spanning buiten band');pushAlarm(`Rail ${nm}: spanning ${U.toFixed(2).replace('.',',')} kV buiten band (${lo},0 – ${hi},0 kV)`,'warn');}}
     else if(U>=lo+m&&U<=hi-m)SIM[k]=false;});
 }
-function thermal(dm){const h=hourOf(),amb=11+5*Math.sin((h-9)/24*2*Math.PI);
+function thermal(dm){const h=hourOf(),amb=ambient(h);
   TR.forEach(T=>{const t=D[T],on=EN.has(T+'h'),k=t.S/(t.fans?t.rAF:t.rON);
     const target=amb+(on?8:0)+62*k*k;t.oil+=(target-t.oil)*(1-Math.exp(-dm/32));
     if(!t.fans&&on&&t.oil>65){t.fans=true;pushAlarm(`${T}: olie ${t.oil.toFixed(0)} °C – koeling ONAF, ventilatoren aan`,'info');}
@@ -1339,7 +1393,7 @@ function feederTick(dm){
   ringProtection(dm);}
 
 // ---------------------------------------------------------- storingen
-function randomEvent(){const r=Math.random();if(r<0.3)return lineFault();if(r<0.75)return feederFault();return trafoFault();}
+function randomEvent(){const r=Math.random();if(r<(WX.cur.thunder>0.5?0.65:0.3))return lineFault();if(r<0.75)return feederFault();return trafoFault();}
 function lineFault(forceL,forcePerm){const c=['L1','L2'].filter(L=>SIM.lines[L].avail&&!SIM.lines[L].maint&&D[L+'-Q0'].state===1&&(!forceL||L===forceL));if(!c.length)return forceL?null:feederFault();const L=pick(c),ln=SIM.lines[L];
   lightning(L);const perm=forcePerm??(Math.random()<DIFFS[GAME.diff].perm);
   setTimeout(()=>{tripBreaker(L+'-Q0');pushAlarm(`${L} ${ln.name}: blikseminslag – distantiebeveiliging zone 1, ${L}-Q0 UIT`,'crit');
@@ -1419,7 +1473,7 @@ function simStep(dtReal){
   const dm=dtReal*SIM.speed/60;SIM.t+=dm;
   SIM.timers.sort((a,b)=>a.at-b.at);while(SIM.timers.length&&SIM.timers[0].at<=SIM.t)SIM.timers.shift().fn();
   CONS.forEach(f=>{f.noise+=(-f.noise*0.08+(Math.random()-0.5)*0.03)*Math.min(1,dm);});
-  computeFlows();thermal(dm);regulate(dm);feederTick(dm);
+  weatherTick(dm);computeFlows();thermal(dm);regulate(dm);feederTick(dm);
   let off=0;CONS.forEach(c=>{off+=custOff(c);});
   FEEDERS.forEach(f=>{if(f.ring)return;const on=EN.has(f.node);
     if(on!==f.wasOn){f.wasOn=on;restoreTrack(f,on);if(on)pushAlarm(`${f.id} ${f.name}: spanning hersteld`,'ok');
@@ -1437,7 +1491,7 @@ function simStep(dtReal){
 
 // ============================================================ spelmodi, score en scenario's
 const DIFFS={rustig:{label:'Rustig',ev:1.6,perm:0.2},normaal:{label:'Normaal',ev:1,perm:0.35},zwaar:{label:'Zwaar',ev:0.6,perm:0.5}};
-const GAME={mode:'free',diff:'normaal',score:1000,ended:false,events:true,tasks:true,storm:0,endT:null,t0:0,obj:[],flags:{},countdown:null,
+const GAME={mode:'free',diff:'normaal',season:'herfst',score:1000,ended:false,events:true,tasks:true,endT:null,t0:0,obj:[],flags:{},countdown:null,
   stats:{fast:0,thermal:0,volt:0,recloseFault:0,clpTrips:0,maxOil:0,hospMin:0}};
 const TOTAL_CUST=CONS.reduce((s,c)=>s+c.cust,0);
 const at=(min,fn)=>SIM.timers.push({at:GAME.t0+min,fn});
@@ -1459,7 +1513,7 @@ const MODES={
       {t:'Niet inschakelen op de kabelfout',check:()=>GAME.stats.recloseFault?'fail':null,final:()=>true},noIncidents]},
   storm:{scen:true,name:'Storm boven Drenthe',tag:'Scenario · gemiddeld',start:16,dur:90,
     desc:'Onweersbuien trekken over de lijnen en het AR-relais van L2 is defect. Houd het licht aan.',
-    setup(){GAME.storm=1;lastEnvElev=-999;Object.assign(SIM.lines.L2,{ar:false,arBroken:true});
+    weather:'onweer',setup(){Object.assign(SIM.lines.L2,{ar:false,arBroken:true});
       pushAlarm('KNMI: code oranje – zware onweersbuien met windstoten boven Drenthe','warn');
       pushAlarm('Storing: AR-relais L2 defect – na een afschakeling moet je L2-Q0 zelf inschakelen','warn');
       at(2,()=>lineFault('L1',false));at(9,()=>lineFault('L2',false));at(16,()=>feederFault('F3'));at(24,()=>lineFault('L1',true));
@@ -1504,6 +1558,7 @@ function applyMode(id){
   SIM.t=(params.get('t')?parseFloat(params.get('t')):m.start)*60;GAME.t0=SIM.t;GAME.endT=m.dur?SIM.t+m.dur:null;
   GAME.events=!m.scen;GAME.tasks=!m.scen;SIM.nextEvent=SIM.t+16*df.ev;SIM.nextTaskAt=m.scen?Infinity:SIM.t+3;
   FEEDERS.concat(RING.stations).forEach(f=>{f.unplanned=false;f.wait=0;});
+  setSeason(m.season||GAME.season);if(m.weather)setWeather(m.weather,true,true);else if(!WX.lock)setWeather(pickWeather(),false,true);
   initTaps();m.setup&&m.setup();
   GAME.obj=m.obj?m.obj().map(o=>({...o,state:null})):[];
   computeFlows();FEEDERS.concat(RING.stations).forEach(f=>{f.wasOn=EN.has(f.node);});
@@ -1520,7 +1575,7 @@ function gameTick(dm,dtReal){
   GAME.obj.forEach(o=>{if(o.state||!o.check)return;const r=o.check();if(!r)return;o.state=r;
     if(r==='done'){award(100,'Doel behaald');pushAlarm(`Doel behaald: ${o.t}`,'ok');}else{award(-150,'Doel gemist');pushAlarm(`Doel gemist: ${o.t}`,'warn');}});
   if(GAME.countdown&&GAME.obj.every(o=>o.state))GAME.countdown=null;
-  if(GAME.storm&&Math.random()<dtReal/14)lightningAt(V3(rnd(-1500,1500),0,rnd(-1600,-300)),rnd(2500,5000));
+  if(WX.cur.thunder>0.5&&Math.random()<dtReal/14)lightningAt(V3(rnd(-1500,1500),0,rnd(-1600,-300)),rnd(2500,5000));
   if(GAME.endT&&SIM.t>=GAME.endT)endGame();
 }
 function grade(s){return s>=1400?['A+',5]:s>=1250?['A',4]:s>=1100?['B',3]:s>=950?['C',2]:s>=750?['D',1]:['E',0];}
@@ -1562,6 +1617,7 @@ function renderMenu(){
   $('#menu').innerHTML=`<div class="mh">Dienst draaien</div><div class="mgrid">${['free','day','eve'].map(card).join('')}</div>
     <div class="mh">Scenario's</div><div class="mgrid">${['zkh','storm','piek','blackout'].map(card).join('')}</div>`;
   document.querySelectorAll('#diff button').forEach(b=>b.classList.toggle('on',b.dataset.d===GAME.diff));
+  document.querySelectorAll('#season button').forEach(b=>b.classList.toggle('on',b.dataset.s===GAME.season));
 }
 const fmtDur=min=>min>=60?`${Math.floor(min/60)}:${String(Math.floor(min%60)).padStart(2,'0')} u`:`${Math.max(0,Math.ceil(min))} min`;
 function gameHeader(){if(GAME.mode==='free')return '';const m=MODES[GAME.mode];
@@ -1700,13 +1756,20 @@ function distGain(p){const d=camera.position.distanceTo(p);return clamp(1.2/(1+(
 function updateAudio(){if(!AudioSys.ctx)return;let hum=0,fan=0;
   TR.forEach(T=>{const v=VIEWS[T];if(!v)return;const d=camera.position.distanceTo(v.center),att=1/(1+(d/16)**2);
     if(EN.has(T+'h'))hum+=(0.35+0.65*D[T].S/D[T].rAF)*att;if(D[T].fans&&EN.has(T+'h'))fan+=att;});
-  AudioSys.set(AudioSys.hum,clamp(hum*0.2,0,0.3));AudioSys.set(AudioSys.fan,clamp(fan*0.12,0,0.15));AudioSys.set(AudioSys.rain,GAME.storm?(camInside()?0.025:0.07):0);AudioSys.set(AudioSys.wind,GAME.storm?0.09:0.03);}
+  AudioSys.set(AudioSys.hum,clamp(hum*0.2,0,0.3));AudioSys.set(AudioSys.fan,clamp(fan*0.12,0,0.15));AudioSys.set(AudioSys.rain,WX.cur.rain*(camInside()?0.025:0.08));AudioSys.set(AudioSys.wind,0.025+0.05*WX.cur.cloud+0.05*WX.cur.thunder);}
 
 // regen (alleen tijdens storm)
 const RAIN=(()=>{const N=3500,pos=new Float32Array(N*6),drops=[];for(let i=0;i<N;i++)drops.push([rnd(-70,70),rnd(0,45),rnd(-70,70),rnd(24,32)]);
   const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(pos,3));
   const ls=new THREE.LineSegments(g,new THREE.LineBasicMaterial({color:0x9aa6b4,transparent:true,opacity:0.3,depthWrite:false}));ls.frustumCulled=false;ls.visible=false;scene.add(ls);return{N,pos,drops,g,ls};})();
-function updateRain(dt){const r=RAIN;r.ls.visible=!!GAME.storm&&!camInside();if(!r.ls.visible)return;r.ls.position.set(camera.position.x,0,camera.position.z);
+// sneeuw
+const SNOW=(()=>{const N=2600,pos=new Float32Array(N*3),fl=[];for(let i=0;i<N;i++)fl.push([rnd(-60,60),rnd(0,35),rnd(-60,60),rnd(0.7,1.4),Math.random()*6]);
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  const p=new THREE.Points(g,new THREE.PointsMaterial({color:0xffffff,size:0.11,transparent:true,opacity:0.9,depthWrite:false}));p.frustumCulled=false;p.visible=false;scene.add(p);return{N,pos,fl,g,p};})();
+function updateSnow(dt){const s=SNOW;s.p.visible=WX.cur.snow>0.08&&!camInside();if(!s.p.visible)return;s.p.material.opacity=0.9*Math.min(1,WX.cur.snow*1.3);s.p.position.set(camera.position.x,0,camera.position.z);const t=performance.now()/1000;
+  for(let i=0;i<s.N;i++){const f=s.fl[i];f[1]-=f[3]*dt;if(f[1]<0){f[1]+=35;f[0]=rnd(-60,60);f[2]=rnd(-60,60);}const k=i*3;s.pos[k]=f[0]+Math.sin(t*0.8+f[4])*0.6;s.pos[k+1]=f[1];s.pos[k+2]=f[2]+Math.cos(t*0.6+f[4])*0.6;}
+  s.g.attributes.position.needsUpdate=true;}
+function updateRain(dt){updateSnow(dt);const r=RAIN;r.ls.visible=WX.cur.rain>0.08&&!camInside();if(!r.ls.visible)return;r.ls.material.opacity=0.32*Math.min(1,WX.cur.rain*1.2);r.ls.position.set(camera.position.x,0,camera.position.z);
   for(let i=0;i<r.N;i++){const d=r.drops[i];d[1]-=d[3]*dt;d[0]+=4*dt;if(d[1]<0){d[1]+=45;d[0]=rnd(-70,70);}if(d[0]>70)d[0]-=140;
     const k=i*6;r.pos[k]=d[0];r.pos[k+1]=d[1];r.pos[k+2]=d[2];r.pos[k+3]=d[0]-0.12;r.pos[k+4]=d[1]+0.9;r.pos[k+5]=d[2];}
   r.g.attributes.position.needsUpdate=true;}
@@ -2328,10 +2391,10 @@ function updateNPCs(dt){
 
 
 // ============================================================ HUD + bediening
-const START_DATE=new Date(2026,9,3);
 function updateHUD(){
   $('#clock').textContent=fmtClock(SIM.t);
-  const dt=new Date(START_DATE.getTime()+Math.floor(SIM.t/1440)*864e5);
+  $('#wx').textContent=wxLabel();
+  const dt=new Date(SEASON.date.getTime()+Math.floor(SIM.t/1440)*864e5);
   $('#date').textContent=dt.toLocaleDateString('nl-NL',{weekday:'short',day:'numeric',month:'short'})+(SIM.paused&&!$('#intro').classList.contains('hidden')?'':SIM.paused?' · PAUZE':'');
   $('#kOff').textContent=SIM.off.toLocaleString('nl-NL');$('#kpiOff').classList.toggle('bad',SIM.off>0);
   $('#kCml').textContent=Math.round(SIM.cml).toLocaleString('nl-NL');
@@ -2376,20 +2439,22 @@ function startGame(id){$('#intro').classList.add('hidden');AudioSys.init();contr
   const v=VIEWPOS[0];flyTo(v[0].clone(),v[1].clone(),2);}
 $('#menu').addEventListener('click',e=>{const b=e.target.closest('[data-mode]');if(b)startGame(b.dataset.mode);});
 $('#diff').addEventListener('click',e=>{const b=e.target.closest('[data-d]');if(b){GAME.diff=b.dataset.d;renderMenu();}});
+$('#season').addEventListener('click',e=>{const b=e.target.closest('[data-s]');if(b){GAME.season=b.dataset.s;setSeason(GAME.season);updateSky(hourOf());renderMenu();}});
 addEventListener('pointerdown',()=>AudioSys.init(),{once:true});
 
 // ============================================================ start
 buildSLD();buildLabels();buildColliders();initTaps();updateSky(hourOf());updateSLD();updateHUD();renderTasks();
 document.querySelectorAll('#speed button').forEach(b=>b.classList.remove('on'));
 $('#loading').remove();
-if(DIFFS[params.get('diff')])GAME.diff=params.get('diff');
+if(DIFFS[params.get('diff')])GAME.diff=params.get('diff');if(SEASONS[params.get('season')])GAME.season=params.get('season');setSeason(GAME.season);
+if(params.get('weer')&&WX_TYPES[params.get('weer')])setWeather(params.get('weer'),true,true);
 if(params.has('play'))startGame(params.get('play'));
 else if(params.has('autostart')){$('#intro').classList.add('hidden');applyMode('free');setSpeed(60);}
 else{renderMenu();$('#intro').classList.remove('hidden');controls.autoRotate=true;controls.autoRotateSpeed=0.35;}
 if(params.has('night'))updateSky(22);
 if(params.has('view')){const v=VIEWPOS[+params.get('view')];camera.position.copy(v[0]);controls.target.copy(v[1]);controls.autoRotate=false;controls.update();}
 
-window.OS={SIM,D,enterKiosk,ROOMS,blockedAt,RING,NPCS,crewDispatch,ringFault,FP,enterFP,exitFP,pickCenter,camera,camInside,setRatio,setTab,GAME,MODES,applyMode,endGame,EN:()=>EN,FLOW,operate,tapStep,setAVR,resetLockout,toggleAR,regulate,computeFlows,randomEvent,lineFault,feederFault,trafoFault,offerTask,simStep,FEEDERS};
+window.OS={SIM,D,WX,setWeather,setSeason,SEASONS,ambient,enterKiosk,ROOMS,blockedAt,RING,NPCS,crewDispatch,ringFault,FP,enterFP,exitFP,pickCenter,camera,camInside,setRatio,setTab,GAME,MODES,applyMode,endGame,EN:()=>EN,FLOW,operate,tapStep,setAVR,resetLockout,toggleAR,regulate,computeFlows,randomEvent,lineFault,feederFault,trafoFault,offerTask,simStep,FEEDERS};
 const clock=new THREE.Clock();let hudT=0,skyT=0;
 renderer.setAnimationLoop(()=>{
   const dt=Math.min(0.1,clock.getDelta());

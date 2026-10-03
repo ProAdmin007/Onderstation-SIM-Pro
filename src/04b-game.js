@@ -1,7 +1,7 @@
 
 // ============================================================ spelmodi, score en scenario's
 const DIFFS={rustig:{label:'Rustig',ev:1.6,perm:0.2},normaal:{label:'Normaal',ev:1,perm:0.35},zwaar:{label:'Zwaar',ev:0.6,perm:0.5}};
-const GAME={mode:'free',diff:'normaal',score:1000,ended:false,events:true,tasks:true,storm:0,endT:null,t0:0,obj:[],flags:{},countdown:null,
+const GAME={mode:'free',diff:'normaal',season:'herfst',score:1000,ended:false,events:true,tasks:true,endT:null,t0:0,obj:[],flags:{},countdown:null,
   stats:{fast:0,thermal:0,volt:0,recloseFault:0,clpTrips:0,maxOil:0,hospMin:0}};
 const TOTAL_CUST=CONS.reduce((s,c)=>s+c.cust,0);
 const at=(min,fn)=>SIM.timers.push({at:GAME.t0+min,fn});
@@ -23,7 +23,7 @@ const MODES={
       {t:'Niet inschakelen op de kabelfout',check:()=>GAME.stats.recloseFault?'fail':null,final:()=>true},noIncidents]},
   storm:{scen:true,name:'Storm boven Drenthe',tag:'Scenario · gemiddeld',start:16,dur:90,
     desc:'Onweersbuien trekken over de lijnen en het AR-relais van L2 is defect. Houd het licht aan.',
-    setup(){GAME.storm=1;lastEnvElev=-999;Object.assign(SIM.lines.L2,{ar:false,arBroken:true});
+    weather:'onweer',setup(){Object.assign(SIM.lines.L2,{ar:false,arBroken:true});
       pushAlarm('KNMI: code oranje – zware onweersbuien met windstoten boven Drenthe','warn');
       pushAlarm('Storing: AR-relais L2 defect – na een afschakeling moet je L2-Q0 zelf inschakelen','warn');
       at(2,()=>lineFault('L1',false));at(9,()=>lineFault('L2',false));at(16,()=>feederFault('F3'));at(24,()=>lineFault('L1',true));
@@ -68,6 +68,7 @@ function applyMode(id){
   SIM.t=(params.get('t')?parseFloat(params.get('t')):m.start)*60;GAME.t0=SIM.t;GAME.endT=m.dur?SIM.t+m.dur:null;
   GAME.events=!m.scen;GAME.tasks=!m.scen;SIM.nextEvent=SIM.t+16*df.ev;SIM.nextTaskAt=m.scen?Infinity:SIM.t+3;
   FEEDERS.concat(RING.stations).forEach(f=>{f.unplanned=false;f.wait=0;});
+  setSeason(m.season||GAME.season);if(m.weather)setWeather(m.weather,true,true);else if(!WX.lock)setWeather(pickWeather(),false,true);
   initTaps();m.setup&&m.setup();
   GAME.obj=m.obj?m.obj().map(o=>({...o,state:null})):[];
   computeFlows();FEEDERS.concat(RING.stations).forEach(f=>{f.wasOn=EN.has(f.node);});
@@ -84,7 +85,7 @@ function gameTick(dm,dtReal){
   GAME.obj.forEach(o=>{if(o.state||!o.check)return;const r=o.check();if(!r)return;o.state=r;
     if(r==='done'){award(100,'Doel behaald');pushAlarm(`Doel behaald: ${o.t}`,'ok');}else{award(-150,'Doel gemist');pushAlarm(`Doel gemist: ${o.t}`,'warn');}});
   if(GAME.countdown&&GAME.obj.every(o=>o.state))GAME.countdown=null;
-  if(GAME.storm&&Math.random()<dtReal/14)lightningAt(V3(rnd(-1500,1500),0,rnd(-1600,-300)),rnd(2500,5000));
+  if(WX.cur.thunder>0.5&&Math.random()<dtReal/14)lightningAt(V3(rnd(-1500,1500),0,rnd(-1600,-300)),rnd(2500,5000));
   if(GAME.endT&&SIM.t>=GAME.endT)endGame();
 }
 function grade(s){return s>=1400?['A+',5]:s>=1250?['A',4]:s>=1100?['B',3]:s>=950?['C',2]:s>=750?['D',1]:['E',0];}
@@ -126,6 +127,7 @@ function renderMenu(){
   $('#menu').innerHTML=`<div class="mh">Dienst draaien</div><div class="mgrid">${['free','day','eve'].map(card).join('')}</div>
     <div class="mh">Scenario's</div><div class="mgrid">${['zkh','storm','piek','blackout'].map(card).join('')}</div>`;
   document.querySelectorAll('#diff button').forEach(b=>b.classList.toggle('on',b.dataset.d===GAME.diff));
+  document.querySelectorAll('#season button').forEach(b=>b.classList.toggle('on',b.dataset.s===GAME.season));
 }
 const fmtDur=min=>min>=60?`${Math.floor(min/60)}:${String(Math.floor(min%60)).padStart(2,'0')} u`:`${Math.max(0,Math.ceil(min))} min`;
 function gameHeader(){if(GAME.mode==='free')return '';const m=MODES[GAME.mode];

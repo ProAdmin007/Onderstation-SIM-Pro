@@ -54,6 +54,21 @@ Een 3D-onderstationsimulator die in de browser draait (Three.js, geen installati
 - **Monteurs:** collega's in een veiligheidsvest lopen het station of de wijk in bij inspecties, werkopdrachten en kabelfouten, en vertrekken weer als het werk klaar is.
 - **SCADA** heeft tabbladen voor 10 kV, 20 kV en de ring. Zoomen kan met de knoppen **−/+**, met `Ctrl` + scrollwiel of met de toetsen `+` en `−` (75–250 %). Het paneel wordt dan mee breder.
 
+## Seizoenen en weer
+- **Seizoenen** (lente, zomer, herfst, winter) kies je in het menu. Ze bepalen:
+  - zonsopkomst, zonsondergang en zonnehoogte;
+  - de buitentemperatuur;
+  - de belasting (winter: verwarming, zomer: airco);
+  - de opbrengst van het zonnepark;
+  - de schakeltijden van kassen en straatverlichting.
+- **Weer:** helder, bewolkt, regen, onweer, mist, sneeuw (met sneeuwdek) en hittegolf, wisselend tijdens een dienst. Het weer beïnvloedt:
+  - lucht en zicht;
+  - neerslag;
+  - transformatortemperaturen;
+  - zonne-opbrengst;
+  - de kans op blikseminslag.
+- De weerindicator met de buitentemperatuur staat in de bovenbalk. Voor testen kun je `?season=winter&weer=sneeuw` gebruiken.
+
 ## Spelmodi en score
 - **Vrije dienst:** eindeloos spelen.
 - **Dagdienst** (07–15 u) en **Avonddienst** (15–23 u): een dienst van 8 uur met een dienstrapport, een cijfer (A+ t/m E), sterren, badges en een highscore.

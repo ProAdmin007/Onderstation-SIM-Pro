@@ -227,6 +227,7 @@ body.menu #fpPause{display:none!important}
 .swr span{color:var(--muted);line-height:1.25}.swr span b{color:var(--text);font-family:var(--mono);margin-right:6px}
 .swr button{padding:4px 0;font-size:11px;font-weight:700}.swr .cur{opacity:.35}
 .npc{position:absolute;left:0;top:0;background:rgba(242,140,26,.92);color:#1a1206;font:600 11px Inter;padding:3px 8px;border-radius:10px;white-space:nowrap;will-change:transform}
+.wx{font-size:12px;color:var(--text);background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:8px;padding:5px 10px;white-space:nowrap}
 #loading{position:fixed;inset:0;display:grid;place-items:center;color:var(--muted);font-family:var(--mono);z-index:20;background:var(--bg)}
 @media (max-width:1250px){#tasks{width:290px}#devpanel{left:314px}#scada{width:min(calc(400px * var(--sldz,1)),64vw)}.kpi{min-width:90px;padding:3px 9px}}
 @media (max-width:1050px){.kpis .kpi:nth-child(n+3){display:none}#views{left:12px;bottom:calc(var(--alarmH) + 24px)}}
@@ -242,6 +243,7 @@ body.menu #fpPause{display:none!important}
     <div><div class="t">OS Zuidwolde</div><div class="s">110/10 kV · Bedrijfsvoering</div></div>
   </div>
   <div class="clock"><div id="clock">09:00</div><div id="date">za 3 okt</div></div>
+  <div id="wx" class="wx" title="Weer en buitentemperatuur"></div>
   <div class="speed" id="speed">
     <button data-s="0" title="Pauze (spatie)">❚❚</button>
     <button data-s="1">1×</button>
@@ -304,6 +306,8 @@ body.menu #fpPause{display:none!important}
         <li><b>Volgorde:</b> eerst de vermogenschakelaar (Q0) uit, dan pas scheiders openen. Andersom geeft een vlamboog.</li>
         <li><b>Score:</b> snel herstel en behaalde doelen leveren punten op; klantminuten, incidenten en overbelasting kosten punten.</li>
       </ul>
+      <div class="mh">Seizoen</div>
+      <div class="seg" id="season"><button data-s="lente">Lente</button><button data-s="zomer">Zomer</button><button data-s="herfst" class="on">Herfst</button><button data-s="winter">Winter</button></div>
       <div class="mh">Moeilijkheid</div>
       <div class="seg" id="diff"><button data-d="rustig">Rustig</button><button data-d="normaal" class="on">Normaal</button><button data-d="zwaar">Zwaar</button></div>
       <div class="keys">slepen: draaien · rechts: schuiven · scroll: zoom<br>1–9 camera · V rondlopen · spatie/P pauze · Esc menu · L labels · M geluid</div>

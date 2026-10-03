@@ -145,9 +145,9 @@ const stars=(()=>{const n=1800,p=new Float32Array(n*3);for(let i=0;i<n;i++){cons
   const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(p,3));const s=new THREE.Points(g,new THREE.PointsMaterial({color:0xffffff,size:1.6,sizeAttenuation:false,transparent:true,opacity:0,fog:false,depthWrite:false}));scene.add(s);return s;})();
 const fogDay=new THREE.Color(0xc3cfd9),fogDusk=new THREE.Color(0xc9a184),fogNight=new THREE.Color(0x0b1119),tmpC=new THREE.Color();
 let NIGHT=0;
-function sunAngles(h){const rise=7.85,set=19.2,len=set-rise;let el;
-  if(h>=rise&&h<=set)el=33*Math.sin(Math.PI*(h-rise)/len);else{const d=h<rise?rise-h:h-set;el=-Math.min(45,d*13);}
-  const az=105+(h-rise)/len*150;return {el,az};}
+function sunAngles(h){const S=SEASON,rise=S.rise,set=S.set,len=set-rise;let el;
+  if(h>=rise&&h<=set)el=S.maxEl*Math.sin(Math.PI*(h-rise)/len);else{const d=h<rise?rise-h:h-set;el=-Math.min(45,d*13);}
+  const az=S.az[0]+(h-rise)/len*(S.az[1]-S.az[0]);return {el,az};}
 function updateSky(h){
   const {el,az}=sunAngles(h);const e=THREE.MathUtils.degToRad(el),a=THREE.MathUtils.degToRad(az);
   const dir=V3(Math.sin(a)*Math.cos(e),Math.sin(e),-Math.cos(a)*Math.cos(e));
@@ -162,7 +162,11 @@ function updateSky(h){
   envGroundMat.color.setRGB(0.3*day+0.01,0.32*day+0.012,0.27*day+0.015);
   stars.material.opacity=NIGHT;
   SPOTS.forEach(s=>s.intensity=NIGHT>0.35?900:0);MAT.lamp.emissiveIntensity=NIGHT>0.35?6:0;
-  if(GAME.storm){sun.intensity*=0.15;hemi.intensity*=0.8;scene.environmentIntensity*=0.5;scene.fog.density=0.0026;scene.fog.color.multiplyScalar(0.6);su.turbidity.value=20;su.rayleigh.value=0.6;su.mieCoefficient.value=0.03;}
-  else{scene.fog.density=0.0008;su.turbidity.value=5.5;su.rayleigh.value=1.5;su.mieCoefficient.value=0.004;}
-  if(Math.abs(el-lastEnvElev)>0.6){lastEnvElev=el;updateEnv();}
+  // weer: bewolking dempt de zon, neerslag en mist maken het zicht korter
+  const W=WX.cur,cl=W.cloud;
+  sun.intensity*=1-0.85*cl;hemi.intensity*=1-0.2*cl;scene.environmentIntensity*=1-0.5*cl;
+  scene.fog.density=0.0008+0.0016*cl*(0.3+W.rain+W.snow)+0.006*W.fog;scene.fog.color.multiplyScalar(1-0.35*cl*(1-W.fog));
+  su.turbidity.value=5.5+14.5*cl;su.rayleigh.value=1.5-0.9*cl;su.mieCoefficient.value=0.004+0.026*cl;
+  applySnowCover();
+  if(Math.abs(el-lastEnvElev)>0.6||Math.abs(cl-lastEnvCloud)>0.08){lastEnvElev=el;lastEnvCloud=cl;updateEnv();}
 }

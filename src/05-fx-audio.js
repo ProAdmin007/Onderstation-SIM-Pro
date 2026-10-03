@@ -64,13 +64,20 @@ function distGain(p){const d=camera.position.distanceTo(p);return clamp(1.2/(1+(
 function updateAudio(){if(!AudioSys.ctx)return;let hum=0,fan=0;
   TR.forEach(T=>{const v=VIEWS[T];if(!v)return;const d=camera.position.distanceTo(v.center),att=1/(1+(d/16)**2);
     if(EN.has(T+'h'))hum+=(0.35+0.65*D[T].S/D[T].rAF)*att;if(D[T].fans&&EN.has(T+'h'))fan+=att;});
-  AudioSys.set(AudioSys.hum,clamp(hum*0.2,0,0.3));AudioSys.set(AudioSys.fan,clamp(fan*0.12,0,0.15));AudioSys.set(AudioSys.rain,GAME.storm?(camInside()?0.025:0.07):0);AudioSys.set(AudioSys.wind,GAME.storm?0.09:0.03);}
+  AudioSys.set(AudioSys.hum,clamp(hum*0.2,0,0.3));AudioSys.set(AudioSys.fan,clamp(fan*0.12,0,0.15));AudioSys.set(AudioSys.rain,WX.cur.rain*(camInside()?0.025:0.08));AudioSys.set(AudioSys.wind,0.025+0.05*WX.cur.cloud+0.05*WX.cur.thunder);}
 
 // regen (alleen tijdens storm)
 const RAIN=(()=>{const N=3500,pos=new Float32Array(N*6),drops=[];for(let i=0;i<N;i++)drops.push([rnd(-70,70),rnd(0,45),rnd(-70,70),rnd(24,32)]);
   const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(pos,3));
   const ls=new THREE.LineSegments(g,new THREE.LineBasicMaterial({color:0x9aa6b4,transparent:true,opacity:0.3,depthWrite:false}));ls.frustumCulled=false;ls.visible=false;scene.add(ls);return{N,pos,drops,g,ls};})();
-function updateRain(dt){const r=RAIN;r.ls.visible=!!GAME.storm&&!camInside();if(!r.ls.visible)return;r.ls.position.set(camera.position.x,0,camera.position.z);
+// sneeuw
+const SNOW=(()=>{const N=2600,pos=new Float32Array(N*3),fl=[];for(let i=0;i<N;i++)fl.push([rnd(-60,60),rnd(0,35),rnd(-60,60),rnd(0.7,1.4),Math.random()*6]);
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  const p=new THREE.Points(g,new THREE.PointsMaterial({color:0xffffff,size:0.11,transparent:true,opacity:0.9,depthWrite:false}));p.frustumCulled=false;p.visible=false;scene.add(p);return{N,pos,fl,g,p};})();
+function updateSnow(dt){const s=SNOW;s.p.visible=WX.cur.snow>0.08&&!camInside();if(!s.p.visible)return;s.p.material.opacity=0.9*Math.min(1,WX.cur.snow*1.3);s.p.position.set(camera.position.x,0,camera.position.z);const t=performance.now()/1000;
+  for(let i=0;i<s.N;i++){const f=s.fl[i];f[1]-=f[3]*dt;if(f[1]<0){f[1]+=35;f[0]=rnd(-60,60);f[2]=rnd(-60,60);}const k=i*3;s.pos[k]=f[0]+Math.sin(t*0.8+f[4])*0.6;s.pos[k+1]=f[1];s.pos[k+2]=f[2]+Math.cos(t*0.6+f[4])*0.6;}
+  s.g.attributes.position.needsUpdate=true;}
+function updateRain(dt){updateSnow(dt);const r=RAIN;r.ls.visible=WX.cur.rain>0.08&&!camInside();if(!r.ls.visible)return;r.ls.material.opacity=0.32*Math.min(1,WX.cur.rain*1.2);r.ls.position.set(camera.position.x,0,camera.position.z);
   for(let i=0;i<r.N;i++){const d=r.drops[i];d[1]-=d[3]*dt;d[0]+=4*dt;if(d[1]<0){d[1]+=45;d[0]=rnd(-70,70);}if(d[0]>70)d[0]-=140;
     const k=i*6;r.pos[k]=d[0];r.pos[k+1]=d[1];r.pos[k+2]=d[2];r.pos[k+3]=d[0]-0.12;r.pos[k+4]=d[1]+0.9;r.pos[k+5]=d[2];}
   r.g.attributes.position.needsUpdate=true;}

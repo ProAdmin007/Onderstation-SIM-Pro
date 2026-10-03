@@ -100,16 +100,16 @@ function profile(k,h){const g=(m,s)=>Math.exp(-(((h-m)/s)**2));
     case 'city':return 0.42+0.35*g(10.5,3)+0.25*g(15,3)+0.35*g(18.5,2);
     case 'ind':return h>6.5&&h<17.5?0.85+0.08*Math.sin(h*1.3):0.33;
     case 'hosp':return 0.72+0.18*g(11,4);
-    case 'green':return (h<6.5||h>17.5)?1.0:0.32+0.1*g(12,3);
-    case 'ovl':return (h<7.7||h>19.1)?1:0;   // schemerschakeling straatverlichting
-    case 'pv':return -Math.max(0,Math.sin(Math.PI*(h-8)/11))*(0.75+0.25*Math.sin(SIM.t*0.011));}return 1;}
+    case 'green':return (h<SEASON.rise+1||h>SEASON.set-1)?1.0:0.32+0.1*g(12,3);   // assimilatiebelichting als het donker is
+    case 'ovl':return isDark(h,0.25)||WX.cur.fog>0.6?1:0;   // schemerschakeling straatverlichting
+    case 'pv':{const r=SEASON.rise+0.5,s=SEASON.set-0.5;return -Math.max(0,Math.sin(Math.PI*(h-r)/(s-r)))*SEASON.pv*(1-0.8*WX.cur.cloud)*(1-0.85*WX.cover)*(0.88+0.12*Math.sin(SIM.t*0.011));}}return 1;}
 let EN=new Set(),ER=new Set();
 const FLOW={P110:0,U110:110,U:{RA:0,RB:0,RC:0},lineP:{L1:0,L2:0},load:0,load20:0,groups:[]};
 const TAP_STEP=0.0125,Z_DROP=0.05;
 function computeFlows(){
   EN=energized();ER=earthed();const h=hourOf();const busLoad={RA:0,RB:0,RC:0};
   FLOW.TAG=supplyTags();const feederP={};
-  CONS.forEach(c=>{c.demand=c.base*profile(c.kind,h)*(1+c.noise)*(c.gen?1:c.clp);c.Pc=EN.has(c.node)?c.demand*(1-c.outFrac):0;
+  CONS.forEach(c=>{c.demand=c.base*profile(c.kind,h)*(c.gen?1:seasonMul(c.kind))*(1+c.noise)*(c.gen?1:c.clp);c.Pc=EN.has(c.node)?c.demand*(1-c.outFrac):0;
     const t=FLOW.TAG[c.node];if(t&&c.Pc){busLoad[t.bus]+=c.Pc;if(t.cb)feederP[t.cb]=(feederP[t.cb]||0)+c.Pc;}});
   FEEDERS.forEach(f=>{f.P=feederP[f.cb]||0;D[f.cb].I=Math.abs(f.P)*kA(f.bus);});
   RING.stations.forEach(s=>{s.P=s.groups.reduce((a,g)=>a+g.Pc,0);});
@@ -236,7 +236,7 @@ function regulate(dm){
     if(U>0&&(U<lo||U>hi)){if(!SIM[k]){SIM[k]=true;GAME.stats.volt++;award(-20,'Spanning buiten band');pushAlarm(`Rail ${nm}: spanning ${U.toFixed(2).replace('.',',')} kV buiten band (${lo},0 – ${hi},0 kV)`,'warn');}}
     else if(U>=lo+m&&U<=hi-m)SIM[k]=false;});
 }
-function thermal(dm){const h=hourOf(),amb=11+5*Math.sin((h-9)/24*2*Math.PI);
+function thermal(dm){const h=hourOf(),amb=ambient(h);
   TR.forEach(T=>{const t=D[T],on=EN.has(T+'h'),k=t.S/(t.fans?t.rAF:t.rON);
     const target=amb+(on?8:0)+62*k*k;t.oil+=(target-t.oil)*(1-Math.exp(-dm/32));
     if(!t.fans&&on&&t.oil>65){t.fans=true;pushAlarm(`${T}: olie ${t.oil.toFixed(0)} °C – koeling ONAF, ventilatoren aan`,'info');}
@@ -264,7 +264,7 @@ function feederTick(dm){
   ringProtection(dm);}
 
 // ---------------------------------------------------------- storingen
-function randomEvent(){const r=Math.random();if(r<0.3)return lineFault();if(r<0.75)return feederFault();return trafoFault();}
+function randomEvent(){const r=Math.random();if(r<(WX.cur.thunder>0.5?0.65:0.3))return lineFault();if(r<0.75)return feederFault();return trafoFault();}
 function lineFault(forceL,forcePerm){const c=['L1','L2'].filter(L=>SIM.lines[L].avail&&!SIM.lines[L].maint&&D[L+'-Q0'].state===1&&(!forceL||L===forceL));if(!c.length)return forceL?null:feederFault();const L=pick(c),ln=SIM.lines[L];
   lightning(L);const perm=forcePerm??(Math.random()<DIFFS[GAME.diff].perm);
   setTimeout(()=>{tripBreaker(L+'-Q0');pushAlarm(`${L} ${ln.name}: blikseminslag – distantiebeveiliging zone 1, ${L}-Q0 UIT`,'crit');
@@ -344,7 +344,7 @@ function simStep(dtReal){
   const dm=dtReal*SIM.speed/60;SIM.t+=dm;
   SIM.timers.sort((a,b)=>a.at-b.at);while(SIM.timers.length&&SIM.timers[0].at<=SIM.t)SIM.timers.shift().fn();
   CONS.forEach(f=>{f.noise+=(-f.noise*0.08+(Math.random()-0.5)*0.03)*Math.min(1,dm);});
-  computeFlows();thermal(dm);regulate(dm);feederTick(dm);
+  weatherTick(dm);computeFlows();thermal(dm);regulate(dm);feederTick(dm);
   let off=0;CONS.forEach(c=>{off+=custOff(c);});
   FEEDERS.forEach(f=>{if(f.ring)return;const on=EN.has(f.node);
     if(on!==f.wasOn){f.wasOn=on;restoreTrack(f,on);if(on)pushAlarm(`${f.id} ${f.name}: spanning hersteld`,'ok');
