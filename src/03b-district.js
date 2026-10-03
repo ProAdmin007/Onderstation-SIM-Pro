@@ -47,11 +47,11 @@ function kiosk(s){
   // casco
   box(KW+0.1,KY,KD+0.1,MAT.concreteDark,root,0,KY/2,0);
   box(KW,KH,KT,DM.kiosk,root,0,Y+KH/2,-fz);box(KT,KH,KD,DM.kiosk,root,-hw+KT/2,Y+KH/2,0);box(KT,KH,KD,DM.kiosk,root,hw-KT/2,Y+KH/2,0);
-  box(0.55,KH,KT,DM.kiosk,root,-2.225,Y+KH/2,fz);box(3.35,KH,KT,DM.kiosk,root,0.825,Y+KH/2,fz);box(1.1,0.6,KT,DM.kiosk,root,-1.4,Y+KH-0.3,fz);
+  box(0.45,KH,KT,DM.kiosk,root,-2.275,Y+KH/2,fz);box(3.25,KH,KT,DM.kiosk,root,0.875,Y+KH/2,fz);box(1.3,0.6,KT,DM.kiosk,root,-1.4,Y+KH-0.3,fz);
   box(KW+0.3,0.18,KD+0.3,MAT.concreteDark,root,0,Y+KH+0.09,0);
   const fl=mesh(new THREE.PlaneGeometry(KW-0.3,KD-0.3),IM.floor,root,0,Y+0.01,0);fl.rotation.x=-Math.PI/2;fl.castShadow=false;
   // openstaande deur en dichte trafodeur
-  const dg=new THREE.Group();dg.position.set(-1.95,Y,fz+0.08);dg.rotation.y=-1.75;root.add(dg);box(1.1,2.15,0.05,MAT.door,dg,0.55,1.08,0);
+  const dg=new THREE.Group();dg.position.set(-2.05,Y,fz+0.08);dg.rotation.y=-1.75;root.add(dg);box(1.3,2.15,0.05,MAT.door,dg,0.65,1.08,0);
   box(1.3,2.15,0.05,MAT.door,root,1.65,Y+1.08,fz+0.1);
   const hz=mesh(new THREE.PlaneGeometry(0.32,0.4),MAT.hazard,root,1.65,Y+1.6,fz+0.135);hz.castShadow=false;
   plate(s.id,root,0.4,Y+1.9,fz+0.08,0,0.42);
@@ -60,7 +60,7 @@ function kiosk(s){
   const flm=mat({color:0x331a00,emissive:0xff8a00,emissiveIntensity:0});const lamp=cyl(0.09,0.09,0.16,flm,root,2.1,Y+KH+0.26,1.2,12);lamp.userData.dyn=true;
   regView(s.id,root,()=>{flm.emissiveIntensity=s.flag&&(performance.now()%900<450)?4:0;},{box:(()=>{const a=L2W(-hw,-KD/2),b=L2W(hw,KD/2);return new THREE.Box3(V3(Math.min(a[0],b[0]),0,Math.min(a[1],b[1])),V3(Math.max(a[0],b[0]),Y+KH+0.3,Math.max(a[1],b[1])));})(),labelPos:V3(x,4,z)});
   // botsingsvlakken: muren met deuropening, inrichting
-  wrect(-hw,-KD/2,hw,-KD/2+KT);wrect(-hw,-KD/2,-hw+KT,KD/2);wrect(hw-KT,-KD/2,hw,KD/2);wrect(-hw,KD/2-KT,-1.95,KD/2);wrect(-0.85,KD/2-KT,hw,KD/2);
+  wrect(-hw,-KD/2,hw,-KD/2+KT);wrect(-hw,-KD/2,-hw+KT,KD/2);wrect(hw-KT,-KD/2,hw,KD/2);wrect(-hw,KD/2-KT,-2.05,KD/2);wrect(-0.75,KD/2-KT,hw,KD/2);
   const idx=ROOMS.length+1,ri=L2W(-hw+KT,-KD/2+KT),rj=L2W(hw-KT,KD/2-KT);
   const room={idx,kiosk:true,kioskId:s.id,x0:Math.min(ri[0],rj[0]),x1:Math.max(ri[0],rj[0]),z0:Math.min(ri[1],rj[1]),z1:Math.max(ri[1],rj[1]),y0:Y,y1:Y+KH,doors:[],
     cx:L2W(-0.8,0.6)[0],cz:L2W(-0.8,0.6)[1],yaw:ry};ROOMS.push(room);
@@ -98,9 +98,18 @@ function kiosk(s){
   const tg=new THREE.Group();root.add(tg);
   box(1.0,1.1,0.8,MAT.trafo,tg,1.75,Y+0.75,0.1);
   for(let k=0;k<6;k++){box(0.03,0.85,0.25,MAT.trafo,tg,1.3+k*0.18,Y+0.72,0.62);box(0.03,0.85,0.25,MAT.trafo,tg,1.3+k*0.18,Y+0.72,-0.42);}
-  for(let k=0;k<3;k++){const bx=1.5+k*0.25;cyl(0.05,0.06,0.18,MAT.black,tg,bx,Y+1.4,0.25,10);rod(V3(bx,Y+1.48,0.25),V3(bx,Y+1.6,0.25),0.035,MAT.cable,tg,6);
-    rod(V3(bx,Y+1.6,0.25),V3(-1.6+(k-1)*0.12,Y+0.05,-0.6),0.035,MAT.cable,root,6);}
-  for(let k=0;k<4;k++){const bx=1.45+k*0.2;cyl(0.03,0.03,0.14,MAT.white,tg,bx,Y+1.37,-0.15,8);rod(V3(bx,Y+1.45,-0.15),V3(1.0,Y+1.65+k*0.07,lf-0.05),0.018,MAT.copper,root,5);}
+  // MS: haakse steekconnectoren op de trafo, kabels recht naar beneden de vloergoot in
+  for(let k=0;k<3;k++){const bx=1.5+k*0.25;cyl(0.05,0.06,0.18,MAT.black,tg,bx,Y+1.4,0.25,10);
+    rod(V3(bx,Y+1.5,0.25),V3(bx,Y+1.5,0.62),0.04,MAT.black,tg,8);rod(V3(bx,Y+1.5,0.62),V3(bx,Y+0.02,0.62),0.035,MAT.cable,tg,8);}
+  // kabelgoot met traanplaten: van de trafo langs de voorwand naar het T-veld van de RMU
+  const goot=(x0,z0,x1,z1)=>{const L=Math.hypot(x1-x0,z1-z0),n=Math.max(1,Math.round(L/0.6));for(let i=0;i<n;i++){const t=(i+0.5)/n;
+    const p=box(Math.abs(x1-x0)>0.01?L/n-0.01:0.34,0.018,Math.abs(x1-x0)>0.01?0.34:L/n-0.01,MAT.galvDark,root,x0+(x1-x0)*t,Y+0.009,z0+(z1-z0)*t);p.castShadow=false;}};
+  goot(2.2,0.62,-1.6,0.62);goot(-1.6,0.45,-1.6,-0.62);
+  // LS: koperrails omhoog, als bundel over het gaas en van boven het LS-rek in
+  for(let k=0;k<4;k++){const bx=1.45+k*0.2,h=Y+2.3+k*0.07,bz=-0.15,rz=lf-0.05,ry=Y+1.62+k*0.07,cu=(a,b)=>rod(a,b,0.016,MAT.copper,root,5);
+    cyl(0.03,0.03,0.14,MAT.white,tg,bx,Y+1.37,bz,8);
+    cu(V3(bx,Y+1.44,bz),V3(bx,h,bz));cu(V3(bx,h,bz),V3(0.98-k*0.05,h,bz));cu(V3(0.98-k*0.05,h,bz),V3(0.98-k*0.05,h,rz));cu(V3(0.98-k*0.05,h,rz),V3(0.98-k*0.05,ry,rz));}
+  for(const x of[1.3,2.2])rod(V3(x,Y+2.2,-0.15),V3(x,Y+KH,-0.15),0.012,MAT.galv,root,4);   // ophangstangen
   const tw=L2W(1.75,0.1);D[s.id+'-TR'].node=s.node+'v';
   regView(s.id+'-TR',tg,null,{inside:idx,labelPos:V3(tw[0],Y+1.9,tw[1]),flyPos:V3(...L2W(0.3,0.9).flatMap((v,i)=>i?[Y+1.65,v]:[v])),flyTarget:V3(tw[0],Y+0.9,tw[1])});
   // ---- inrichting

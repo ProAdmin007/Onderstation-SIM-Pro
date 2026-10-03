@@ -6,7 +6,7 @@ function addRect(x0,z0,x1,z1){FP.rects.push([Math.min(x0,x1),Math.min(z0,z1),Mat
 function buildColliders(){
   FP.rects=[];
   // apparatuur: de selectieboxen van alle velden en panelen
-  Object.values(VIEWS).forEach(v=>{const d=D[v.id];if(!d||['bld','line','bb','es'].includes(d.type))return;addRect(v.box.min.x,v.box.min.z,v.box.max.x,v.box.max.z);});
+  Object.values(VIEWS).forEach(v=>{const d=D[v.id];if(!d||['bld','line','bb','es','kiosk','mstr'].includes(d.type))return;addRect(v.box.min.x,v.box.min.z,v.box.max.x,v.box.max.z);});
   // portaalkolommen en railsteunen
   for(const L of['L1','L2'])for(const sx of[-6,6]){const x=BAYS[L].x+sx;addRect(x-0.6,-36.6,x+0.6,-35.4);}
   for(const x of[-38,-20,0,18,44,70])for(const z of[-3.7,3.7])addRect(x-0.45,z-0.45,x+0.45,z+0.45);
