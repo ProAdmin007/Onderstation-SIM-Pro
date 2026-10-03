@@ -114,6 +114,16 @@ const TESTS = [
       assert(r.na === 0, 'na melden niet geschakeld');
       assert(r.msgs >= 2, `te weinig portofoonberichten: ${r.msgs}`);
   } },
+  { name: 'schakelbrief: foute volgorde afgekeurd, goede goedgekeurd, afwijking bestraft', query: '?autostart&t=10', async run(p) {
+      const r = await p.evaluate(() => { T.quiet(); OS.SIM.paused = false; OS.offerTask(); const t = OS.task(), keys = OS.taskActs(t).map(s => OS.actKey(s.act));
+        t.brief = keys.slice().reverse(); const fout = OS.briefSubmit();
+        t.brief = keys.slice(); const goed = OS.briefSubmit(); const s0 = OS.GAME.score;
+        const verkeerd = keys.find((k, i) => i > 1 && OS.D[k.split(':')[0]].state !== +k.split(':')[1]).split(':'); OS.operate(verkeerd[0], +verkeerd[1]);   // een latere stap eerst = afwijking
+        return { n: keys.length, fout, goed, approved: t.approved, straf: Math.round(s0 - OS.GAME.score) }; });
+      assert(r.n >= 4, `te weinig stappen in de schakelbrief: ${r.n}`);
+      assert(!r.fout && r.goed && r.approved, `controle klopt niet: fout ${r.fout} goed ${r.goed}`);
+      assert(r.straf >= 25, `geen straf voor afwijking: ${r.straf}`);
+  } },
   { name: 'Esc opent pauzemenu en pauzeert', query: '?autostart', async run(p) {
       await p.keyboard.press('Escape'); await sleep(800);
       const r = await p.evaluate(() => ({ menu: !document.querySelector('#pauseMenu').classList.contains('hidden'), paused: OS.SIM.paused }));

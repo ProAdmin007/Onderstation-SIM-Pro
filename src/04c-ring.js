@@ -54,10 +54,10 @@ function ringProtection(dm=0){
 function ringTask(){const s=pick(RING.secs.filter(x=>x.a&&x.b&&x.a+'-R'!==x.ring.nop)),l=s.a+'-R',r=s.b+'-L',st=RING.stations.find(x=>x.id===s.a),nop=s.ring.nop;
   return{title:`Kabelwerk ring: ${secName(s)}`,crew:()=>({box:VIEWS[st.id].box,say:`Mof leggen ${secName(s)}`,from:V3(st.pos[0]+6,0,st.pos[1]-8),rel:[l,r]}),
     crewRel:[l,r],desc:`Een kabelploeg legt een nieuwe mof in de kabel tussen ${secName(s)}. Sluit eerst het normaal-open punt, zodat niemand zonder stroom komt, en schakel dan de kabel vrij.`,steps:[
-    {t:`Sluit het normaal-open punt ${nop}`,ok:()=>D[nop].state===1},
-    {t:`Open lastscheider ${l}`,ok:()=>D[l].state===0},
-    {t:`Open lastscheider ${r}`,ok:()=>D[r].state===0,done:()=>pushAlarm(`Werkvergunning afgegeven – kabelwerk ${secName(s)} gestart`,'info')},
+    {t:`Sluit het normaal-open punt ${nop}`,act:[nop,1],why:'Eerst het normaal-open punt sluiten, zodat alle stations gevoed blijven als je de kabel vrijschakelt.',ok:()=>D[nop].state===1},
+    {t:`Open lastscheider ${l}`,act:[l,0],grp:'open',why:'Daarna de kabel aan beide kanten vrijschakelen.',ok:()=>D[l].state===0},
+    {t:`Open lastscheider ${r}`,act:[r,0],grp:'open',why:'Daarna de kabel aan beide kanten vrijschakelen.',ok:()=>D[r].state===0,done:()=>pushAlarm(`Werkvergunning afgegeven – kabelwerk ${secName(s)} gestart`,'info')},
     {t:'Kabelwerk in uitvoering…',wait:35},
-    {t:`Werk gereed – sluit ${r}`,ok:()=>D[r].state===1},
-    {t:`Sluit ${l}`,ok:()=>D[l].state===1},
-    {t:`Open het normaal-open punt ${nop} weer`,ok:()=>D[nop].state===0}]};}
+    {t:`Werk gereed – sluit ${r}`,act:[r,1],grp:'dicht',why:'Na het werk de kabel weer aan beide kanten bijschakelen.',ok:()=>D[r].state===1},
+    {t:`Sluit ${l}`,act:[l,1],grp:'dicht',why:'Na het werk de kabel weer aan beide kanten bijschakelen.',ok:()=>D[l].state===1},
+    {t:`Open het normaal-open punt ${nop} weer`,act:[nop,0],why:'Als laatste het normaal-open punt weer openen: de ring is dan genormaliseerd.',ok:()=>D[nop].state===0}]};}

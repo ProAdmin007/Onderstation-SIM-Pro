@@ -107,7 +107,8 @@ function renderTasks(){
   if(!TASK&&!GAME.tasks){$('#taskCode').textContent='';body.innerHTML=gh||'<div class="idle">Geen werkopdrachten in dit scenario.</div>';return;}
   if(!TASK){$('#taskCode').textContent='';body.innerHTML=gh+`<div class="idle">Geen actieve werkopdracht. Houd de installatie in de gaten en reageer op meldingen.<br><br><b style="color:var(--text)">Volgende opdracht</b> rond ${fmtClock(SIM.nextTaskAt)}.</div>`;return;}
   $('#taskCode').textContent=TASK.code;
-  body.innerHTML=gh+`<h3>${TASK.title}</h3><p>${TASK.desc}</p>`+TASK.steps.map((s,i)=>`<div class="step ${i<TASK.i?'done':i===TASK.i?'cur':''}"><span class="b">${i<TASK.i?'✓':''}</span><span>${s.t}${i===TASK.i&&s.wait!=null&&s.until!=null?` <span class="tag">tot ${fmtClock(s.until)}</span>`:''}</span></div>`).join('');
+  if(TASK.pool&&!TASK.approved){body.innerHTML=gh+`<h3>${TASK.title}</h3><p>${TASK.desc}</p><div class="bf-status">📝 Schakelbrief nog niet goedgekeurd${TASK.tries?` · ${TASK.tries}× afgekeurd`:''}</div><button class="primary bf-open" data-brief>Schakelbrief opstellen</button>`;return;}
+  body.innerHTML=gh+`<h3>${TASK.title}</h3><p>${TASK.desc}</p>${TASK.pool?'<div class="bf-status ok">✓ Schakelbrief goedgekeurd</div>':''}`+TASK.steps.map((s,i)=>`<div class="step ${i<TASK.i?'done':i===TASK.i?'cur':''}"><span class="b">${i<TASK.i?'✓':''}</span><span>${s.t}${i===TASK.i&&s.wait!=null&&s.until!=null?` <span class="tag">tot ${fmtClock(s.until)}</span>`:''}</span></div>`).join('');
 }
 
 // ============================================================ apparaatpaneel

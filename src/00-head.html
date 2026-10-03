@@ -231,6 +231,17 @@ body.menu #fpPause{display:none!important}
 #radio{position:fixed;inset:0;display:grid;place-items:center;background:rgba(6,9,12,.5);z-index:11}
 #radio .rmsg{color:#c4ccd4;font-size:13px;margin:4px 0 10px;line-height:1.5}
 .al.radio .lv{background:#b48cff;border-radius:50%}.al.radio{color:#e2d4ff}
+#brief{position:fixed;inset:0;display:grid;place-items:center;background:rgba(6,9,12,.66);z-index:12;overflow:auto;padding:20px 0}
+.card.bf{width:min(820px,95vw);padding:24px 28px;background:rgba(13,17,22,.96);border:1px solid var(--line);border-radius:16px}
+.bf h2{margin:6px 0 6px;font-size:21px}.bf-desc{color:#c4ccd4;font-size:13px;line-height:1.5;margin:0 0 6px}
+.bf-cols{display:grid;grid-template-columns:1fr 1.15fr;gap:22px}
+.bf-act{display:block;width:100%;text-align:left;margin-bottom:5px;font-size:12.5px}
+.bf-act:hover{border-color:var(--accent);background:rgba(240,164,58,.08)}
+.bf-list{margin:0;padding-left:22px}.bf-list li{display:flex;align-items:center;gap:6px;padding:5px 0;font-size:12.5px;border-bottom:1px solid var(--line)}
+.bf-list li span{flex:1}.bf-msg{margin-top:12px;padding:9px 12px;border-radius:8px;background:rgba(240,164,58,.1);border:1px solid rgba(240,164,58,.35);font-size:12.5px;color:#ffe2b5}
+.bf-status{font-size:12px;color:var(--accent);margin:4px 0 8px}.bf-status.ok{color:var(--green)}
+.bf-open{background:var(--accent);color:#1a1206;border:none;font-weight:700;width:100%;padding:9px}
+@media (max-width:760px){.bf-cols{grid-template-columns:1fr}}
 #loading{position:fixed;inset:0;display:grid;place-items:center;color:var(--muted);font-family:var(--mono);z-index:20;background:var(--bg)}
 @media (max-width:1250px){#tasks{width:290px}#devpanel{left:314px}#scada{width:min(calc(400px * var(--sldz,1)),64vw)}.kpi{min-width:90px;padding:3px 9px}}
 @media (max-width:1050px){.kpis .kpi:nth-child(n+3){display:none}#views{left:12px;bottom:calc(var(--alarmH) + 24px)}}
@@ -292,6 +303,7 @@ body.menu #fpPause{display:none!important}
 <div id="toast"></div>
 <div id="notice"></div>
 <div id="radio" class="hidden"></div>
+<div id="brief" class="hidden"></div>
 <div id="pauseMenu" class="hidden"><div class="card pm">
   <div class="eyebrow">Gepauzeerd</div><div class="pm-mode" id="pmMode"></div>
   <div class="pm-score"><span id="pmScore">0</span><small>punten</small><em id="pmBest"></em></div>

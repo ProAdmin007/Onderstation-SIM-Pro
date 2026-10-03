@@ -167,6 +167,7 @@ function operate(id,to,opts={}){
   let arc=null;
   if(d.type==='ds'){const cb=D[d.cb];if(cb.state===1&&(EN.has(d.a)||EN.has(d.b)))arc=d.a;}
   const trDead=d.tr&&id.endsWith('-Q0')&&!EN.has(d.tr+'h');
+  briefWatch(id,to);
   d.state=to;d.ops++;SIM.manualFlag=true;if(d.type==='cb'&&to===1)d.springAt=performance.now()+7000;
   pushAlarm(`Bediening ${id} ${actionText(d,to)}`,'op');
   const v=VIEWS[id];
@@ -296,40 +297,41 @@ function trafoFault(forceT){const c=TR.filter(T=>!D[T].blocked&&D[T+'-Q0'].state
 // ---------------------------------------------------------- werkopdrachten
 let TASK=null,taskSeq=411;
 function lineTask(L){const ln=SIM.lines[L];return{crew:()=>({box:VIEWS[L+'-Q9'].box,say:`Onderhoud scheider ${L}-Q9`,rel:[L+'-Q9',L+'-Q8',L+'-Q1',L+'-Q0']}),title:`Onderhoud lijnveld ${L} (${ln.name})`,desc:`Monteurs gaan scheider ${L}-Q9 smeren en inspecteren. Schakel het veld vrij en aard de lijn.`,steps:[
-  {t:`Schakel ${L}-Q0 UIT`,ok:()=>D[L+'-Q0'].state===0},
-  {t:`Open lijnscheider ${L}-Q9`,ok:()=>D[L+'-Q9'].state===0},
-  {t:`Open railscheider ${L}-Q1`,ok:()=>D[L+'-Q1'].state===0,done:()=>{ln.maint=true;pushAlarm(`TenneT: verzoek ontvangen – lijn ${L} wordt aan de overzijde vrijgeschakeld`,'info');
+  {t:`Schakel ${L}-Q0 UIT`,act:[L+'-Q0',0],why:'Eerst de vermogenschakelaar uit: alleen die kan de belastingstroom onderbreken.',ok:()=>D[L+'-Q0'].state===0},
+  {t:`Open lijnscheider ${L}-Q9`,act:[L+'-Q9',0],grp:'open',why:'Scheiders pas openen of sluiten als de vermogenschakelaar van het veld uit staat.',ok:()=>D[L+'-Q9'].state===0},
+  {t:`Open railscheider ${L}-Q1`,act:[L+'-Q1',0],grp:'open',why:'Scheiders pas openen of sluiten als de vermogenschakelaar van het veld uit staat.',ok:()=>D[L+'-Q1'].state===0,done:()=>{ln.maint=true;pushAlarm(`TenneT: verzoek ontvangen – lijn ${L} wordt aan de overzijde vrijgeschakeld`,'info');
     addTimer(3,()=>{if(ln.avail){ln.avail=false;ln.reason='vrijgeschakeld voor werkzaamheden';}pushAlarm(`TenneT: lijn ${L} spanningsloos – aarden toegestaan`,'info');});}},
   {t:'Wacht op TenneT: lijn spanningsloos',ok:()=>!ln.avail},
-  {t:`Sluit aardschakelaar ${L}-Q8`,ok:()=>D[L+'-Q8'].state===1,done:()=>pushAlarm(`Werkvergunning afgegeven – werkzaamheden ${L} gestart`,'info')},
+  {t:`Sluit aardschakelaar ${L}-Q8`,act:[L+'-Q8',1],why:'Pas aarden als alles open is en de kabel of lijn spanningsloos is. Wacht op TenneT.',ok:()=>D[L+'-Q8'].state===1,done:()=>pushAlarm(`Werkvergunning afgegeven – werkzaamheden ${L} gestart`,'info')},
   {t:'Werkzaamheden in uitvoering…',wait:40},
-  {t:`Werk gereed – open aardschakelaar ${L}-Q8`,ok:()=>D[L+'-Q8'].state===0,done:()=>{ln.maint=false;addTimer(3,()=>{ln.avail=true;ln.reason='';pushAlarm(`TenneT: lijn ${L} weer onder spanning`,'ok');});}},
+  {t:`Werk gereed – open aardschakelaar ${L}-Q8`,act:[L+'-Q8',0],why:'Eerst de aarding opheffen – anders schakel je straks in op een geaard deel.',ok:()=>D[L+'-Q8'].state===0,done:()=>{ln.maint=false;addTimer(3,()=>{ln.avail=true;ln.reason='';pushAlarm(`TenneT: lijn ${L} weer onder spanning`,'ok');});}},
   {t:'Wacht op TenneT: lijn onder spanning',ok:()=>ln.avail},
-  {t:`Sluit ${L}-Q1 en ${L}-Q9`,ok:()=>D[L+'-Q1'].state&&D[L+'-Q9'].state},
-  {t:`Schakel ${L}-Q0 IN`,ok:()=>D[L+'-Q0'].state===1}]};}
+  {t:`Sluit railscheider ${L}-Q1`,act:[L+'-Q1',1],grp:'dicht',why:'Scheiders pas openen of sluiten als de vermogenschakelaar van het veld uit staat.',ok:()=>D[L+'-Q1'].state===1},
+  {t:`Sluit lijnscheider ${L}-Q9`,act:[L+'-Q9',1],grp:'dicht',why:'Scheiders pas openen of sluiten als de vermogenschakelaar van het veld uit staat.',ok:()=>D[L+'-Q1'].state&&D[L+'-Q9'].state},
+  {t:`Schakel ${L}-Q0 IN`,act:[L+'-Q0',1],why:'Als laatste de vermogenschakelaar weer inschakelen.',ok:()=>D[L+'-Q0'].state===1}]};}
 function feederTask(F){const f=FEEDERS.find(x=>x.id===F);return{feeder:F,title:`Kabelwerk ${F} (${f.name})`,desc:`Een kabelploeg vervangt een mof in ${F}. De storingsdienst schakelt de klanten eerst om via het net; daarna kun je het veld vrijschakelen en de kabel aarden.`,steps:[
   {t:'Wacht: storingsdienst schakelt klanten om (terugvoeding)',wait:6,done:()=>{f.backfed=true;pushAlarm(`Storingsdienst: klanten van ${F} omgeschakeld via het net – ${f.cb} mag UIT`,'info');}},
-  {t:`Schakel ${f.cb} UIT`,ok:()=>D[f.cb].state===0},
-  {t:`Sluit aardschakelaar ${F}-Q8 (kabelzijde)`,ok:()=>D[F+'-Q8'].state===1,done:()=>pushAlarm(`Werkvergunning afgegeven – kabelwerk ${F} gestart`,'info')},
+  {t:`Schakel ${f.cb} UIT`,act:[f.cb,0],why:'Eerst het veld uitschakelen (de klanten zijn omgeschakeld).',ok:()=>D[f.cb].state===0},
+  {t:`Sluit aardschakelaar ${F}-Q8 (kabelzijde)`,act:[F+'-Q8',1],why:'Pas aarden als alles open is en de kabel of lijn spanningsloos is.',ok:()=>D[F+'-Q8'].state===1,done:()=>pushAlarm(`Werkvergunning afgegeven – kabelwerk ${F} gestart`,'info')},
   {t:'Kabelwerk in uitvoering…',wait:35},
-  {t:`Werk gereed – open ${F}-Q8`,ok:()=>D[F+'-Q8'].state===0},
-  {t:`Schakel ${f.cb} IN`,ok:()=>D[f.cb].state===1&&EN.has(f.node),done:()=>addTimer(4,()=>{f.backfed=false;pushAlarm(`Storingsdienst: terugvoeding ${F} opgeheven – normale situatie`,'ok');})}]};}
+  {t:`Werk gereed – open ${F}-Q8`,act:[F+'-Q8',0],why:'Eerst de aarding opheffen – anders schakel je straks in op een geaard deel.',ok:()=>D[F+'-Q8'].state===0},
+  {t:`Schakel ${f.cb} IN`,act:[f.cb,1],why:'Als laatste het veld weer inschakelen.',ok:()=>D[f.cb].state===1&&EN.has(f.node),done:()=>addTimer(4,()=>{f.backfed=false;pushAlarm(`Storingsdienst: terugvoeding ${F} opgeheven – normale situatie`,'ok');})}]};}
 function reserveTask(main){const r=main==='T1'?'10':'20',lvM=TR_LV[main][0],lvR=r==='10'?'V-T3':'W-T3',rail=r==='10'?'rail A/B':'rail C';
   return{tr:main,crew:()=>({box:VIEWS[main].box,say:`Onderhoud ${main}`,rel:[main+'-Q0',main+'-Q1',lvM]}),title:`Onderhoud ${main} met reservetransformator`,desc:`${main} gaat uit bedrijf voor ${main==='T1'?'onderhoud aan de trappenschakelaar':'oliebemonstering'}. Neem eerst reservetransformator T3 op ${r} kV in bedrijf, zodat de klanten niets merken.`,steps:[
   {t:`Zorg dat T3 op ${r} kV staat (omschakelaar, alleen spanningsloos)`,ok:()=>D.T3.ratio===r},
   {t:'Zet T3 onder spanning (T3-Q1 en T3-Q0 IN)',ok:()=>EN.has('T3h')},
-  {t:`Schakel ${lvR} IN – ${main} en T3 parallel op ${rail}`,ok:()=>D[lvR].state===1},
-  {t:`Schakel ${lvM} UIT`,ok:()=>D[lvM].state===0},
-  {t:`Schakel ${main}-Q0 UIT (110 kV)`,ok:()=>D[main+'-Q0'].state===0},
-  {t:`Open railscheider ${main}-Q1`,ok:()=>D[main+'-Q1'].state===0,done:()=>pushAlarm(`Werkvergunning afgegeven – onderhoud ${main} gestart`,'info')},
+  {t:`Schakel ${lvR} IN – ${main} en T3 parallel op ${rail}`,act:[lvR,1],why:'Eerst de reserve parallel bijschakelen, zodat de klanten niets merken.',ok:()=>D[lvR].state===1},
+  {t:`Schakel ${lvM} UIT`,act:[lvM,0],why:'Pas als de reserve meedraait het MS-veld van de hoofdtrafo uitschakelen.',ok:()=>D[lvM].state===0},
+  {t:`Schakel ${main}-Q0 UIT (110 kV)`,act:[main+'-Q0',0],why:'Daarna de transformator aan de 110 kV-kant afschakelen.',ok:()=>D[main+'-Q0'].state===0},
+  {t:`Open railscheider ${main}-Q1`,act:[main+'-Q1',0],why:'Scheiders pas openen of sluiten als de vermogenschakelaar van het veld uit staat.',ok:()=>D[main+'-Q1'].state===0,done:()=>pushAlarm(`Werkvergunning afgegeven – onderhoud ${main} gestart`,'info')},
   {t:'Onderhoud in uitvoering…',wait:30},
-  {t:`Werk gereed – sluit ${main}-Q1`,ok:()=>D[main+'-Q1'].state===1},
-  {t:`Schakel ${main}-Q0 IN`,ok:()=>D[main+'-Q0'].state===1},
-  {t:`Schakel ${lvM} IN`,ok:()=>D[lvM].state===1},
-  {t:`Schakel ${lvR} UIT – T3 terug naar warme reserve`,ok:()=>D[lvR].state===0}]};}
+  {t:`Werk gereed – sluit ${main}-Q1`,act:[main+'-Q1',1],why:'Terug in omgekeerde volgorde: eerst de railscheider, met de vermogenschakelaar nog uit.',ok:()=>D[main+'-Q1'].state===1},
+  {t:`Schakel ${main}-Q0 IN`,act:[main+'-Q0',1],why:'Dan de transformator aan de 110 kV-kant onder spanning brengen.',ok:()=>D[main+'-Q0'].state===1},
+  {t:`Schakel ${lvM} IN`,act:[lvM,1],why:'Het MS-veld pas inschakelen als de transformator onder spanning staat.',ok:()=>D[lvM].state===1},
+  {t:`Schakel ${lvR} UIT – T3 terug naar warme reserve`,act:[lvR,0],why:'Als laatste de reserve weer afschakelen.',ok:()=>D[lvR].state===0}]};}
 let taskCycle=0;
 function offerTask(){const defs=[()=>reserveTask('T2'),()=>ringTask(),()=>lineTask('L2'),()=>reserveTask('T1'),()=>feederTask('G3'),()=>feederTask('F5'),()=>lineTask('L1')];
-  TASK=defs[taskCycle++%defs.length]();TASK.i=0;TASK.code='WV-2026-'+(taskSeq++);
+  TASK=defs[taskCycle++%defs.length]();TASK.i=0;TASK.code='WV-2026-'+(taskSeq++);briefInit(TASK);
   pushAlarm(`Nieuwe werkopdracht ${TASK.code}: ${TASK.title}`,'info');AudioSys.chime();renderTasks();}
 function taskTick(){if(!TASK)return;let guard=0;
   while(TASK&&guard++<20){const st=TASK.steps[TASK.i];
