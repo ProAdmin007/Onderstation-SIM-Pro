@@ -54,6 +54,14 @@ Een 3D-onderstationsimulator die in de browser draait (Three.js, geen installati
 - **Monteurs:** collega's in een veiligheidsvest lopen het station of de wijk in bij inspecties, werkopdrachten en kabelfouten, en vertrekken weer als het werk klaar is.
 - **SCADA** heeft tabbladen voor 10 kV, 20 kV en de ring. Zoomen kan met de knoppen **−/+**, met `Ctrl` + scrollwiel of met de toetsen `+` en `−` (75–250 %). Het paneel wordt dan mee breder.
 
+## Geluid
+Alle geluid wordt in de browser gemaakt (Web Audio) en hangt af van waar je bent:
+- **In de MS-gebouwen:** zoemen van de installatie en ventilatie.
+- **In een MS-station:** trafobrom die meegroeit met de belasting.
+- **Op het 110 kV-terrein:** transformatorbrom en corona-geknetter (sterker bij regen en mist).
+- **In de wijk:** verkeersgeruis, passerende auto's, vogels overdag en krekels op zomer- en lenteavonden.
+- **Overal:** wind, regen en onweer.
+
 ## Seizoenen en weer
 - **Seizoenen** (lente, zomer, herfst, winter) kies je in het menu. Ze bepalen:
   - zonsopkomst, zonsondergang en zonnehoogte;

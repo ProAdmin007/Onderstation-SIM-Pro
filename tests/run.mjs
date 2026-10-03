@@ -97,6 +97,12 @@ const TESTS = [
       assert(r.ended && r.report, 'scenario niet afgesloten met rapport');
       assert(r.obj[0] === 'done', `ziekenhuisdoel niet gehaald: ${r.obj}`);
   } },
+  { name: 'geluid per plek werkt binnen, op het terrein en in de wijk', query: '?autostart&t=13', async run(p) {
+      const r = await p.evaluate(() => { T.quiet(); OS.AudioSys.init(); const out = [];
+        for (const [x, y, z] of [[0, 30, 10], [-60, 1.7, 130], [0, 2.1, 50]]) { OS.camera.position.set(x, y, z); OS.camera.updateMatrixWorld(); OS.updateAudio(); out.push(OS.camInside()); }
+        OS.enterKiosk('MS1'); OS.camera.position.set(OS.FP.pos.x, 2, OS.FP.pos.z); OS.updateAudio(); out.push(OS.camInside()); return out; });
+      assert(r[2] === 1 && r[3] > 2, `plekherkenning klopt niet: ${r}`);
+  } },
   { name: 'Esc opent pauzemenu en pauzeert', query: '?autostart', async run(p) {
       await p.keyboard.press('Escape'); await sleep(800);
       const r = await p.evaluate(() => ({ menu: !document.querySelector('#pauseMenu').classList.contains('hidden'), paused: OS.SIM.paused }));

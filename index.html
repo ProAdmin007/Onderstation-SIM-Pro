@@ -1732,7 +1732,11 @@ const AudioSys={ctx:null,muted:false,
     const len=c.sampleRate*2,b=c.createBuffer(1,len,c.sampleRate),d=b.getChannelData(0);for(let i=0;i<len;i++)d[i]=Math.random()*2-1;this.nbuf=b;
     this.hum=c.createGain();this.hum.gain.value=0;const lp=c.createBiquadFilter();lp.type='lowpass';lp.frequency.value=700;this.hum.connect(lp);lp.connect(this.master);
     [[100,1],[200,0.5],[300,0.22],[400,0.12],[500,0.05]].forEach(([f,a])=>{const o=c.createOscillator();o.frequency.value=f+(Math.random()-0.5)*0.4;const g=c.createGain();g.gain.value=a;o.connect(g);g.connect(this.hum);o.start();});
-    this.fan=this.loopNoise('bandpass',380,0.8,0);this.wind=this.loopNoise('lowpass',320,0.5,0.03);this.rain=this.loopNoise('highpass',1100,0.4,0);},
+    this.fan=this.loopNoise('bandpass',380,0.8,0);this.wind=this.loopNoise('lowpass',320,0.5,0.03);this.rain=this.loopNoise('highpass',1100,0.4,0);
+    // plek-geluiden: brom binnen (installatie/trafo), verkeer in de wijk, corona op het hoogspanningsterrein
+    this.room=c.createGain();this.room.gain.value=0;const rl=c.createBiquadFilter();rl.type='lowpass';rl.frequency.value=900;this.room.connect(rl);rl.connect(this.master);
+    [[100,1],[200,0.35],[300,0.18],[50,0.25]].forEach(([f,a])=>{const o=c.createOscillator();o.frequency.value=f+(Math.random()-0.5)*0.3;const g=c.createGain();g.gain.value=a;o.connect(g);g.connect(this.room);o.start();});
+    this.vent=this.loopNoise('bandpass',700,0.5,0);this.traffic=this.loopNoise('lowpass',170,0.7,0);this.corona=this.loopNoise('highpass',5200,0.6,0);},
   loopNoise(type,f,q,gain){const c=this.ctx,s=c.createBufferSource();s.buffer=this.nbuf;s.loop=true;const fl=c.createBiquadFilter();fl.type=type;fl.frequency.value=f;fl.Q.value=q;const g=c.createGain();g.gain.value=gain;s.connect(fl);fl.connect(g);g.connect(this.master);s.start();return g;},
   set(g,v){if(this.ctx)g.gain.setTargetAtTime(v,this.ctx.currentTime,0.3);},
   burst({type='bandpass',f=1000,q=1,gain=0.5,dur=0.3,attack=0.003,delay=0}={}){if(!this.ctx||gain<=0.001)return;const c=this.ctx,t=c.currentTime+delay;const s=c.createBufferSource();s.buffer=this.nbuf;
@@ -1749,11 +1753,25 @@ const AudioSys={ctx:null,muted:false,
   thunder(){this.burst({type:'lowpass',f:170,gain:1.3,dur:4.8,attack:0.1});this.burst({type:'lowpass',f:700,gain:0.5,dur:1.6,attack:0.02});this.burst({type:'lowpass',f:260,gain:0.7,dur:3,attack:0.4,delay:0.7});},
   alarm(level){if(level==='crit'){[0,0.18,0.36].forEach((d,i)=>this.tone({f:i%2?660:880,gain:0.1,dur:0.14,delay:d}));}else if(level==='warn')this.tone({f:740,gain:0.07,dur:0.16});},
   ready(){[523,659,784,1047].forEach((f,i)=>this.tone({f,type:'triangle',gain:0.13,dur:0.55,delay:i*0.12}));this.tone({f:1568,gain:0.05,dur:0.9,delay:0.48});},
+  chirp(v=1){const b=2600+Math.random()*2400,n=2+Math.floor(Math.random()*4);for(let i=0;i<n;i++)this.tone({f:b*(0.9+Math.random()*0.25),f2:b*(1.15+Math.random()*0.3),gain:0.018*v,dur:0.07+Math.random()*0.05,delay:i*(0.1+Math.random()*0.06)});},
+  carPass(v=1){this.burst({type:'lowpass',f:420,q:0.6,gain:0.07*v,dur:3.6,attack:1.6});this.tone({f:95,f2:72,type:'sawtooth',gain:0.012*v,dur:3.2,delay:0.4});},
+  cricket(v=1){for(let i=0;i<4;i++)this.tone({f:4300+Math.random()*200,gain:0.007*v,dur:0.035,delay:i*0.065});},
   chime(){this.tone({f:660,gain:0.08,dur:0.3});this.tone({f:990,gain:0.07,dur:0.4,delay:0.12});},
   deny(){this.tone({f:200,type:'square',gain:0.045,dur:0.2});},
   toggleMute(){this.muted=!this.muted;if(this.master)this.master.gain.value=this.muted?0:0.9;return this.muted;}};
 function distGain(p){const d=camera.position.distanceTo(p);return clamp(1.2/(1+(d/35)**2)+0.12,0.12,1);}
-function updateAudio(){if(!AudioSys.ctx)return;let hum=0,fan=0;
+// ---- geluid per plek (elke 0,25 s)
+function updatePlaceAudio(){const A=AudioSys,ins=camInside(),r=ins&&ROOMS[ins-1],kiosk=!!(r&&r.kiosk),p=camera.position,F=FENCE;
+  const inYard=!ins&&p.x>F.x0&&p.x<F.x1&&p.z>F.z0&&p.z<F.z1&&p.y<40,district=!ins&&!inYard&&p.y<70&&p.z>60;
+  let kload=0;if(kiosk){const st=RING.stations.find(s=>s.id===r.kioskId);kload=st&&EN.has(st.node)?0.6+0.4*Math.min(1,st.P/1.5):0;}
+  A.set(A.room,kiosk?0.16*kload:ins?0.035:0);A.set(A.vent,ins&&!kiosk?0.02:0);
+  A.set(A.traffic,district?(NIGHT>0.5?0.01:0.03)*(1-0.5*WX.cur.snow):0);
+  A.corona.gain.setTargetAtTime(inYard?(0.006+0.05*WX.cur.rain+0.03*WX.cur.fog)*(0.5+Math.random()):0,A.ctx.currentTime,0.05);
+  const quiet=WX.cur.rain<0.3&&WX.cur.snow<0.3;
+  if(!ins&&NIGHT<0.3&&quiet&&p.y<80&&Math.random()<0.25/(district?3:7))A.chirp(district?1:0.6);
+  if(district&&NIGHT<0.8&&Math.random()<0.25/9)A.carPass(NIGHT>0.4?0.6:1);
+  if(!ins&&NIGHT>0.6&&quiet&&(SEASON===SEASONS.zomer||SEASON===SEASONS.lente)&&Math.random()<0.25/1.2)A.cricket();}
+function updateAudio(){if(!AudioSys.ctx)return;updatePlaceAudio();let hum=0,fan=0;
   TR.forEach(T=>{const v=VIEWS[T];if(!v)return;const d=camera.position.distanceTo(v.center),att=1/(1+(d/16)**2);
     if(EN.has(T+'h'))hum+=(0.35+0.65*D[T].S/D[T].rAF)*att;if(D[T].fans&&EN.has(T+'h'))fan+=att;});
   AudioSys.set(AudioSys.hum,clamp(hum*0.2,0,0.3));AudioSys.set(AudioSys.fan,clamp(fan*0.12,0,0.15));AudioSys.set(AudioSys.rain,WX.cur.rain*(camInside()?0.025:0.08));AudioSys.set(AudioSys.wind,0.025+0.05*WX.cur.cloud+0.05*WX.cur.thunder);}
@@ -2454,7 +2472,7 @@ else{renderMenu();$('#intro').classList.remove('hidden');controls.autoRotate=tru
 if(params.has('night'))updateSky(22);
 if(params.has('view')){const v=VIEWPOS[+params.get('view')];camera.position.copy(v[0]);controls.target.copy(v[1]);controls.autoRotate=false;controls.update();}
 
-window.OS={SIM,D,WX,setWeather,setSeason,SEASONS,ambient,enterKiosk,ROOMS,blockedAt,RING,NPCS,crewDispatch,ringFault,FP,enterFP,exitFP,pickCenter,camera,camInside,setRatio,setTab,GAME,MODES,applyMode,endGame,EN:()=>EN,FLOW,operate,tapStep,setAVR,resetLockout,toggleAR,regulate,computeFlows,randomEvent,lineFault,feederFault,trafoFault,offerTask,simStep,FEEDERS};
+window.OS={SIM,D,AudioSys,updateAudio,WX,setWeather,setSeason,SEASONS,ambient,enterKiosk,ROOMS,blockedAt,RING,NPCS,crewDispatch,ringFault,FP,enterFP,exitFP,pickCenter,camera,camInside,setRatio,setTab,GAME,MODES,applyMode,endGame,EN:()=>EN,FLOW,operate,tapStep,setAVR,resetLockout,toggleAR,regulate,computeFlows,randomEvent,lineFault,feederFault,trafoFault,offerTask,simStep,FEEDERS};
 const clock=new THREE.Clock();let hudT=0,skyT=0;
 renderer.setAnimationLoop(()=>{
   const dt=Math.min(0.1,clock.getDelta());
