@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Onderstation Simulator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0b0f14;--panel:rgba(13,17,22,.80);--line:rgba(255,255,255,.09);--line2:rgba(255,255,255,.18);--text:#e7ecf1;--muted:#8d99a6;--dim:#5d6873;--accent:#f0a43a;--red:#e5484d;--green:#3fcf72;--hv:#ff6b3d;--mv:#4aa3ff;--earth:#e8c547;--dead:#56616b;--mono:'JetBrains Mono',ui-monospace,monospace}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font:13px/1.35 Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+#scene{position:fixed;inset:0}
+#scene canvas{display:block;width:100%;height:100%}
+.panel{position:fixed;background:var(--panel);border:1px solid var(--line);border-radius:12px;backdrop-filter:blur(14px) saturate(1.3);-webkit-backdrop-filter:blur(14px) saturate(1.3);box-shadow:0 12px 40px rgba(0,0,0,.35)}
+.hidden{display:none!important}
+button{font:inherit;color:inherit;background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:8px;padding:6px 10px;cursor:pointer;transition:background .15s,border-color .15s}
+button:hover{background:rgba(255,255,255,.12);border-color:var(--line2)}
+button.on{background:var(--accent);color:#1a1206;border-color:var(--accent);font-weight:600}
+button:disabled{opacity:.35;cursor:not-allowed}
+#topbar{top:12px;left:12px;right:12px;height:58px;display:flex;align-items:center;gap:22px;padding:0 14px 0 14px}
+.brand{display:flex;align-items:center;gap:12px;min-width:200px}
+.logo{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,#f6b44a,#d9731f);display:grid;place-items:center}
+.brand .t{font-weight:700;font-size:15px;letter-spacing:.2px}
+.brand .s{color:var(--muted);font-size:11.5px}
+.clock{font-family:var(--mono);text-align:center;min-width:120px}
+#clock{font-size:22px;font-weight:700;letter-spacing:1px;line-height:1.1}
+#date{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px}
+.speed{display:flex;gap:4px}
+.speed button{padding:5px 9px;font-family:var(--mono);font-size:12px}
+.kpis{display:flex;margin-left:auto}
+.kpi{padding:3px 14px;border-left:1px solid var(--line);min-width:112px}
+.kpi .k{display:block;font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;white-space:nowrap}
+.kpi .v{font-family:var(--mono);font-size:17px;font-weight:700}
+.kpi.bad .v{color:var(--red)}
+.toggle{display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;font-size:12px;color:var(--muted);white-space:nowrap}
+.toggle input{display:none}
+.toggle .sw{width:34px;height:19px;border-radius:10px;background:#39414a;position:relative;transition:.2s}
+.toggle .sw:after{content:'';position:absolute;left:2px;top:2px;width:15px;height:15px;border-radius:50%;background:#cfd6dd;transition:.2s}
+.toggle input:checked+.sw{background:var(--green)}
+.toggle input:checked+.sw:after{left:17px;background:#fff}
+.icon{width:36px;height:36px;padding:0;display:grid;place-items:center}
+.ph{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--line);font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);font-weight:600}
+.tag{font-family:var(--mono);font-size:10px;color:var(--accent);letter-spacing:.3px}
+#tasks{top:82px;left:12px;width:330px;max-height:calc(100% - 340px);overflow:auto}
+#taskBody{padding:12px 14px 14px}
+#taskBody h3{margin:0 0 4px;font-size:14px}
+#taskBody p{margin:0 0 10px;color:var(--muted);font-size:12px}
+.step{display:flex;gap:9px;align-items:flex-start;padding:5px 0;font-size:12.5px;color:var(--dim)}
+.step .b{width:16px;height:16px;border-radius:50%;border:1.5px solid var(--dim);flex:none;margin-top:1px;display:grid;place-items:center;font-size:10px}
+.step.done{color:var(--muted)}
+.step.done .b{background:var(--green);border-color:var(--green);color:#06210f}
+.step.cur{color:var(--text);font-weight:600}
+.step.cur .b{border-color:var(--accent);box-shadow:0 0 0 3px rgba(240,164,58,.2)}
+.idle{color:var(--muted);font-size:12px}
+#alarms{left:12px;bottom:12px;width:410px;height:232px;display:flex;flex-direction:column}
+#alarmList{overflow:auto;flex:1;padding:4px 0}
+.al{display:grid;grid-template-columns:44px 8px 1fr;gap:8px;padding:5px 14px;font-size:12px;align-items:start}
+.al .tm{font-family:var(--mono);color:var(--dim);font-size:11px}
+.al .lv{width:8px;height:8px;border-radius:2px;margin-top:4px;background:var(--dim)}
+.al.crit .lv{background:var(--red)} .al.warn .lv{background:var(--accent)} .al.ok .lv{background:var(--green)} .al.info .lv{background:var(--mv)} .al.op .lv{background:#8a96a3;border-radius:50%}
+.al.crit{color:#ffd0d1} .al.op{color:var(--muted)}
+.al.new{animation:flash 1.2s ease-out}
+@keyframes flash{from{background:rgba(240,164,58,.25)}to{background:transparent}}
+.cnt{font-family:var(--mono);color:var(--text)}
+#scada{top:82px;right:12px;width:470px;max-height:calc(100% - 94px);overflow:auto}
+#scada.min #sld,#scada.min .legend{display:none}
+#sld{display:block;width:100%;height:auto;padding:4px 6px 0}
+.legend{display:flex;flex-wrap:wrap;gap:12px;padding:8px 14px 12px;font-size:11px;color:var(--muted)}
+.legend span{display:flex;align-items:center;gap:5px}
+.legend i{width:14px;height:3px;border-radius:2px;display:inline-block}
+.legend i.sq{width:10px;height:10px;border-radius:2px}
+.mini{padding:1px 8px;font-size:13px;line-height:1.2}
+#sld .w{stroke-width:3;stroke-linecap:round;fill:none}
+#sld .bus{stroke-width:6}
+#sld .hv{stroke:var(--hv)} #sld .mv{stroke:var(--mv)} #sld .dead{stroke:var(--dead)} #sld .earth{stroke:var(--earth);stroke-dasharray:5 3}
+#sld .arrow{stroke:none} #sld .arrow.hv{fill:var(--hv)} #sld .arrow.mv{fill:var(--mv)} #sld .arrow.dead{fill:var(--dead)}
+#sld .dev{cursor:pointer}
+#sld .dev .hit{fill:transparent}
+#sld .dev:hover .hit{fill:rgba(255,255,255,.08)}
+#sld .dev.sel .hit{fill:rgba(240,164,58,.16);stroke:var(--accent);stroke-width:1}
+#sld .cb .body{stroke-width:2}
+#sld .cb.closed .body{fill:var(--red);stroke:#ff9a9c}
+#sld .cb.open .body{fill:#0f1418;stroke:var(--green)}
+#sld .ds .blade,#sld .es .blade{stroke-width:3;stroke-linecap:round;transition:transform .3s}
+#sld .closed .blade{stroke:var(--red)} #sld .open .blade{stroke:var(--green)}
+#sld .tick,#sld .gnd{stroke:#9aa5b1;stroke-width:2}
+#sld .piv{fill:#0f1418;stroke:#9aa5b1;stroke-width:1.5}
+#sld text{fill:var(--muted);font:10px 'JetBrains Mono',monospace}
+#sld text.dl{fill:#c3ccd5;font-weight:500}
+#sld text.h{fill:var(--text);font-weight:700;font-size:11px}
+#sld text.m{fill:#9fd0ff}
+#sld text.mh{fill:#ffb59c}
+#sld text.bad{fill:var(--red)}
+#sld .tr .hit{fill:transparent}
+#devpanel{top:82px;left:354px;width:330px}
+.dp-head{display:flex;justify-content:space-between;align-items:flex-start;padding:12px 14px 6px}
+.dp-id{font-family:var(--mono);font-size:18px;font-weight:700}
+.dp-type{color:var(--muted);font-size:12px}
+.dp-bay{padding:0 14px 8px;font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--line)}
+.dp-rows{padding:8px 14px}
+.row{display:flex;justify-content:space-between;gap:10px;padding:4px 0;font-size:12.5px}
+.row span{color:var(--muted)}
+.row b{font-family:var(--mono);font-weight:500;text-align:right}
+.chip{font-family:var(--mono);font-size:10.5px;padding:2px 7px;border-radius:4px;font-weight:700;letter-spacing:.4px}
+.chip.on{background:rgba(229,72,77,.18);color:#ff8f92}
+.chip.off{background:rgba(63,207,114,.15);color:#6fe39a}
+.chip.earth{background:rgba(232,197,71,.18);color:var(--earth)}
+.chip.bad{background:var(--red);color:#fff}
+.bad{color:var(--red)} .warnc{color:var(--accent)}
+.dp-ctl{display:flex;gap:8px;padding:6px 14px 12px}
+.dp-ctl button{flex:1;padding:10px;font-weight:700;letter-spacing:.6px}
+.dp-ctl .b1:hover{background:rgba(229,72,77,.25);border-color:var(--red)}
+.dp-ctl .b0:hover{background:rgba(63,207,114,.2);border-color:var(--green)}
+.dp-ctl button.cur{opacity:.35}
+.dp-sub{display:flex;gap:8px;padding:0 14px 12px}
+.dp-sub button{flex:1;font-size:12px}
+.x{border:none;background:none;color:var(--muted);font-size:16px;padding:2px 6px}
+#views{left:434px;bottom:12px;display:flex;gap:4px;padding:6px}
+#views button{font-size:12px;padding:6px 11px}
+#views kbd{font-family:var(--mono);color:var(--dim);font-size:10px;margin-right:5px}
+#labels{position:fixed;inset:0;pointer-events:none;overflow:hidden}
+.lbl{position:absolute;left:0;top:0;font:600 10.5px var(--mono);color:#fff;background:rgba(10,14,18,.74);border:1px solid rgba(255,255,255,.14);padding:2px 6px 2px 5px;border-radius:5px;white-space:nowrap;display:flex;align-items:center;gap:5px;will-change:transform}
+.lbl i{width:7px;height:7px;border-radius:50%;background:var(--red);display:inline-block}
+.lbl.open i{background:var(--green)} .lbl.earth i{background:var(--earth)} .lbl.info i{background:#9aa5b1}
+.lbl.sel{border-color:var(--accent);color:var(--accent)}
+body.nolabels #labels{display:none}
+#tooltip{position:fixed;pointer-events:none;background:rgba(10,14,18,.9);border:1px solid var(--line2);padding:5px 9px;border-radius:6px;font-size:12px;display:none;z-index:5}
+#tooltip b{font-family:var(--mono)}
+#toast{position:fixed;left:50%;top:84px;transform:translateX(-50%);background:#2a1416;border:1px solid var(--red);color:#ffd7d8;padding:9px 16px;border-radius:8px;font-size:13px;opacity:0;transition:opacity .25s;pointer-events:none;z-index:6;max-width:520px;text-align:center}
+#toast.show{opacity:1}
+#intro{position:fixed;inset:0;display:grid;place-items:center;background:radial-gradient(ellipse at center,rgba(6,9,12,.45),rgba(6,9,12,.85));z-index:10}
+#intro .card{width:min(600px,92vw);padding:34px 36px;background:rgba(13,17,22,.86);border:1px solid var(--line);border-radius:16px;backdrop-filter:blur(16px)}
+.eyebrow{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--accent);font-weight:700}
+#intro h1{margin:6px 0 12px;font-size:32px;letter-spacing:-.5px}
+#intro h1 span{color:var(--muted);font-weight:500}
+#intro p{color:#c4ccd4;font-size:14px;line-height:1.55}
+#intro ul{padding-left:18px;color:#c4ccd4;font-size:13.5px;line-height:1.6}
+#intro .keys{font-size:12px;color:var(--muted);margin:14px 0 22px;font-family:var(--mono)}
+#startBtn{background:var(--accent);color:#1a1206;border:none;font-weight:700;font-size:15px;padding:12px 26px;border-radius:10px}
+#startBtn:hover{filter:brightness(1.1)}
+#loading{position:fixed;inset:0;display:grid;place-items:center;color:var(--muted);font-family:var(--mono);z-index:20;background:var(--bg)}
+@media (max-width:1250px){#tasks{width:290px}#devpanel{left:314px}#scada{width:400px}.kpi{min-width:90px;padding:3px 9px}}
+@media (max-width:1050px){.kpis .kpi:nth-child(n+3){display:none}#views{left:12px;bottom:256px}}
+</style>
+</head>
+<body>
+<div id="loading">Onderstation laden…</div>
+<div id="scene"></div>
+<div id="labels"></div>
+<header id="topbar" class="panel">
+  <div class="brand">
+    <div class="logo"><svg width="18" height="18" viewBox="0 0 24 24" fill="#1b1000"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg></div>
+    <div><div class="t">OS Zuidwolde</div><div class="s">110/10 kV · Bedrijfsvoering</div></div>
+  </div>
+  <div class="clock"><div id="clock">09:00</div><div id="date">za 3 okt</div></div>
+  <div class="speed" id="speed">
+    <button data-s="0" title="Pauze (spatie)">❚❚</button>
+    <button data-s="1">1×</button>
+    <button data-s="60" class="on">60×</button>
+    <button data-s="300">300×</button>
+  </div>
+  <div class="kpis">
+    <div class="kpi" id="kpiOff"><span class="k">Klanten zonder stroom</span><span class="v" id="kOff">0</span></div>
+    <div class="kpi"><span class="k">Klantminuten (CML)</span><span class="v" id="kCml">0</span></div>
+    <div class="kpi"><span class="k">Opdrachten</span><span class="v" id="kTasks">0</span></div>
+    <div class="kpi" id="kpiInc"><span class="k">Veiligheidsincidenten</span><span class="v" id="kInc">0</span></div>
+  </div>
+  <label class="toggle" title="Elektrische vergrendelingen voorkomen verkeerde schakelhandelingen"><input type="checkbox" id="interlock" checked><span class="sw"></span><span>Vergrendelingen</span></label>
+  <button id="mute" class="icon" title="Geluid (M)"><svg id="muteIco" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/></svg></button>
+</header>
+<aside id="tasks" class="panel"><div class="ph"><span>Werkopdracht</span><span id="taskCode" class="tag"></span></div><div id="taskBody"><div class="idle">Geen actieve opdracht.</div></div></aside>
+<aside id="alarms" class="panel"><div class="ph"><span>Meldingen &amp; gebeurtenissen</span><span class="cnt" id="alarmCnt">0</span></div><div id="alarmList"></div></aside>
+<aside id="scada" class="panel">
+  <div class="ph"><span>SCADA · Eénlijnschema</span><button id="scadaToggle" class="mini" title="In-/uitklappen">–</button></div>
+  <svg id="sld" viewBox="0 0 460 575"></svg>
+  <div class="legend">
+    <span><i style="background:var(--hv)"></i>110 kV</span><span><i style="background:var(--mv)"></i>10 kV</span><span><i style="background:var(--dead)"></i>spanningsloos</span><span><i style="background:var(--earth)"></i>geaard</span>
+    <span><i class="sq" style="background:var(--red)"></i>gesloten</span><span><i class="sq" style="border:2px solid var(--green)"></i>open</span>
+  </div>
+</aside>
+<div id="devpanel" class="panel hidden"></div>
+<nav id="views" class="panel">
+  <button data-v="0"><kbd>1</kbd>Overzicht</button>
+  <button data-v="1"><kbd>2</kbd>Lijnvelden</button>
+  <button data-v="2"><kbd>3</kbd>Transformatoren</button>
+  <button data-v="3"><kbd>4</kbd>10 kV-gebouw</button>
+  <button data-v="4"><kbd>5</kbd>Vogelvlucht</button>
+  <button data-v="5"><kbd>6</kbd>Binnen</button>
+</nav>
+<div id="tooltip"></div>
+<div id="toast"></div>
+<div id="intro" class="hidden">
+  <div class="card">
+    <div class="eyebrow">Onderstation Simulator</div>
+    <h1>OS Zuidwolde <span>110/10 kV</span></h1>
+    <p>Je hebt dienst als operator. Twee 110 kV-lijnen voeden via twee transformatoren de 10 kV-installatie met zes uitgaande velden: ruim 11.800 klanten.</p>
+    <ul>
+      <li><b>Klik</b> op een schakelaar in 3D of in het SCADA-schema om hem te bedienen.</li>
+      <li><b>Volgorde:</b> eerst de vermogenschakelaar (Q0) uit, dan pas scheiders (Q1/Q9) openen. Andersom geeft een vlamboog.</li>
+      <li>Reageer op <b>storingen</b>, voer <b>werkopdrachten</b> veilig uit en houd de uitvalminuten laag.</li>
+    </ul>
+    <div class="keys">links slepen: draaien · rechts: schuiven · scroll: zoom<br>1–6 camera · spatie pauze · L labels · M geluid · Esc deselecteren</div>
+    <button id="startBtn">Dienst starten</button>
+  </div>
+</div>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"}}</script>
+<script type="module">
