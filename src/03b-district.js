@@ -122,6 +122,26 @@ function updateKioskLight(){KUPD.forEach(f=>f());const i=camInside(),r=i&&ROOMS[
 function enterKiosk(id){const r=ROOMS.find(r=>r.kioskId===id);if(!r)return;FP.last={x:r.cx,z:r.cz,yaw:r.yaw,pitch:-0.08};
   if(FP.on){FP.pos.set(r.cx,0,r.cz);FP.yaw=r.yaw;FP.pitch=-0.08;}else enterFP();if(SEL)selectDevice(null);}
 
+// appartementenblok met winkelplint (centrum)
+function aptCanvas(){const c=cnv(256,256),g=c.getContext('2d');g.fillStyle='#b9b2a3';g.fillRect(0,0,256,256);noiseFill(g,256,12);
+  for(let i=0;i<2;i++){const x=24+i*128;g.fillStyle='#e9e6de';g.fillRect(x-5,58,90,110);const gr=g.createLinearGradient(x,64,x+80,160);gr.addColorStop(0,'#2b3a47');gr.addColorStop(0.5,'#7d93a6');gr.addColorStop(1,'#26323d');
+    g.fillStyle=gr;g.fillRect(x,64,80,98);g.fillStyle='#e9e6de';g.fillRect(x+38,64,4,98);g.fillStyle='#55595c';g.fillRect(x-8,170,96,10);}
+  const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=MAXANISO;return t;}
+function shopCanvas(){const c=cnv(512,128),g=c.getContext('2d');g.fillStyle='#3a3f44';g.fillRect(0,0,512,128);
+  const cols=['#b33a2f','#2f6db3','#2f9a5a','#d38a1f'];for(let i=0;i<4;i++){const x=i*128;g.fillStyle=cols[i];g.fillRect(x+6,6,116,22);
+    const gr=g.createLinearGradient(x,30,x+120,120);gr.addColorStop(0,'#c9d6df');gr.addColorStop(1,'#56646f');g.fillStyle=gr;g.fillRect(x+10,34,108,90);g.fillStyle='#3a3f44';g.fillRect(x+60,34,4,90);}
+  const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.colorSpace=THREE.SRGBColorSpace;return t;}
+const APT={tex:aptCanvas(),shop:shopCanvas()};
+function aptBlock(x0,z0,x1,z1,floors){const W=x1-x0,Dz=z1-z0,H=floors*3+3.6,cx=(x0+x1)/2,cz=(z0+z1)/2;
+  const facade=(len)=>{const t=APT.tex.clone();t.repeat.set(len/8,floors);t.needsUpdate=true;return mat({map:t,roughness:0.85});};
+  const shop=(len)=>{const t=APT.shop.clone();t.repeat.set(len/16,1);t.needsUpdate=true;return mat({map:t,roughness:0.6});};
+  box(W,H,Dz,DM.kiosk,staticRoot,cx,H/2,cz);
+  for(const s of[-1,1]){const f=mesh(new THREE.PlaneGeometry(W,floors*3),facade(W),staticRoot,cx,3.6+floors*1.5,cz+s*(Dz/2+0.02));f.rotation.y=s>0?0:Math.PI;f.castShadow=false;
+    const sp=mesh(new THREE.PlaneGeometry(W,3.4),shop(W),staticRoot,cx,1.7,cz+s*(Dz/2+0.02));sp.rotation.y=s>0?0:Math.PI;sp.castShadow=false;
+    box(W,0.15,1.6,MAT.trim,staticRoot,cx,3.5,cz+s*(Dz/2+0.8));}
+  for(const s of[-1,1]){const f=mesh(new THREE.PlaneGeometry(Dz,floors*3),facade(Dz),staticRoot,cx+s*(W/2+0.02),3.6+floors*1.5,cz);f.rotation.y=s*Math.PI/2;f.castShadow=false;}
+  box(W+0.4,0.6,Dz+0.4,MAT.concreteDark,staticRoot,cx,H+0.3,cz);box(3,1.4,2,MAT.cabinet,staticRoot,cx-W/4,H+1.3,cz);box(2,1,2,MAT.cabinet,staticRoot,cx+W/4,H+1.1,cz);
+  DISTRICT_RECTS.push([x0,z0-1.7,x1,z1+1.7]);}
 function streetLight(x,z){cyl(0.06,0.09,7,MAT.galv,staticRoot,x,3.5,z,8);box(0.7,0.12,0.25,MAT.lamp,staticRoot,x+0.3,7,z);}
 function buildDistrict(){
   // straten
@@ -136,5 +156,14 @@ function buildDistrict(){
   hall(100,140,30,20,8,'TRANSPORT');hall(145,140,30,22,9,'KOELHUIS',true);hall(130,175,40,18,7,'GARAGE · KANTOREN');
   // LS-verdeelkasten in de straat
   [[-62,112],[-18,112],[-104,165],[-36,228],[52,124],[96,226],[150,114]].forEach(([x,z])=>{box(0.9,1.15,0.35,DM.green,staticRoot,x,0.6,z);});
+  // ---- Centrum en bedrijventerrein De Vaart (ring 2)
+  groundQuad(-130,270,200,276,0.04,MAT.asphalt,6);groundQuad(-130,384,200,390,0.04,MAT.asphalt,6);
+  groundQuad(-64,276,-58,384,0.04,MAT.asphalt,6);groundQuad(106,276,112,384,0.04,MAT.asphalt,6);
+  groundQuad(-125,364,-70,380,0.035,MAT.concrete,3);   // marktplein
+  for(let x=-120;x<-72;x+=12)tree(x,372,0.9,false);
+  aptBlock(-125,292,-70,310,4);aptBlock(-52,292,8,310,5);aptBlock(-125,330,-70,356,3);aptBlock(-52,330,8,360,4);
+  hall(62,318,38,24,9,'METAALBEWERKING SMIT');hall(158,322,50,32,11,'DISTRIBUTIECENTRUM',true);hall(70,362,32,18,7,'BOUWMARKT');
+  box(14,0.5,9,MAT.trim,staticRoot,96,5.2,300);for(const [dx,dz] of[[-6,-4],[6,-4],[-6,4],[6,4]])cyl(0.15,0.15,5,MAT.galv,staticRoot,96+dx,2.5,300+dz,8);   // tankstation
+  for(let x=-120;x<190;x+=30){streetLight(x,268.5);streetLight(x+15,391.5);}
   RING.stations.forEach(kiosk);
 }

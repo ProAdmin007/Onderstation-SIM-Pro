@@ -34,28 +34,28 @@ function buildSLD(){
   o=out[20];top();bay('T2',200,-1,'W-T2','RC');bay('T3',300,1,'W-T3','RC');
   W(20,420,452,420,'RC','w bus');T(20,412,'20 kV RAIL C','start','dl');M('RC',98,412,'start');
   [['G1',45],['G2',110],['G3',370],['G4',430]].forEach(([id,x])=>feeder(F(id),x));
-  // tabblad Ring 10 kV: V-F3 (rail A) → MS1…MS5 → V-F4 (rail B)
-  out.R=[];o=out.R;const RY=128,HS=(id,x,y)=>{o.push(`<g class="dev ds" data-id="${id}" transform="translate(${x} ${y}) rotate(-90)"><title>${id} · ${D[id].label}</title>${hit(26,26)}<line class="tick" x1="-6" y1="-11" x2="6" y2="-11"/><line class="blade" x1="0" y1="11" x2="0" y2="-11" style="transform-origin:0px 11px"/><circle class="piv" cx="0" cy="11" r="2.4"/></g>`);};
-  T(235,20,'10 kV-RING · normaal-open punt '+RING.nop,'middle','h');T(235,34,'⚑ = kortsluitverklikker aangesproken · ⚡ = kabelfout','middle','fs');
-  W(14,48,14,66,'RA');CB('V-F3',14,76);W(14,84,14,RY,'F3');T(22,56,'V-F3 · rail A','start','fs');
-  W(456,48,456,66,'RB');CB('V-F4',456,76);W(456,84,456,RY,'F4');T(448,56,'rail B · V-F4','end','fs');
-  const XS=RING.stations.map((s,i)=>66+i*84);
-  RING.stations.forEach((s,i)=>{const x=XS[i],n=s.node;
-    o.push(`<rect x="${x-38}" y="90" width="76" height="232" rx="7" fill="rgba(255,255,255,0.025)" stroke="rgba(255,255,255,0.09)"/>`);
-    o.push(`<g class="dev kiosk" data-id="${s.id}"><title>${s.id} · ${s.name}</title><rect class="hit" x="${x-38}" y="90" width="76" height="22" rx="6"/></g>`);
-    T(x-4,104,s.id,'middle','h');M('fi'+s.id,x+26,104,'middle','flag');
-    HS(s.id+'-L',x-24,RY);HS(s.id+'-R',x+24,RY);W(x-13,RY,x+13,RY,n,'w bus2');
-    T(x,146,s.short,'middle','dl fs');
-    W(x,RY,x,150,n);DS(s.id+'-T',x,161);W(x,172,x,183,n+'t');
-    o.push(`<circle class="w" data-n="${n}t" data-c="w" cx="${x}" cy="191" r="8"/><circle class="w" data-n="${n}v" data-c="w" cx="${x}" cy="203" r="8"/>`);
-    W(x,211,x,222,n+'v');W(x-32,222,x+32,222,n+'v','w bus2');
-    s.groups.forEach((g,j)=>{const gx=x-32+(j+0.5)*64/s.groups.length;W(gx,222,gx,236,n+'v');
-      o.push(`<g class="dev cb lvs" data-id="${g.id}" transform="translate(${gx} 243)"><title>${g.id} · ${g.name}</title>${hit(14,18)}<rect class="body" x="-4.5" y="-4.5" width="9" height="9" rx="1.5"/></g>`);
-      W(gx,248,gx,262,g.node);o.push(`<polygon class="w arrow" data-n="${g.node}" data-c="w arrow" points="${gx-4},262 ${gx+4},262 ${gx},270"/>`);T(gx,281,'G'+(j+1),'middle','fs');});
-    M('stc'+s.id,x,298);M('stp'+s.id,x,311,'middle','');});
-  RING.secs.forEach((sec,i)=>{const x1=i?XS[i-1]+35:14,x2=i<5?XS[i]-35:456;W(x1,RY,x2,RY,sec.node);M('flt'+sec.id,(x1+x2)/2,RY-8,'middle','bad');});
-  T(XS[2]+24,RY-13,'NOP','middle','mh fs');
-  T(235,346,'Klik op een station voor alle schakelaars en laagspanningsvelden.','middle','fs');
+  // tabblad Ring: alle 10 kV-ringen onder elkaar
+  out.R=[];o=out.R;const HS=(id,x,y)=>{o.push(`<g class="dev ds" data-id="${id}" transform="translate(${x} ${y}) rotate(-90)"><title>${id} · ${D[id].label}</title>${hit(26,26)}<line class="tick" x1="-6" y1="-11" x2="6" y2="-11"/><line class="blade" x1="0" y1="11" x2="0" y2="-11" style="transform-origin:0px 11px"/><circle class="piv" cx="0" cy="11" r="2.4"/></g>`);};
+  const drawRing=(rg,oy)=>{const st=rg.stations,n=st.length,RY=oy+92,x0=(470-(n-1)*84)/2,XS=st.map((s,i)=>x0+i*84),fb=F(rg.from).bus,tb=F(rg.to).bus;
+    T(235,oy+16,`${rg.name.toUpperCase()} · normaal-open punt ${rg.nop}`,'middle','h');
+    W(14,oy+24,14,oy+36,fb);CB('V-'+rg.from,14,oy+44);W(14,oy+52,14,RY,rg.from);T(24,oy+33,`V-${rg.from} · rail ${fb.slice(1)}`,'start','fs');
+    W(456,oy+24,456,oy+36,tb);CB('V-'+rg.to,456,oy+44);W(456,oy+52,456,RY,rg.to);T(446,oy+33,`rail ${tb.slice(1)} · V-${rg.to}`,'end','fs');
+    st.forEach((s,i)=>{const x=XS[i],n2=s.node,Y=RY;
+      o.push(`<rect x="${x-38}" y="${oy+58}" width="76" height="196" rx="7" fill="rgba(255,255,255,0.025)" stroke="rgba(255,255,255,0.09)"/>`);
+      o.push(`<g class="dev kiosk" data-id="${s.id}"><title>${s.id} · ${s.name}</title><rect class="hit" x="${x-38}" y="${oy+58}" width="76" height="27" rx="6"/></g>`);
+      T(x,oy+70,s.id,'middle','h');T(x,oy+81,s.short,'middle','dl fs');M('fi'+s.id,x+28,oy+71,'middle','flag');
+      HS(s.id+'-L',x-24,Y);HS(s.id+'-R',x+24,Y);W(x-13,Y,x+13,Y,n2,'w bus2');
+      W(x,Y,x,Y+12,n2);DS(s.id+'-T',x,Y+23);W(x,Y+34,x,Y+42,n2+'t');
+      o.push(`<circle class="w" data-n="${n2}t" data-c="w" cx="${x}" cy="${Y+49}" r="7"/><circle class="w" data-n="${n2}v" data-c="w" cx="${x}" cy="${Y+60}" r="7"/>`);
+      W(x,Y+67,x,Y+74,n2+'v');W(x-32,Y+74,x+32,Y+74,n2+'v','w bus2');
+      s.groups.forEach((g,j)=>{const gx=x-32+(j+0.5)*64/s.groups.length;W(gx,Y+74,gx,Y+84,n2+'v');
+        o.push(`<g class="dev cb lvs" data-id="${g.id}" transform="translate(${gx} ${Y+90})"><title>${g.id} · ${g.name}</title>${hit(14,18)}<rect class="body" x="-4.5" y="-4.5" width="9" height="9" rx="1.5"/></g>`);
+        W(gx,Y+95,gx,Y+104,g.node);o.push(`<polygon class="w arrow" data-n="${g.node}" data-c="w arrow" points="${gx-4},${Y+104} ${gx+4},${Y+104} ${gx},${Y+111}"/>`);T(gx,Y+121,'G'+(j+1),'middle','fs');});
+      M('stc'+s.id,x,Y+136);M('stp'+s.id,x,Y+148,'middle','');
+      if(s.id+'-R'===rg.nop)T(x+24,Y+20,'NOP','middle','mh fs');});
+    RING.secs.filter(c=>c.ring===rg).forEach((sec,i)=>{const x1=i?XS[i-1]+35:14,x2=i<n?XS[i]-35:456;W(x1,RY,x2,RY,sec.node);M('flt'+sec.id,(x1+x2)/2,RY-8,'middle','bad');});};
+  RINGS.forEach((rg,k)=>drawRing(rg,k*262));
+  T(235,540,'⚑ verklikker aangesproken · ⚡ kabelfout','middle','fs');T(235,553,'klik op een station voor alle schakelaars','middle','fs');
   const svg=$('#sld');svg.innerHTML=`<g data-tab="10">${out[10].join('')}</g><g data-tab="20" style="display:none">${out[20].join('')}</g><g data-tab="R" style="display:none">${out.R.join('')}</g>`;
   SLD.nodes=[...svg.querySelectorAll('[data-n]')];
   svg.querySelectorAll('.dev').forEach(el=>{const id=el.dataset.id,tab=el.closest('[data-tab]').dataset.tab;(SLD.devs[id]??=[]).push(el);(SLD.devTab[id]??=new Set()).add(tab);
@@ -225,7 +225,7 @@ function updateHover(){if(FP.on||!moveEv)return;const e=moveEv;moveEv=null;const
 
 // ============================================================ camera
 const VIEWPOS=[[V3(100,52,118),V3(22,3,8)],[V3(-4,13,-2),V3(-30,5,-22)],[V3(88,17,14),V3(32,3,32)],[V3(64,11,32),V3(30,3,50)],[V3(22.1,215,34),V3(22,0,10)],
-  [V3(-2.2,2.5,47.6),V3(0.4,1.6,54.2)],[V3(58.8,2.5,47.6),V3(61.4,1.6,54.2)],[V3(30,95,330),V3(10,0,175)]];
+  [V3(-2.2,2.5,47.6),V3(0.4,1.6,54.2)],[V3(58.8,2.5,47.6),V3(61.4,1.6,54.2)],[V3(30,95,330),V3(10,0,175)],[V3(40,90,470),V3(30,0,330)]];
 let fly=null;
 function flyTo(pos,target,dur=1.5){if(FP.on)exitFP();fly={t:0,dur,p0:camera.position.clone(),t0:controls.target.clone(),p1:pos,t1:target};controls.autoRotate=false;}
 function fmtClock(t){const m=((t%1440)+1440)%1440;return `${String(Math.floor(m/60)).padStart(2,'0')}:${String(Math.floor(m%60)).padStart(2,'0')}`;}

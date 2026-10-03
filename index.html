@@ -275,7 +275,8 @@ body.menu #fpPause{display:none!important}
   <button data-v="4"><kbd>5</kbd>Vogelvlucht</button>
   <button data-v="5"><kbd>6</kbd>Binnen 10 kV</button>
   <button data-v="6"><kbd>7</kbd>Binnen 20 kV</button>
-  <button data-v="7"><kbd>8</kbd>Wijk &amp; ring</button>
+  <button data-v="7"><kbd>8</kbd>Woonwijk</button>
+  <button data-v="8"><kbd>9</kbd>Centrum &amp; Vaart</button>
   <button id="fpBtn" class="walk"><kbd>V</kbd>Rondlopen</button>
 </nav>
 <div id="tooltip"></div>
@@ -304,7 +305,7 @@ body.menu #fpPause{display:none!important}
       </ul>
       <div class="mh">Moeilijkheid</div>
       <div class="seg" id="diff"><button data-d="rustig">Rustig</button><button data-d="normaal" class="on">Normaal</button><button data-d="zwaar">Zwaar</button></div>
-      <div class="keys">slepen: draaien · rechts: schuiven · scroll: zoom<br>1–8 camera · V rondlopen · spatie pauze · Esc menu · L labels · M geluid</div>
+      <div class="keys">slepen: draaien · rechts: schuiven · scroll: zoom<br>1–9 camera · V rondlopen · spatie pauze · Esc menu · L labels · M geluid</div>
     </div>
     <div id="menu"></div>
   </div>
@@ -731,7 +732,7 @@ const FENCE = {x0:-48,x1:92,z0:-44,z1:68,gate:[20,30]};
 function buildGround(){
   groundQuad(-10000,-10000,10000,10000,-0.5,MAT.water,20);
   // kavels met sloten (Nederlands polderlandschap)
-  const xs=[-170,170],zs=[-230,260];
+  const xs=[-170,210],zs=[-230,420];
   for(let x=170;x<3200;x+=rr(260,460)){xs.push(x+rr(260,460));xs.unshift(-x-rr(260,460));}
   for(let z=260;z<3200;z+=rr(170,320))zs.push(z+rr(170,320));
   for(let z=-230;z>-3200;z-=rr(170,320))zs.unshift(z-rr(170,320));
@@ -815,10 +816,10 @@ function tree(x,z,s=1,cast=false){const h=rr(4,6)*s;const t=cyl(0.18*s,0.28*s,h,
   for(let i=0;i<n;i++){const r=rr(1.8,3.0)*s;const c=mesh(crownGeos[i%3],lm,staticRoot,x+rr(-1.5,1.5)*s,h+rr(-0.5,2.5)*s,z+rr(-1.5,1.5)*s);c.scale.set(r,r*rr(0.8,1.1),r);c.rotation.y=R()*6;c.castShadow=cast;}}
 function poplar(x,z){const h=rr(14,18);cyl(0.2,0.3,h*0.5,MAT.bark,staticRoot,x,h*0.25,z,7).castShadow=false;const c=mesh(crownGeos[Math.floor(R()*3)],MAT.leaf[0],staticRoot,x,h*0.58,z);c.scale.set(rr(1.3,1.8),h*0.42,rr(1.3,1.8));c.castShadow=Math.abs(x)<200&&Math.abs(z)<200;}
 function buildTrees(){
-  for(let z=78;z<1200;z+=rr(9,13)){if(Math.abs(z-101)<7||Math.abs(z-239)<7)continue;tree(17+rr(-0.5,0.5),z,rr(0.9,1.1),z<160);tree(33+rr(-0.5,0.5),z,rr(0.9,1.1),z<160);}
+  for(let z=78;z<1200;z+=rr(9,13)){if(Math.abs(z-101)<7||Math.abs(z-239)<7||Math.abs(z-273)<7||Math.abs(z-387)<7)continue;tree(17+rr(-0.5,0.5),z,rr(0.9,1.1),z<160);tree(33+rr(-0.5,0.5),z,rr(0.9,1.1),z<160);}
   for(let z=-70;z<110;z+=rr(8,11)){poplar(-64+rr(-1,1),z);poplar(108+rr(-1,1),z);}
   for(let x=-64;x<110;x+=rr(8,11))poplar(x,-62+rr(-1,1));
-  for(let k=0;k<26;k++){const cx=rr(-2200,2200),cz=rr(-2200,2200);if(Math.abs(cx)<350&&Math.abs(cz)<400)continue;const n=4+Math.floor(R()*10);for(let i=0;i<n;i++)tree(cx+rr(-30,30),cz+rr(-30,30),rr(1.2,1.8));}
+  for(let k=0;k<26;k++){const cx=rr(-2200,2200),cz=rr(-2200,2200);if(Math.abs(cx)<350&&cz>-400&&cz<500)continue;const n=4+Math.floor(R()*10);for(let i=0;i<n;i++)tree(cx+rr(-30,30),cz+rr(-30,30),rr(1.2,1.8));}
   for(let x=-2000;x<2000;x+=rr(10,16))tree(x,-1300+rr(-3,3),1.5);
 }
 function farm(x,z,ry){const g=grp(x,z);g.rotation.y=ry;
@@ -1018,6 +1019,26 @@ function updateKioskLight(){KUPD.forEach(f=>f());const i=camInside(),r=i&&ROOMS[
 function enterKiosk(id){const r=ROOMS.find(r=>r.kioskId===id);if(!r)return;FP.last={x:r.cx,z:r.cz,yaw:r.yaw,pitch:-0.08};
   if(FP.on){FP.pos.set(r.cx,0,r.cz);FP.yaw=r.yaw;FP.pitch=-0.08;}else enterFP();if(SEL)selectDevice(null);}
 
+// appartementenblok met winkelplint (centrum)
+function aptCanvas(){const c=cnv(256,256),g=c.getContext('2d');g.fillStyle='#b9b2a3';g.fillRect(0,0,256,256);noiseFill(g,256,12);
+  for(let i=0;i<2;i++){const x=24+i*128;g.fillStyle='#e9e6de';g.fillRect(x-5,58,90,110);const gr=g.createLinearGradient(x,64,x+80,160);gr.addColorStop(0,'#2b3a47');gr.addColorStop(0.5,'#7d93a6');gr.addColorStop(1,'#26323d');
+    g.fillStyle=gr;g.fillRect(x,64,80,98);g.fillStyle='#e9e6de';g.fillRect(x+38,64,4,98);g.fillStyle='#55595c';g.fillRect(x-8,170,96,10);}
+  const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=MAXANISO;return t;}
+function shopCanvas(){const c=cnv(512,128),g=c.getContext('2d');g.fillStyle='#3a3f44';g.fillRect(0,0,512,128);
+  const cols=['#b33a2f','#2f6db3','#2f9a5a','#d38a1f'];for(let i=0;i<4;i++){const x=i*128;g.fillStyle=cols[i];g.fillRect(x+6,6,116,22);
+    const gr=g.createLinearGradient(x,30,x+120,120);gr.addColorStop(0,'#c9d6df');gr.addColorStop(1,'#56646f');g.fillStyle=gr;g.fillRect(x+10,34,108,90);g.fillStyle='#3a3f44';g.fillRect(x+60,34,4,90);}
+  const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.colorSpace=THREE.SRGBColorSpace;return t;}
+const APT={tex:aptCanvas(),shop:shopCanvas()};
+function aptBlock(x0,z0,x1,z1,floors){const W=x1-x0,Dz=z1-z0,H=floors*3+3.6,cx=(x0+x1)/2,cz=(z0+z1)/2;
+  const facade=(len)=>{const t=APT.tex.clone();t.repeat.set(len/8,floors);t.needsUpdate=true;return mat({map:t,roughness:0.85});};
+  const shop=(len)=>{const t=APT.shop.clone();t.repeat.set(len/16,1);t.needsUpdate=true;return mat({map:t,roughness:0.6});};
+  box(W,H,Dz,DM.kiosk,staticRoot,cx,H/2,cz);
+  for(const s of[-1,1]){const f=mesh(new THREE.PlaneGeometry(W,floors*3),facade(W),staticRoot,cx,3.6+floors*1.5,cz+s*(Dz/2+0.02));f.rotation.y=s>0?0:Math.PI;f.castShadow=false;
+    const sp=mesh(new THREE.PlaneGeometry(W,3.4),shop(W),staticRoot,cx,1.7,cz+s*(Dz/2+0.02));sp.rotation.y=s>0?0:Math.PI;sp.castShadow=false;
+    box(W,0.15,1.6,MAT.trim,staticRoot,cx,3.5,cz+s*(Dz/2+0.8));}
+  for(const s of[-1,1]){const f=mesh(new THREE.PlaneGeometry(Dz,floors*3),facade(Dz),staticRoot,cx+s*(W/2+0.02),3.6+floors*1.5,cz);f.rotation.y=s*Math.PI/2;f.castShadow=false;}
+  box(W+0.4,0.6,Dz+0.4,MAT.concreteDark,staticRoot,cx,H+0.3,cz);box(3,1.4,2,MAT.cabinet,staticRoot,cx-W/4,H+1.3,cz);box(2,1,2,MAT.cabinet,staticRoot,cx+W/4,H+1.1,cz);
+  DISTRICT_RECTS.push([x0,z0-1.7,x1,z1+1.7]);}
 function streetLight(x,z){cyl(0.06,0.09,7,MAT.galv,staticRoot,x,3.5,z,8);box(0.7,0.12,0.25,MAT.lamp,staticRoot,x+0.3,7,z);}
 function buildDistrict(){
   // straten
@@ -1032,6 +1053,15 @@ function buildDistrict(){
   hall(100,140,30,20,8,'TRANSPORT');hall(145,140,30,22,9,'KOELHUIS',true);hall(130,175,40,18,7,'GARAGE · KANTOREN');
   // LS-verdeelkasten in de straat
   [[-62,112],[-18,112],[-104,165],[-36,228],[52,124],[96,226],[150,114]].forEach(([x,z])=>{box(0.9,1.15,0.35,DM.green,staticRoot,x,0.6,z);});
+  // ---- Centrum en bedrijventerrein De Vaart (ring 2)
+  groundQuad(-130,270,200,276,0.04,MAT.asphalt,6);groundQuad(-130,384,200,390,0.04,MAT.asphalt,6);
+  groundQuad(-64,276,-58,384,0.04,MAT.asphalt,6);groundQuad(106,276,112,384,0.04,MAT.asphalt,6);
+  groundQuad(-125,364,-70,380,0.035,MAT.concrete,3);   // marktplein
+  for(let x=-120;x<-72;x+=12)tree(x,372,0.9,false);
+  aptBlock(-125,292,-70,310,4);aptBlock(-52,292,8,310,5);aptBlock(-125,330,-70,356,3);aptBlock(-52,330,8,360,4);
+  hall(62,318,38,24,9,'METAALBEWERKING SMIT');hall(158,322,50,32,11,'DISTRIBUTIECENTRUM',true);hall(70,362,32,18,7,'BOUWMARKT');
+  box(14,0.5,9,MAT.trim,staticRoot,96,5.2,300);for(const [dx,dz] of[[-6,-4],[6,-4],[-6,4],[6,4]])cyl(0.15,0.15,5,MAT.galv,staticRoot,96+dx,2.5,300+dz,8);   // tankstation
+  for(let x=-120;x<190;x+=30){streetLight(x,268.5);streetLight(x+15,391.5);}
   RING.stations.forEach(kiosk);
 }
 
@@ -1042,8 +1072,8 @@ const SIM={t:9*60,speed:60,paused:true,interlock:true,cml:0,incidents:0,tasksDon
   lines:{L1:{name:'Hoogeveen',avail:true,reason:'',maint:false,ar:true},L2:{name:'Meppel',avail:true,reason:'',maint:false,ar:true}}};
 if(params.get('t')){SIM.t=parseFloat(params.get('t'))*60;SIM.nextEvent=SIM.t+16;SIM.nextTaskAt=SIM.t+3;}
 const FEEDERS=[
-  {id:'F1',name:'Centrum',short:'Centrum',kind:'city',base:6.5,cust:3600,bus:'RA'},
-  {id:'F2',name:'Bedrijventerrein De Vaart',short:'De Vaart',kind:'ind',base:7.0,cust:140,bus:'RA'},
+  {id:'F1',name:'Ring Centrum (MS6–MS7)',short:'Centrum',kind:'city',base:0,cust:0,bus:'RA',ring:true},
+  {id:'F2',name:'Ring De Vaart (MS8–MS9)',short:'De Vaart',kind:'ind',base:0,cust:0,bus:'RA',ring:true},
   {id:'F3',name:'Ring west (MS1–MS3)',short:'Ring W',kind:'res',base:0,cust:0,bus:'RA',ring:true},
   {id:'F4',name:'Ring oost (MS4–MS5)',short:'Ring O',kind:'res',base:0,cust:0,bus:'RB',ring:true},
   {id:'F5',name:'Ziekenhuis',short:'Ziekenh.',kind:'hosp',base:2.8,cust:1,bus:'RB',prio:true},
@@ -1084,26 +1114,34 @@ dev('V-K',{type:'cb',bay:'K',label:'Railkoppeling 10 kV (synchrocheck)',a:'RA',b
 FEEDERS.forEach(f=>{Object.assign(f,{node:f.id,cb:(f.bus==='RC'?'W-':'V-')+f.id,rate:f.ring?9:f.base*1.15,fault:null,outFrac:0,clp:1,offSince:null,oc:0,backfed:false,noise:0,wasOn:true,P:0,demand:0});
   dev(f.cb,{type:'cb',bay:f.id,label:(f.gen?'Productieveld · ':'Uitgaand veld · ')+f.name,a:f.bus,b:f.id,state:1,feeder:f});
   dev(f.id+'-Q8',{type:'es',bay:f.id,label:'Aardschakelaar kabelzijde',a:f.id,cb:f.cb});});
-// ---------- 10 kV-ring achter het station: V-F3 (rail A) → MS1…MS5 → V-F4 (rail B), normaal-open punt MS3-R
-const RING={nop:'MS3-R',secs:[],stations:[
+// ---------- 10 kV-ringen achter het station: elke ring loopt tussen twee uitgaande velden en heeft een normaal-open punt
+const RINGS=[
+ {id:'R1',name:'Ring Woonwijk',from:'F3',to:'F4',nop:'MS3-R',stations:[
   {id:'MS1',name:'Esdoornlaan',short:'Esdoornln',pos:[-60,108],face:0,groups:[['Woningen Esdoornlaan',600,'res',0.45],['Woningen Lindehof',520,'res',0.4],['Basisschool De Linde',1,'city',0.15],['Supermarkt',1,'city',0.3]]},
   {id:'MS2',name:'Berkenhof',short:'Berkenhof',pos:[-91,170],face:1,groups:[['Woningen Berkenhof',700,'res',0.5],['Woningen Populierenlaan',650,'res',0.45],['Sporthal',1,'city',0.2]]},
   {id:'MS3',name:'Molenweg',short:'Molenweg',pos:[-60,232],face:2,groups:[['Woningen Molenweg',800,'res',0.6],['Appartementen De Molen',420,'res',0.35],['Huisartsenpost',1,'hosp',0.1],['Woningen Kerkpad',500,'res',0.4]]},
   {id:'MS4',name:'Zuiderveld',short:'Zuiderveld',pos:[86,232],face:2,groups:[['Woningen Zuiderveld',900,'res',0.65],['Woningen Akkerweg',780,'res',0.55],['Laadplein elektrische auto\'s',1,'city',0.4]]},
-  {id:'MS5',name:'Bedrijvenpark Zuid',short:'Bedr.park',pos:[118,108],face:0,groups:[['Transportbedrijf',1,'ind',0.6],['Koelhuis',1,'ind',0.8],['Garage en werkplaats',1,'ind',0.25],['Kantoren',25,'city',0.4],['Woningen Zuidrand',520,'res',0.4]]}]};
-const CABLE=['F3','K12','K23','K34','K45','F4'];
-const RING_MV=new Set(CABLE),RING_LV=new Set(),LVG=[];
-RING.stations.forEach((s,i)=>{const M='M'+(i+1);Object.assign(s,{node:M,flag:false,wasOn:true,unplanned:false,wait:0,P:0,cust:0});
-  RING_MV.add(M);RING_MV.add(M+'t');RING_LV.add(M+'v');
-  dev(s.id,{type:'kiosk',bay:s.id,label:'MS-station '+s.name+' · 10/0,4 kV 1600 kVA',node:M,st:s});
-  dev(s.id+'-L',{type:'lbs',bay:s.id,label:'Lastscheider kabel '+(i?'naar '+RING.stations[i-1].id:'naar OS (V-F3)'),a:CABLE[i],b:M,state:1});
-  dev(s.id+'-R',{type:'lbs',bay:s.id,label:'Lastscheider kabel '+(i<4?'naar '+RING.stations[i+1].id:'naar OS (V-F4)'),a:M,b:CABLE[i+1],state:s.id+'-R'===RING.nop?0:1});
-  dev(s.id+'-T',{type:'lbs',bay:s.id,label:'Transformatorschakelaar met zekeringen',a:M,b:M+'t',state:1});
-  dev(s.id+'-TR',{type:'mstr',bay:s.id,label:'Distributietransformator 10/0,4 kV',a:M+'t',b:M+'v',state:1});
-  s.groups=s.groups.map(([name,cust,kind,base],j)=>{const id=s.id+'-G'+(j+1);RING_LV.add(id);s.cust+=cust;
-    const g={id,name,short:name,cust,kind,base,node:id,st:s,noise:0,clp:1,offSince:null,outFrac:0,backfed:false,Pc:0};LVG.push(g);
-    dev(id,{type:'lvs',bay:s.id,label:'Laagspanningsveld · '+name,a:M+'v',b:id,state:1,lvg:g});return g;});});
-for(let i=0;i<6;i++)RING.secs.push({id:CABLE[i],node:CABLE[i],a:i?RING.stations[i-1].id:null,b:i<5?RING.stations[i].id:null,fault:false,located:false});
+  {id:'MS5',name:'Bedrijvenpark Zuid',short:'Bedr.park',pos:[118,108],face:0,groups:[['Transportbedrijf',1,'ind',0.6],['Koelhuis',1,'ind',0.8],['Garage en werkplaats',1,'ind',0.25],['Kantoren',25,'city',0.4],['Woningen Zuidrand',520,'res',0.4]]}]},
+ {id:'R2',name:'Ring Centrum – De Vaart',from:'F1',to:'F2',nop:'MS7-R',stations:[
+  {id:'MS6',name:'Marktplein',short:'Marktplein',pos:[-95,281],face:0,groups:[['Winkels Marktplein',85,'city',0.55],['Horeca Marktplein',30,'city',0.4],['Appartementen De Markt',380,'res',0.3],['Bibliotheek',1,'city',0.12]]},
+  {id:'MS7',name:'Stationsstraat',short:'Stationsstr',pos:[-30,379],face:2,groups:[['Kantoren Stationsstraat',40,'city',0.55],['Appartementen Spoorzicht',460,'res',0.35],['Treinstation',1,'city',0.25],['Gemeentehuis',1,'city',0.3]]},
+  {id:'MS8',name:'De Vaart Noord',short:'Vaart N',pos:[80,281],face:0,groups:[['Metaalbewerking Smit',1,'ind',0.9],['Bedrijfsunits Noord',24,'ind',0.35],['Tankstation',1,'city',0.12]]},
+  {id:'MS9',name:'De Vaart Zuid',short:'Vaart Z',pos:[150,379],face:2,groups:[['Distributiecentrum',1,'ind',1.1],['Bouwmarkt',1,'city',0.35],['Bedrijfsunits Zuid',30,'ind',0.3]]}]}];
+const RING={secs:[],stations:[]};   // alle stations en kabelsecties van alle ringen
+const RING_MV=new Set(),RING_LV=new Set(),LVG=[];
+RINGS.forEach(rg=>{const st=rg.stations,n=st.length,cable=[rg.from];
+  for(let i=1;i<n;i++)cable.push('K'+st[i-1].id.slice(2)+st[i].id.slice(2));cable.push(rg.to);cable.forEach(c=>RING_MV.add(c));rg.cable=cable;
+  st.forEach((s,i)=>{const M='M'+s.id.slice(2);Object.assign(s,{node:M,ring:rg,flag:false,wasOn:true,unplanned:false,wait:0,P:0,cust:0});
+    RING_MV.add(M);RING_MV.add(M+'t');RING_LV.add(M+'v');RING.stations.push(s);
+    dev(s.id,{type:'kiosk',bay:s.id,label:'MS-station '+s.name+' · 10/0,4 kV 1600 kVA',node:M,st:s});
+    dev(s.id+'-L',{type:'lbs',bay:s.id,label:'Lastscheider kabel '+(i?'naar '+st[i-1].id:'naar OS (V-'+rg.from+')'),a:cable[i],b:M,state:1});
+    dev(s.id+'-R',{type:'lbs',bay:s.id,label:'Lastscheider kabel '+(i<n-1?'naar '+st[i+1].id:'naar OS (V-'+rg.to+')'),a:M,b:cable[i+1],state:s.id+'-R'===rg.nop?0:1});
+    dev(s.id+'-T',{type:'lbs',bay:s.id,label:'Transformatorschakelaar met zekeringen',a:M,b:M+'t',state:1});
+    dev(s.id+'-TR',{type:'mstr',bay:s.id,label:'Distributietransformator 10/0,4 kV',a:M+'t',b:M+'v',state:1});
+    s.groups=s.groups.map(([name,cust,kind,base],j)=>{const id=s.id+'-G'+(j+1);RING_LV.add(id);s.cust+=cust;
+      const g={id,name,short:name,cust,kind,base,node:id,st:s,noise:0,clp:1,offSince:null,outFrac:0,backfed:false,Pc:0};LVG.push(g);
+      dev(id,{type:'lvs',bay:s.id,label:'Laagspanningsveld · '+name,a:M+'v',b:id,state:1,lvg:g});return g;});});
+  for(let i=0;i<=n;i++)RING.secs.push({id:cable[i],node:cable[i],ring:rg,a:i?st[i-1].id:null,b:i<n?st[i].id:null,fault:false,located:false});});
 const CONS=FEEDERS.filter(f=>!f.ring).concat(LVG);   // alle afnemers (MS-velden en LS-groepen in de ring)
 dev('RAIL',{type:'bb',label:'110 kV-railsysteem',node:'BB'});
 dev('MS',{type:'bld',label:'10 kV-schakelinstallatie (binnen)',node:'RA'});
@@ -1543,27 +1581,27 @@ function ringFault(f){
   s.fault=true;s.located=false;RING.stations.forEach(x=>x.flag=flagged.includes(x.id));
   tripFrom(s.node);
   pushAlarm(`${f.cb} ${f.name}: I>> – kabelfout in de 10 kV-ring. Kortsluitverklikkers aangesproken: ${flagged.length?flagged.join(', '):'geen'}`,'crit');
-  pushAlarm(`Tip: de fout zit achter het laatste station met een aangesproken verklikker. Isoleer die kabel met de lastscheiders aan beide kanten, voed de rest terug via het normaal-open punt ${RING.nop} en schakel ${f.cb} weer in.`,'info');
+  pushAlarm(`Tip: de fout zit achter het laatste station met een aangesproken verklikker. Isoleer die kabel met de lastscheiders aan beide kanten, voed de rest terug via het normaal-open punt ${s.ring.nop} en schakel ${f.cb} weer in.`,'info');
   addTimer(rnd(10,18),()=>{if(!s.fault)return;s.located=true;const open=isoSwitches(s).filter(id=>D[id].state===1);
     readyNotice(`Storingsdienst: kabelfout gevonden tussen ${secName(s)}${open.length?` – isoleer met ${open.join(' en ')}`:' – kabel is al geïsoleerd'}, herstel daarna via het normaal-open punt`,
       open[0]||null,()=>!!open[0]&&D[open[0]].state===1);
     const st=RING.stations.find(x=>x.id===(s.a||s.b));if(st)crewDispatch({box:VIEWS[st.id].box,say:`Kabelfout ${secName(s)} graven`,until:()=>!s.fault,from:V3(st.pos[0]+6,0,st.pos[1]-8)});});
   addTimer(rnd(70,130),()=>{s.fault=false;s.located=false;RING.stations.forEach(x=>x.flag=false);
-    pushAlarm(`Storingsdienst: kabel ${secName(s)} gerepareerd – normaliseer de ring (normaal-open punt ${RING.nop} weer open)`,'ok');refreshAll();});
+    pushAlarm(`Storingsdienst: kabel ${secName(s)} gerepareerd – normaliseer de ring (normaal-open punt ${s.ring.nop} weer open)`,'ok');refreshAll();});
   refreshAll();}
 // een kabel met fout die weer onder spanning komt: beveiliging schakelt direct af
 function ringProtection(){RING.secs.forEach(s=>{if(!s.fault||!EN.has(s.node))return;const t=FLOW.TAG[s.node];tripFrom(s.node);GAME.stats.recloseFault++;award(-40,'Ingeschakeld op kabelfout');
   pushAlarm(`Kabel ${secName(s)} met fout onder spanning gebracht – ${t&&t.cb?t.cb:'beveiliging'} schakelt af`,'warn');});}
-function ringTask(){const s=pick([RING.secs[1],RING.secs[2],RING.secs[4]]),l=s.a+'-R',r=s.b+'-L',st=RING.stations.find(x=>x.id===s.a);
+function ringTask(){const s=pick(RING.secs.filter(x=>x.a&&x.b&&x.a+'-R'!==x.ring.nop)),l=s.a+'-R',r=s.b+'-L',st=RING.stations.find(x=>x.id===s.a),nop=s.ring.nop;
   return{title:`Kabelwerk ring: ${secName(s)}`,crew:()=>({box:VIEWS[st.id].box,say:`Mof leggen ${secName(s)}`,from:V3(st.pos[0]+6,0,st.pos[1]-8)}),
     desc:`Een kabelploeg legt een nieuwe mof in de kabel tussen ${secName(s)}. Sluit eerst het normaal-open punt, zodat niemand zonder stroom komt, en schakel dan de kabel vrij.`,steps:[
-    {t:`Sluit het normaal-open punt ${RING.nop}`,ok:()=>D[RING.nop].state===1},
+    {t:`Sluit het normaal-open punt ${nop}`,ok:()=>D[nop].state===1},
     {t:`Open lastscheider ${l}`,ok:()=>D[l].state===0},
     {t:`Open lastscheider ${r}`,ok:()=>D[r].state===0,done:()=>pushAlarm(`Werkvergunning afgegeven – kabelwerk ${secName(s)} gestart`,'info')},
     {t:'Kabelwerk in uitvoering…',wait:35},
     {t:`Werk gereed – sluit ${r}`,ok:()=>D[r].state===1},
     {t:`Sluit ${l}`,ok:()=>D[l].state===1},
-    {t:`Open het normaal-open punt ${RING.nop} weer`,ok:()=>D[RING.nop].state===0}]};}
+    {t:`Open het normaal-open punt ${nop} weer`,ok:()=>D[nop].state===0}]};}
 
 
 // ============================================================ effecten
@@ -1875,28 +1913,28 @@ function buildSLD(){
   o=out[20];top();bay('T2',200,-1,'W-T2','RC');bay('T3',300,1,'W-T3','RC');
   W(20,420,452,420,'RC','w bus');T(20,412,'20 kV RAIL C','start','dl');M('RC',98,412,'start');
   [['G1',45],['G2',110],['G3',370],['G4',430]].forEach(([id,x])=>feeder(F(id),x));
-  // tabblad Ring 10 kV: V-F3 (rail A) → MS1…MS5 → V-F4 (rail B)
-  out.R=[];o=out.R;const RY=128,HS=(id,x,y)=>{o.push(`<g class="dev ds" data-id="${id}" transform="translate(${x} ${y}) rotate(-90)"><title>${id} · ${D[id].label}</title>${hit(26,26)}<line class="tick" x1="-6" y1="-11" x2="6" y2="-11"/><line class="blade" x1="0" y1="11" x2="0" y2="-11" style="transform-origin:0px 11px"/><circle class="piv" cx="0" cy="11" r="2.4"/></g>`);};
-  T(235,20,'10 kV-RING · normaal-open punt '+RING.nop,'middle','h');T(235,34,'⚑ = kortsluitverklikker aangesproken · ⚡ = kabelfout','middle','fs');
-  W(14,48,14,66,'RA');CB('V-F3',14,76);W(14,84,14,RY,'F3');T(22,56,'V-F3 · rail A','start','fs');
-  W(456,48,456,66,'RB');CB('V-F4',456,76);W(456,84,456,RY,'F4');T(448,56,'rail B · V-F4','end','fs');
-  const XS=RING.stations.map((s,i)=>66+i*84);
-  RING.stations.forEach((s,i)=>{const x=XS[i],n=s.node;
-    o.push(`<rect x="${x-38}" y="90" width="76" height="232" rx="7" fill="rgba(255,255,255,0.025)" stroke="rgba(255,255,255,0.09)"/>`);
-    o.push(`<g class="dev kiosk" data-id="${s.id}"><title>${s.id} · ${s.name}</title><rect class="hit" x="${x-38}" y="90" width="76" height="22" rx="6"/></g>`);
-    T(x-4,104,s.id,'middle','h');M('fi'+s.id,x+26,104,'middle','flag');
-    HS(s.id+'-L',x-24,RY);HS(s.id+'-R',x+24,RY);W(x-13,RY,x+13,RY,n,'w bus2');
-    T(x,146,s.short,'middle','dl fs');
-    W(x,RY,x,150,n);DS(s.id+'-T',x,161);W(x,172,x,183,n+'t');
-    o.push(`<circle class="w" data-n="${n}t" data-c="w" cx="${x}" cy="191" r="8"/><circle class="w" data-n="${n}v" data-c="w" cx="${x}" cy="203" r="8"/>`);
-    W(x,211,x,222,n+'v');W(x-32,222,x+32,222,n+'v','w bus2');
-    s.groups.forEach((g,j)=>{const gx=x-32+(j+0.5)*64/s.groups.length;W(gx,222,gx,236,n+'v');
-      o.push(`<g class="dev cb lvs" data-id="${g.id}" transform="translate(${gx} 243)"><title>${g.id} · ${g.name}</title>${hit(14,18)}<rect class="body" x="-4.5" y="-4.5" width="9" height="9" rx="1.5"/></g>`);
-      W(gx,248,gx,262,g.node);o.push(`<polygon class="w arrow" data-n="${g.node}" data-c="w arrow" points="${gx-4},262 ${gx+4},262 ${gx},270"/>`);T(gx,281,'G'+(j+1),'middle','fs');});
-    M('stc'+s.id,x,298);M('stp'+s.id,x,311,'middle','');});
-  RING.secs.forEach((sec,i)=>{const x1=i?XS[i-1]+35:14,x2=i<5?XS[i]-35:456;W(x1,RY,x2,RY,sec.node);M('flt'+sec.id,(x1+x2)/2,RY-8,'middle','bad');});
-  T(XS[2]+24,RY-13,'NOP','middle','mh fs');
-  T(235,346,'Klik op een station voor alle schakelaars en laagspanningsvelden.','middle','fs');
+  // tabblad Ring: alle 10 kV-ringen onder elkaar
+  out.R=[];o=out.R;const HS=(id,x,y)=>{o.push(`<g class="dev ds" data-id="${id}" transform="translate(${x} ${y}) rotate(-90)"><title>${id} · ${D[id].label}</title>${hit(26,26)}<line class="tick" x1="-6" y1="-11" x2="6" y2="-11"/><line class="blade" x1="0" y1="11" x2="0" y2="-11" style="transform-origin:0px 11px"/><circle class="piv" cx="0" cy="11" r="2.4"/></g>`);};
+  const drawRing=(rg,oy)=>{const st=rg.stations,n=st.length,RY=oy+92,x0=(470-(n-1)*84)/2,XS=st.map((s,i)=>x0+i*84),fb=F(rg.from).bus,tb=F(rg.to).bus;
+    T(235,oy+16,`${rg.name.toUpperCase()} · normaal-open punt ${rg.nop}`,'middle','h');
+    W(14,oy+24,14,oy+36,fb);CB('V-'+rg.from,14,oy+44);W(14,oy+52,14,RY,rg.from);T(24,oy+33,`V-${rg.from} · rail ${fb.slice(1)}`,'start','fs');
+    W(456,oy+24,456,oy+36,tb);CB('V-'+rg.to,456,oy+44);W(456,oy+52,456,RY,rg.to);T(446,oy+33,`rail ${tb.slice(1)} · V-${rg.to}`,'end','fs');
+    st.forEach((s,i)=>{const x=XS[i],n2=s.node,Y=RY;
+      o.push(`<rect x="${x-38}" y="${oy+58}" width="76" height="196" rx="7" fill="rgba(255,255,255,0.025)" stroke="rgba(255,255,255,0.09)"/>`);
+      o.push(`<g class="dev kiosk" data-id="${s.id}"><title>${s.id} · ${s.name}</title><rect class="hit" x="${x-38}" y="${oy+58}" width="76" height="27" rx="6"/></g>`);
+      T(x,oy+70,s.id,'middle','h');T(x,oy+81,s.short,'middle','dl fs');M('fi'+s.id,x+28,oy+71,'middle','flag');
+      HS(s.id+'-L',x-24,Y);HS(s.id+'-R',x+24,Y);W(x-13,Y,x+13,Y,n2,'w bus2');
+      W(x,Y,x,Y+12,n2);DS(s.id+'-T',x,Y+23);W(x,Y+34,x,Y+42,n2+'t');
+      o.push(`<circle class="w" data-n="${n2}t" data-c="w" cx="${x}" cy="${Y+49}" r="7"/><circle class="w" data-n="${n2}v" data-c="w" cx="${x}" cy="${Y+60}" r="7"/>`);
+      W(x,Y+67,x,Y+74,n2+'v');W(x-32,Y+74,x+32,Y+74,n2+'v','w bus2');
+      s.groups.forEach((g,j)=>{const gx=x-32+(j+0.5)*64/s.groups.length;W(gx,Y+74,gx,Y+84,n2+'v');
+        o.push(`<g class="dev cb lvs" data-id="${g.id}" transform="translate(${gx} ${Y+90})"><title>${g.id} · ${g.name}</title>${hit(14,18)}<rect class="body" x="-4.5" y="-4.5" width="9" height="9" rx="1.5"/></g>`);
+        W(gx,Y+95,gx,Y+104,g.node);o.push(`<polygon class="w arrow" data-n="${g.node}" data-c="w arrow" points="${gx-4},${Y+104} ${gx+4},${Y+104} ${gx},${Y+111}"/>`);T(gx,Y+121,'G'+(j+1),'middle','fs');});
+      M('stc'+s.id,x,Y+136);M('stp'+s.id,x,Y+148,'middle','');
+      if(s.id+'-R'===rg.nop)T(x+24,Y+20,'NOP','middle','mh fs');});
+    RING.secs.filter(c=>c.ring===rg).forEach((sec,i)=>{const x1=i?XS[i-1]+35:14,x2=i<n?XS[i]-35:456;W(x1,RY,x2,RY,sec.node);M('flt'+sec.id,(x1+x2)/2,RY-8,'middle','bad');});};
+  RINGS.forEach((rg,k)=>drawRing(rg,k*262));
+  T(235,540,'⚑ verklikker aangesproken · ⚡ kabelfout','middle','fs');T(235,553,'klik op een station voor alle schakelaars','middle','fs');
   const svg=$('#sld');svg.innerHTML=`<g data-tab="10">${out[10].join('')}</g><g data-tab="20" style="display:none">${out[20].join('')}</g><g data-tab="R" style="display:none">${out.R.join('')}</g>`;
   SLD.nodes=[...svg.querySelectorAll('[data-n]')];
   svg.querySelectorAll('.dev').forEach(el=>{const id=el.dataset.id,tab=el.closest('[data-tab]').dataset.tab;(SLD.devs[id]??=[]).push(el);(SLD.devTab[id]??=new Set()).add(tab);
@@ -2066,7 +2104,7 @@ function updateHover(){if(FP.on||!moveEv)return;const e=moveEv;moveEv=null;const
 
 // ============================================================ camera
 const VIEWPOS=[[V3(100,52,118),V3(22,3,8)],[V3(-4,13,-2),V3(-30,5,-22)],[V3(88,17,14),V3(32,3,32)],[V3(64,11,32),V3(30,3,50)],[V3(22.1,215,34),V3(22,0,10)],
-  [V3(-2.2,2.5,47.6),V3(0.4,1.6,54.2)],[V3(58.8,2.5,47.6),V3(61.4,1.6,54.2)],[V3(30,95,330),V3(10,0,175)]];
+  [V3(-2.2,2.5,47.6),V3(0.4,1.6,54.2)],[V3(58.8,2.5,47.6),V3(61.4,1.6,54.2)],[V3(30,95,330),V3(10,0,175)],[V3(40,90,470),V3(30,0,330)]];
 let fly=null;
 function flyTo(pos,target,dur=1.5){if(FP.on)exitFP();fly={t:0,dur,p0:camera.position.clone(),t0:controls.target.clone(),p1:pos,t1:target};controls.autoRotate=false;}
 function fmtClock(t){const m=((t%1440)+1440)%1440;return `${String(Math.floor(m/60)).padStart(2,'0')}:${String(Math.floor(m%60)).padStart(2,'0')}`;}
@@ -2094,7 +2132,7 @@ function buildColliders(){
   addRect(F.x0,F.z1-t,F.gate[0],F.z1+t);addRect(F.gate[1],F.z1-t,F.x1,F.z1+t);addRect(F.gate[1],F.z1+0.2,F.gate[1]+10.2,F.z1+1.1);
   DISTRICT_RECTS.forEach(r=>addRect(...r));
 }
-function blockedAt(x,z){const r=0.3;if(x<-200||x>250||z<-110||z>330)return true;
+function blockedAt(x,z){const r=0.3;if(x<-200||x>250||z<-110||z>440)return true;
   for(const q of FP.rects)if(x>q[0]-r&&x<q[2]+r&&z>q[1]-r&&z<q[3]+r)return true;return false;}
 function floorAt(x,z){const r=ROOMS.find(r=>x>r.x0-0.05&&x<r.x1+0.05&&z>r.z0-0.05&&z<r.z1+0.05);return r?r.y0:0.02;}
 const canvasEl=renderer.domElement;
@@ -2189,7 +2227,7 @@ function makePerson(v){
   scene.add(g);return {g,legL,legR,armL,armR,head};}
 
 // ---- routeplanning op een raster van 1 m (A*), met de botsingsvakken van het rondlopen
-const GRID={x0:-210,z0:-120,w:470,h:460,cache:null};
+const GRID={x0:-210,z0:-120,w:470,h:580,cache:null};
 function cellFree(ix,iz){if(ix<0||iz<0||ix>=GRID.w||iz>=GRID.h)return false;const k=iz*GRID.w+ix;
   if(!GRID.cache)GRID.cache=new Uint8Array(GRID.w*GRID.h);let v=GRID.cache[k];
   if(!v){v=blockedAt(GRID.x0+ix+0.5,GRID.z0+iz+0.5)?2:1;GRID.cache[k]=v;}return v===1;}
@@ -2268,7 +2306,7 @@ $('#mute').addEventListener('click',()=>{const m=AudioSys.toggleMute();$('#mute'
 $('#scadaToggle').addEventListener('click',()=>{const s=$('#scada');s.classList.toggle('min');$('#scadaToggle').textContent=s.classList.contains('min')?'+':'–';});
 $('#views').addEventListener('click',e=>{const b=e.target.closest('button');if(b&&b.dataset.v){const v=VIEWPOS[+b.dataset.v];flyTo(v[0].clone(),v[1].clone());}});
 addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;
-  if(e.key>='1'&&e.key<='8'){const v=VIEWPOS[+e.key-1];flyTo(v[0].clone(),v[1].clone());}
+  if(e.key>='1'&&e.key<='9'){const v=VIEWPOS[+e.key-1];flyTo(v[0].clone(),v[1].clone());}
   else if(e.code==='Space'){e.preventDefault();if($('#intro').classList.contains('hidden'))setSpeed(0);}
   else if(e.key==='l'||e.key==='L')document.body.classList.toggle('nolabels');
   else if(e.key==='m'||e.key==='M')$('#mute').click();

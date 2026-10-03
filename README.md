@@ -17,7 +17,7 @@ Een 3D-onderstationsimulator die in de browser draait (Three.js, geen installati
 ## Bediening
 - Klik op een schakelaar in 3D of in het SCADA-schema en kies vervolgens IN/UIT of SLUITEN/OPENEN.
 - Linker muisknop draaien, rechter muisknop schuiven, scrollen om te zoomen.
-- `1`–`8` camerastandpunten (6 = binnen 10 kV, 7 = binnen 20 kV, 8 = wijk en ring)
+- `1`–`9` camerastandpunten (6 = binnen 10 kV, 7 = binnen 20 kV, 8 = woonwijk, 9 = centrum en De Vaart)
 - **Rondlopen (first person):** druk op `V` of op de knop *Rondlopen*.
   - Je loopt met `WASD`, rent met `Shift` en kijkt rond met de muis.
   - Richt het kruis op een schakelaar: `F` schakelt direct. `E` maakt de cursor vrij (en opent het paneel als je naar een schakelaar kijkt), zodat je ook in het SCADA-schema kunt schakelen. Met nog een keer `E` loop je verder.
@@ -37,8 +37,9 @@ Een 3D-onderstationsimulator die in de browser draait (Three.js, geen installati
   - Omschakelen kan alleen spanningsloos (T3-Q0, V-T3 en W-T3 UIT).
   - Inschakelen op de verkeerde spanning blokkeert de vergrendeling. Met de vergrendelingen uit leidt het tot een incident en wikkelingsschade.
   - Let op: T3 is kleiner dan T1. Neemt hij tijdens de avondpiek de hele 10 kV over, dan raakt hij overbelast.
-- **10 kV-ring achter het station:** V-F3 (rail A) voedt via vijf MS-stations (MS1 t/m MS5) naar V-F4 (rail B).
-  - Het normaal-open punt is **MS3-R**.
+- **Twee 10 kV-ringen achter het station:**
+  - **Ring Woonwijk:** V-F3 (rail A) → MS1–MS5 → V-F4 (rail B), normaal-open punt **MS3-R**.
+  - **Ring Centrum – De Vaart:** V-F1 → MS6 Marktplein → MS7 Stationsstraat ‖ MS8 De Vaart Noord → MS9 De Vaart Zuid → V-F2, normaal-open punt **MS7-R**. Het centrum heeft appartementen met winkels, een plein en een station; bedrijventerrein De Vaart heeft hallen, een bouwmarkt en een tankstation.
   - Elk station heeft lastscheiders naar links en rechts, een transformatorschakelaar, een 10/0,4 kV-trafo en laagspanningsvelden naar woonwijken, een school, een supermarkt, een huisartsenpost, een laadplein en bedrijven.
   - Bij een kabelfout spreken **kortsluitverklikkers** aan bij de stations tussen het voedingspunt en de fout. Isoleer de kabel achter het laatste station met een verklikker, sluit het normaal-open punt en schakel het veld weer in.
 - **Inloop-MS-stations:** elk ringstation kun je in, via de open deur of met de knop *Naar binnen* in het stationspaneel. Binnen staan:

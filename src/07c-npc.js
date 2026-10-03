@@ -21,7 +21,7 @@ function makePerson(v){
   scene.add(g);return {g,legL,legR,armL,armR,head};}
 
 // ---- routeplanning op een raster van 1 m (A*), met de botsingsvakken van het rondlopen
-const GRID={x0:-210,z0:-120,w:470,h:460,cache:null};
+const GRID={x0:-210,z0:-120,w:470,h:580,cache:null};
 function cellFree(ix,iz){if(ix<0||iz<0||ix>=GRID.w||iz>=GRID.h)return false;const k=iz*GRID.w+ix;
   if(!GRID.cache)GRID.cache=new Uint8Array(GRID.w*GRID.h);let v=GRID.cache[k];
   if(!v){v=blockedAt(GRID.x0+ix+0.5,GRID.z0+iz+0.5)?2:1;GRID.cache[k]=v;}return v===1;}

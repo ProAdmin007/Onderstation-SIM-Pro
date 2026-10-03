@@ -5,8 +5,8 @@ const SIM={t:9*60,speed:60,paused:true,interlock:true,cml:0,incidents:0,tasksDon
   lines:{L1:{name:'Hoogeveen',avail:true,reason:'',maint:false,ar:true},L2:{name:'Meppel',avail:true,reason:'',maint:false,ar:true}}};
 if(params.get('t')){SIM.t=parseFloat(params.get('t'))*60;SIM.nextEvent=SIM.t+16;SIM.nextTaskAt=SIM.t+3;}
 const FEEDERS=[
-  {id:'F1',name:'Centrum',short:'Centrum',kind:'city',base:6.5,cust:3600,bus:'RA'},
-  {id:'F2',name:'Bedrijventerrein De Vaart',short:'De Vaart',kind:'ind',base:7.0,cust:140,bus:'RA'},
+  {id:'F1',name:'Ring Centrum (MS6–MS7)',short:'Centrum',kind:'city',base:0,cust:0,bus:'RA',ring:true},
+  {id:'F2',name:'Ring De Vaart (MS8–MS9)',short:'De Vaart',kind:'ind',base:0,cust:0,bus:'RA',ring:true},
   {id:'F3',name:'Ring west (MS1–MS3)',short:'Ring W',kind:'res',base:0,cust:0,bus:'RA',ring:true},
   {id:'F4',name:'Ring oost (MS4–MS5)',short:'Ring O',kind:'res',base:0,cust:0,bus:'RB',ring:true},
   {id:'F5',name:'Ziekenhuis',short:'Ziekenh.',kind:'hosp',base:2.8,cust:1,bus:'RB',prio:true},
@@ -47,26 +47,34 @@ dev('V-K',{type:'cb',bay:'K',label:'Railkoppeling 10 kV (synchrocheck)',a:'RA',b
 FEEDERS.forEach(f=>{Object.assign(f,{node:f.id,cb:(f.bus==='RC'?'W-':'V-')+f.id,rate:f.ring?9:f.base*1.15,fault:null,outFrac:0,clp:1,offSince:null,oc:0,backfed:false,noise:0,wasOn:true,P:0,demand:0});
   dev(f.cb,{type:'cb',bay:f.id,label:(f.gen?'Productieveld · ':'Uitgaand veld · ')+f.name,a:f.bus,b:f.id,state:1,feeder:f});
   dev(f.id+'-Q8',{type:'es',bay:f.id,label:'Aardschakelaar kabelzijde',a:f.id,cb:f.cb});});
-// ---------- 10 kV-ring achter het station: V-F3 (rail A) → MS1…MS5 → V-F4 (rail B), normaal-open punt MS3-R
-const RING={nop:'MS3-R',secs:[],stations:[
+// ---------- 10 kV-ringen achter het station: elke ring loopt tussen twee uitgaande velden en heeft een normaal-open punt
+const RINGS=[
+ {id:'R1',name:'Ring Woonwijk',from:'F3',to:'F4',nop:'MS3-R',stations:[
   {id:'MS1',name:'Esdoornlaan',short:'Esdoornln',pos:[-60,108],face:0,groups:[['Woningen Esdoornlaan',600,'res',0.45],['Woningen Lindehof',520,'res',0.4],['Basisschool De Linde',1,'city',0.15],['Supermarkt',1,'city',0.3]]},
   {id:'MS2',name:'Berkenhof',short:'Berkenhof',pos:[-91,170],face:1,groups:[['Woningen Berkenhof',700,'res',0.5],['Woningen Populierenlaan',650,'res',0.45],['Sporthal',1,'city',0.2]]},
   {id:'MS3',name:'Molenweg',short:'Molenweg',pos:[-60,232],face:2,groups:[['Woningen Molenweg',800,'res',0.6],['Appartementen De Molen',420,'res',0.35],['Huisartsenpost',1,'hosp',0.1],['Woningen Kerkpad',500,'res',0.4]]},
   {id:'MS4',name:'Zuiderveld',short:'Zuiderveld',pos:[86,232],face:2,groups:[['Woningen Zuiderveld',900,'res',0.65],['Woningen Akkerweg',780,'res',0.55],['Laadplein elektrische auto\'s',1,'city',0.4]]},
-  {id:'MS5',name:'Bedrijvenpark Zuid',short:'Bedr.park',pos:[118,108],face:0,groups:[['Transportbedrijf',1,'ind',0.6],['Koelhuis',1,'ind',0.8],['Garage en werkplaats',1,'ind',0.25],['Kantoren',25,'city',0.4],['Woningen Zuidrand',520,'res',0.4]]}]};
-const CABLE=['F3','K12','K23','K34','K45','F4'];
-const RING_MV=new Set(CABLE),RING_LV=new Set(),LVG=[];
-RING.stations.forEach((s,i)=>{const M='M'+(i+1);Object.assign(s,{node:M,flag:false,wasOn:true,unplanned:false,wait:0,P:0,cust:0});
-  RING_MV.add(M);RING_MV.add(M+'t');RING_LV.add(M+'v');
-  dev(s.id,{type:'kiosk',bay:s.id,label:'MS-station '+s.name+' · 10/0,4 kV 1600 kVA',node:M,st:s});
-  dev(s.id+'-L',{type:'lbs',bay:s.id,label:'Lastscheider kabel '+(i?'naar '+RING.stations[i-1].id:'naar OS (V-F3)'),a:CABLE[i],b:M,state:1});
-  dev(s.id+'-R',{type:'lbs',bay:s.id,label:'Lastscheider kabel '+(i<4?'naar '+RING.stations[i+1].id:'naar OS (V-F4)'),a:M,b:CABLE[i+1],state:s.id+'-R'===RING.nop?0:1});
-  dev(s.id+'-T',{type:'lbs',bay:s.id,label:'Transformatorschakelaar met zekeringen',a:M,b:M+'t',state:1});
-  dev(s.id+'-TR',{type:'mstr',bay:s.id,label:'Distributietransformator 10/0,4 kV',a:M+'t',b:M+'v',state:1});
-  s.groups=s.groups.map(([name,cust,kind,base],j)=>{const id=s.id+'-G'+(j+1);RING_LV.add(id);s.cust+=cust;
-    const g={id,name,short:name,cust,kind,base,node:id,st:s,noise:0,clp:1,offSince:null,outFrac:0,backfed:false,Pc:0};LVG.push(g);
-    dev(id,{type:'lvs',bay:s.id,label:'Laagspanningsveld · '+name,a:M+'v',b:id,state:1,lvg:g});return g;});});
-for(let i=0;i<6;i++)RING.secs.push({id:CABLE[i],node:CABLE[i],a:i?RING.stations[i-1].id:null,b:i<5?RING.stations[i].id:null,fault:false,located:false});
+  {id:'MS5',name:'Bedrijvenpark Zuid',short:'Bedr.park',pos:[118,108],face:0,groups:[['Transportbedrijf',1,'ind',0.6],['Koelhuis',1,'ind',0.8],['Garage en werkplaats',1,'ind',0.25],['Kantoren',25,'city',0.4],['Woningen Zuidrand',520,'res',0.4]]}]},
+ {id:'R2',name:'Ring Centrum – De Vaart',from:'F1',to:'F2',nop:'MS7-R',stations:[
+  {id:'MS6',name:'Marktplein',short:'Marktplein',pos:[-95,281],face:0,groups:[['Winkels Marktplein',85,'city',0.55],['Horeca Marktplein',30,'city',0.4],['Appartementen De Markt',380,'res',0.3],['Bibliotheek',1,'city',0.12]]},
+  {id:'MS7',name:'Stationsstraat',short:'Stationsstr',pos:[-30,379],face:2,groups:[['Kantoren Stationsstraat',40,'city',0.55],['Appartementen Spoorzicht',460,'res',0.35],['Treinstation',1,'city',0.25],['Gemeentehuis',1,'city',0.3]]},
+  {id:'MS8',name:'De Vaart Noord',short:'Vaart N',pos:[80,281],face:0,groups:[['Metaalbewerking Smit',1,'ind',0.9],['Bedrijfsunits Noord',24,'ind',0.35],['Tankstation',1,'city',0.12]]},
+  {id:'MS9',name:'De Vaart Zuid',short:'Vaart Z',pos:[150,379],face:2,groups:[['Distributiecentrum',1,'ind',1.1],['Bouwmarkt',1,'city',0.35],['Bedrijfsunits Zuid',30,'ind',0.3]]}]}];
+const RING={secs:[],stations:[]};   // alle stations en kabelsecties van alle ringen
+const RING_MV=new Set(),RING_LV=new Set(),LVG=[];
+RINGS.forEach(rg=>{const st=rg.stations,n=st.length,cable=[rg.from];
+  for(let i=1;i<n;i++)cable.push('K'+st[i-1].id.slice(2)+st[i].id.slice(2));cable.push(rg.to);cable.forEach(c=>RING_MV.add(c));rg.cable=cable;
+  st.forEach((s,i)=>{const M='M'+s.id.slice(2);Object.assign(s,{node:M,ring:rg,flag:false,wasOn:true,unplanned:false,wait:0,P:0,cust:0});
+    RING_MV.add(M);RING_MV.add(M+'t');RING_LV.add(M+'v');RING.stations.push(s);
+    dev(s.id,{type:'kiosk',bay:s.id,label:'MS-station '+s.name+' · 10/0,4 kV 1600 kVA',node:M,st:s});
+    dev(s.id+'-L',{type:'lbs',bay:s.id,label:'Lastscheider kabel '+(i?'naar '+st[i-1].id:'naar OS (V-'+rg.from+')'),a:cable[i],b:M,state:1});
+    dev(s.id+'-R',{type:'lbs',bay:s.id,label:'Lastscheider kabel '+(i<n-1?'naar '+st[i+1].id:'naar OS (V-'+rg.to+')'),a:M,b:cable[i+1],state:s.id+'-R'===rg.nop?0:1});
+    dev(s.id+'-T',{type:'lbs',bay:s.id,label:'Transformatorschakelaar met zekeringen',a:M,b:M+'t',state:1});
+    dev(s.id+'-TR',{type:'mstr',bay:s.id,label:'Distributietransformator 10/0,4 kV',a:M+'t',b:M+'v',state:1});
+    s.groups=s.groups.map(([name,cust,kind,base],j)=>{const id=s.id+'-G'+(j+1);RING_LV.add(id);s.cust+=cust;
+      const g={id,name,short:name,cust,kind,base,node:id,st:s,noise:0,clp:1,offSince:null,outFrac:0,backfed:false,Pc:0};LVG.push(g);
+      dev(id,{type:'lvs',bay:s.id,label:'Laagspanningsveld · '+name,a:M+'v',b:id,state:1,lvg:g});return g;});});
+  for(let i=0;i<=n;i++)RING.secs.push({id:cable[i],node:cable[i],ring:rg,a:i?st[i-1].id:null,b:i<n?st[i].id:null,fault:false,located:false});});
 const CONS=FEEDERS.filter(f=>!f.ring).concat(LVG);   // alle afnemers (MS-velden en LS-groepen in de ring)
 dev('RAIL',{type:'bb',label:'110 kV-railsysteem',node:'BB'});
 dev('MS',{type:'bld',label:'10 kV-schakelinstallatie (binnen)',node:'RA'});
