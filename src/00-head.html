@@ -73,6 +73,7 @@ button:disabled{opacity:.35;cursor:not-allowed}
 .mini{padding:1px 8px;font-size:13px;line-height:1.2}
 #sld .w{stroke-width:3;stroke-linecap:round;fill:none}
 #sld .bus{stroke-width:6}
+#sld .lv{stroke:#9be15d} #sld .arrow.lv{fill:#9be15d} #sld .bus2{stroke-width:4} #sld text.flag{fill:#ff9d2e;font-size:13px}
 #sld .hv{stroke:var(--hv)} #sld .mv{stroke:var(--mv)} #sld .mv20{stroke:var(--mv20)} #sld .arrow.mv20{fill:var(--mv20)} #sld .dead{stroke:var(--dead)} #sld .earth{stroke:var(--earth);stroke-dasharray:5 3}
 #sld .arrow{stroke:none} #sld .arrow.hv{fill:var(--hv)} #sld .arrow.mv{fill:var(--mv)} #sld .arrow.dead{fill:var(--dead)}
 #sld .dev{cursor:pointer}
@@ -120,7 +121,7 @@ button:disabled{opacity:.35;cursor:not-allowed}
 .dp-sub button{flex:1;font-size:12px}
 .x{border:none;background:none;color:var(--muted);font-size:16px;padding:2px 6px}
 #views{left:434px;bottom:12px;display:flex;gap:4px;padding:6px}
-#views button{font-size:12px;padding:6px 11px}
+#views button{font-size:11.5px;padding:6px 8px}
 #views kbd{font-family:var(--mono);color:var(--dim);font-size:10px;margin-right:5px}
 #labels{position:fixed;inset:0;pointer-events:none;overflow:hidden}
 .lbl{position:absolute;left:0;top:0;font:600 10.5px var(--mono);color:#fff;background:rgba(10,14,18,.74);border:1px solid rgba(255,255,255,.14);padding:2px 6px 2px 5px;border-radius:5px;white-space:nowrap;display:flex;align-items:center;gap:5px;will-change:transform}
@@ -217,6 +218,11 @@ body.fp #labels{opacity:.75}
 .pm .primary{background:var(--accent);color:#1a1206;border:none;display:flex;justify-content:space-between;align-items:center}
 .pm .primary kbd{background:rgba(0,0,0,.15);border-color:rgba(0,0,0,.2)}
 body.menu #fpPause{display:none!important}
+.swlist{display:flex;flex-direction:column;gap:4px;padding:4px 14px 12px;max-height:300px;overflow:auto}
+.swr{display:grid;grid-template-columns:1fr 54px 54px;gap:5px;align-items:center;font-size:11.5px}
+.swr span{color:var(--muted);line-height:1.25}.swr span b{color:var(--text);font-family:var(--mono);margin-right:6px}
+.swr button{padding:4px 0;font-size:11px;font-weight:700}.swr .cur{opacity:.35}
+.npc{position:absolute;left:0;top:0;background:rgba(242,140,26,.92);color:#1a1206;font:600 11px Inter;padding:3px 8px;border-radius:10px;white-space:nowrap;will-change:transform}
 #loading{position:fixed;inset:0;display:grid;place-items:center;color:var(--muted);font-family:var(--mono);z-index:20;background:var(--bg)}
 @media (max-width:1250px){#tasks{width:290px}#devpanel{left:314px}#scada{width:400px}.kpi{min-width:90px;padding:3px 9px}}
 @media (max-width:1050px){.kpis .kpi:nth-child(n+3){display:none}#views{left:12px;bottom:calc(var(--alarmH) + 24px)}}
@@ -250,7 +256,7 @@ body.menu #fpPause{display:none!important}
 <aside id="tasks" class="panel"><div class="ph"><span id="taskTitle">Werkopdracht</span><span id="taskCode" class="tag"></span></div><div id="taskBody"><div class="idle">Geen actieve opdracht.</div></div></aside>
 <aside id="alarms" class="panel"><div class="ph"><span>Meldingen &amp; gebeurtenissen</span><span class="cnt" id="alarmCnt">0</span></div><div id="alarmList"></div></aside>
 <aside id="scada" class="panel">
-  <div class="ph"><span>SCADA · Eénlijnschema</span><div class="tabs" id="sldTabs"><button data-t="10" class="on">10 kV</button><button data-t="20">20 kV</button></div><button id="scadaToggle" class="mini" title="In-/uitklappen">–</button></div>
+  <div class="ph"><span>SCADA · Eénlijnschema</span><div class="tabs" id="sldTabs"><button data-t="10" class="on">10 kV</button><button data-t="20">20 kV</button><button data-t="R">Ring</button></div><button id="scadaToggle" class="mini" title="In-/uitklappen">–</button></div>
   <svg id="sld" viewBox="0 0 470 575"></svg>
   <div class="legend">
     <span><i style="background:var(--hv)"></i>110 kV</span><span><i style="background:var(--mv)"></i>10 kV</span><span><i style="background:var(--mv20)"></i>20 kV</span><span><i style="background:var(--dead)"></i>spanningsloos</span><span><i style="background:var(--earth)"></i>geaard</span>
@@ -266,6 +272,7 @@ body.menu #fpPause{display:none!important}
   <button data-v="4"><kbd>5</kbd>Vogelvlucht</button>
   <button data-v="5"><kbd>6</kbd>Binnen 10 kV</button>
   <button data-v="6"><kbd>7</kbd>Binnen 20 kV</button>
+  <button data-v="7"><kbd>8</kbd>Wijk &amp; ring</button>
   <button id="fpBtn" class="walk"><kbd>V</kbd>Rondlopen</button>
 </nav>
 <div id="tooltip"></div>
@@ -294,7 +301,7 @@ body.menu #fpPause{display:none!important}
       </ul>
       <div class="mh">Moeilijkheid</div>
       <div class="seg" id="diff"><button data-d="rustig">Rustig</button><button data-d="normaal" class="on">Normaal</button><button data-d="zwaar">Zwaar</button></div>
-      <div class="keys">slepen: draaien · rechts: schuiven · scroll: zoom<br>1–7 camera · V rondlopen · spatie pauze · Esc menu · L labels · M geluid</div>
+      <div class="keys">slepen: draaien · rechts: schuiven · scroll: zoom<br>1–8 camera · V rondlopen · spatie pauze · Esc menu · L labels · M geluid</div>
     </div>
     <div id="menu"></div>
   </div>

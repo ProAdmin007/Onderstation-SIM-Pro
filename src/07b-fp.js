@@ -16,8 +16,12 @@ function buildColliders(){
   // inrichting binnen
   addRect(-19.4,54.8,-14.0,55.7);addRect(-17.1,46.7,-13.9,47.7);addRect(13.3,54.9,17.9,55.5);addRect(16.9,47.0,18.3,48.2);addRect(47.9,54.8,51.2,55.7);
   addRect(37.2,39.9,43.0,42.1);   // busje
+  // hek met open poort, poortvleugels opzij
+  const F=FENCE,t=0.25;addRect(F.x0,F.z0-t,F.x1,F.z0+t);addRect(F.x0-t,F.z0,F.x0+t,F.z1);addRect(F.x1-t,F.z0,F.x1+t,F.z1);
+  addRect(F.x0,F.z1-t,F.gate[0],F.z1+t);addRect(F.gate[1],F.z1-t,F.x1,F.z1+t);addRect(F.gate[1],F.z1+0.2,F.gate[1]+10.2,F.z1+1.1);
+  DISTRICT_RECTS.forEach(r=>addRect(...r));
 }
-function blockedAt(x,z){const r=0.3,F=FENCE;if(x<F.x0+0.5||x>F.x1-0.5||z<F.z0+0.5||z>F.z1-0.5)return true;
+function blockedAt(x,z){const r=0.3;if(x<-200||x>250||z<-110||z>330)return true;
   for(const q of FP.rects)if(x>q[0]-r&&x<q[2]+r&&z>q[1]-r&&z<q[3]+r)return true;return false;}
 function floorAt(x,z){return ROOMS.some(r=>x>r.x0-0.05&&x<r.x1+0.05&&z>r.z0-0.05&&z<r.z1+0.05)?0.45:0.02;}
 const canvasEl=renderer.domElement;

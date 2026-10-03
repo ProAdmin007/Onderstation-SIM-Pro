@@ -49,5 +49,6 @@ buildTrees();
 farm(-420,520,0.3);farm(610,-380,-0.2);farm(-760,-520,1.4);farm(380,820,0.1);
 [[780,-150,0.6],[900,-480,0.6],[1020,-810,0.6],[-950,-760,0.4],[-1150,-430,0.4]].forEach(a=>turbine(...a));
 van(40,41,Math.PI/2);
+buildDistrict();
 buildInterior();
 bakeStatic();

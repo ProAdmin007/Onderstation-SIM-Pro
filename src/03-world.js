@@ -46,7 +46,7 @@ function buildFence(){
   // poort
   for(const gx of gate){cyl(0.08,0.08,2.6,MAT.galv,staticRoot,gx,1.3,z1,12);}
   const gl=mat({map:(()=>{const t=base.clone();t.repeat.set(4.6/0.11,1.9/0.11);t.needsUpdate=true;return t;})(),alphaTest:0.45,side:THREE.DoubleSide,metalness:0.6,roughness:0.45});
-  for(const s of[0,1]){const x=gate[0]+0.1+s*4.9;const f=new THREE.Mesh(new THREE.PlaneGeometry(4.6,1.9),gl);f.position.set(x+2.35,1.15,z1+0.5+s*0.3);staticRoot.add(f);
+  for(const s of[0,1]){const x=gate[1]+0.4+s*4.9;const f=new THREE.Mesh(new THREE.PlaneGeometry(4.6,1.9),gl);f.position.set(x+2.35,1.15,z1+0.5+s*0.3);staticRoot.add(f);
     for(const y of[0.2,2.1])rod(V3(x,y,z1+0.5+s*0.3),V3(x+4.7,y,z1+0.5+s*0.3),0.03,MAT.galv,staticRoot,6);
     for(const xx of[x,x+4.7])rod(V3(xx,0.2,z1+0.5+s*0.3),V3(xx,2.1,z1+0.5+s*0.3),0.03,MAT.galv,staticRoot,6);}
   // naambord
@@ -88,10 +88,10 @@ function tree(x,z,s=1,cast=false){const h=rr(4,6)*s;const t=cyl(0.18*s,0.28*s,h,
   for(let i=0;i<n;i++){const r=rr(1.8,3.0)*s;const c=mesh(crownGeos[i%3],lm,staticRoot,x+rr(-1.5,1.5)*s,h+rr(-0.5,2.5)*s,z+rr(-1.5,1.5)*s);c.scale.set(r,r*rr(0.8,1.1),r);c.rotation.y=R()*6;c.castShadow=cast;}}
 function poplar(x,z){const h=rr(14,18);cyl(0.2,0.3,h*0.5,MAT.bark,staticRoot,x,h*0.25,z,7).castShadow=false;const c=mesh(crownGeos[Math.floor(R()*3)],MAT.leaf[0],staticRoot,x,h*0.58,z);c.scale.set(rr(1.3,1.8),h*0.42,rr(1.3,1.8));c.castShadow=Math.abs(x)<200&&Math.abs(z)<200;}
 function buildTrees(){
-  for(let z=78;z<1200;z+=rr(9,13)){tree(17+rr(-0.5,0.5),z,rr(0.9,1.1),z<160);tree(33+rr(-0.5,0.5),z,rr(0.9,1.1),z<160);}
+  for(let z=78;z<1200;z+=rr(9,13)){if(Math.abs(z-101)<7||Math.abs(z-239)<7)continue;tree(17+rr(-0.5,0.5),z,rr(0.9,1.1),z<160);tree(33+rr(-0.5,0.5),z,rr(0.9,1.1),z<160);}
   for(let z=-70;z<110;z+=rr(8,11)){poplar(-64+rr(-1,1),z);poplar(108+rr(-1,1),z);}
   for(let x=-64;x<110;x+=rr(8,11))poplar(x,-62+rr(-1,1));
-  for(let k=0;k<26;k++){const cx=rr(-2200,2200),cz=rr(-2200,2200);if(Math.abs(cx)<300&&Math.abs(cz)<300)continue;const n=4+Math.floor(R()*10);for(let i=0;i<n;i++)tree(cx+rr(-30,30),cz+rr(-30,30),rr(1.2,1.8));}
+  for(let k=0;k<26;k++){const cx=rr(-2200,2200),cz=rr(-2200,2200);if(Math.abs(cx)<350&&Math.abs(cz)<400)continue;const n=4+Math.floor(R()*10);for(let i=0;i<n;i++)tree(cx+rr(-30,30),cz+rr(-30,30),rr(1.2,1.8));}
   for(let x=-2000;x<2000;x+=rr(10,16))tree(x,-1300+rr(-3,3),1.5);
 }
 function farm(x,z,ry){const g=grp(x,z);g.rotation.y=ry;

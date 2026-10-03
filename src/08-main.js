@@ -17,7 +17,7 @@ $('#mute').addEventListener('click',()=>{const m=AudioSys.toggleMute();$('#mute'
 $('#scadaToggle').addEventListener('click',()=>{const s=$('#scada');s.classList.toggle('min');$('#scadaToggle').textContent=s.classList.contains('min')?'+':'–';});
 $('#views').addEventListener('click',e=>{const b=e.target.closest('button');if(b&&b.dataset.v){const v=VIEWPOS[+b.dataset.v];flyTo(v[0].clone(),v[1].clone());}});
 addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;
-  if(e.key>='1'&&e.key<='7'){const v=VIEWPOS[+e.key-1];flyTo(v[0].clone(),v[1].clone());}
+  if(e.key>='1'&&e.key<='8'){const v=VIEWPOS[+e.key-1];flyTo(v[0].clone(),v[1].clone());}
   else if(e.code==='Space'){e.preventDefault();if($('#intro').classList.contains('hidden'))setSpeed(0);}
   else if(e.key==='l'||e.key==='L')document.body.classList.toggle('nolabels');
   else if(e.key==='m'||e.key==='M')$('#mute').click();
@@ -53,7 +53,7 @@ else{renderMenu();$('#intro').classList.remove('hidden');controls.autoRotate=tru
 if(params.has('night'))updateSky(22);
 if(params.has('view')){const v=VIEWPOS[+params.get('view')];camera.position.copy(v[0]);controls.target.copy(v[1]);controls.autoRotate=false;controls.update();}
 
-window.OS={SIM,D,FP,enterFP,exitFP,pickCenter,camera,camInside,setRatio,setTab,GAME,MODES,applyMode,endGame,EN:()=>EN,FLOW,operate,tapStep,setAVR,resetLockout,toggleAR,regulate,computeFlows,randomEvent,lineFault,feederFault,trafoFault,offerTask,simStep,FEEDERS};
+window.OS={SIM,D,RING,NPCS,crewDispatch,ringFault,FP,enterFP,exitFP,pickCenter,camera,camInside,setRatio,setTab,GAME,MODES,applyMode,endGame,EN:()=>EN,FLOW,operate,tapStep,setAVR,resetLockout,toggleAR,regulate,computeFlows,randomEvent,lineFault,feederFault,trafoFault,offerTask,simStep,FEEDERS};
 const clock=new THREE.Clock();let hudT=0,skyT=0;
 renderer.setAnimationLoop(()=>{
   const dt=Math.min(0.1,clock.getDelta());
@@ -67,7 +67,7 @@ renderer.setAnimationLoop(()=>{
   controls.minDistance=camInside()?1.2:4;controls.update();}
   if((skyT+=dt)>0.25){skyT=0;if(!params.has('night'))updateSky(hourOf());}
   if((hudT+=dt)>0.25){hudT=0;updateHUD();updateSLD();refreshDevPanel();updateAudio();drawPanelScreens();renderTasks();}
-  updateHover();updateLabels();updateRain(dt);
+  updateHover();updateLabels();updateRain(dt);updateNPCs(dt);
   let off=null;if(shake>0.01){off=V3((Math.random()-0.5)*shake,(Math.random()-0.5)*shake,(Math.random()-0.5)*shake);camera.position.add(off);shake*=Math.pow(0.02,dt);}
   renderer.render(scene,camera);
   if(off)camera.position.sub(off);

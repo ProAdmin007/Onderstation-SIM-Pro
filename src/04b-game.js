@@ -3,7 +3,7 @@
 const DIFFS={rustig:{label:'Rustig',ev:1.6,perm:0.2},normaal:{label:'Normaal',ev:1,perm:0.35},zwaar:{label:'Zwaar',ev:0.6,perm:0.5}};
 const GAME={mode:'free',diff:'normaal',score:1000,ended:false,events:true,tasks:true,storm:0,endT:null,t0:0,obj:[],flags:{},countdown:null,
   stats:{fast:0,thermal:0,volt:0,recloseFault:0,clpTrips:0,maxOil:0,hospMin:0}};
-const TOTAL_CUST=FEEDERS.reduce((s,f)=>s+f.cust,0);
+const TOTAL_CUST=CONS.reduce((s,c)=>s+c.cust,0);
 const at=(min,fn)=>SIM.timers.push({at:GAME.t0+min,fn});
 const setCB=(id,s)=>{D[id].state=s;};
 const noIncidents={t:'Geen veiligheidsincidenten',check:()=>SIM.incidents?'fail':null,final:()=>!SIM.incidents};
@@ -19,7 +19,7 @@ const MODES={
         GAME.countdown={label:'Noodstroom ziekenhuis',until:SIM.t+25};pushAlarm('Ziekenhuis: noodstroomaggregaat gestart – brandstof voor ±25 minuten!','crit');});},
     obj:()=>[
       {t:'Ziekenhuis terug op het net vóór de noodstroom op is',check:()=>GAME.flags.fuelEnd==null?null:EN.has('F5')?'done':SIM.t>GAME.flags.fuelEnd?'fail':null},
-      {t:'Woonwijken (F3 en F4) binnen 5 min na de trip hersteld',check:()=>GAME.flags.tripAt==null?null:EN.has('F3')&&EN.has('F4')?'done':SIM.t>GAME.flags.tripAt+5?'fail':null},
+      {t:'Ring (V-F3 en V-F4) binnen 5 min na de trip weer gevoed',check:()=>GAME.flags.tripAt==null?null:EN.has('F3')&&EN.has('F4')?'done':SIM.t>GAME.flags.tripAt+5?'fail':null},
       {t:'Niet inschakelen op de kabelfout',check:()=>GAME.stats.recloseFault?'fail':null,final:()=>true},noIncidents]},
   storm:{scen:true,name:'Storm boven Drenthe',tag:'Scenario · gemiddeld',start:16,dur:90,
     desc:'Onweersbuien trekken over de lijnen en het AR-relais van L2 is defect. Houd het licht aan.',
@@ -46,7 +46,7 @@ const MODES={
     desc:'Landelijke storing: het station is volledig zwart. Bouw alles weer op, veld voor veld.',
     setup(){for(const L of['L1','L2'])Object.assign(SIM.lines[L],{avail:false,reason:'landelijke storing (black-out)'});
       Object.values(D).forEach(d=>{if(d.type==='cb')d.state=0;});D.T1.oil=D.T2.oil=24;
-      FEEDERS.forEach(f=>{f.offSince=SIM.t-120;f.unplanned=true;});
+      CONS.forEach(c=>{c.offSince=SIM.t-120;});FEEDERS.concat(RING.stations).forEach(f=>{f.unplanned=true;});
       GAME.countdown={label:'Deadline volledig herstel',until:SIM.t+30};
       pushAlarm('BLACK-OUT: landelijke storing in het 380 kV-net – OS Zuidwolde volledig spanningsloos','crit');
       pushAlarm('Alle vermogenschakelaars zijn door onderspanning uitgeschakeld. Wacht op TenneT.','info');
@@ -67,20 +67,20 @@ function applyMode(id){
   const m=MODES[id]||MODES.free;GAME.mode=MODES[id]?id:'free';const df=DIFFS[GAME.diff]||DIFFS.normaal;
   SIM.t=(params.get('t')?parseFloat(params.get('t')):m.start)*60;GAME.t0=SIM.t;GAME.endT=m.dur?SIM.t+m.dur:null;
   GAME.events=!m.scen;GAME.tasks=!m.scen;SIM.nextEvent=SIM.t+16*df.ev;SIM.nextTaskAt=m.scen?Infinity:SIM.t+3;
-  FEEDERS.forEach(f=>{f.unplanned=false;f.wait=0;});
+  FEEDERS.concat(RING.stations).forEach(f=>{f.unplanned=false;f.wait=0;});
   initTaps();m.setup&&m.setup();
   GAME.obj=m.obj?m.obj().map(o=>({...o,state:null})):[];
-  computeFlows();FEEDERS.forEach(f=>{f.wasOn=EN.has(f.node);});
+  computeFlows();FEEDERS.concat(RING.stations).forEach(f=>{f.wasOn=EN.has(f.node);});
   updateSky(hourOf());refreshAll();renderTasks();
 }
 function gameTick(dm,dtReal){
   if(GAME.ended)return;
-  GAME.score-=FEEDERS.reduce((s,f)=>s+custOff(f)*(f.interruptible?0.1:1),0)*dm/500;
+  GAME.score-=CONS.reduce((s,c)=>s+custOff(c)*(c.interruptible?0.1:1),0)*dm/500;
   const hosp=FEEDERS[4];
   if(!EN.has(hosp.node)&&!hosp.backfed){GAME.score-=5*dm;GAME.flags.hospRun=(GAME.flags.hospRun||0)+dm;GAME.stats.hospMin+=dm;}else GAME.flags.hospRun=0;
   TR.forEach(T=>GAME.stats.maxOil=Math.max(GAME.stats.maxOil,D[T].oil));
   const canRestore=SIM.lines.L1.avail||SIM.lines.L2.avail;
-  FEEDERS.forEach(f=>{if(f.unplanned&&!EN.has(f.node)&&canRestore&&!(f.fault&&f.fault.stage==='search'))f.wait=(f.wait||0)+dtReal;});
+  FEEDERS.concat(RING.stations).forEach(f=>{if(f.unplanned&&!EN.has(f.node)&&canRestore&&!(f.fault&&f.fault.stage==='search'))f.wait=(f.wait||0)+dtReal;});
   GAME.obj.forEach(o=>{if(o.state||!o.check)return;const r=o.check();if(!r)return;o.state=r;
     if(r==='done'){award(100,'Doel behaald');pushAlarm(`Doel behaald: ${o.t}`,'ok');}else{award(-150,'Doel gemist');pushAlarm(`Doel gemist: ${o.t}`,'warn');}});
   if(GAME.countdown&&GAME.obj.every(o=>o.state))GAME.countdown=null;

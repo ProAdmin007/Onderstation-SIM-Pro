@@ -10,14 +10,18 @@ Een 3D-onderstationsimulator die in de browser draait (Three.js, geen installati
 |---|---|---|
 | ![Transformatorvelden](docs/transformatoren.jpg) | ![20 kV-binnenruimte](docs/binnen-20kv.jpg) | ![Nachtbeeld](docs/nacht.jpg) |
 
+| Wijk met de 10 kV-ring | Monteurs bij een inspectie |
+|---|---|
+| ![Wijk en MS-ring](docs/wijk.jpg) | ![Monteurs bij T2](docs/monteurs.jpg) |
+
 ## Bediening
 - Klik op een schakelaar in 3D of in het SCADA-schema en kies vervolgens IN/UIT of SLUITEN/OPENEN.
 - Linker muisknop draaien, rechter muisknop schuiven, scrollen om te zoomen.
-- `1`–`7` camerastandpunten (6 = binnen 10 kV, 7 = binnen 20 kV)
+- `1`–`8` camerastandpunten (6 = binnen 10 kV, 7 = binnen 20 kV, 8 = wijk en ring)
 - **Rondlopen (first person):** druk op `V` of op de knop *Rondlopen*.
   - Je loopt met `WASD`, rent met `Shift` en kijkt rond met de muis.
   - Richt het kruis op een schakelaar: `F` schakelt direct, `E` opent het apparaatpaneel en met nog een keer `E` sluit je het weer en loop je verder.
-  - Je loopt niet door apparatuur, muren of het hek; de gebouwen kun je via de deuren in.
+  - Je loopt niet door apparatuur, muren, huizen of het hek. De gebouwen kun je via de deuren in, en via de open poort loop je de wijk in naar de MS-stations.
   - Met `V` stop je met rondlopen; met nog een keer `V` ga je verder waar je was.
   - Lopen gaat met 2,2 m/s, rennen met `Shift` met 8 m/s.
 - **Pauzemenu (`Esc`):** hervatten, de dienst beëindigen met rapport, of de score opslaan en terug naar het hoofdmenu.
@@ -33,7 +37,12 @@ Een 3D-onderstationsimulator die in de browser draait (Three.js, geen installati
   - Omschakelen kan alleen spanningsloos (T3-Q0, V-T3 en W-T3 UIT).
   - Inschakelen op de verkeerde spanning blokkeert de vergrendeling. Met de vergrendelingen uit leidt het tot een incident en wikkelingsschade.
   - Let op: T3 is kleiner dan T1. Neemt hij tijdens de avondpiek de hele 10 kV over, dan raakt hij overbelast.
-- **SCADA** heeft tabbladen voor 10 kV en 20 kV.
+- **10 kV-ring achter het station:** V-F3 (rail A) voedt via vijf MS-stations (MS1 t/m MS5) naar V-F4 (rail B).
+  - Het normaal-open punt is **MS3-R**.
+  - Elk station heeft lastscheiders naar links en rechts, een transformatorschakelaar, een 10/0,4 kV-trafo en laagspanningsvelden naar woonwijken, een school, een supermarkt, een huisartsenpost, een laadplein en bedrijven.
+  - Bij een kabelfout spreken **kortsluitverklikkers** aan bij de stations tussen het voedingspunt en de fout. Isoleer de kabel achter het laatste station met een verklikker, sluit het normaal-open punt en schakel het veld weer in.
+- **Monteurs:** collega's in een veiligheidsvest lopen het station of de wijk in bij inspecties, werkopdrachten en kabelfouten, en vertrekken weer als het werk klaar is.
+- **SCADA** heeft tabbladen voor 10 kV, 20 kV en de ring.
 
 ## Spelmodi en score
 - **Vrije dienst:** eindeloos spelen.
