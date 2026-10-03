@@ -13,13 +13,13 @@ const MODES={
   day:{name:'Dagdienst',tag:'Dienst · 8 uur',start:7,dur:480,desc:'07:00–15:00. Ochtendpiek, werkopdrachten en storingen. Afsluiten met een dienstrapport.'},
   eve:{name:'Avonddienst',tag:'Dienst · 8 uur',start:15,dur:480,desc:'15:00–23:00. De zware avondpiek en kassen die ’s avonds gaan belichten.'},
   zkh:{scen:true,name:'Kabelstoring ziekenhuis',tag:'Scenario · makkelijk',start:10,dur:50,
-    desc:'Een rustige ochtend… tot T2 uitvalt en het ziekenhuis op noodstroom overgaat.',
+    desc:'Een rustige ochtend… tot T1 uitvalt en het ziekenhuis op noodstroom overgaat.',
     setup(){pushAlarm('Rustige ochtend in OS Zuidwolde. Fijne dienst!','info');
-      at(1,()=>{feederFault('F5',14);trafoFault('T2');GAME.flags.tripAt=SIM.t;GAME.flags.fuelEnd=SIM.t+25;
+      at(1,()=>{feederFault('F5',14);trafoFault('T1');GAME.flags.tripAt=SIM.t;GAME.flags.fuelEnd=SIM.t+25;
         GAME.countdown={label:'Noodstroom ziekenhuis',until:SIM.t+25};pushAlarm('Ziekenhuis: noodstroomaggregaat gestart – brandstof voor ±25 minuten!','crit');});},
     obj:()=>[
       {t:'Ziekenhuis terug op het net vóór de noodstroom op is',check:()=>GAME.flags.fuelEnd==null?null:EN.has('F5')?'done':SIM.t>GAME.flags.fuelEnd?'fail':null},
-      {t:'Wijk Zuid (F4) binnen 5 min na de trip hersteld',check:()=>GAME.flags.tripAt==null?null:EN.has('F4')?'done':SIM.t>GAME.flags.tripAt+5?'fail':null},
+      {t:'Woonwijken (F3 en F4) binnen 5 min na de trip hersteld',check:()=>GAME.flags.tripAt==null?null:EN.has('F3')&&EN.has('F4')?'done':SIM.t>GAME.flags.tripAt+5?'fail':null},
       {t:'Niet inschakelen op de kabelfout',check:()=>GAME.stats.recloseFault?'fail':null,final:()=>true},noIncidents]},
   storm:{scen:true,name:'Storm boven Drenthe',tag:'Scenario · gemiddeld',start:16,dur:90,
     desc:'Onweersbuien trekken over de lijnen en het AR-relais van L2 is defect. Houd het licht aan.',
@@ -32,16 +32,15 @@ const MODES={
       {t:'Ziekenhuis nooit langer dan 5 min zonder net',check:()=>GAME.flags.hospRun>5?'fail':null,final:()=>true},
       {t:'Minder dan 40.000 klantminuten',check:()=>SIM.cml>40000?'fail':null,final:()=>SIM.cml<=40000},noIncidents]},
   piek:{scen:true,name:'Avondpiek op één poot',tag:'Scenario · gemiddeld',start:16.5,dur:150,
-    desc:'T2 staat in onderhoud en de avondpiek komt eraan. Houd T1 heel: schakel de kassen af of zet reservetrafo T4 om naar 10 kV.',
-    setup(){setCB('T2-Q0',0);setCB('V-T2',0);setCB('T2-Q1',0);setCB('V-K',1);
-      Object.assign(D.T2,{blocked:true,resettable:false,blockText:'onderhoud trappenschakelaar',blockKind:'maint'});D.T1.oil=62;FEEDERS[5].interruptible=true;
-      pushAlarm('T2 staat uit bedrijf voor onderhoud – gereed verwacht rond 17:50','info');
+    desc:'T1 staat in onderhoud en reservetrafo T3 (25 MVA) draagt de hele 10 kV. De avondpiek komt eraan: houd T3 heel, de kassen hebben een afschakelbaar contract.',
+    setup(){setCB('T1-Q0',0);setCB('V-T1',0);setCB('T1-Q1',0);setCB('V-T3',1);setCB('V-K',1);
+      Object.assign(D.T1,{blocked:true,resettable:false,blockText:'onderhoud trappenschakelaar',blockKind:'maint'});D.T3.oil=62;FEEDERS[5].interruptible=true;
+      pushAlarm('T1 staat uit bedrijf voor onderhoud – gereed verwacht rond 17:50. Reservetransformator T3 voedt de 10 kV.','info');
       pushAlarm('Glastuinbouw Oost (F6) heeft een afschakelbaar contract: afschakelen kost maar 10% klantminuten','info');
-      pushAlarm('Reservetransformator T4 staat warm op 20 kV. Omschakelen naar 10 kV kan alleen spanningsloos.','info');
-      at(80,()=>{D.T2.resettable=true;pushAlarm('Onderhoud T2 gereed – reset blokkeerrelais 86, sluit T2-Q1 en neem T2 weer in bedrijf','ok');});},
-    obj:()=>[{t:'T1 wordt niet thermisch afgeschakeld',check:()=>GAME.stats.thermal?'fail':null,final:()=>true},
+      at(80,()=>{D.T1.resettable=true;pushAlarm('Onderhoud T1 gereed – reset blokkeerrelais 86, sluit T1-Q1 en neem T1 weer in bedrijf','ok');});},
+    obj:()=>[{t:'T3 wordt niet thermisch afgeschakeld',check:()=>GAME.stats.thermal?'fail':null,final:()=>true},
       {t:'Ziekenhuis (F5) blijft onder spanning',check:()=>GAME.flags.hospRun>1?'fail':null,final:()=>true},
-      {t:'T2 vóór 18:30 weer in bedrijf',check:()=>EN.has('T2l')&&D['V-T2'].state?'done':SIM.t>18.5*60?'fail':null},
+      {t:'T1 vóór 18:30 weer in bedrijf',check:()=>EN.has('T1l')&&D['V-T1'].state?'done':SIM.t>18.5*60?'fail':null},
       {t:'Minder dan 15.000 klantminuten',check:()=>SIM.cml>15000?'fail':null,final:()=>SIM.cml<=15000}]},
   blackout:{scen:true,name:'Black-out',tag:'Scenario · moeilijk',start:6.33,dur:45,
     desc:'Landelijke storing: het station is volledig zwart. Bouw alles weer op, veld voor veld.',

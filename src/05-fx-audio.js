@@ -62,7 +62,7 @@ const AudioSys={ctx:null,muted:false,
 function distGain(p){const d=camera.position.distanceTo(p);return clamp(1.2/(1+(d/35)**2)+0.12,0.12,1);}
 function updateAudio(){if(!AudioSys.ctx)return;let hum=0,fan=0;
   TR.forEach(T=>{const v=VIEWS[T];if(!v)return;const d=camera.position.distanceTo(v.center),att=1/(1+(d/16)**2);
-    if(EN.has(T+'h'))hum+=(0.35+0.65*D[T].S/25)*att;if(D[T].fans&&EN.has(T+'h'))fan+=att;});
+    if(EN.has(T+'h'))hum+=(0.35+0.65*D[T].S/D[T].rAF)*att;if(D[T].fans&&EN.has(T+'h'))fan+=att;});
   AudioSys.set(AudioSys.hum,clamp(hum*0.2,0,0.3));AudioSys.set(AudioSys.fan,clamp(fan*0.12,0,0.15));AudioSys.set(AudioSys.rain,GAME.storm?(camInside()?0.025:0.07):0);AudioSys.set(AudioSys.wind,GAME.storm?0.09:0.03);}
 
 // regen (alleen tijdens storm)

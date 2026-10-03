@@ -473,7 +473,7 @@ const PH = [-2.2,0,2.2];          // faseafstand binnen een veld
 const BUSZ = [-2.4,0,2.4];        // fasen van de 110 kV-rail
 const BUSY = 8.32;
 const W_G = [-4,0,4];             // fasen bij het lijnportaal
-const BAYS = {L1:{x:-30},L2:{x:30},T1:{x:-10},T2:{x:10},T3:{x:50},T4:{x:70}};
+const BAYS = {L1:{x:-30},L2:{x:30},T1:{x:-10},T3:{x:30},T2:{x:60}};
 const VIEWS = {}, pickables = [];
 const pickMat = new THREE.MeshBasicMaterial({visible:false});
 const easeIO = t => t<0.5?2*t*t:1-Math.pow(-2*t+2,2)/2;
@@ -627,7 +627,7 @@ function buildTR(id,cx,cz,ratioText='110/10,5 kV'){
   box(0.7,1.1,0.35,MAT.cabinet,root,-2.0,1.9,1.68);
   box(0.9,1.4,0.45,MAT.cabinet,root,2.0,1.9,1.73);
   plate(id,root,-0.6,1.6,1.515,0,0.7);
-  plate(ratioText,root,0.45,1.6,1.515,0,0.7);if(id==='T4'){box(0.5,0.6,0.3,MAT.cabinet,root,-2.4,3.4,-1.62);plate('10 ⇄ 20 kV',root,-2.4,3.85,-1.78,Math.PI,0.4);}
+  plate(ratioText,root,0.45,1.6,1.515,0,0.7);if(id==='T3'){box(0.5,0.6,0.3,MAT.cabinet,root,-2.4,3.4,-1.62);plate('10 ⇄ 20 kV',root,-2.4,3.85,-1.78,Math.PI,0.4);}
   const hz=mesh(new THREE.PlaneGeometry(0.4,0.5),MAT.hazard,root,1.2,1.65,1.515);hz.castShadow=false;
   const st={fan:0};
   regView(id,root,(dt)=>{const t=D[id];const target=(t.fans&&EN.has(t.a))?16:0;st.fan+=(target-st.fan)*Math.min(1,dt*0.5);fans.forEach(f=>f.rotation.x+=st.fan*dt);},{arcPos:V3(cx,5,cz)});
@@ -637,12 +637,12 @@ function buildTR(id,cx,cz,ratioText='110/10,5 kV'){
 // --- 110 kV-rail
 function buildBus(){
   const root=grp();
-  [-38,-20,0,20,40,60,78].forEach(x=>{support(root,x,-3.7,6.3);support(root,x,3.7,6.3);box(0.3,0.35,8.0,MAT.galv,root,x,6.475,0);
+  [-38,-20,0,18,44,70].forEach(x=>{support(root,x,-3.7,6.3);support(root,x,3.7,6.3);box(0.3,0.35,8.0,MAT.galv,root,x,6.475,0);
     BUSZ.forEach(z=>{insulator(root,1.6,0.1,0.22,10,MAT.porcelain,6.65,x,z);box(0.22,0.14,0.22,MAT.alu,root,x,8.28,z);});});
-  BUSZ.forEach(z=>{const m=mesh(new THREE.CylinderGeometry(0.06,0.06,117,16),MAT.alu,root,20,BUSY,z);m.rotation.z=Math.PI/2;
-    for(const x of[-38.5,78.5])mesh(new THREE.SphereGeometry(0.09,12,8),MAT.alu,root,x,BUSY,z);});
+  BUSZ.forEach(z=>{const m=mesh(new THREE.CylinderGeometry(0.06,0.06,109,16),MAT.alu,root,16,BUSY,z);m.rotation.z=Math.PI/2;
+    for(const x of[-38.5,70.5])mesh(new THREE.SphereGeometry(0.09,12,8),MAT.alu,root,x,BUSY,z);});
   plate('RAIL 110 kV',root,-38,2.2,-3.55,0,0.6);
-  regView('RAIL',root,null,{box:new THREE.Box3(V3(-38.6,7.6,-3),V3(78.6,8.7,3)),labelPos:V3(-41,9.2,0)});
+  regView('RAIL',root,null,{box:new THREE.Box3(V3(-38.6,7.6,-3),V3(70.6,8.7,3)),labelPos:V3(-41,9.2,0)});
 }
 
 // --- vakwerk: portaal en mast
@@ -698,7 +698,7 @@ function buildGround(){
   groundQuad(-30,38,22,44,0.04,MAT.asphalt,6);
   groundQuad(28,38,86,44,0.04,MAT.asphalt,6);
   // kabelgoten
-  for(const bx of[-10,10,50,70])for(let z=35.2;z<37.8;z+=0.62)box(0.9,0.1,0.58,MAT.concreteDark,staticRoot,bx,0.07,z);
+  for(const bx of[-10,30,60])for(let z=35.2;z<37.8;z+=0.62)box(0.9,0.1,0.58,MAT.concreteDark,staticRoot,bx,0.07,z);
   for(let x=-40;x<80;x+=0.62)if(Math.abs(x)>3&&Math.abs(x-40)>3)box(0.58,0.1,0.7,MAT.concreteDark,staticRoot,x,0.07,-3.9);
 }
 
@@ -870,34 +870,34 @@ for(const L of['L1','L2']){const nm=SIM.lines[L].name;
   dev(L+'-CT',{type:'ct',bay:L,label:'Stroomtransformatoren',node:L+'a',ref:L+'-Q0'});
   dev(L+'-SA',{type:'sa',bay:L,label:'Overspanningsafleiders',node:L+'x',count:3});
   dev(L+'-LIJN',{type:'line',bay:L,label:'110 kV-lijn '+nm,node:L+'x',line:L});}
-// transformatoren: T1/T2 → 10 kV, T3 → 20 kV, T4 = omschakelbare reserve 10 of 20 kV
-const TR=['T1','T2','T3','T4'];
-const TR_LV={T1:['V-T1'],T2:['V-T2'],T3:['W-T3'],T4:['V-T4','W-T4']};
-const TR_INFO={T1:{label:'Transformator 110/10,5 kV · 20/25 MVA',un:10.5},T2:{label:'Transformator 110/10,5 kV · 20/25 MVA',un:10.5},
-  T3:{label:'Transformator 110/21 kV · 20/25 MVA',un:21},T4:{label:'Reservetransformator 110/10,5-21 kV · omschakelbaar',un:21}};
+// transformatoren: T1 → 10 kV, T2 → 20 kV, T3 = omschakelbare reserve voor 10 of 20 kV
+const TR=['T1','T2','T3'],RES='T3';
+const TR_LV={T1:['V-T1'],T2:['W-T2'],T3:['V-T3','W-T3']};
+const TR_INFO={T1:{label:'Transformator 110/10,5 kV · 31,5/40 MVA',un:10.5,rON:31.5,rAF:40},
+  T2:{label:'Transformator 110/21 kV · 20/25 MVA',un:21,rON:20,rAF:25},
+  T3:{label:'Reservetransformator 110/10,5-21 kV · 20/25 MVA · omschakelbaar',un:10.5,rON:20,rAF:25}};
 for(const T of TR){
   dev(T+'-Q1',{type:'ds',bay:T,label:'Railscheider',a:'BB',b:T+'b',state:1,cb:T+'-Q0'});
   dev(T+'-Q0',{type:'cb',bay:T,label:'Vermogenschakelaar 110 kV',a:T+'b',b:T+'h',state:1,tr:T});
   dev(T+'-CT',{type:'ct',bay:T,label:'Stroomtransformatoren',node:T+'h',ref:T+'-Q0'});
   dev(T+'-SA',{type:'sa',bay:T,label:'Overspanningsafleiders',node:T+'h',count:2});
-  dev(T,{type:'tr',bay:T,label:TR_INFO[T].label,un:TR_INFO[T].un,a:T+'h',b:T+'l',state:1,oil:T==='T4'?28:47,fans:false,
+  dev(T,{type:'tr',bay:T,label:TR_INFO[T].label,un:TR_INFO[T].un,rON:TR_INFO[T].rON,rAF:TR_INFO[T].rAF,a:T+'h',b:T+'l',state:1,oil:T===RES?30:47,fans:false,
     blocked:false,blockText:'',blockKind:'',resettable:false,S:0,Sc:0,P:0,tap:9,avr:'auto',avrT:0,tapBusy:false,tapOps:0,U0:0,Ulv:0,rev:false});}
-D.T4.ratio='20';D.T4.reserve=true;
+D[RES].ratio='10';D[RES].reserve=true;
 dev('V-T1',{type:'cb',bay:'T1',label:'Inkomend veld 10 kV',a:'T1l',b:'RA',state:1,tr:'T1'});
-dev('V-T2',{type:'cb',bay:'T2',label:'Inkomend veld 10 kV',a:'T2l',b:'RB',state:1,tr:'T2'});
-dev('W-T3',{type:'cb',bay:'T3',label:'Inkomend veld 20 kV',a:'T3l',b:'RC',state:1,tr:'T3'});
-dev('V-T4',{type:'cb',bay:'T4',label:'Reserve-inkomend veld 10 kV (rail B)',a:'T4l',b:'RB',state:0,tr:'T4',need:'10'});
-dev('W-T4',{type:'cb',bay:'T4',label:'Reserve-inkomend veld 20 kV',a:'T4l',b:'RC',state:0,tr:'T4',need:'20'});
-dev('V-K',{type:'cb',bay:'K',label:'Railkoppeling 10 kV (synchrocheck)',a:'RA',b:'RB',state:0});
+dev('W-T2',{type:'cb',bay:'T2',label:'Inkomend veld 20 kV',a:'T2l',b:'RC',state:1,tr:'T2'});
+dev('V-T3',{type:'cb',bay:'T3',label:'Reserve-inkomend veld 10 kV (rail B)',a:'T3l',b:'RB',state:0,tr:'T3',need:'10'});
+dev('W-T3',{type:'cb',bay:'T3',label:'Reserve-inkomend veld 20 kV',a:'T3l',b:'RC',state:0,tr:'T3',need:'20'});
+dev('V-K',{type:'cb',bay:'K',label:'Railkoppeling 10 kV (synchrocheck)',a:'RA',b:'RB',state:1});
 FEEDERS.forEach(f=>{Object.assign(f,{node:f.id,cb:(f.bus==='RC'?'W-':'V-')+f.id,fault:null,outFrac:0,clp:1,offSince:null,oc:0,backfed:false,noise:0,wasOn:true,P:0,demand:0});
   dev(f.cb,{type:'cb',bay:f.id,label:(f.gen?'Productieveld · ':'Uitgaand veld · ')+f.name,a:f.bus,b:f.id,state:1,feeder:f});
   dev(f.id+'-Q8',{type:'es',bay:f.id,label:'Aardschakelaar kabelzijde',a:f.id,cb:f.cb});});
 dev('RAIL',{type:'bb',label:'110 kV-railsysteem',node:'BB'});
 dev('MS',{type:'bld',label:'10 kV-schakelinstallatie (binnen)',node:'RA'});
 dev('MS20',{type:'bld',label:'20 kV-schakelinstallatie (binnen)',node:'RC'});
-const LV10=new Set(['T1l','T2l','RA','RB','F1','F2','F3','F4','F5','F6']),LV20=new Set(['T3l','RC','G1','G2','G3','G4']);
-function lvl(n){if(n==='T4l')return +D.T4.ratio;return LV10.has(n)?10:LV20.has(n)?20:110;}
-const trafoUn=T=>T==='T4'?(D.T4.ratio==='10'?10.5:21):D[T].un;
+const LV10=new Set(['T1l','RA','RB','F1','F2','F3','F4','F5','F6']),LV20=new Set(['T2l','RC','G1','G2','G3','G4']);
+function lvl(n){if(n===RES+'l')return +D[RES].ratio;return LV10.has(n)?10:LV20.has(n)?20:110;}
+const trafoUn=T=>T===RES?(D[RES].ratio==='10'?10.5:21):D[T].un;
 const kA=b=>b==='RC'?28.9:57.9;   // A per MW bij cos φ 0,95
 const ADJ={};
 Object.values(D).forEach(d=>{if(['cb','ds','tr'].includes(d.type)){(ADJ[d.a]??=[]).push(d);(ADJ[d.b]??=[]).push(d);}if(d.type==='es')(ADJ[d.a]??=[]).push(d);});
@@ -935,7 +935,7 @@ function computeFlows(){
     FLOW.groups.push({buses:g,tf});
     tf.forEach(T=>{D[T].S+=Math.abs(load)/tf.length/0.95;D[T].rev=load<0;});
     if(tf.length>=2){const taps=tf.map(T=>D[T].tap),sc=25*0.052*(Math.max(...taps)-Math.min(...taps));tf.forEach(T=>D[T].Sc=sc);}
-    const U=tf.reduce((s,T)=>s+D[T].U0-Z_DROP*trafoUn(T)*(D[T].S/25)*(load<0?-1:1),0)/tf.length;
+    const U=tf.reduce((s,T)=>s+D[T].U0-Z_DROP*trafoUn(T)*(D[T].S/D[T].rAF)*(load<0?-1:1),0)/tf.length;
     g.forEach(b=>FLOW.U[b]=U);tf.forEach(T=>D[T].Ulv=U);});
   TR.forEach(T=>{const t=D[T];if(!FLOW.groups.some(g=>g.tf.includes(T)))t.Ulv=t.U0;if(t.Sc)t.S=Math.hypot(t.S,t.Sc);
     TR_LV[T].forEach(id=>{const c=D[id];if(c.state===1&&EN.has(T+'l'))c.I=t.S*0.95*kA(c.b);});});
@@ -980,7 +980,7 @@ function operate(id,to){
   if(d.type==='cb')AudioSys.breaker(v?distGain(v.center):0.5);else{d.busy=!!v;AudioSys.motor(d.type==='es'?2.2:2.8,v?distGain(v.center):0.5);}
   if(d.type==='cb'&&to===1&&d.need&&D[d.tr].ratio!==d.need&&EN.has(d.a)){incident();d.state=0;tripBreaker(d.tr+'-Q0');
     pushAlarm(`${id} ingeschakeld terwijl ${d.tr} op ${D[d.tr].ratio} kV staat – verkeerde spanning op de rail, overspanningsbeveiliging en differentiaal grijpen in!`,'crit');
-    spawnArc(v?v.arcPos:null,1.5);const t=D[d.tr];t.blocked=true;t.resettable=false;t.blockKind='ratio';t.blockText='wikkelingsschade door verkeerde omschakelstand';addTimer(90,()=>{t.resettable=true;pushAlarm(`T4: inspectie na overspanning gereed – reset 86 mogelijk`,'ok');});refreshAll();return;}
+    spawnArc(v?v.arcPos:null,1.5);const t=D[d.tr];t.blocked=true;t.resettable=false;t.blockKind='ratio';t.blockText='wikkelingsschade door verkeerde omschakelstand';addTimer(90,()=>{t.resettable=true;pushAlarm(`${d.tr}: inspectie na overspanning gereed – reset 86 mogelijk`,'ok');});refreshAll();return;}
   if(arc){incident();pushAlarm(`${id} geschakeld met ${d.cb} IN – vlamboog! Beveiliging grijpt in`,'crit');spawnArc(v?v.arcPos:null,1.3);tripFrom(arc);}
   else{const sc=shortNode();if(sc){incident();
     pushAlarm(d.type==='es'?`Aardschakelaar ${id} op spanning gesloten – kortsluiting!`:d.type==='cb'?`${id} ingeschakeld op geaard deel – kortsluiting!`:`Kortsluiting na bediening ${id}!`,'crit');
@@ -1012,16 +1012,16 @@ function tripTrafo(T,reason,inspectMin,kind){const t=D[T];tripBreaker(T+'-Q0');T
   pushAlarm(`${T}: ${reason} – ${T}-Q0 en ${TR_LV[T].join('/')} UIT, blokkeerrelais 86 aangesproken`,'crit');
   if(inspectMin)addTimer(inspectMin,()=>{t.resettable=true;pushAlarm(`${T}: inspectie gereed, geen schade gevonden – reset blokkeerrelais 86 in het transformatorpaneel`,'ok');});
   setTimeout(()=>{computeFlows();const dead=FEEDERS.filter(f=>!EN.has(f.node)&&D[f.cb].state===1);if(!dead.length)return;
-    if(dead.some(f=>f.bus==='RC'))pushAlarm(`Tip: neem reservetransformator T4 in bedrijf op 20 kV (W-T4) – T4 staat op ${D.T4.ratio} kV`,'info');
-    if(dead.some(f=>f.bus!=='RC'))pushAlarm('Tip: sluit railkoppeling V-K, of zet reservetransformator T4 om naar 10 kV en sluit V-T4 (let op de belasting!)','info');},600);}
+    if(dead.some(f=>f.bus==='RC'))pushAlarm(`Tip: neem reservetransformator T3 in bedrijf op 20 kV (W-T3) – T3 staat nu op ${D.T3.ratio} kV`,'info');
+    if(dead.some(f=>f.bus!=='RC'))pushAlarm(`Tip: neem reservetransformator T3 in bedrijf op 10 kV (V-T3) – T3 staat nu op ${D.T3.ratio} kV. Let op de belasting!`,'info');},600);}
 function resetLockout(T){const t=D[T];if(!t.blocked)return;
   if(!t.resettable)return deny(`Reset 86 niet mogelijk: ${t.blockKind==='temp'?'transformator nog te warm (< 75 °C)':t.blockKind==='ratio'?'wikkelingsschade, inspectie loopt':'inspectie nog niet gereed'}`);
   t.blocked=false;t.blockText='';pushAlarm(`${T}: blokkeerrelais 86 gereset – transformator vrijgegeven`,'op');refreshAll();}
-function setRatio(r){const t=D.T4;if(t.ratio===r)return;
-  if(EN.has('T4h')||D['V-T4'].state||D['W-T4'].state)return deny('Omschakelen alleen spanningsloos: schakel T4-Q0, V-T4 en W-T4 eerst UIT');
-  if(t.ratioBusy)return deny('Omschakelaar draait nog…');t.ratioBusy=true;const v=VIEWS.T4;AudioSys.motor(3,v?distGain(v.center):0.4);
-  pushAlarm(`T4: wikkelingsomschakelaar naar ${r} kV gestart`,'op');
-  setTimeout(()=>{t.ratio=r;t.ratioBusy=false;t.tap=9;pushAlarm(`T4: omgeschakeld naar ${r} kV – schakel nu ${r==='10'?'V-T4':'W-T4'} in`,'op');refreshAll();},3000);}
+function setRatio(r){const t=D[RES];if(t.ratio===r)return;
+  if(EN.has('T3h')||D['V-T3'].state||D['W-T3'].state)return deny('Omschakelen alleen spanningsloos: schakel T3-Q0, V-T3 en W-T3 eerst UIT');
+  if(t.ratioBusy)return deny('Omschakelaar draait nog…');t.ratioBusy=true;const v=VIEWS[RES];AudioSys.motor(3,v?distGain(v.center):0.4);
+  pushAlarm(`T3: wikkelingsomschakelaar naar ${r} kV gestart`,'op');
+  setTimeout(()=>{t.ratio=r;t.ratioBusy=false;t.tap=9;pushAlarm(`T3: omgeschakeld naar ${r} kV – schakel nu ${r==='10'?'V-T3':'W-T3'} in`,'op');refreshAll();},3000);}
 function setAVR(T,mode){D[T].avr=mode;D[T].avrT=0;pushAlarm(`${T}: spanningsregelaar op ${mode==='auto'?'AUTOMATISCH':'HAND'}`,'op');refreshAll();}
 function moveTap(T,dir,manual){const t=D[T];const n=clamp(t.tap+dir,1,17);if(n===t.tap)return false;
   t.tapBusy=true;const v=VIEWS[T];AudioSys.motor(1.4,v?distGain(v.center)*0.6:0.2);
@@ -1044,7 +1044,7 @@ function regulate(dm){
     else if(U>=lo+m&&U<=hi-m)SIM[k]=false;});
 }
 function thermal(dm){const h=hourOf(),amb=11+5*Math.sin((h-9)/24*2*Math.PI);
-  TR.forEach(T=>{const t=D[T],on=EN.has(T+'h'),k=t.S/(t.fans?25:20);
+  TR.forEach(T=>{const t=D[T],on=EN.has(T+'h'),k=t.S/(t.fans?t.rAF:t.rON);
     const target=amb+(on?8:0)+62*k*k;t.oil+=(target-t.oil)*(1-Math.exp(-dm/32));
     if(!t.fans&&on&&t.oil>65){t.fans=true;pushAlarm(`${T}: olie ${t.oil.toFixed(0)} °C – koeling ONAF, ventilatoren aan`,'info');}
     if(t.fans&&(t.oil<57||!on))t.fans=false;
@@ -1055,6 +1055,8 @@ function thermal(dm){const h=hourOf(),amb=11+5*Math.sin((h-9)/24*2*Math.PI);
 
 // ---------------------------------------------------------- 10 kV-velden: koude-lastopname en overstroom
 function feederTick(dm){FEEDERS.forEach(f=>{const on=EN.has(f.node);
+  if(on&&f.fault&&f.fault.stage==='search'&&D[f.cb].state===1){tripBreaker(f.cb);GAME.stats.recloseFault++;award(-40,'Ingeschakeld op kortsluiting');
+    pushAlarm(`${f.cb}: kabel onder spanning gebracht met fout – I>> momentaan trip. Wacht op de storingsdienst!`,'warn');return;}
   if(f.backfed)f.offSince=null;
   else if(!on){if(f.offSince==null)f.offSince=SIM.t;}
   else if(f.offSince!=null){const dur=SIM.t-f.offSince;f.offSince=null;
@@ -1107,16 +1109,6 @@ function lineTask(L){const ln=SIM.lines[L];return{title:`Onderhoud lijnveld ${L}
   {t:'Wacht op TenneT: lijn onder spanning',ok:()=>ln.avail},
   {t:`Sluit ${L}-Q1 en ${L}-Q9`,ok:()=>D[L+'-Q1'].state&&D[L+'-Q9'].state},
   {t:`Schakel ${L}-Q0 IN`,ok:()=>D[L+'-Q0'].state===1}]};}
-function trafoTask(T){return{tr:T,title:`Onderhoud transformator ${T}`,desc:`De trappenschakelaar van ${T} krijgt onderhoud. Neem ${T} uit bedrijf zonder klanten af te schakelen.`,steps:[
-  {t:'Sluit 10 kV-railkoppeling V-K (synchrocheck)',ok:()=>D['V-K'].state===1},
-  {t:`Schakel V-${T} UIT (10 kV)`,ok:()=>D['V-'+T].state===0},
-  {t:`Schakel ${T}-Q0 UIT (110 kV)`,ok:()=>D[T+'-Q0'].state===0},
-  {t:`Open railscheider ${T}-Q1`,ok:()=>D[T+'-Q1'].state===0,done:()=>pushAlarm(`Werkvergunning afgegeven – onderhoud ${T} gestart`,'info')},
-  {t:'Onderhoud in uitvoering…',wait:35},
-  {t:`Werk gereed – sluit ${T}-Q1`,ok:()=>D[T+'-Q1'].state===1},
-  {t:`Schakel ${T}-Q0 IN`,ok:()=>D[T+'-Q0'].state===1},
-  {t:`Schakel V-${T} IN`,ok:()=>D['V-'+T].state===1},
-  {t:'Open railkoppeling V-K',ok:()=>D['V-K'].state===0}]};}
 function feederTask(F){const f=FEEDERS.find(x=>x.id===F);return{feeder:F,title:`Kabelwerk ${F} (${f.name})`,desc:`Een kabelploeg vervangt een mof in ${F}. De storingsdienst schakelt de klanten eerst om via het net; daarna kun je het veld vrijschakelen en de kabel aarden.`,steps:[
   {t:'Wacht: storingsdienst schakelt klanten om (terugvoeding)',wait:6,done:()=>{f.backfed=true;pushAlarm(`Storingsdienst: klanten van ${F} omgeschakeld via het net – ${f.cb} mag UIT`,'info');}},
   {t:`Schakel ${f.cb} UIT`,ok:()=>D[f.cb].state===0},
@@ -1124,20 +1116,21 @@ function feederTask(F){const f=FEEDERS.find(x=>x.id===F);return{feeder:F,title:`
   {t:'Kabelwerk in uitvoering…',wait:35},
   {t:`Werk gereed – open ${F}-Q8`,ok:()=>D[F+'-Q8'].state===0},
   {t:`Schakel ${f.cb} IN`,ok:()=>D[f.cb].state===1&&EN.has(f.node),done:()=>addTimer(4,()=>{f.backfed=false;pushAlarm(`Storingsdienst: terugvoeding ${F} opgeheven – normale situatie`,'ok');})}]};}
-function reserveTask(){return{tr:'T3',title:'Onderhoud T3 met reservetransformator',desc:'T3 gaat uit bedrijf voor oliebemonstering. Neem eerst reservetransformator T4 op 20 kV in bedrijf, zodat de 20 kV-klanten niets merken.',steps:[
-  {t:'Zorg dat T4 op 20 kV staat (omschakelaar, alleen spanningsloos)',ok:()=>D.T4.ratio==='20'},
-  {t:'Zet T4 onder spanning (T4-Q1 en T4-Q0 IN)',ok:()=>EN.has('T4h')},
-  {t:'Schakel W-T4 IN – T3 en T4 parallel op rail C',ok:()=>D['W-T4'].state===1},
-  {t:'Schakel W-T3 UIT (20 kV)',ok:()=>D['W-T3'].state===0},
-  {t:'Schakel T3-Q0 UIT (110 kV)',ok:()=>D['T3-Q0'].state===0},
-  {t:'Open railscheider T3-Q1',ok:()=>D['T3-Q1'].state===0,done:()=>pushAlarm('Werkvergunning afgegeven – oliebemonstering T3 gestart','info')},
-  {t:'Oliebemonstering in uitvoering…',wait:30},
-  {t:'Werk gereed – sluit T3-Q1',ok:()=>D['T3-Q1'].state===1},
-  {t:'Schakel T3-Q0 IN',ok:()=>D['T3-Q0'].state===1},
-  {t:'Schakel W-T3 IN',ok:()=>D['W-T3'].state===1},
-  {t:'Schakel W-T4 UIT – T4 terug naar warme reserve',ok:()=>D['W-T4'].state===0}]};}
+function reserveTask(main){const r=main==='T1'?'10':'20',lvM=TR_LV[main][0],lvR=r==='10'?'V-T3':'W-T3',rail=r==='10'?'rail A/B':'rail C';
+  return{tr:main,title:`Onderhoud ${main} met reservetransformator`,desc:`${main} gaat uit bedrijf voor ${main==='T1'?'onderhoud aan de trappenschakelaar':'oliebemonstering'}. Neem eerst reservetransformator T3 op ${r} kV in bedrijf, zodat de klanten niets merken.`,steps:[
+  {t:`Zorg dat T3 op ${r} kV staat (omschakelaar, alleen spanningsloos)`,ok:()=>D.T3.ratio===r},
+  {t:'Zet T3 onder spanning (T3-Q1 en T3-Q0 IN)',ok:()=>EN.has('T3h')},
+  {t:`Schakel ${lvR} IN – ${main} en T3 parallel op ${rail}`,ok:()=>D[lvR].state===1},
+  {t:`Schakel ${lvM} UIT`,ok:()=>D[lvM].state===0},
+  {t:`Schakel ${main}-Q0 UIT (110 kV)`,ok:()=>D[main+'-Q0'].state===0},
+  {t:`Open railscheider ${main}-Q1`,ok:()=>D[main+'-Q1'].state===0,done:()=>pushAlarm(`Werkvergunning afgegeven – onderhoud ${main} gestart`,'info')},
+  {t:'Onderhoud in uitvoering…',wait:30},
+  {t:`Werk gereed – sluit ${main}-Q1`,ok:()=>D[main+'-Q1'].state===1},
+  {t:`Schakel ${main}-Q0 IN`,ok:()=>D[main+'-Q0'].state===1},
+  {t:`Schakel ${lvM} IN`,ok:()=>D[lvM].state===1},
+  {t:`Schakel ${lvR} UIT – T3 terug naar warme reserve`,ok:()=>D[lvR].state===0}]};}
 let taskCycle=0;
-function offerTask(){const defs=[()=>reserveTask(),()=>trafoTask('T2'),()=>feederTask('F3'),()=>lineTask('L2'),()=>feederTask('G3'),()=>trafoTask('T1'),()=>feederTask('F5'),()=>lineTask('L1')];
+function offerTask(){const defs=[()=>reserveTask('T2'),()=>feederTask('F3'),()=>lineTask('L2'),()=>reserveTask('T1'),()=>feederTask('G3'),()=>feederTask('F5'),()=>lineTask('L1')];
   TASK=defs[taskCycle++%defs.length]();TASK.i=0;TASK.code='WV-2026-'+(taskSeq++);
   pushAlarm(`Nieuwe werkopdracht ${TASK.code}: ${TASK.title}`,'info');AudioSys.chime();renderTasks();}
 function taskTick(){if(!TASK)return;let guard=0;
@@ -1181,13 +1174,13 @@ const MODES={
   day:{name:'Dagdienst',tag:'Dienst · 8 uur',start:7,dur:480,desc:'07:00–15:00. Ochtendpiek, werkopdrachten en storingen. Afsluiten met een dienstrapport.'},
   eve:{name:'Avonddienst',tag:'Dienst · 8 uur',start:15,dur:480,desc:'15:00–23:00. De zware avondpiek en kassen die ’s avonds gaan belichten.'},
   zkh:{scen:true,name:'Kabelstoring ziekenhuis',tag:'Scenario · makkelijk',start:10,dur:50,
-    desc:'Een rustige ochtend… tot T2 uitvalt en het ziekenhuis op noodstroom overgaat.',
+    desc:'Een rustige ochtend… tot T1 uitvalt en het ziekenhuis op noodstroom overgaat.',
     setup(){pushAlarm('Rustige ochtend in OS Zuidwolde. Fijne dienst!','info');
-      at(1,()=>{feederFault('F5',14);trafoFault('T2');GAME.flags.tripAt=SIM.t;GAME.flags.fuelEnd=SIM.t+25;
+      at(1,()=>{feederFault('F5',14);trafoFault('T1');GAME.flags.tripAt=SIM.t;GAME.flags.fuelEnd=SIM.t+25;
         GAME.countdown={label:'Noodstroom ziekenhuis',until:SIM.t+25};pushAlarm('Ziekenhuis: noodstroomaggregaat gestart – brandstof voor ±25 minuten!','crit');});},
     obj:()=>[
       {t:'Ziekenhuis terug op het net vóór de noodstroom op is',check:()=>GAME.flags.fuelEnd==null?null:EN.has('F5')?'done':SIM.t>GAME.flags.fuelEnd?'fail':null},
-      {t:'Wijk Zuid (F4) binnen 5 min na de trip hersteld',check:()=>GAME.flags.tripAt==null?null:EN.has('F4')?'done':SIM.t>GAME.flags.tripAt+5?'fail':null},
+      {t:'Woonwijken (F3 en F4) binnen 5 min na de trip hersteld',check:()=>GAME.flags.tripAt==null?null:EN.has('F3')&&EN.has('F4')?'done':SIM.t>GAME.flags.tripAt+5?'fail':null},
       {t:'Niet inschakelen op de kabelfout',check:()=>GAME.stats.recloseFault?'fail':null,final:()=>true},noIncidents]},
   storm:{scen:true,name:'Storm boven Drenthe',tag:'Scenario · gemiddeld',start:16,dur:90,
     desc:'Onweersbuien trekken over de lijnen en het AR-relais van L2 is defect. Houd het licht aan.',
@@ -1200,16 +1193,15 @@ const MODES={
       {t:'Ziekenhuis nooit langer dan 5 min zonder net',check:()=>GAME.flags.hospRun>5?'fail':null,final:()=>true},
       {t:'Minder dan 40.000 klantminuten',check:()=>SIM.cml>40000?'fail':null,final:()=>SIM.cml<=40000},noIncidents]},
   piek:{scen:true,name:'Avondpiek op één poot',tag:'Scenario · gemiddeld',start:16.5,dur:150,
-    desc:'T2 staat in onderhoud en de avondpiek komt eraan. Houd T1 heel: schakel de kassen af of zet reservetrafo T4 om naar 10 kV.',
-    setup(){setCB('T2-Q0',0);setCB('V-T2',0);setCB('T2-Q1',0);setCB('V-K',1);
-      Object.assign(D.T2,{blocked:true,resettable:false,blockText:'onderhoud trappenschakelaar',blockKind:'maint'});D.T1.oil=62;FEEDERS[5].interruptible=true;
-      pushAlarm('T2 staat uit bedrijf voor onderhoud – gereed verwacht rond 17:50','info');
+    desc:'T1 staat in onderhoud en reservetrafo T3 (25 MVA) draagt de hele 10 kV. De avondpiek komt eraan: houd T3 heel, de kassen hebben een afschakelbaar contract.',
+    setup(){setCB('T1-Q0',0);setCB('V-T1',0);setCB('T1-Q1',0);setCB('V-T3',1);setCB('V-K',1);
+      Object.assign(D.T1,{blocked:true,resettable:false,blockText:'onderhoud trappenschakelaar',blockKind:'maint'});D.T3.oil=62;FEEDERS[5].interruptible=true;
+      pushAlarm('T1 staat uit bedrijf voor onderhoud – gereed verwacht rond 17:50. Reservetransformator T3 voedt de 10 kV.','info');
       pushAlarm('Glastuinbouw Oost (F6) heeft een afschakelbaar contract: afschakelen kost maar 10% klantminuten','info');
-      pushAlarm('Reservetransformator T4 staat warm op 20 kV. Omschakelen naar 10 kV kan alleen spanningsloos.','info');
-      at(80,()=>{D.T2.resettable=true;pushAlarm('Onderhoud T2 gereed – reset blokkeerrelais 86, sluit T2-Q1 en neem T2 weer in bedrijf','ok');});},
-    obj:()=>[{t:'T1 wordt niet thermisch afgeschakeld',check:()=>GAME.stats.thermal?'fail':null,final:()=>true},
+      at(80,()=>{D.T1.resettable=true;pushAlarm('Onderhoud T1 gereed – reset blokkeerrelais 86, sluit T1-Q1 en neem T1 weer in bedrijf','ok');});},
+    obj:()=>[{t:'T3 wordt niet thermisch afgeschakeld',check:()=>GAME.stats.thermal?'fail':null,final:()=>true},
       {t:'Ziekenhuis (F5) blijft onder spanning',check:()=>GAME.flags.hospRun>1?'fail':null,final:()=>true},
-      {t:'T2 vóór 18:30 weer in bedrijf',check:()=>EN.has('T2l')&&D['V-T2'].state?'done':SIM.t>18.5*60?'fail':null},
+      {t:'T1 vóór 18:30 weer in bedrijf',check:()=>EN.has('T1l')&&D['V-T1'].state?'done':SIM.t>18.5*60?'fail':null},
       {t:'Minder dan 15.000 klantminuten',check:()=>SIM.cml>15000?'fail':null,final:()=>SIM.cml<=15000}]},
   blackout:{scen:true,name:'Black-out',tag:'Scenario · moeilijk',start:6.33,dur:45,
     desc:'Landelijke storing: het station is volledig zwart. Bouw alles weer op, veld voor veld.',
@@ -1368,7 +1360,7 @@ const AudioSys={ctx:null,muted:false,
 function distGain(p){const d=camera.position.distanceTo(p);return clamp(1.2/(1+(d/35)**2)+0.12,0.12,1);}
 function updateAudio(){if(!AudioSys.ctx)return;let hum=0,fan=0;
   TR.forEach(T=>{const v=VIEWS[T];if(!v)return;const d=camera.position.distanceTo(v.center),att=1/(1+(d/16)**2);
-    if(EN.has(T+'h'))hum+=(0.35+0.65*D[T].S/25)*att;if(D[T].fans&&EN.has(T+'h'))fan+=att;});
+    if(EN.has(T+'h'))hum+=(0.35+0.65*D[T].S/D[T].rAF)*att;if(D[T].fans&&EN.has(T+'h'))fan+=att;});
   AudioSys.set(AudioSys.hum,clamp(hum*0.2,0,0.3));AudioSys.set(AudioSys.fan,clamp(fan*0.12,0,0.15));AudioSys.set(AudioSys.rain,GAME.storm?(camInside()?0.025:0.07):0);AudioSys.set(AudioSys.wind,GAME.storm?0.09:0.03);}
 
 // regen (alleen tijdens storm)
@@ -1422,9 +1414,9 @@ function posterTex(){const c=cnv(512,700),g=c.getContext('2d');g.fillStyle='#fbf
 
 const PANELS=[{title:'Reserve'},{id:'V-T1',kind:'inc',node:'T1l'},{id:'V-F1',kind:'feed',node:'F1'},{id:'V-F2',kind:'feed',node:'F2'},{id:'V-F3',kind:'feed',node:'F3'},
   {title:'Meetveld A',kind:'meas'},{id:'V-K',kind:'coup',node:'RB'},{title:'Meetveld B',kind:'meas'},
-  {id:'V-F4',kind:'feed',node:'F4'},{id:'V-F5',kind:'feed',node:'F5'},{id:'V-F6',kind:'feed',node:'F6'},{id:'V-T2',kind:'inc',node:'T2l'},{id:'V-T4',kind:'inc',node:'T4l'}];
-const PANELS20=[{title:'Reserve'},{id:'W-T3',kind:'inc',node:'T3l'},{id:'W-G1',kind:'feed',node:'G1'},{id:'W-G2',kind:'feed',node:'G2'},{title:'Meetveld C',kind:'meas'},
-  {id:'W-G3',kind:'feed',node:'G3'},{id:'W-G4',kind:'feed',node:'G4'},{id:'W-T4',kind:'inc',node:'T4l'}];
+  {id:'V-F4',kind:'feed',node:'F4'},{id:'V-F5',kind:'feed',node:'F5'},{id:'V-F6',kind:'feed',node:'F6'},{title:'Reserve'},{id:'V-T3',kind:'inc',node:'T3l'}];
+const PANELS20=[{title:'Reserve'},{id:'W-T2',kind:'inc',node:'T2l'},{id:'W-G1',kind:'feed',node:'G1'},{id:'W-G2',kind:'feed',node:'G2'},{title:'Meetveld C',kind:'meas'},
+  {id:'W-G3',kind:'feed',node:'G3'},{id:'W-G4',kind:'feed',node:'G4'},{id:'W-T3',kind:'inc',node:'T3l'}];
 const SCREENS=[];
 function buildPanel(i,p,row){
   const x=row.cx+(row.n-1)/2*0.8-i*0.8,Y=row.room.y0,F=-0.66,root=grp(x,54.85,Y);
@@ -1553,7 +1545,7 @@ function buildTrafoBay(T){
   const q0=buildCB(T+'-Q0',bx,13.5,-1);
   const ct=buildCT(T+'-CT',bx,18.5);
   const sa=buildSA(T+'-SA',bx,25.0);
-  const tr=buildTR(T,bx,31,{T3:'110/21 kV',T4:'110/10,5-21 kV'}[T]||'110/10,5 kV');
+  const tr=buildTR(T,bx,31,{T2:'110/21 kV',T3:'110/10,5-21 kV'}[T]||'110/10,5 kV');
   PH.forEach((p,i)=>{
     wire(V3(bx+p,BUSY-0.07,BUSZ[i]),q1.A[i],0.35);
     wire(q1.B[i],q0.low[i],0.12);
@@ -1567,13 +1559,12 @@ buildFence();
 BUILDINGS.forEach(buildBuilding);
 buildBus();
 buildLineBay('L1');buildLineBay('L2');
-buildTrafoBay('T1');buildTrafoBay('T2');buildTrafoBay('T3');buildTrafoBay('T4');
-box(0.35,8,9,MAT.concreteDark,staticRoot,0,4,31);box(0.35,8,9,MAT.concreteDark,staticRoot,60,4,31);  // brandwanden
+buildTrafoBay('T1');buildTrafoBay('T2');buildTrafoBay('T3');
 buildLights();
 buildTrees();
 farm(-420,520,0.3);farm(610,-380,-0.2);farm(-760,-520,1.4);farm(380,820,0.1);
 [[780,-150,0.6],[900,-480,0.6],[1020,-810,0.6],[-950,-760,0.4],[-1150,-430,0.4]].forEach(a=>turbine(...a));
-van(25,30,0.05);
+van(40,41,Math.PI/2);
 buildInterior();
 bakeStatic();
 
@@ -1598,19 +1589,19 @@ function buildSLD(){
     W(28,200,444,200,'BB','w bus');T(28,216,'110 kV RAIL','start','dl');M('bb',444,216,'end');};
   const bay=(Tn,x,side,lv,bus)=>{W(x,200,x,224,'BB');DS(Tn+'-Q1',x,235,'Q1',side);W(x,246,x,271,Tn+'b');CB(Tn+'-Q0',x,279,'Q0',side);W(x,287,x,306,Tn+'h');
     o.push(`<g class="dev tr" data-id="${Tn}"><title>${Tn} · ${D[Tn].label}</title><rect class="hit" x="${x-16}" y="304" width="32" height="44" rx="5"/><circle class="w" data-n="${Tn}h" data-c="w" cx="${x}" cy="318" r="12"/><circle class="w" data-n="${Tn}l" data-c="w" cx="${x}" cy="334" r="12"/></g>`);
-    const tx=x+side*18,an=side<0?'end':'start';T(tx,316,Tn+(Tn==='T4'?' reserve':''),an,'h');M('tr'+Tn,tx,330,an);M('to'+Tn,tx,343,an);if(Tn==='T4')M('rtT4',tx,356,an,'mh');
+    const tx=x+side*18,an=side<0?'end':'start';T(tx,316,Tn+(Tn===RES?' reserve':''),an,'h');M('tr'+Tn,tx,330,an);M('to'+Tn,tx,343,an);if(Tn===RES)M('rt'+RES,tx,356,an,'mh');
     W(x,346,x,374,Tn+'l');CB(lv,x,382,lv,side);W(x,390,x,420,bus);};
   const feeder=(f,x)=>{W(x,420,x,447,f.bus);CB(f.cb,x,455,null);W(x,463,x,494,f.node);W(x,474,x+15,474,f.node);ES(f.id+'-Q8',x+15,486,'');
     o.push(`<polygon class="w arrow" data-n="${f.node}" data-c="w arrow" points="${f.gen?`${x-6},506 ${x+6},506 ${x},494`:`${x-6},494 ${x+6},494 ${x},506`}"/>`);
     T(x,522,f.short,'middle','dl fs');M('f'+f.id,x,535);M('fc'+f.id,x,548,'middle','');T(x,561,f.id,'middle','');};
   const F=id=>FEEDERS.find(f=>f.id===id);
   // tabblad 10 kV
-  o=out[10];top();bay('T1',160,-1,'V-T1','RA');bay('T2',255,1,'V-T2','RB');bay('T4',350,1,'V-T4','RB');
+  o=out[10];top();bay('T1',160,-1,'V-T1','RA');bay('T3',330,1,'V-T3','RB');
   W(20,420,222,420,'RA','w bus');W(238,420,452,420,'RB','w bus');CB('V-K',230,420,null);T(230,442,'V-K','middle','dl');
   T(20,412,'10 kV RAIL A','start','dl');M('RA',98,412,'start');T(452,412,'RAIL B','end','dl');M('RB',412,412,'end');
-  [['F1',35],['F2',82],['F3',128],['F4',300],['F5',395],['F6',440]].forEach(([id,x])=>feeder(F(id),x));
+  [['F1',35],['F2',82],['F3',128],['F4',285],['F5',395],['F6',440]].forEach(([id,x])=>feeder(F(id),x));
   // tabblad 20 kV
-  o=out[20];top();bay('T3',200,-1,'W-T3','RC');bay('T4',300,1,'W-T4','RC');
+  o=out[20];top();bay('T2',200,-1,'W-T2','RC');bay('T3',300,1,'W-T3','RC');
   W(20,420,452,420,'RC','w bus');T(20,412,'20 kV RAIL C','start','dl');M('RC',98,412,'start');
   [['G1',45],['G2',110],['G3',370],['G4',430]].forEach(([id,x])=>feeder(F(id),x));
   const svg=$('#sld');svg.innerHTML=`<g data-tab="10">${out[10].join('')}</g><g data-tab="20" style="display:none">${out[20].join('')}</g>`;
@@ -1632,9 +1623,9 @@ function updateSLD(){
   const fx=(v,n=1)=>v.toFixed(n).replace('.',',');
   for(const L of['L1','L2']){const ln=SIM.lines[L];setM('ln'+L,ln.avail?`${fx(FLOW.lineP[L])} MW`:'GEEN SPANNING',ln.avail?'mh':'bad');}
   setM('bb',EN.has('BB')?`${fx(FLOW.U110)} kV`:'0 kV');
-  TR.forEach(Tn=>{const t=D[Tn];setM('tr'+Tn,`${fx(t.S)} MVA ${Math.round(t.S/(t.fans?25:20)*100)}%`);
+  TR.forEach(Tn=>{const t=D[Tn];setM('tr'+Tn,`${fx(t.S)} MVA ${Math.round(t.S/(t.fans?t.rAF:t.rON)*100)}%`);
     setM('to'+Tn,t.blocked?'86 BLOKKADE':`${Math.round(t.oil)}°C · t${t.tap}${t.avr==='auto'?'A':'H'}`,t.blocked||t.oil>90?'bad':'m');});
-  setM('rtT4',`stand ${D.T4.ratio} kV${D.T4.ratioBusy?'…':''}`);
+  setM('rt'+RES,`stand ${D[RES].ratio} kV${D[RES].ratioBusy?'…':''}`);
   ['RA','RB','RC'].forEach(b=>setM(b,`${fx(FLOW.U[b],2)} kV`));
   FEEDERS.forEach(f=>{const on=EN.has(f.node);setM('f'+f.id,on?`${fx(f.P)} MW`:'UIT',on?(f.gen?'mh':'m'):'bad');setM('fc'+f.id,f.gen?'productie':f.cust>=1000?`${fx(f.cust/1000)}k kl`:`${f.cust} kl`);});
 }
@@ -1660,7 +1651,7 @@ function renderTasks(){
 // ============================================================ apparaatpaneel
 let SEL=null,panelRows=[];
 const fmtKV=v=>v>0?`${v.toFixed(v<20?2:1).replace('.',',')} kV`:'0 kV';
-function bayName(d){const b=d.bay;if(!b)return 'OS Zuidwolde';if(b[0]==='L')return `Lijnveld ${b} · ${SIM.lines[b].name}`;if(/^T\d$/.test(b))return `Transformatorveld ${b}${b==='T4'?' · reserve':''}`;if(b==='K')return '10 kV-installatie';const f=FEEDERS.find(f=>f.id===b);return `${f.bus==='RC'?20:10} kV-veld ${b} · ${f.name}`;}
+function bayName(d){const b=d.bay;if(!b)return 'OS Zuidwolde';if(b[0]==='L')return `Lijnveld ${b} · ${SIM.lines[b].name}`;if(/^T\d$/.test(b))return `Transformatorveld ${b}${b===RES?' · reserve':''}`;if(b==='K')return '10 kV-installatie';const f=FEEDERS.find(f=>f.id===b);return `${f.bus==='RC'?20:10} kV-veld ${b} · ${f.name}`;}
 function statusOf(d){
   if(d.type==='cb')return d.state?['INGESCHAKELD','on']:['UITGESCHAKELD','off'];
   if(d.type==='ds')return d.state?['GESLOTEN','on']:['OPEN','off'];
@@ -1679,8 +1670,8 @@ function rowsFor(d){const r=[],A=(k,f)=>r.push([k,f]);
   if(d.type==='cb'){A('Inschakelveer',()=>springOk(d)?'geladen':'<span class="warnc">laden…</span>');A('Schakelingen',()=>d.ops);}
   if(d.line)A('Herinschakeling (AR)',()=>SIM.lines[d.line].ar?'IN bedrijf':'<span class="warnc">UIT bedrijf</span>');
   if(d.id==='V-K')A('Spanningsverschil',()=>EN.has('RA')&&EN.has('RB')?`<span class="${Math.abs(FLOW.U.RA-FLOW.U.RB)>0.25?'bad':''}">${Math.abs(FLOW.U.RA-FLOW.U.RB).toFixed(2).replace('.',',')} kV</span>`:'—');
-  if(d.type==='tr'){A('Belasting',()=>`${d.S.toFixed(1)} MVA · ${Math.round(d.S/(d.fans?25:20)*100)}%`);
-    if(d.id==='T4')A('Wikkeling (omschakelaar)',()=>`<b style="color:var(--accent)">${d.ratio} kV</b>${d.ratioBusy?' · schakelt…':''}`);
+  if(d.type==='tr'){A('Belasting',()=>`${d.S.toFixed(1)} MVA · ${Math.round(d.S/(d.fans?d.rAF:d.rON)*100)}% van ${d.fans?d.rAF:d.rON} MVA`);
+    if(d.id===RES)A('Wikkeling (omschakelaar)',()=>`<b style="color:var(--accent)">${d.ratio} kV</b>${d.ratioBusy?' · schakelt…':''}`);
     A('Spanning MS',()=>{const u=trafoUn(d.id);return d.Ulv>0?`<span class="${Math.abs(d.Ulv-u)>u*0.012?'warnc':''}">${fmtU(d.Ulv)}</span> (doel ${u.toFixed(2).replace('.',',')})`:'0 kV';});
     A('Trappenschakelaar',()=>`stand ${d.tap} / 17 · ${d.avr==='auto'?'AUTO':'<span class="warnc">HAND</span>'}${d.tapBusy?' · draait…':''}`);
     A('Circulatiestroom',()=>d.Sc>0.1?`<span class="warnc">${Math.round(d.Sc*55)} A</span>`:'—');
@@ -1689,8 +1680,8 @@ function rowsFor(d){const r=[],A=(k,f)=>r.push([k,f]);
     A('Blokkeerrelais 86',()=>d.blocked?`<span class="bad">${d.blockText}</span>${d.resettable?' · reset mogelijk':''}`:'normaal');}
   if(d.type==='line'){A('Vermogen',()=>`${FLOW.lineP[d.line].toFixed(1)} MW`);A('Opmerking',()=>SIM.lines[d.line].reason||'—');}
   if(d.type==='bb')A('Doorvoer',()=>`${FLOW.P110.toFixed(1)} MW`);
-  if(d.id==='MS'){A('Rail A',()=>fmtKV(FLOW.U.RA));A('Rail B',()=>fmtKV(FLOW.U.RB));A('Totale belasting',()=>`${FLOW.load.toFixed(1)} MW`);A('Koppeling V-K',()=>D['V-K'].state?'gesloten':'open');A('Reserve V-T4',()=>D['V-T4'].state?'IN':'uit');}
-  if(d.id==='MS20'){A('Rail C',()=>fmtKV(FLOW.U.RC));A('Netto belasting',()=>`${FLOW.load20.toFixed(1)} MW${FLOW.load20<0?' (teruglevering)':''}`);A('Voeding',()=>['W-T3','W-T4'].filter(id=>D[id].state).join(' + ')||'geen');}
+  if(d.id==='MS'){A('Rail A',()=>fmtKV(FLOW.U.RA));A('Rail B',()=>fmtKV(FLOW.U.RB));A('Totale belasting',()=>`${FLOW.load.toFixed(1)} MW`);A('Koppeling V-K',()=>D['V-K'].state?'gesloten':'open');A('Reserve V-T3',()=>D['V-T3'].state?'IN':'uit');}
+  if(d.id==='MS20'){A('Rail C',()=>fmtKV(FLOW.U.RC));A('Netto belasting',()=>`${FLOW.load20.toFixed(1)} MW${FLOW.load20<0?' (teruglevering)':''}`);A('Voeding',()=>['W-T2','W-T3'].filter(id=>D[id].state).join(' + ')||'geen');}
   if(d.feeder){const f=d.feeder;A('Belasting',()=>`${f.P.toFixed(2)} MW${f.clp>1.03?` <span class="warnc">(+${Math.round((f.clp-1)*100)}% KLO)</span>`:''}`);A('Klanten',()=>f.cust.toLocaleString('nl-NL'));
     A('Kabel',()=>feederState(f));A('Terugvoeding',()=>f.backfed?'<span class="warnc">actief (via net)</span>':'—');}
   if(d.type==='sa')A('Ontladingsteller',()=>d.count);
@@ -1705,7 +1696,7 @@ function renderDevPanel(){
   else if(d.type==='tr')ctl=`<div class="dp-ctl"><button data-act="avr"></button><button data-act="tap-1" title="Trap lager">▼ trap</button><button data-act="tap1" title="Trap hoger">▲ trap</button></div>`;
   const sub=[];if(VIEWS[SEL])sub.push(`<button data-act="fly">Bekijk in 3D</button>`);if(d.type==='bld')sub.push(`<button data-act="inside">Ga naar binnen</button>`);if(d.type==='bld'||VIEWS[SEL]?.inside)sub.push(`<button data-act="scada">Toon in SCADA</button>`);
   if(d.type==='tr')sub.push(`<button data-act="reset">Reset blokkeerrelais 86</button>`);
-  if(d.id==='T4')sub.push(`<button data-act="ratio10">Omschakelen → 10 kV</button>`,`<button data-act="ratio20">Omschakelen → 20 kV</button>`);
+  if(d.id===RES)sub.push(`<button data-act="ratio10">Omschakelen → 10 kV</button>`,`<button data-act="ratio20">Omschakelen → 20 kV</button>`);
   const ln=d.line||(d.type==='line'&&d.line);if(d.line)sub.push(`<button data-act="ar"></button>`);
   if(d.feeder)sub.push(`<button data-act="sel:${d.feeder.id}-Q8">Aardschakelaar ${d.feeder.id}-Q8</button>`);
   if(d.type==='es'&&d.cb)sub.push(`<button data-act="sel:${d.cb}">Naar ${d.cb}</button>`);

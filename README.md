@@ -6,7 +6,7 @@ Een 3D-onderstationsimulator die in de browser draait (Three.js, geen installati
 
 **Spelen:** dubbelklik op `index.html` (internet nodig voor Three.js en lettertypen via CDN).
 
-| Transformatorvelden T1–T4 | 20 kV-schakelinstallatie binnen | 's Nachts met terreinverlichting |
+| Transformatorvelden T1–T3 | 20 kV-schakelinstallatie binnen | 's Nachts met terreinverlichting |
 |---|---|---|
 | ![Transformatorvelden](docs/transformatoren.jpg) | ![20 kV-binnenruimte](docs/binnen-20kv.jpg) | ![Nachtbeeld](docs/nacht.jpg) |
 
@@ -16,23 +16,24 @@ Een 3D-onderstationsimulator die in de browser draait (Three.js, geen installati
 - `1`–`7` camerastandpunten (6 = binnen 10 kV, 7 = binnen 20 kV) · `spatie` pauze · `L` labels · `M` geluid · `Esc` deselecteren
 
 ## Installatie
-- **110 kV:** twee lijnvelden (L1 Hoogeveen, L2 Meppel), een railsysteem en vier transformatorvelden.
-- **T1 en T2** (110/10,5 kV) voeden de 10 kV-installatie: rail A en B, railkoppeling V-K, velden F1–F6.
-- **T3** (110/21 kV) voedt de 20 kV-installatie in een tweede gebouw: rail C met G1 Zonnepark (productie en teruglevering), G2 Industrieterrein Noord, G3 Buitengebied Oost en G4 Waterzuivering.
-- **T4** is een omschakelbare reservetransformator (110/10,5-21 kV).
-  - Hij staat als warme reserve op 20 kV.
-  - Via **V-T4** voedt hij 10 kV-rail B, via **W-T4** 20 kV-rail C.
-  - Omschakelen kan alleen spanningsloos (T4-Q0, V-T4 en W-T4 UIT).
+- **110 kV:** twee lijnvelden (L1 Hoogeveen, L2 Meppel), een railsysteem en drie transformatorvelden.
+- **T1** (110/10,5 kV, 31,5/40 MVA) voedt de 10 kV-installatie: rail A en B, normaal gekoppeld via V-K, met de velden F1–F6.
+- **T2** (110/21 kV, 20/25 MVA) voedt de 20 kV-installatie in het tweede gebouw: rail C met G1 Zonnepark (productie en teruglevering), G2 Industrieterrein Noord, G3 Buitengebied Oost en G4 Waterzuivering.
+- **T3** is de omschakelbare reservetransformator (110/10,5-21 kV, 20/25 MVA).
+  - Hij staat als warme reserve op 10 kV.
+  - Via **V-T3** voedt hij 10 kV-rail B, via **W-T3** 20 kV-rail C.
+  - Omschakelen kan alleen spanningsloos (T3-Q0, V-T3 en W-T3 UIT).
   - Inschakelen op de verkeerde spanning blokkeert de vergrendeling. Met de vergrendelingen uit leidt het tot een incident en wikkelingsschade.
+  - Let op: T3 is kleiner dan T1. Neemt hij tijdens de avondpiek de hele 10 kV over, dan raakt hij overbelast.
 - **SCADA** heeft tabbladen voor 10 kV en 20 kV.
 
 ## Spelmodi en score
 - **Vrije dienst:** eindeloos spelen.
 - **Dagdienst** (07–15 u) en **Avonddienst** (15–23 u): een dienst van 8 uur met een dienstrapport, een cijfer (A+ t/m E), sterren, badges en een highscore.
 - **Scenario's:**
-  - *Kabelstoring ziekenhuis*: T2 valt uit en het ziekenhuis draait op noodstroom.
+  - *Kabelstoring ziekenhuis*: T1 valt uit en het ziekenhuis draait op noodstroom.
   - *Storm boven Drenthe*: regen, onweer, blikseminslagen en een defect AR-relais.
-  - *Avondpiek op één poot*: T2 staat in onderhoud; schakel de kassen af om T1 heel te houden.
+  - *Avondpiek op één poot*: T1 staat in onderhoud en reservetransformator T3 draagt de 10 kV; schakel de kassen af om T3 heel te houden.
   - *Black-out*: bouw het station weer op.
 - **Moeilijkheid:** Rustig, Normaal of Zwaar. Dit bepaalt hoe vaak storingen optreden en hoe vaak een fout blijvend is.
 - **Score:** je begint met 1.000 punten.

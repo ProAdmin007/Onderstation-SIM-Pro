@@ -25,34 +25,34 @@ for(const L of['L1','L2']){const nm=SIM.lines[L].name;
   dev(L+'-CT',{type:'ct',bay:L,label:'Stroomtransformatoren',node:L+'a',ref:L+'-Q0'});
   dev(L+'-SA',{type:'sa',bay:L,label:'Overspanningsafleiders',node:L+'x',count:3});
   dev(L+'-LIJN',{type:'line',bay:L,label:'110 kV-lijn '+nm,node:L+'x',line:L});}
-// transformatoren: T1/T2 → 10 kV, T3 → 20 kV, T4 = omschakelbare reserve 10 of 20 kV
-const TR=['T1','T2','T3','T4'];
-const TR_LV={T1:['V-T1'],T2:['V-T2'],T3:['W-T3'],T4:['V-T4','W-T4']};
-const TR_INFO={T1:{label:'Transformator 110/10,5 kV · 20/25 MVA',un:10.5},T2:{label:'Transformator 110/10,5 kV · 20/25 MVA',un:10.5},
-  T3:{label:'Transformator 110/21 kV · 20/25 MVA',un:21},T4:{label:'Reservetransformator 110/10,5-21 kV · omschakelbaar',un:21}};
+// transformatoren: T1 → 10 kV, T2 → 20 kV, T3 = omschakelbare reserve voor 10 of 20 kV
+const TR=['T1','T2','T3'],RES='T3';
+const TR_LV={T1:['V-T1'],T2:['W-T2'],T3:['V-T3','W-T3']};
+const TR_INFO={T1:{label:'Transformator 110/10,5 kV · 31,5/40 MVA',un:10.5,rON:31.5,rAF:40},
+  T2:{label:'Transformator 110/21 kV · 20/25 MVA',un:21,rON:20,rAF:25},
+  T3:{label:'Reservetransformator 110/10,5-21 kV · 20/25 MVA · omschakelbaar',un:10.5,rON:20,rAF:25}};
 for(const T of TR){
   dev(T+'-Q1',{type:'ds',bay:T,label:'Railscheider',a:'BB',b:T+'b',state:1,cb:T+'-Q0'});
   dev(T+'-Q0',{type:'cb',bay:T,label:'Vermogenschakelaar 110 kV',a:T+'b',b:T+'h',state:1,tr:T});
   dev(T+'-CT',{type:'ct',bay:T,label:'Stroomtransformatoren',node:T+'h',ref:T+'-Q0'});
   dev(T+'-SA',{type:'sa',bay:T,label:'Overspanningsafleiders',node:T+'h',count:2});
-  dev(T,{type:'tr',bay:T,label:TR_INFO[T].label,un:TR_INFO[T].un,a:T+'h',b:T+'l',state:1,oil:T==='T4'?28:47,fans:false,
+  dev(T,{type:'tr',bay:T,label:TR_INFO[T].label,un:TR_INFO[T].un,rON:TR_INFO[T].rON,rAF:TR_INFO[T].rAF,a:T+'h',b:T+'l',state:1,oil:T===RES?30:47,fans:false,
     blocked:false,blockText:'',blockKind:'',resettable:false,S:0,Sc:0,P:0,tap:9,avr:'auto',avrT:0,tapBusy:false,tapOps:0,U0:0,Ulv:0,rev:false});}
-D.T4.ratio='20';D.T4.reserve=true;
+D[RES].ratio='10';D[RES].reserve=true;
 dev('V-T1',{type:'cb',bay:'T1',label:'Inkomend veld 10 kV',a:'T1l',b:'RA',state:1,tr:'T1'});
-dev('V-T2',{type:'cb',bay:'T2',label:'Inkomend veld 10 kV',a:'T2l',b:'RB',state:1,tr:'T2'});
-dev('W-T3',{type:'cb',bay:'T3',label:'Inkomend veld 20 kV',a:'T3l',b:'RC',state:1,tr:'T3'});
-dev('V-T4',{type:'cb',bay:'T4',label:'Reserve-inkomend veld 10 kV (rail B)',a:'T4l',b:'RB',state:0,tr:'T4',need:'10'});
-dev('W-T4',{type:'cb',bay:'T4',label:'Reserve-inkomend veld 20 kV',a:'T4l',b:'RC',state:0,tr:'T4',need:'20'});
-dev('V-K',{type:'cb',bay:'K',label:'Railkoppeling 10 kV (synchrocheck)',a:'RA',b:'RB',state:0});
+dev('W-T2',{type:'cb',bay:'T2',label:'Inkomend veld 20 kV',a:'T2l',b:'RC',state:1,tr:'T2'});
+dev('V-T3',{type:'cb',bay:'T3',label:'Reserve-inkomend veld 10 kV (rail B)',a:'T3l',b:'RB',state:0,tr:'T3',need:'10'});
+dev('W-T3',{type:'cb',bay:'T3',label:'Reserve-inkomend veld 20 kV',a:'T3l',b:'RC',state:0,tr:'T3',need:'20'});
+dev('V-K',{type:'cb',bay:'K',label:'Railkoppeling 10 kV (synchrocheck)',a:'RA',b:'RB',state:1});
 FEEDERS.forEach(f=>{Object.assign(f,{node:f.id,cb:(f.bus==='RC'?'W-':'V-')+f.id,fault:null,outFrac:0,clp:1,offSince:null,oc:0,backfed:false,noise:0,wasOn:true,P:0,demand:0});
   dev(f.cb,{type:'cb',bay:f.id,label:(f.gen?'Productieveld · ':'Uitgaand veld · ')+f.name,a:f.bus,b:f.id,state:1,feeder:f});
   dev(f.id+'-Q8',{type:'es',bay:f.id,label:'Aardschakelaar kabelzijde',a:f.id,cb:f.cb});});
 dev('RAIL',{type:'bb',label:'110 kV-railsysteem',node:'BB'});
 dev('MS',{type:'bld',label:'10 kV-schakelinstallatie (binnen)',node:'RA'});
 dev('MS20',{type:'bld',label:'20 kV-schakelinstallatie (binnen)',node:'RC'});
-const LV10=new Set(['T1l','T2l','RA','RB','F1','F2','F3','F4','F5','F6']),LV20=new Set(['T3l','RC','G1','G2','G3','G4']);
-function lvl(n){if(n==='T4l')return +D.T4.ratio;return LV10.has(n)?10:LV20.has(n)?20:110;}
-const trafoUn=T=>T==='T4'?(D.T4.ratio==='10'?10.5:21):D[T].un;
+const LV10=new Set(['T1l','RA','RB','F1','F2','F3','F4','F5','F6']),LV20=new Set(['T2l','RC','G1','G2','G3','G4']);
+function lvl(n){if(n===RES+'l')return +D[RES].ratio;return LV10.has(n)?10:LV20.has(n)?20:110;}
+const trafoUn=T=>T===RES?(D[RES].ratio==='10'?10.5:21):D[T].un;
 const kA=b=>b==='RC'?28.9:57.9;   // A per MW bij cos φ 0,95
 const ADJ={};
 Object.values(D).forEach(d=>{if(['cb','ds','tr'].includes(d.type)){(ADJ[d.a]??=[]).push(d);(ADJ[d.b]??=[]).push(d);}if(d.type==='es')(ADJ[d.a]??=[]).push(d);});
@@ -90,7 +90,7 @@ function computeFlows(){
     FLOW.groups.push({buses:g,tf});
     tf.forEach(T=>{D[T].S+=Math.abs(load)/tf.length/0.95;D[T].rev=load<0;});
     if(tf.length>=2){const taps=tf.map(T=>D[T].tap),sc=25*0.052*(Math.max(...taps)-Math.min(...taps));tf.forEach(T=>D[T].Sc=sc);}
-    const U=tf.reduce((s,T)=>s+D[T].U0-Z_DROP*trafoUn(T)*(D[T].S/25)*(load<0?-1:1),0)/tf.length;
+    const U=tf.reduce((s,T)=>s+D[T].U0-Z_DROP*trafoUn(T)*(D[T].S/D[T].rAF)*(load<0?-1:1),0)/tf.length;
     g.forEach(b=>FLOW.U[b]=U);tf.forEach(T=>D[T].Ulv=U);});
   TR.forEach(T=>{const t=D[T];if(!FLOW.groups.some(g=>g.tf.includes(T)))t.Ulv=t.U0;if(t.Sc)t.S=Math.hypot(t.S,t.Sc);
     TR_LV[T].forEach(id=>{const c=D[id];if(c.state===1&&EN.has(T+'l'))c.I=t.S*0.95*kA(c.b);});});
@@ -135,7 +135,7 @@ function operate(id,to){
   if(d.type==='cb')AudioSys.breaker(v?distGain(v.center):0.5);else{d.busy=!!v;AudioSys.motor(d.type==='es'?2.2:2.8,v?distGain(v.center):0.5);}
   if(d.type==='cb'&&to===1&&d.need&&D[d.tr].ratio!==d.need&&EN.has(d.a)){incident();d.state=0;tripBreaker(d.tr+'-Q0');
     pushAlarm(`${id} ingeschakeld terwijl ${d.tr} op ${D[d.tr].ratio} kV staat – verkeerde spanning op de rail, overspanningsbeveiliging en differentiaal grijpen in!`,'crit');
-    spawnArc(v?v.arcPos:null,1.5);const t=D[d.tr];t.blocked=true;t.resettable=false;t.blockKind='ratio';t.blockText='wikkelingsschade door verkeerde omschakelstand';addTimer(90,()=>{t.resettable=true;pushAlarm(`T4: inspectie na overspanning gereed – reset 86 mogelijk`,'ok');});refreshAll();return;}
+    spawnArc(v?v.arcPos:null,1.5);const t=D[d.tr];t.blocked=true;t.resettable=false;t.blockKind='ratio';t.blockText='wikkelingsschade door verkeerde omschakelstand';addTimer(90,()=>{t.resettable=true;pushAlarm(`${d.tr}: inspectie na overspanning gereed – reset 86 mogelijk`,'ok');});refreshAll();return;}
   if(arc){incident();pushAlarm(`${id} geschakeld met ${d.cb} IN – vlamboog! Beveiliging grijpt in`,'crit');spawnArc(v?v.arcPos:null,1.3);tripFrom(arc);}
   else{const sc=shortNode();if(sc){incident();
     pushAlarm(d.type==='es'?`Aardschakelaar ${id} op spanning gesloten – kortsluiting!`:d.type==='cb'?`${id} ingeschakeld op geaard deel – kortsluiting!`:`Kortsluiting na bediening ${id}!`,'crit');
@@ -167,16 +167,16 @@ function tripTrafo(T,reason,inspectMin,kind){const t=D[T];tripBreaker(T+'-Q0');T
   pushAlarm(`${T}: ${reason} – ${T}-Q0 en ${TR_LV[T].join('/')} UIT, blokkeerrelais 86 aangesproken`,'crit');
   if(inspectMin)addTimer(inspectMin,()=>{t.resettable=true;pushAlarm(`${T}: inspectie gereed, geen schade gevonden – reset blokkeerrelais 86 in het transformatorpaneel`,'ok');});
   setTimeout(()=>{computeFlows();const dead=FEEDERS.filter(f=>!EN.has(f.node)&&D[f.cb].state===1);if(!dead.length)return;
-    if(dead.some(f=>f.bus==='RC'))pushAlarm(`Tip: neem reservetransformator T4 in bedrijf op 20 kV (W-T4) – T4 staat op ${D.T4.ratio} kV`,'info');
-    if(dead.some(f=>f.bus!=='RC'))pushAlarm('Tip: sluit railkoppeling V-K, of zet reservetransformator T4 om naar 10 kV en sluit V-T4 (let op de belasting!)','info');},600);}
+    if(dead.some(f=>f.bus==='RC'))pushAlarm(`Tip: neem reservetransformator T3 in bedrijf op 20 kV (W-T3) – T3 staat nu op ${D.T3.ratio} kV`,'info');
+    if(dead.some(f=>f.bus!=='RC'))pushAlarm(`Tip: neem reservetransformator T3 in bedrijf op 10 kV (V-T3) – T3 staat nu op ${D.T3.ratio} kV. Let op de belasting!`,'info');},600);}
 function resetLockout(T){const t=D[T];if(!t.blocked)return;
   if(!t.resettable)return deny(`Reset 86 niet mogelijk: ${t.blockKind==='temp'?'transformator nog te warm (< 75 °C)':t.blockKind==='ratio'?'wikkelingsschade, inspectie loopt':'inspectie nog niet gereed'}`);
   t.blocked=false;t.blockText='';pushAlarm(`${T}: blokkeerrelais 86 gereset – transformator vrijgegeven`,'op');refreshAll();}
-function setRatio(r){const t=D.T4;if(t.ratio===r)return;
-  if(EN.has('T4h')||D['V-T4'].state||D['W-T4'].state)return deny('Omschakelen alleen spanningsloos: schakel T4-Q0, V-T4 en W-T4 eerst UIT');
-  if(t.ratioBusy)return deny('Omschakelaar draait nog…');t.ratioBusy=true;const v=VIEWS.T4;AudioSys.motor(3,v?distGain(v.center):0.4);
-  pushAlarm(`T4: wikkelingsomschakelaar naar ${r} kV gestart`,'op');
-  setTimeout(()=>{t.ratio=r;t.ratioBusy=false;t.tap=9;pushAlarm(`T4: omgeschakeld naar ${r} kV – schakel nu ${r==='10'?'V-T4':'W-T4'} in`,'op');refreshAll();},3000);}
+function setRatio(r){const t=D[RES];if(t.ratio===r)return;
+  if(EN.has('T3h')||D['V-T3'].state||D['W-T3'].state)return deny('Omschakelen alleen spanningsloos: schakel T3-Q0, V-T3 en W-T3 eerst UIT');
+  if(t.ratioBusy)return deny('Omschakelaar draait nog…');t.ratioBusy=true;const v=VIEWS[RES];AudioSys.motor(3,v?distGain(v.center):0.4);
+  pushAlarm(`T3: wikkelingsomschakelaar naar ${r} kV gestart`,'op');
+  setTimeout(()=>{t.ratio=r;t.ratioBusy=false;t.tap=9;pushAlarm(`T3: omgeschakeld naar ${r} kV – schakel nu ${r==='10'?'V-T3':'W-T3'} in`,'op');refreshAll();},3000);}
 function setAVR(T,mode){D[T].avr=mode;D[T].avrT=0;pushAlarm(`${T}: spanningsregelaar op ${mode==='auto'?'AUTOMATISCH':'HAND'}`,'op');refreshAll();}
 function moveTap(T,dir,manual){const t=D[T];const n=clamp(t.tap+dir,1,17);if(n===t.tap)return false;
   t.tapBusy=true;const v=VIEWS[T];AudioSys.motor(1.4,v?distGain(v.center)*0.6:0.2);
@@ -199,7 +199,7 @@ function regulate(dm){
     else if(U>=lo+m&&U<=hi-m)SIM[k]=false;});
 }
 function thermal(dm){const h=hourOf(),amb=11+5*Math.sin((h-9)/24*2*Math.PI);
-  TR.forEach(T=>{const t=D[T],on=EN.has(T+'h'),k=t.S/(t.fans?25:20);
+  TR.forEach(T=>{const t=D[T],on=EN.has(T+'h'),k=t.S/(t.fans?t.rAF:t.rON);
     const target=amb+(on?8:0)+62*k*k;t.oil+=(target-t.oil)*(1-Math.exp(-dm/32));
     if(!t.fans&&on&&t.oil>65){t.fans=true;pushAlarm(`${T}: olie ${t.oil.toFixed(0)} °C – koeling ONAF, ventilatoren aan`,'info');}
     if(t.fans&&(t.oil<57||!on))t.fans=false;
@@ -210,6 +210,8 @@ function thermal(dm){const h=hourOf(),amb=11+5*Math.sin((h-9)/24*2*Math.PI);
 
 // ---------------------------------------------------------- 10 kV-velden: koude-lastopname en overstroom
 function feederTick(dm){FEEDERS.forEach(f=>{const on=EN.has(f.node);
+  if(on&&f.fault&&f.fault.stage==='search'&&D[f.cb].state===1){tripBreaker(f.cb);GAME.stats.recloseFault++;award(-40,'Ingeschakeld op kortsluiting');
+    pushAlarm(`${f.cb}: kabel onder spanning gebracht met fout – I>> momentaan trip. Wacht op de storingsdienst!`,'warn');return;}
   if(f.backfed)f.offSince=null;
   else if(!on){if(f.offSince==null)f.offSince=SIM.t;}
   else if(f.offSince!=null){const dur=SIM.t-f.offSince;f.offSince=null;
@@ -262,16 +264,6 @@ function lineTask(L){const ln=SIM.lines[L];return{title:`Onderhoud lijnveld ${L}
   {t:'Wacht op TenneT: lijn onder spanning',ok:()=>ln.avail},
   {t:`Sluit ${L}-Q1 en ${L}-Q9`,ok:()=>D[L+'-Q1'].state&&D[L+'-Q9'].state},
   {t:`Schakel ${L}-Q0 IN`,ok:()=>D[L+'-Q0'].state===1}]};}
-function trafoTask(T){return{tr:T,title:`Onderhoud transformator ${T}`,desc:`De trappenschakelaar van ${T} krijgt onderhoud. Neem ${T} uit bedrijf zonder klanten af te schakelen.`,steps:[
-  {t:'Sluit 10 kV-railkoppeling V-K (synchrocheck)',ok:()=>D['V-K'].state===1},
-  {t:`Schakel V-${T} UIT (10 kV)`,ok:()=>D['V-'+T].state===0},
-  {t:`Schakel ${T}-Q0 UIT (110 kV)`,ok:()=>D[T+'-Q0'].state===0},
-  {t:`Open railscheider ${T}-Q1`,ok:()=>D[T+'-Q1'].state===0,done:()=>pushAlarm(`Werkvergunning afgegeven – onderhoud ${T} gestart`,'info')},
-  {t:'Onderhoud in uitvoering…',wait:35},
-  {t:`Werk gereed – sluit ${T}-Q1`,ok:()=>D[T+'-Q1'].state===1},
-  {t:`Schakel ${T}-Q0 IN`,ok:()=>D[T+'-Q0'].state===1},
-  {t:`Schakel V-${T} IN`,ok:()=>D['V-'+T].state===1},
-  {t:'Open railkoppeling V-K',ok:()=>D['V-K'].state===0}]};}
 function feederTask(F){const f=FEEDERS.find(x=>x.id===F);return{feeder:F,title:`Kabelwerk ${F} (${f.name})`,desc:`Een kabelploeg vervangt een mof in ${F}. De storingsdienst schakelt de klanten eerst om via het net; daarna kun je het veld vrijschakelen en de kabel aarden.`,steps:[
   {t:'Wacht: storingsdienst schakelt klanten om (terugvoeding)',wait:6,done:()=>{f.backfed=true;pushAlarm(`Storingsdienst: klanten van ${F} omgeschakeld via het net – ${f.cb} mag UIT`,'info');}},
   {t:`Schakel ${f.cb} UIT`,ok:()=>D[f.cb].state===0},
@@ -279,20 +271,21 @@ function feederTask(F){const f=FEEDERS.find(x=>x.id===F);return{feeder:F,title:`
   {t:'Kabelwerk in uitvoering…',wait:35},
   {t:`Werk gereed – open ${F}-Q8`,ok:()=>D[F+'-Q8'].state===0},
   {t:`Schakel ${f.cb} IN`,ok:()=>D[f.cb].state===1&&EN.has(f.node),done:()=>addTimer(4,()=>{f.backfed=false;pushAlarm(`Storingsdienst: terugvoeding ${F} opgeheven – normale situatie`,'ok');})}]};}
-function reserveTask(){return{tr:'T3',title:'Onderhoud T3 met reservetransformator',desc:'T3 gaat uit bedrijf voor oliebemonstering. Neem eerst reservetransformator T4 op 20 kV in bedrijf, zodat de 20 kV-klanten niets merken.',steps:[
-  {t:'Zorg dat T4 op 20 kV staat (omschakelaar, alleen spanningsloos)',ok:()=>D.T4.ratio==='20'},
-  {t:'Zet T4 onder spanning (T4-Q1 en T4-Q0 IN)',ok:()=>EN.has('T4h')},
-  {t:'Schakel W-T4 IN – T3 en T4 parallel op rail C',ok:()=>D['W-T4'].state===1},
-  {t:'Schakel W-T3 UIT (20 kV)',ok:()=>D['W-T3'].state===0},
-  {t:'Schakel T3-Q0 UIT (110 kV)',ok:()=>D['T3-Q0'].state===0},
-  {t:'Open railscheider T3-Q1',ok:()=>D['T3-Q1'].state===0,done:()=>pushAlarm('Werkvergunning afgegeven – oliebemonstering T3 gestart','info')},
-  {t:'Oliebemonstering in uitvoering…',wait:30},
-  {t:'Werk gereed – sluit T3-Q1',ok:()=>D['T3-Q1'].state===1},
-  {t:'Schakel T3-Q0 IN',ok:()=>D['T3-Q0'].state===1},
-  {t:'Schakel W-T3 IN',ok:()=>D['W-T3'].state===1},
-  {t:'Schakel W-T4 UIT – T4 terug naar warme reserve',ok:()=>D['W-T4'].state===0}]};}
+function reserveTask(main){const r=main==='T1'?'10':'20',lvM=TR_LV[main][0],lvR=r==='10'?'V-T3':'W-T3',rail=r==='10'?'rail A/B':'rail C';
+  return{tr:main,title:`Onderhoud ${main} met reservetransformator`,desc:`${main} gaat uit bedrijf voor ${main==='T1'?'onderhoud aan de trappenschakelaar':'oliebemonstering'}. Neem eerst reservetransformator T3 op ${r} kV in bedrijf, zodat de klanten niets merken.`,steps:[
+  {t:`Zorg dat T3 op ${r} kV staat (omschakelaar, alleen spanningsloos)`,ok:()=>D.T3.ratio===r},
+  {t:'Zet T3 onder spanning (T3-Q1 en T3-Q0 IN)',ok:()=>EN.has('T3h')},
+  {t:`Schakel ${lvR} IN – ${main} en T3 parallel op ${rail}`,ok:()=>D[lvR].state===1},
+  {t:`Schakel ${lvM} UIT`,ok:()=>D[lvM].state===0},
+  {t:`Schakel ${main}-Q0 UIT (110 kV)`,ok:()=>D[main+'-Q0'].state===0},
+  {t:`Open railscheider ${main}-Q1`,ok:()=>D[main+'-Q1'].state===0,done:()=>pushAlarm(`Werkvergunning afgegeven – onderhoud ${main} gestart`,'info')},
+  {t:'Onderhoud in uitvoering…',wait:30},
+  {t:`Werk gereed – sluit ${main}-Q1`,ok:()=>D[main+'-Q1'].state===1},
+  {t:`Schakel ${main}-Q0 IN`,ok:()=>D[main+'-Q0'].state===1},
+  {t:`Schakel ${lvM} IN`,ok:()=>D[lvM].state===1},
+  {t:`Schakel ${lvR} UIT – T3 terug naar warme reserve`,ok:()=>D[lvR].state===0}]};}
 let taskCycle=0;
-function offerTask(){const defs=[()=>reserveTask(),()=>trafoTask('T2'),()=>feederTask('F3'),()=>lineTask('L2'),()=>feederTask('G3'),()=>trafoTask('T1'),()=>feederTask('F5'),()=>lineTask('L1')];
+function offerTask(){const defs=[()=>reserveTask('T2'),()=>feederTask('F3'),()=>lineTask('L2'),()=>reserveTask('T1'),()=>feederTask('G3'),()=>feederTask('F5'),()=>lineTask('L1')];
   TASK=defs[taskCycle++%defs.length]();TASK.i=0;TASK.code='WV-2026-'+(taskSeq++);
   pushAlarm(`Nieuwe werkopdracht ${TASK.code}: ${TASK.title}`,'info');AudioSys.chime();renderTasks();}
 function taskTick(){if(!TASK)return;let guard=0;

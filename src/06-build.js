@@ -29,7 +29,7 @@ function buildTrafoBay(T){
   const q0=buildCB(T+'-Q0',bx,13.5,-1);
   const ct=buildCT(T+'-CT',bx,18.5);
   const sa=buildSA(T+'-SA',bx,25.0);
-  const tr=buildTR(T,bx,31,{T3:'110/21 kV',T4:'110/10,5-21 kV'}[T]||'110/10,5 kV');
+  const tr=buildTR(T,bx,31,{T2:'110/21 kV',T3:'110/10,5-21 kV'}[T]||'110/10,5 kV');
   PH.forEach((p,i)=>{
     wire(V3(bx+p,BUSY-0.07,BUSZ[i]),q1.A[i],0.35);
     wire(q1.B[i],q0.low[i],0.12);
@@ -43,12 +43,11 @@ buildFence();
 BUILDINGS.forEach(buildBuilding);
 buildBus();
 buildLineBay('L1');buildLineBay('L2');
-buildTrafoBay('T1');buildTrafoBay('T2');buildTrafoBay('T3');buildTrafoBay('T4');
-box(0.35,8,9,MAT.concreteDark,staticRoot,0,4,31);box(0.35,8,9,MAT.concreteDark,staticRoot,60,4,31);  // brandwanden
+buildTrafoBay('T1');buildTrafoBay('T2');buildTrafoBay('T3');
 buildLights();
 buildTrees();
 farm(-420,520,0.3);farm(610,-380,-0.2);farm(-760,-520,1.4);farm(380,820,0.1);
 [[780,-150,0.6],[900,-480,0.6],[1020,-810,0.6],[-950,-760,0.4],[-1150,-430,0.4]].forEach(a=>turbine(...a));
-van(25,30,0.05);
+van(40,41,Math.PI/2);
 buildInterior();
 bakeStatic();

@@ -22,7 +22,7 @@ function buildGround(){
   groundQuad(-30,38,22,44,0.04,MAT.asphalt,6);
   groundQuad(28,38,86,44,0.04,MAT.asphalt,6);
   // kabelgoten
-  for(const bx of[-10,10,50,70])for(let z=35.2;z<37.8;z+=0.62)box(0.9,0.1,0.58,MAT.concreteDark,staticRoot,bx,0.07,z);
+  for(const bx of[-10,30,60])for(let z=35.2;z<37.8;z+=0.62)box(0.9,0.1,0.58,MAT.concreteDark,staticRoot,bx,0.07,z);
   for(let x=-40;x<80;x+=0.62)if(Math.abs(x)>3&&Math.abs(x-40)>3)box(0.58,0.1,0.7,MAT.concreteDark,staticRoot,x,0.07,-3.9);
 }
 
