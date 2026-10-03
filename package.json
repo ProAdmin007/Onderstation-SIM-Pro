@@ -1,0 +1,13 @@
+{
+  "name": "onderstation-sim-pro",
+  "private": true,
+  "type": "module",
+  "description": "Realistische 3D-onderstationsimulator in de browser",
+  "scripts": {
+    "build": "pwsh ./build.ps1",
+    "test": "node tests/run.mjs"
+  },
+  "devDependencies": {
+    "puppeteer-core": "^23.11.1"
+  }
+}

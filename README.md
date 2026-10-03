@@ -85,6 +85,16 @@ Binnen staat een rij van 13 metaalomsloten schakelvelden (V-T1, F1–F3, meetvel
 - **Koude-lastopname:** na een lange onderbreking ligt de belasting tijdelijk tot 60 % hoger. Een vertraagde overstroombeveiliging (I>) kan dan afschakelen.
 - **Aardschakelaars kabelzijde** (F1-Q8 … F6-Q8) met een opdracht voor kabelwerk, waarbij de klanten eerst via het net worden omgeschakeld.
 
+## Tests
+Automatische tests sturen de simulator aan in headless Chrome: vergrendelingen, vlamboog, reservetransformator, ringfout met terugvoeding, spanningsregelaar, het ziekenhuisscenario en het pauzemenu.
+
+```powershell
+npm install
+npm test            # of: npm test -- ring   (alleen tests met 'ring' in de naam)
+```
+
+Gebruik `CHROME_PATH` als Chrome niet op een standaardplek staat.
+
 ## Ontwikkelen
 De broncode staat in `src/` (HTML/CSS plus JS-modules in volgorde). Bouw `index.html` opnieuw met:
 

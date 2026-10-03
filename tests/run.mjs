@@ -1,0 +1,116 @@
+// Automatische tests voor de Onderstation Simulator.
+// Start index.html in headless Chrome (software-rendering) en stuurt de simulatie via window.OS.
+// Gebruik: npm test   (optioneel CHROME_PATH=/pad/naar/chrome)
+import puppeteer from 'puppeteer-core';
+import { existsSync } from 'node:fs';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import path from 'node:path';
+
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const pageUrl = pathToFileURL(path.join(root, 'index.html')).href;
+const chrome = process.env.CHROME_PATH || [
+  'C:/Program Files/Google/Chrome/Application/chrome.exe',
+  'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',
+  '/usr/bin/google-chrome', '/usr/bin/chromium', '/usr/bin/chromium-browser',
+  '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+].find(p => existsSync(p));
+if (!chrome) { console.error('Geen Chrome gevonden – zet CHROME_PATH'); process.exit(2); }
+
+const only = process.argv[2];
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+// helpers die in de pagina beschikbaar komen
+const PAGE_HELPERS = `
+  window.T = {
+    step(min){ const O=window.OS; const p=O.SIM.paused; O.SIM.paused=false; for(let i=0;i<min*4;i++) O.simStep(0.25*60/O.SIM.speed); O.SIM.paused=p; },
+    sleep: ms => new Promise(r=>setTimeout(r,ms)),
+    quiet(){ const S=window.OS.SIM; S.nextEvent=1e9; S.nextTaskAt=1e9; },
+    toast: () => document.querySelector('#toast').textContent,
+  };`;
+
+async function openPage(browser, query) {
+  const page = await browser.newPage();
+  const errors = [];
+  page.on('pageerror', e => errors.push(e.message));
+  page.on('console', m => { if (m.type() === 'error' && !/AudioContext/.test(m.text())) errors.push(m.text()); });
+  await page.goto(pageUrl + query, { waitUntil: 'load', timeout: 120000 });
+  for (let i = 0; i < 120 && !(await page.evaluate(() => !!window.OS)); i++) await sleep(500);
+  await page.evaluate(PAGE_HELPERS);
+  return { page, errors };
+}
+
+const assert = (cond, msg) => { if (!cond) throw new Error(msg); };
+
+const TESTS = [
+  { name: 'laadt zonder fouten en iedereen heeft stroom', query: '?autostart&t=12', async run(p) {
+      const r = await p.evaluate(() => { T.quiet(); T.step(1); return { off: OS.SIM.off, ring: OS.RING.stations.length }; });
+      assert(r.off === 0, `klanten zonder stroom bij start: ${r.off}`);
+      assert(r.ring >= 9, `te weinig MS-stations: ${r.ring}`);
+  } },
+  { name: 'vergrendeling: scheider niet open met vermogenschakelaar in', query: '?autostart', async run(p) {
+      const r = await p.evaluate(() => { T.quiet(); OS.SIM.paused = false; OS.operate('L1-Q1', 0); return { st: OS.D['L1-Q1'].state, toast: T.toast() }; });
+      assert(r.st === 1, 'L1-Q1 is toch geopend');
+      assert(/Vergrendeling/.test(r.toast), `geen vergrendelingsmelding: ${r.toast}`);
+  } },
+  { name: 'zonder vergrendeling: vlamboog en beveiligingstrip', query: '?autostart', async run(p) {
+      const r = await p.evaluate(() => { T.quiet(); OS.SIM.paused = false; OS.SIM.interlock = false; OS.operate('L1-Q1', 0); return { inc: OS.SIM.incidents, q0: OS.D['L1-Q0'].state }; });
+      assert(r.inc === 1, `verwacht 1 incident, kreeg ${r.inc}`);
+      assert(r.q0 === 0, 'L1-Q0 is niet afgeschakeld');
+  } },
+  { name: 'reservetransformator neemt 10 kV over na trip T1', query: '?autostart&t=12', async run(p) {
+      const r = await p.evaluate(() => { T.quiet(); T.step(0.5); OS.trafoFault('T1'); T.step(0.3); const uit = OS.SIM.off;
+        OS.operate('V-T3', 1); T.step(0.5); const na = OS.SIM.off; OS.operate('W-T3', 1); return { uit, na, w: OS.D['W-T3'].state }; });
+      assert(r.uit > 5000, `te weinig uitval na trip: ${r.uit}`);
+      assert(r.na === 0, `na V-T3 nog ${r.na} klanten uit`);
+      assert(r.w === 0, 'W-T3 kon inschakelen terwijl T3 op 10 kV staat');
+  } },
+  { name: 'ring: kabelfout isoleren en terugvoeden via normaal-open punt', query: '?autostart&t=18', async run(p) {
+      const r = await p.evaluate(async () => { T.quiet(); T.step(0.5);
+        const f3 = OS.FEEDERS.find(f => f.id === 'F3'); const rnd = Math.random; Math.random = () => 0.99; OS.ringFault(f3); Math.random = rnd; T.step(0.2);
+        const sec = OS.RING.secs.find(s => s.fault); const uit = OS.SIM.off;
+        OS.operate(sec.a + '-R', 0); OS.operate(sec.b + '-L', 0); OS.operate(sec.ring.nop, 1); T.step(0.2); const half = OS.SIM.off;
+        await T.sleep(7200); OS.operate('V-F3', 1); T.step(0.5); return { sec: sec.id, uit, half, na: OS.SIM.off, flags: OS.RING.stations.filter(s => s.flag).map(s => s.id) }; });
+      assert(r.uit > 0 && r.half < r.uit, `isoleren hielp niet (${r.uit} → ${r.half})`);
+      assert(r.na === 0, `na herinschakelen nog ${r.na} klanten uit (fout ${r.sec})`);
+      assert(r.flags.length > 0, 'geen kortsluitverklikkers aangesproken');
+  } },
+  { name: 'spanningsregelaar brengt rail A terug in de band', query: '?autostart&t=18', async run(p) {
+      const r = await p.evaluate(async () => { T.quiet(); T.step(0.5); OS.setAVR('T1', 'hand');
+        for (let i = 0; i < 3; i++) { OS.tapStep('T1', 1); await T.sleep(1700); } T.step(0.2); const hoog = OS.FLOW.U.RA;
+        OS.setAVR('T1', 'auto'); for (let i = 0; i < 16; i++) { T.step(1); await T.sleep(400); } return { hoog, na: OS.FLOW.U.RA }; });
+      assert(r.hoog > 10.7, `trappen omhoog gaf geen hoge spanning: ${r.hoog}`);
+      assert(Math.abs(r.na - 10.5) < 0.15, `regelaar bracht spanning niet terug: ${r.na}`);
+  } },
+  { name: 'ziekenhuisscenario loopt tot het rapport', query: '?play=zkh', async run(p) {
+      const r = await p.evaluate(async () => { T.step(1.5); OS.operate('V-T3', 1); T.step(16); await T.sleep(7200); OS.operate('V-F5', 1); T.step(45);
+        return { ended: OS.GAME.ended, report: !document.querySelector('#report').classList.contains('hidden'), obj: OS.GAME.obj.map(o => o.state) }; });
+      assert(r.ended && r.report, 'scenario niet afgesloten met rapport');
+      assert(r.obj[0] === 'done', `ziekenhuisdoel niet gehaald: ${r.obj}`);
+  } },
+  { name: 'Esc opent pauzemenu en pauzeert', query: '?autostart', async run(p) {
+      await p.keyboard.press('Escape'); await sleep(800);
+      const r = await p.evaluate(() => ({ menu: !document.querySelector('#pauseMenu').classList.contains('hidden'), paused: OS.SIM.paused }));
+      assert(r.menu && r.paused, `menu ${r.menu}, pauze ${r.paused}`);
+  } },
+];
+
+const browser = await puppeteer.launch({ executablePath: chrome, headless: 'new',
+  args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--no-sandbox', '--window-size=1280,800'],
+  defaultViewport: { width: 1280, height: 800 } });
+let failed = 0;
+for (const t of TESTS) {
+  if (only && !t.name.includes(only)) continue;
+  const t0 = Date.now();
+  let page, errors = [];
+  try {
+    ({ page, errors } = await openPage(browser, t.query));
+    await t.run(page);
+    assert(errors.length === 0, 'paginafouten: ' + errors.join(' | '));
+    console.log(`✓ ${t.name} (${((Date.now() - t0) / 1000).toFixed(0)} s)`);
+  } catch (e) {
+    failed++; console.log(`✗ ${t.name}\n    ${e.message}`);
+  } finally { if (page) await page.close(); }
+}
+await browser.close();
+console.log(failed ? `\n${failed} test(s) mislukt` : '\nAlle tests geslaagd');
+process.exit(failed ? 1 : 0);
