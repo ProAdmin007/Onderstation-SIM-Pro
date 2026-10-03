@@ -56,6 +56,7 @@ const AudioSys={ctx:null,muted:false,
     this.burst({type:'lowpass',f:500,gain:1.1*k,dur:1.3});this.tone({f:130,f2:30,gain:0.8*k,dur:0.7});this.burst({type:'highpass',f:4000,gain:0.3*k,dur:0.7});},
   thunder(){this.burst({type:'lowpass',f:170,gain:1.3,dur:4.8,attack:0.1});this.burst({type:'lowpass',f:700,gain:0.5,dur:1.6,attack:0.02});this.burst({type:'lowpass',f:260,gain:0.7,dur:3,attack:0.4,delay:0.7});},
   alarm(level){if(level==='crit'){[0,0.18,0.36].forEach((d,i)=>this.tone({f:i%2?660:880,gain:0.1,dur:0.14,delay:d}));}else if(level==='warn')this.tone({f:740,gain:0.07,dur:0.16});},
+  ready(){[523,659,784,1047].forEach((f,i)=>this.tone({f,type:'triangle',gain:0.13,dur:0.55,delay:i*0.12}));this.tone({f:1568,gain:0.05,dur:0.9,delay:0.48});},
   chime(){this.tone({f:660,gain:0.08,dur:0.3});this.tone({f:990,gain:0.07,dur:0.4,delay:0.12});},
   deny(){this.tone({f:200,type:'square',gain:0.045,dur:0.2});},
   toggleMute(){this.muted=!this.muted;if(this.master)this.master.gain.value=this.muted?0:0.9;return this.muted;}};

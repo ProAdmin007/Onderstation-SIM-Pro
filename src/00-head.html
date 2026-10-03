@@ -200,6 +200,23 @@ body.fp:not(.fplocked) #fpPause{display:flex;position:fixed;left:50%;top:50%;tra
 #views .walk{background:rgba(240,164,58,.14);border-color:rgba(240,164,58,.4)}
 body.fp #views .walk{background:var(--accent);color:#1a1206;font-weight:700}
 body.fp #labels{opacity:.75}
+#notice{position:fixed;left:50%;top:84px;transform:translate(-50%,-12px);min-width:340px;max-width:600px;background:rgba(10,40,24,.94);border:1px solid var(--green);border-radius:10px;padding:10px 18px;z-index:8;opacity:0;pointer-events:none;transition:opacity .3s,transform .3s;display:flex;flex-direction:column;gap:2px;box-shadow:0 0 0 4px rgba(63,207,114,.15),0 12px 30px rgba(0,0,0,.4)}
+#notice.show{opacity:1;transform:translate(-50%,0)}
+#notice b{color:#7cf0a4;font-size:14px}#notice span{color:#d9f7e4;font-size:13px}
+#toast{top:150px}
+#sld .dev.ready .hit{fill:rgba(63,207,114,.28);stroke:var(--green);stroke-width:1.5;animation:rdy 1s ease-in-out infinite}
+@keyframes rdy{50%{fill:rgba(63,207,114,.05);stroke-opacity:.3}}
+.lbl.ready{border-color:var(--green);color:#7cf0a4;animation:rdy2 1s ease-in-out infinite}
+@keyframes rdy2{50%{box-shadow:0 0 0 4px rgba(63,207,114,.35)}}
+#pauseMenu{position:fixed;inset:0;display:grid;place-items:center;background:rgba(6,9,12,.62);z-index:11}
+.card.pm{width:min(420px,92vw);padding:26px 28px;background:rgba(13,17,22,.95);border:1px solid var(--line);border-radius:16px;display:flex;flex-direction:column;gap:9px}
+.pm-mode{font-size:18px;font-weight:700;margin-bottom:2px}
+.pm-score{display:flex;align-items:baseline;gap:8px;margin-bottom:10px}
+.pm-score span{font:700 28px var(--mono);color:var(--accent)}.pm-score small{color:var(--muted)}.pm-score em{margin-left:auto;font-style:normal;font-size:12px;color:var(--muted)}
+.pm button{padding:11px 14px;text-align:left;font-weight:600}
+.pm .primary{background:var(--accent);color:#1a1206;border:none;display:flex;justify-content:space-between;align-items:center}
+.pm .primary kbd{background:rgba(0,0,0,.15);border-color:rgba(0,0,0,.2)}
+body.menu #fpPause{display:none!important}
 #loading{position:fixed;inset:0;display:grid;place-items:center;color:var(--muted);font-family:var(--mono);z-index:20;background:var(--bg)}
 @media (max-width:1250px){#tasks{width:290px}#devpanel{left:314px}#scada{width:400px}.kpi{min-width:90px;padding:3px 9px}}
 @media (max-width:1050px){.kpis .kpi:nth-child(n+3){display:none}#views{left:12px;bottom:calc(var(--alarmH) + 24px)}}
@@ -254,8 +271,16 @@ body.fp #labels{opacity:.75}
 <div id="tooltip"></div>
 <div id="fpCross"></div>
 <div id="fpHint"></div>
-<div id="fpPause"><b>Rondlopen</b><span>Klik om verder te lopen</span><span class="k">WASD lopen · Shift rennen · muis kijken · F schakelen · E paneel · V stoppen</span></div>
+<div id="fpPause"><b>Rondlopen</b><span>Klik om verder te lopen</span><span class="k">WASD lopen · Shift rennen · muis kijken · F schakelen · E paneel · V stoppen · Esc menu</span></div>
 <div id="toast"></div>
+<div id="notice"></div>
+<div id="pauseMenu" class="hidden"><div class="card pm">
+  <div class="eyebrow">Gepauzeerd</div><div class="pm-mode" id="pmMode"></div>
+  <div class="pm-score"><span id="pmScore">0</span><small>punten</small><em id="pmBest"></em></div>
+  <button class="primary" data-pm="resume">Hervatten <kbd>Esc</kbd></button>
+  <button data-pm="end">Dienst beëindigen · rapport en score opslaan</button>
+  <button data-pm="menu">Score opslaan en naar hoofdmenu</button>
+</div></div>
 <div id="intro" class="hidden">
   <div class="card wide">
     <div class="about">
@@ -269,7 +294,7 @@ body.fp #labels{opacity:.75}
       </ul>
       <div class="mh">Moeilijkheid</div>
       <div class="seg" id="diff"><button data-d="rustig">Rustig</button><button data-d="normaal" class="on">Normaal</button><button data-d="zwaar">Zwaar</button></div>
-      <div class="keys">slepen: draaien · rechts: schuiven · scroll: zoom<br>1–7 camera · V rondlopen · spatie pauze · L labels · M geluid</div>
+      <div class="keys">slepen: draaien · rechts: schuiven · scroll: zoom<br>1–7 camera · V rondlopen · spatie pauze · Esc menu · L labels · M geluid</div>
     </div>
     <div id="menu"></div>
   </div>

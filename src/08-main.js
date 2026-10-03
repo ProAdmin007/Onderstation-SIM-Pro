@@ -21,7 +21,19 @@ addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;
   else if(e.code==='Space'){e.preventDefault();if($('#intro').classList.contains('hidden'))setSpeed(0);}
   else if(e.key==='l'||e.key==='L')document.body.classList.toggle('nolabels');
   else if(e.key==='m'||e.key==='M')$('#mute').click();
-  else if(e.key==='Escape')selectDevice(null);});
+  else if(e.key==='Escape'){if(menuOpen()){if(performance.now()-menuAt>350)closeMenu();}else if(SEL&&!document.pointerLockElement)selectDevice(null);else openMenu();}});
+// ---------- pauzemenu (Esc)
+let menuPrev=false,menuAt=0;
+const menuOpen=()=>!$('#pauseMenu').classList.contains('hidden');
+function openMenu(){if(GAME.ended||menuOpen()||!$('#intro').classList.contains('hidden'))return;menuPrev=SIM.paused;menuAt=performance.now();SIM.paused=true;syncSpeed();unlockPointer();
+  const m=MODES[GAME.mode]||MODES.free;$('#pmMode').textContent=`${m.name} · ${DIFFS[GAME.diff].label}`;$('#pmScore').textContent=Math.round(GAME.score).toLocaleString('nl-NL');
+  $('#pmBest').textContent=getBest(GAME.mode,GAME.diff)?`beste: ${getBest(GAME.mode,GAME.diff).toLocaleString('nl-NL')}`:'nog geen beste score';
+  $('#pauseMenu').classList.remove('hidden');document.body.classList.add('menu');}
+function closeMenu(){$('#pauseMenu').classList.add('hidden');document.body.classList.remove('menu');SIM.paused=menuPrev;syncSpeed();if(FP.on)canvasEl.requestPointerLock?.();}
+$('#pauseMenu').addEventListener('click',e=>{const b=e.target.closest('[data-pm]');if(!b)return;const a=b.dataset.pm;
+  if(a==='resume')closeMenu();
+  else if(a==='end'){$('#pauseMenu').classList.add('hidden');document.body.classList.remove('menu');if(FP.on)exitFP();endGame();}
+  else if(a==='menu'){finalizeGame();saveBest();location.search='';}});
 addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
 function startGame(id){$('#intro').classList.add('hidden');AudioSys.init();controls.autoRotate=false;
   applyMode(id);pushAlarm(`Dienst overgenomen – ${MODES[id]?.name||'Vrije dienst'} (${DIFFS[GAME.diff].label})`,'ok');setSpeed(60);

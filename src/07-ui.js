@@ -47,7 +47,8 @@ function nodeClass(n){if(ER.has(n))return 'earth';if(!EN.has(n))return 'dead';co
 function setM(k,txt,cls){(SLD.meas[k]||[]).forEach(el=>{el.textContent=txt;if(cls)el.setAttribute('class',cls);});}
 function updateSLD(){
   SLD.nodes.forEach(el=>el.setAttribute('class',el.dataset.c+' '+nodeClass(el.dataset.n)));
-  for(const [id,els] of Object.entries(SLD.devs)){const d=D[id];els.forEach(el=>{if(['cb','ds','es'].includes(d.type)){el.classList.toggle('closed',d.state===1);el.classList.toggle('open',d.state!==1);
+  for(const [id,c] of READY)if(!c())READY.delete(id);
+  for(const [id,els] of Object.entries(SLD.devs)){const d=D[id];els.forEach(el=>{el.classList.toggle('ready',READY.has(id));if(['cb','ds','es'].includes(d.type)){el.classList.toggle('closed',d.state===1);el.classList.toggle('open',d.state!==1);
       const bl=el.querySelector('.blade');if(bl)bl.style.transform=d.state?'':'rotate(-35deg)';}
     el.classList.toggle('sel',id===SEL);});}
   const fx=(v,n=1)=>v.toFixed(n).replace('.',',');
@@ -61,6 +62,10 @@ function updateSLD(){
 }
 
 // ============================================================ meldingen, toast, opdrachten
+const READY=new Map();   // velden die weer geschakeld mogen worden (knipperen groen)
+function readyNotice(text,id,cond){pushAlarm(text,'ok');AudioSys.ready();
+  const n=$('#notice');n.innerHTML=`<b>✓ Klaar om te schakelen</b><span>${text}</span>`;n.classList.remove('show');void n.offsetWidth;n.classList.add('show');
+  clearTimeout(n._t);n._t=setTimeout(()=>n.classList.remove('show'),8000);if(id)READY.set(id,cond||(()=>true));updateSLD();updateLabels(true);}
 let alarmCount=0;
 function pushAlarm(text,level='info'){
   alarmCount++;const el=document.createElement('div');el.className=`al ${level} new`;
@@ -165,7 +170,7 @@ function updateLabels(force){const w=innerWidth,h=innerHeight,ins=camInside();
     if(!vis){if(L.el.style.display!=='none')L.el.style.display='none';continue;}
     if(L.el.style.display==='none')L.el.style.display='';
     L.el.style.transform=`translate(${((_p.x+1)/2*w).toFixed(1)}px,${((1-_p.y)/2*h).toFixed(1)}px) translate(-50%,-100%)`;
-    const d=L.d;const c=(d.type==='es'?(d.state?'earth':'open'):['cb','ds'].includes(d.type)?(d.state?'':'open'):d.type==='tr'?(EN.has(d.a)?'':'open'):d.type==='line'?(SIM.lines[d.line].avail?'':'open'):'info')+(d.id===SEL?' sel':'');
+    const d=L.d;const c=(d.type==='es'?(d.state?'earth':'open'):['cb','ds'].includes(d.type)?(d.state?'':'open'):d.type==='tr'?(EN.has(d.a)?'':'open'):d.type==='line'?(SIM.lines[d.line].avail?'':'open'):'info')+(d.id===SEL?' sel':'')+(READY.has(d.id)?' ready':'');
     if(c!==L.cls||force){L.cls=c;L.el.className='lbl '+c;}}}
 const ray=new THREE.Raycaster(),ndc=new THREE.Vector2();
 function pickAt(cx,cy){ndc.set(cx/innerWidth*2-1,-(cy/innerHeight)*2+1);ray.setFromCamera(ndc,camera);

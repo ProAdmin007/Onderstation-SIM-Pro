@@ -18,7 +18,10 @@ Een 3D-onderstationsimulator die in de browser draait (Three.js, geen installati
   - Je loopt met `WASD`, rent met `Shift` en kijkt rond met de muis.
   - Richt het kruis op een schakelaar: `F` schakelt direct, `E` opent het apparaatpaneel en met nog een keer `E` sluit je het weer en loop je verder.
   - Je loopt niet door apparatuur, muren of het hek; de gebouwen kun je via de deuren in.
-  - Met `Esc` geef je de muis vrij, met `V` stop je met rondlopen. · `spatie` pauze · `L` labels · `M` geluid · `Esc` deselecteren
+  - Met `V` stop je met rondlopen; met nog een keer `V` ga je verder waar je was.
+  - Lopen gaat met 2,2 m/s, rennen met `Shift` met 8 m/s.
+- **Pauzemenu (`Esc`):** hervatten, de dienst beëindigen met rapport, of de score opslaan en terug naar het hoofdmenu.
+- **Klaar om te schakelen:** als de storingsdienst of TenneT klaar is, of een transformator weer gereset mag worden, hoor je een oplopend klokgeluid en verschijnt een groene banner. Het betreffende veld knippert groen in SCADA en in 3D tot je het schakelt. · `spatie` pauze · `L` labels · `M` geluid · `Esc` deselecteren
 
 ## Installatie
 - **110 kV:** twee lijnvelden (L1 Hoogeveen, L2 Meppel), een railsysteem en drie transformatorvelden.

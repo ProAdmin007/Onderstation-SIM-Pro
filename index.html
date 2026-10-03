@@ -200,6 +200,23 @@ body.fp:not(.fplocked) #fpPause{display:flex;position:fixed;left:50%;top:50%;tra
 #views .walk{background:rgba(240,164,58,.14);border-color:rgba(240,164,58,.4)}
 body.fp #views .walk{background:var(--accent);color:#1a1206;font-weight:700}
 body.fp #labels{opacity:.75}
+#notice{position:fixed;left:50%;top:84px;transform:translate(-50%,-12px);min-width:340px;max-width:600px;background:rgba(10,40,24,.94);border:1px solid var(--green);border-radius:10px;padding:10px 18px;z-index:8;opacity:0;pointer-events:none;transition:opacity .3s,transform .3s;display:flex;flex-direction:column;gap:2px;box-shadow:0 0 0 4px rgba(63,207,114,.15),0 12px 30px rgba(0,0,0,.4)}
+#notice.show{opacity:1;transform:translate(-50%,0)}
+#notice b{color:#7cf0a4;font-size:14px}#notice span{color:#d9f7e4;font-size:13px}
+#toast{top:150px}
+#sld .dev.ready .hit{fill:rgba(63,207,114,.28);stroke:var(--green);stroke-width:1.5;animation:rdy 1s ease-in-out infinite}
+@keyframes rdy{50%{fill:rgba(63,207,114,.05);stroke-opacity:.3}}
+.lbl.ready{border-color:var(--green);color:#7cf0a4;animation:rdy2 1s ease-in-out infinite}
+@keyframes rdy2{50%{box-shadow:0 0 0 4px rgba(63,207,114,.35)}}
+#pauseMenu{position:fixed;inset:0;display:grid;place-items:center;background:rgba(6,9,12,.62);z-index:11}
+.card.pm{width:min(420px,92vw);padding:26px 28px;background:rgba(13,17,22,.95);border:1px solid var(--line);border-radius:16px;display:flex;flex-direction:column;gap:9px}
+.pm-mode{font-size:18px;font-weight:700;margin-bottom:2px}
+.pm-score{display:flex;align-items:baseline;gap:8px;margin-bottom:10px}
+.pm-score span{font:700 28px var(--mono);color:var(--accent)}.pm-score small{color:var(--muted)}.pm-score em{margin-left:auto;font-style:normal;font-size:12px;color:var(--muted)}
+.pm button{padding:11px 14px;text-align:left;font-weight:600}
+.pm .primary{background:var(--accent);color:#1a1206;border:none;display:flex;justify-content:space-between;align-items:center}
+.pm .primary kbd{background:rgba(0,0,0,.15);border-color:rgba(0,0,0,.2)}
+body.menu #fpPause{display:none!important}
 #loading{position:fixed;inset:0;display:grid;place-items:center;color:var(--muted);font-family:var(--mono);z-index:20;background:var(--bg)}
 @media (max-width:1250px){#tasks{width:290px}#devpanel{left:314px}#scada{width:400px}.kpi{min-width:90px;padding:3px 9px}}
 @media (max-width:1050px){.kpis .kpi:nth-child(n+3){display:none}#views{left:12px;bottom:calc(var(--alarmH) + 24px)}}
@@ -254,8 +271,16 @@ body.fp #labels{opacity:.75}
 <div id="tooltip"></div>
 <div id="fpCross"></div>
 <div id="fpHint"></div>
-<div id="fpPause"><b>Rondlopen</b><span>Klik om verder te lopen</span><span class="k">WASD lopen · Shift rennen · muis kijken · F schakelen · E paneel · V stoppen</span></div>
+<div id="fpPause"><b>Rondlopen</b><span>Klik om verder te lopen</span><span class="k">WASD lopen · Shift rennen · muis kijken · F schakelen · E paneel · V stoppen · Esc menu</span></div>
 <div id="toast"></div>
+<div id="notice"></div>
+<div id="pauseMenu" class="hidden"><div class="card pm">
+  <div class="eyebrow">Gepauzeerd</div><div class="pm-mode" id="pmMode"></div>
+  <div class="pm-score"><span id="pmScore">0</span><small>punten</small><em id="pmBest"></em></div>
+  <button class="primary" data-pm="resume">Hervatten <kbd>Esc</kbd></button>
+  <button data-pm="end">Dienst beëindigen · rapport en score opslaan</button>
+  <button data-pm="menu">Score opslaan en naar hoofdmenu</button>
+</div></div>
 <div id="intro" class="hidden">
   <div class="card wide">
     <div class="about">
@@ -269,7 +294,7 @@ body.fp #labels{opacity:.75}
       </ul>
       <div class="mh">Moeilijkheid</div>
       <div class="seg" id="diff"><button data-d="rustig">Rustig</button><button data-d="normaal" class="on">Normaal</button><button data-d="zwaar">Zwaar</button></div>
-      <div class="keys">slepen: draaien · rechts: schuiven · scroll: zoom<br>1–7 camera · V rondlopen · spatie pauze · L labels · M geluid</div>
+      <div class="keys">slepen: draaien · rechts: schuiven · scroll: zoom<br>1–7 camera · V rondlopen · spatie pauze · Esc menu · L labels · M geluid</div>
     </div>
     <div id="menu"></div>
   </div>
@@ -996,7 +1021,7 @@ function operate(id,to){
   if(d.type==='cb')AudioSys.breaker(v?distGain(v.center):0.5);else{d.busy=!!v;AudioSys.motor(d.type==='es'?2.2:2.8,v?distGain(v.center):0.5);}
   if(d.type==='cb'&&to===1&&d.need&&D[d.tr].ratio!==d.need&&EN.has(d.a)){incident();d.state=0;tripBreaker(d.tr+'-Q0');
     pushAlarm(`${id} ingeschakeld terwijl ${d.tr} op ${D[d.tr].ratio} kV staat – verkeerde spanning op de rail, overspanningsbeveiliging en differentiaal grijpen in!`,'crit');
-    spawnArc(v?v.arcPos:null,1.5);const t=D[d.tr];t.blocked=true;t.resettable=false;t.blockKind='ratio';t.blockText='wikkelingsschade door verkeerde omschakelstand';addTimer(90,()=>{t.resettable=true;pushAlarm(`${d.tr}: inspectie na overspanning gereed – reset 86 mogelijk`,'ok');});refreshAll();return;}
+    spawnArc(v?v.arcPos:null,1.5);const t=D[d.tr];t.blocked=true;t.resettable=false;t.blockKind='ratio';t.blockText='wikkelingsschade door verkeerde omschakelstand';addTimer(90,()=>{t.resettable=true;readyNotice(`${d.tr}: inspectie na overspanning gereed – reset blokkeerrelais 86`,d.tr,()=>t.blocked);});refreshAll();return;}
   if(arc){incident();pushAlarm(`${id} geschakeld met ${d.cb} IN – vlamboog! Beveiliging grijpt in`,'crit');spawnArc(v?v.arcPos:null,1.3);tripFrom(arc);}
   else{const sc=shortNode();if(sc){incident();
     pushAlarm(d.type==='es'?`Aardschakelaar ${id} op spanning gesloten – kortsluiting!`:d.type==='cb'?`${id} ingeschakeld op geaard deel – kortsluiting!`:`Kortsluiting na bediening ${id}!`,'crit');
@@ -1017,7 +1042,7 @@ function tripFrom(node){
 function tripBreaker(id){const d=D[id];if(d.state!==1)return false;d.state=0;const v=VIEWS[id];AudioSys.breaker(v?distGain(v.center):0.5);return true;}
 function lineRestore(L){const ln=SIM.lines[L];if(ln.avail||ln.maint)return;
   if(D[L+'-Q8'].state===1){pushAlarm(`TenneT: lijn ${L} kan niet onder spanning – ${L}-Q8 is geaard`,'warn');addTimer(5,()=>lineRestore(L));return;}
-  ln.avail=true;ln.reason='';pushAlarm(`TenneT: lijn ${L} ${ln.name} weer onder spanning – ${L}-Q0 mag weer IN`,'ok');}
+  ln.avail=true;ln.reason='';if(D[L+'-Q0'].state)pushAlarm(`TenneT: lijn ${L} ${ln.name} weer onder spanning`,'ok');else readyNotice(`TenneT: lijn ${L} ${ln.name} weer onder spanning – ${L}-Q0 mag weer IN`,L+'-Q0',()=>!D[L+'-Q0'].state&&SIM.lines[L].avail);}
 function lineLockout(L){const ln=SIM.lines[L];ln.avail=false;ln.reason='blijvende fout, ploeg onderweg';const m=rnd(25,50);
   pushAlarm(`TenneT: blijvende fout op lijn ${L} – herstel verwacht over ±${Math.round(m)} min`,'warn');addTimer(m,()=>lineRestore(L));}
 function toggleAR(L){const ln=SIM.lines[L];if(ln.arBroken)return deny(`AR-relais ${L} is defect`);ln.ar=!ln.ar;pushAlarm(`Automatische herinschakeling ${L} ${ln.ar?'IN':'UIT'}bedrijf gesteld`,'op');refreshAll();}
@@ -1026,7 +1051,7 @@ function toggleAR(L){const ln=SIM.lines[L];if(ln.arBroken)return deny(`AR-relais
 function tripTrafo(T,reason,inspectMin,kind){const t=D[T];tripBreaker(T+'-Q0');TR_LV[T].forEach(tripBreaker);
   t.blocked=true;t.resettable=false;t.blockText=reason;t.blockKind=kind;if(kind==='temp'){GAME.stats.thermal++;award(-100,`${T} thermisch afgeschakeld`);}
   pushAlarm(`${T}: ${reason} – ${T}-Q0 en ${TR_LV[T].join('/')} UIT, blokkeerrelais 86 aangesproken`,'crit');
-  if(inspectMin)addTimer(inspectMin,()=>{t.resettable=true;pushAlarm(`${T}: inspectie gereed, geen schade gevonden – reset blokkeerrelais 86 in het transformatorpaneel`,'ok');});
+  if(inspectMin)addTimer(inspectMin,()=>{t.resettable=true;readyNotice(`${T}: inspectie gereed, geen schade gevonden – reset blokkeerrelais 86 in het transformatorpaneel`,T,()=>t.blocked);});
   setTimeout(()=>{computeFlows();const dead=FEEDERS.filter(f=>!EN.has(f.node)&&D[f.cb].state===1);if(!dead.length)return;
     if(dead.some(f=>f.bus==='RC'))pushAlarm(`Tip: neem reservetransformator T3 in bedrijf op 20 kV (W-T3) – T3 staat nu op ${D.T3.ratio} kV`,'info');
     if(dead.some(f=>f.bus!=='RC'))pushAlarm(`Tip: neem reservetransformator T3 in bedrijf op 10 kV (V-T3) – T3 staat nu op ${D.T3.ratio} kV. Let op de belasting!`,'info');},600);}
@@ -1067,7 +1092,7 @@ function thermal(dm){const h=hourOf(),amb=11+5*Math.sin((h-9)/24*2*Math.PI);
     if(t.oil>90&&!t.hot){t.hot=true;pushAlarm(`${T}: olietemperatuur hoog (${t.oil.toFixed(0)} °C) – overbelast! Verlaag de belasting`,'warn');}
     if(t.oil<85)t.hot=false;
     if(t.oil>=100&&(D[T+'-Q0'].state||TR_LV[T].some(id=>D[id].state)))tripTrafo(T,'thermische beveiliging (olie ≥ 100 °C)',0,'temp');
-    if(t.blocked&&t.blockKind==='temp'&&!t.resettable&&t.oil<75){t.resettable=true;pushAlarm(`${T}: afgekoeld tot ${t.oil.toFixed(0)} °C – blokkeerrelais 86 mag worden gereset`,'ok');}});}
+    if(t.blocked&&t.blockKind==='temp'&&!t.resettable&&t.oil<75){t.resettable=true;readyNotice(`${T}: afgekoeld tot ${t.oil.toFixed(0)} °C – blokkeerrelais 86 mag worden gereset`,T,()=>t.blocked);}});}
 
 // ---------------------------------------------------------- 10 kV-velden: koude-lastopname en overstroom
 function feederTick(dm){FEEDERS.forEach(f=>{const on=EN.has(f.node);
@@ -1095,7 +1120,7 @@ function lineFault(forceL,forcePerm){const c=['L1','L2'].filter(L=>SIM.lines[L].
         else setTimeout(()=>{tripBreaker(d.id);pushAlarm(`${L}: herinschakeling mislukt (blijvende fout) – ${L}-Q0 definitief UIT`,'crit');lineLockout(L);refreshAll();},260);
         refreshAll();},1200);}
     else if(perm)lineLockout(L);
-    else pushAlarm(`TenneT: lijn ${L} na herinschakeling aan de overzijde weer onder spanning – ${L}-Q0 mag weer IN`,'info');
+    else readyNotice(`TenneT: lijn ${L} na herinschakeling aan de overzijde weer onder spanning – ${L}-Q0 mag weer IN`,L+'-Q0',()=>!D[L+'-Q0'].state&&SIM.lines[L].avail);
     refreshAll();},700);}
 function feederFault(forceF,searchMin){const c=FEEDERS.filter(f=>D[f.cb].state===1&&EN.has(f.node)&&!f.fault&&!f.backfed&&(!forceF||f.id===forceF));if(!c.length)return;const f=pick(c);
   tripBreaker(f.cb);f.fault={stage:'search',frac:f.prio?0:rnd(0.12,0.35)};
@@ -1104,7 +1129,7 @@ function feederFault(forceF,searchMin){const c=FEEDERS.filter(f=>D[f.cb].state==
   pushAlarm(`${f.cb} ${f.name}: overstroombeveiliging I>> – ${why}`,'crit');
   pushAlarm(`Storingsdienst: monteur onderweg naar ${f.id}, foutzoeken ±${Math.round(ts)} min. Veld nog niet inschakelen!`,'info');
   addTimer(ts,()=>{f.fault.stage='isolated';f.outFrac=f.fault.frac;
-    pushAlarm(`Storingsdienst: fout in ${f.id} gelokaliseerd en weggeschakeld – ${f.cb} mag IN. ${Math.round(f.cust*f.outFrac)} klanten wachten op reparatie`,'ok');
+    readyNotice(`Storingsdienst: fout in ${f.id} ${f.name} gevonden en weggeschakeld – ${f.cb} mag weer IN${f.outFrac?` (${Math.round(f.cust*f.outFrac)} klanten wachten nog op reparatie)`:''}`,f.cb,()=>!D[f.cb].state);
     addTimer(rnd(40,80),()=>{f.fault=null;f.outFrac=0;pushAlarm(`Storingsdienst: kabel ${f.id} gerepareerd – alle klanten van ${f.name} terug`,'ok');});});
   refreshAll();}
 function trafoFault(forceT){const c=TR.filter(T=>!D[T].blocked&&D[T+'-Q0'].state===1&&EN.has(T+'h')&&!(TASK&&TASK.tr===T)&&(!forceT||T===forceT));if(!c.length)return forceT?null:feederFault();const T=pick(c);
@@ -1214,7 +1239,7 @@ const MODES={
       Object.assign(D.T1,{blocked:true,resettable:false,blockText:'onderhoud trappenschakelaar',blockKind:'maint'});D.T3.oil=62;FEEDERS[5].interruptible=true;
       pushAlarm('T1 staat uit bedrijf voor onderhoud – gereed verwacht rond 17:50. Reservetransformator T3 voedt de 10 kV.','info');
       pushAlarm('Glastuinbouw Oost (F6) heeft een afschakelbaar contract: afschakelen kost maar 10% klantminuten','info');
-      at(80,()=>{D.T1.resettable=true;pushAlarm('Onderhoud T1 gereed – reset blokkeerrelais 86, sluit T1-Q1 en neem T1 weer in bedrijf','ok');});},
+      at(80,()=>{D.T1.resettable=true;readyNotice('Onderhoud T1 gereed – reset blokkeerrelais 86, sluit T1-Q1 en neem T1 weer in bedrijf','T1',()=>D.T1.blocked);});},
     obj:()=>[{t:'T3 wordt niet thermisch afgeschakeld',check:()=>GAME.stats.thermal?'fail':null,final:()=>true},
       {t:'Ziekenhuis (F5) blijft onder spanning',check:()=>GAME.flags.hospRun>1?'fail':null,final:()=>true},
       {t:'T1 vóór 18:30 weer in bedrijf',check:()=>EN.has('T1l')&&D['V-T1'].state?'done':SIM.t>18.5*60?'fail':null},
@@ -1265,17 +1290,16 @@ function gameTick(dm,dtReal){
   if(GAME.endT&&SIM.t>=GAME.endT)endGame();
 }
 function grade(s){return s>=1400?['A+',5]:s>=1250?['A',4]:s>=1100?['B',3]:s>=950?['C',2]:s>=750?['D',1]:['E',0];}
-function endGame(){
-  GAME.ended=true;SIM.paused=true;syncSpeed();
+function finalizeGame(){if(GAME.ended)return;GAME.ended=true;SIM.paused=true;
   GAME.obj.forEach(o=>{if(o.state)return;const ok=o.final?o.final():false;o.state=ok?'done':'fail';award(ok?100:-150);});
-  if(!SIM.incidents)award(200,'Veilig gewerkt');
-  showReport();
-}
+  if(!SIM.incidents&&SIM.t-GAME.t0>=60)award(200,'Veilig gewerkt');}   // bonus pas na minimaal een uur dienst
+function saveBest(){const s=Math.round(GAME.score),best=getBest(GAME.mode,GAME.diff),rec=s>best;if(rec){try{localStorage.setItem(bestKey(GAME.mode,GAME.diff),s);}catch(e){}}return {s,best,rec};}
+function endGame(){finalizeGame();syncSpeed();showReport();}
 function bestKey(id,diff){return `osz-best-${id}-${diff}`;}
 function getBest(id,diff){try{return +localStorage.getItem(bestKey(id,diff))||0;}catch(e){return 0;}}
 function showReport(){
   const m=MODES[GAME.mode],s=Math.round(GAME.score),[g,stars]=grade(s),st=GAME.stats;
-  const best=getBest(GAME.mode,GAME.diff),rec=s>best;if(rec){try{localStorage.setItem(bestKey(GAME.mode,GAME.diff),s);}catch(e){}}
+  const {best,rec}=saveBest();
   const badges=[];
   if(!SIM.incidents)badges.push(['Veilig gewerkt','geen enkel veiligheidsincident']);
   if(st.hospMin<0.01)badges.push(['Zorgzaam','het ziekenhuis bleef aan het net']);
@@ -1370,6 +1394,7 @@ const AudioSys={ctx:null,muted:false,
     this.burst({type:'lowpass',f:500,gain:1.1*k,dur:1.3});this.tone({f:130,f2:30,gain:0.8*k,dur:0.7});this.burst({type:'highpass',f:4000,gain:0.3*k,dur:0.7});},
   thunder(){this.burst({type:'lowpass',f:170,gain:1.3,dur:4.8,attack:0.1});this.burst({type:'lowpass',f:700,gain:0.5,dur:1.6,attack:0.02});this.burst({type:'lowpass',f:260,gain:0.7,dur:3,attack:0.4,delay:0.7});},
   alarm(level){if(level==='crit'){[0,0.18,0.36].forEach((d,i)=>this.tone({f:i%2?660:880,gain:0.1,dur:0.14,delay:d}));}else if(level==='warn')this.tone({f:740,gain:0.07,dur:0.16});},
+  ready(){[523,659,784,1047].forEach((f,i)=>this.tone({f,type:'triangle',gain:0.13,dur:0.55,delay:i*0.12}));this.tone({f:1568,gain:0.05,dur:0.9,delay:0.48});},
   chime(){this.tone({f:660,gain:0.08,dur:0.3});this.tone({f:990,gain:0.07,dur:0.4,delay:0.12});},
   deny(){this.tone({f:200,type:'square',gain:0.045,dur:0.2});},
   toggleMute(){this.muted=!this.muted;if(this.master)this.master.gain.value=this.muted?0:0.9;return this.muted;}};
@@ -1633,7 +1658,8 @@ function nodeClass(n){if(ER.has(n))return 'earth';if(!EN.has(n))return 'dead';co
 function setM(k,txt,cls){(SLD.meas[k]||[]).forEach(el=>{el.textContent=txt;if(cls)el.setAttribute('class',cls);});}
 function updateSLD(){
   SLD.nodes.forEach(el=>el.setAttribute('class',el.dataset.c+' '+nodeClass(el.dataset.n)));
-  for(const [id,els] of Object.entries(SLD.devs)){const d=D[id];els.forEach(el=>{if(['cb','ds','es'].includes(d.type)){el.classList.toggle('closed',d.state===1);el.classList.toggle('open',d.state!==1);
+  for(const [id,c] of READY)if(!c())READY.delete(id);
+  for(const [id,els] of Object.entries(SLD.devs)){const d=D[id];els.forEach(el=>{el.classList.toggle('ready',READY.has(id));if(['cb','ds','es'].includes(d.type)){el.classList.toggle('closed',d.state===1);el.classList.toggle('open',d.state!==1);
       const bl=el.querySelector('.blade');if(bl)bl.style.transform=d.state?'':'rotate(-35deg)';}
     el.classList.toggle('sel',id===SEL);});}
   const fx=(v,n=1)=>v.toFixed(n).replace('.',',');
@@ -1647,6 +1673,10 @@ function updateSLD(){
 }
 
 // ============================================================ meldingen, toast, opdrachten
+const READY=new Map();   // velden die weer geschakeld mogen worden (knipperen groen)
+function readyNotice(text,id,cond){pushAlarm(text,'ok');AudioSys.ready();
+  const n=$('#notice');n.innerHTML=`<b>✓ Klaar om te schakelen</b><span>${text}</span>`;n.classList.remove('show');void n.offsetWidth;n.classList.add('show');
+  clearTimeout(n._t);n._t=setTimeout(()=>n.classList.remove('show'),8000);if(id)READY.set(id,cond||(()=>true));updateSLD();updateLabels(true);}
 let alarmCount=0;
 function pushAlarm(text,level='info'){
   alarmCount++;const el=document.createElement('div');el.className=`al ${level} new`;
@@ -1751,7 +1781,7 @@ function updateLabels(force){const w=innerWidth,h=innerHeight,ins=camInside();
     if(!vis){if(L.el.style.display!=='none')L.el.style.display='none';continue;}
     if(L.el.style.display==='none')L.el.style.display='';
     L.el.style.transform=`translate(${((_p.x+1)/2*w).toFixed(1)}px,${((1-_p.y)/2*h).toFixed(1)}px) translate(-50%,-100%)`;
-    const d=L.d;const c=(d.type==='es'?(d.state?'earth':'open'):['cb','ds'].includes(d.type)?(d.state?'':'open'):d.type==='tr'?(EN.has(d.a)?'':'open'):d.type==='line'?(SIM.lines[d.line].avail?'':'open'):'info')+(d.id===SEL?' sel':'');
+    const d=L.d;const c=(d.type==='es'?(d.state?'earth':'open'):['cb','ds'].includes(d.type)?(d.state?'':'open'):d.type==='tr'?(EN.has(d.a)?'':'open'):d.type==='line'?(SIM.lines[d.line].avail?'':'open'):'info')+(d.id===SEL?' sel':'')+(READY.has(d.id)?' ready':'');
     if(c!==L.cls||force){L.cls=c;L.el.className='lbl '+c;}}}
 const ray=new THREE.Raycaster(),ndc=new THREE.Vector2();
 function pickAt(cx,cy){ndc.set(cx/innerWidth*2-1,-(cy/innerHeight)*2+1);ray.setFromCamera(ndc,camera);
@@ -1800,14 +1830,17 @@ const canvasEl=renderer.domElement;
 function enterFP(){
   if(FP.on)return;FP.on=true;fly=null;controls.enabled=false;controls.autoRotate=false;
   const ins=camInside();
-  if(ins&&!blockedAt(camera.position.x,camera.position.z))FP.pos.set(camera.position.x,0,camera.position.z);else FP.pos.set(25,0,62);
-  const dir=new THREE.Vector3();camera.getWorldDirection(dir);FP.yaw=ins?Math.atan2(-dir.x,-dir.z):0;FP.pitch=0;FP.y=null;
+  const dir=new THREE.Vector3();camera.getWorldDirection(dir);
+  if(FP.last){FP.pos.set(FP.last.x,0,FP.last.z);FP.yaw=FP.last.yaw;FP.pitch=FP.last.pitch;}   // verder waar je was
+  else if(ins&&!blockedAt(camera.position.x,camera.position.z)){FP.pos.set(camera.position.x,0,camera.position.z);FP.yaw=Math.atan2(-dir.x,-dir.z);FP.pitch=0;}
+  else{FP.pos.set(25,0,62);FP.yaw=0;FP.pitch=0;}
+  FP.y=null;
   camera.rotation.order='YXZ';camera.fov=70;camera.updateProjectionMatrix();
   document.body.classList.add('fp');hovBox.visible=false;$('#tooltip').style.display='none';
-  canvasEl.requestPointerLock?.();pushAlarm('Rondlopen: WASD lopen, muis kijken, F schakelen, E paneel, V stoppen','info');
+  canvasEl.requestPointerLock?.();if(!FP.hinted){FP.hinted=true;pushAlarm('Rondlopen: WASD lopen, Shift rennen, muis kijken, F schakelen, E paneel, V stoppen, Esc menu','info');}
 }
 function exitFP(){
-  if(!FP.on)return;FP.on=false;FP.keys={};if(document.pointerLockElement)document.exitPointerLock();
+  if(!FP.on)return;FP.on=false;FP.keys={};FP.last={x:FP.pos.x,z:FP.pos.z,yaw:FP.yaw,pitch:FP.pitch};unlockPointer();
   const dir=new THREE.Vector3();camera.getWorldDirection(dir);
   camera.rotation.order='XYZ';camera.fov=42;camera.updateProjectionMatrix();
   controls.target.copy(camera.position).addScaledVector(dir,8);controls.enabled=true;controls.update();
@@ -1820,7 +1853,7 @@ function pickCenter(){camera.updateMatrixWorld();ray.setFromCamera(new THREE.Vec
 function actionLabel(d){if(d.type==='cb')return d.state?'UIT schakelen':'IN schakelen';if(d.type==='ds'||d.type==='es')return d.state?'openen':'sluiten';return null;}
 function updateFP(dt){
   if(!FP.on)return;
-  const k=FP.keys,run=k.ShiftLeft||k.ShiftRight,sp=run?4.5:1.9;
+  const k=FP.keys,run=k.ShiftLeft||k.ShiftRight,sp=run?8:2.2;
   const fx=-Math.sin(FP.yaw),fz=-Math.cos(FP.yaw),rx=Math.cos(FP.yaw),rz=-Math.sin(FP.yaw);
   let mx=0,mz=0;
   if(k.KeyW||k.ArrowUp){mx+=fx;mz+=fz;}if(k.KeyS||k.ArrowDown){mx-=fx;mz-=fz;}
@@ -1843,15 +1876,18 @@ function updateFP(dt){
 }
 addEventListener('mousemove',e=>{if(!FP.on||document.pointerLockElement!==canvasEl)return;
   FP.yaw-=e.movementX*0.0022;FP.pitch=clamp(FP.pitch-e.movementY*0.0022,-1.45,1.45);});
-document.addEventListener('pointerlockchange',()=>document.body.classList.toggle('fplocked',document.pointerLockElement===canvasEl));
-canvasEl.addEventListener('click',()=>{if(!FP.on)return;if(document.pointerLockElement!==canvasEl){canvasEl.requestPointerLock?.();return;}if(FP.look)selectDevice(FP.look);});
+function unlockPointer(){if(document.pointerLockElement){FP.expectUnlock=true;document.exitPointerLock();}}
+document.addEventListener('pointerlockchange',()=>{const locked=document.pointerLockElement===canvasEl;document.body.classList.toggle('fplocked',locked);
+  if(!locked&&FP.on&&!FP.expectUnlock)openMenu();   // Esc tijdens rondlopen → pauzemenu
+  FP.expectUnlock=false;});
+canvasEl.addEventListener('click',()=>{if(!FP.on||menuOpen())return;if(document.pointerLockElement!==canvasEl){canvasEl.requestPointerLock?.();return;}if(FP.look)selectDevice(FP.look);});
 addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;
   if(e.code==='KeyV'){toggleFP();return;}
   // E sluit een geopend paneel weer (en hervat het rondlopen)
   if(e.code==='KeyE'&&SEL&&(!FP.on||document.pointerLockElement!==canvasEl)){e.preventDefault();selectDevice(null);if(FP.on)canvasEl.requestPointerLock?.();return;}
   if(!FP.on)return;FP.keys[e.code]=true;
   if(e.code==='KeyF'&&FP.look){const d=D[FP.look];if(actionLabel(d))operate(FP.look,d.state?0:1);}
-  if(e.code==='KeyE'&&FP.look){selectDevice(FP.look);if(document.pointerLockElement)document.exitPointerLock();}});
+  if(e.code==='KeyE'&&FP.look){selectDevice(FP.look);unlockPointer();}});
 addEventListener('keyup',e=>{FP.keys[e.code]=false;});
 addEventListener('blur',()=>{FP.keys={};});
 $('#fpBtn').addEventListener('click',toggleFP);
@@ -1879,7 +1915,19 @@ addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;
   else if(e.code==='Space'){e.preventDefault();if($('#intro').classList.contains('hidden'))setSpeed(0);}
   else if(e.key==='l'||e.key==='L')document.body.classList.toggle('nolabels');
   else if(e.key==='m'||e.key==='M')$('#mute').click();
-  else if(e.key==='Escape')selectDevice(null);});
+  else if(e.key==='Escape'){if(menuOpen()){if(performance.now()-menuAt>350)closeMenu();}else if(SEL&&!document.pointerLockElement)selectDevice(null);else openMenu();}});
+// ---------- pauzemenu (Esc)
+let menuPrev=false,menuAt=0;
+const menuOpen=()=>!$('#pauseMenu').classList.contains('hidden');
+function openMenu(){if(GAME.ended||menuOpen()||!$('#intro').classList.contains('hidden'))return;menuPrev=SIM.paused;menuAt=performance.now();SIM.paused=true;syncSpeed();unlockPointer();
+  const m=MODES[GAME.mode]||MODES.free;$('#pmMode').textContent=`${m.name} · ${DIFFS[GAME.diff].label}`;$('#pmScore').textContent=Math.round(GAME.score).toLocaleString('nl-NL');
+  $('#pmBest').textContent=getBest(GAME.mode,GAME.diff)?`beste: ${getBest(GAME.mode,GAME.diff).toLocaleString('nl-NL')}`:'nog geen beste score';
+  $('#pauseMenu').classList.remove('hidden');document.body.classList.add('menu');}
+function closeMenu(){$('#pauseMenu').classList.add('hidden');document.body.classList.remove('menu');SIM.paused=menuPrev;syncSpeed();if(FP.on)canvasEl.requestPointerLock?.();}
+$('#pauseMenu').addEventListener('click',e=>{const b=e.target.closest('[data-pm]');if(!b)return;const a=b.dataset.pm;
+  if(a==='resume')closeMenu();
+  else if(a==='end'){$('#pauseMenu').classList.add('hidden');document.body.classList.remove('menu');if(FP.on)exitFP();endGame();}
+  else if(a==='menu'){finalizeGame();saveBest();location.search='';}});
 addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
 function startGame(id){$('#intro').classList.add('hidden');AudioSys.init();controls.autoRotate=false;
   applyMode(id);pushAlarm(`Dienst overgenomen – ${MODES[id]?.name||'Vrije dienst'} (${DIFFS[GAME.diff].label})`,'ok');setSpeed(60);

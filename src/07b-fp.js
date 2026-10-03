@@ -24,14 +24,17 @@ const canvasEl=renderer.domElement;
 function enterFP(){
   if(FP.on)return;FP.on=true;fly=null;controls.enabled=false;controls.autoRotate=false;
   const ins=camInside();
-  if(ins&&!blockedAt(camera.position.x,camera.position.z))FP.pos.set(camera.position.x,0,camera.position.z);else FP.pos.set(25,0,62);
-  const dir=new THREE.Vector3();camera.getWorldDirection(dir);FP.yaw=ins?Math.atan2(-dir.x,-dir.z):0;FP.pitch=0;FP.y=null;
+  const dir=new THREE.Vector3();camera.getWorldDirection(dir);
+  if(FP.last){FP.pos.set(FP.last.x,0,FP.last.z);FP.yaw=FP.last.yaw;FP.pitch=FP.last.pitch;}   // verder waar je was
+  else if(ins&&!blockedAt(camera.position.x,camera.position.z)){FP.pos.set(camera.position.x,0,camera.position.z);FP.yaw=Math.atan2(-dir.x,-dir.z);FP.pitch=0;}
+  else{FP.pos.set(25,0,62);FP.yaw=0;FP.pitch=0;}
+  FP.y=null;
   camera.rotation.order='YXZ';camera.fov=70;camera.updateProjectionMatrix();
   document.body.classList.add('fp');hovBox.visible=false;$('#tooltip').style.display='none';
-  canvasEl.requestPointerLock?.();pushAlarm('Rondlopen: WASD lopen, muis kijken, F schakelen, E paneel, V stoppen','info');
+  canvasEl.requestPointerLock?.();if(!FP.hinted){FP.hinted=true;pushAlarm('Rondlopen: WASD lopen, Shift rennen, muis kijken, F schakelen, E paneel, V stoppen, Esc menu','info');}
 }
 function exitFP(){
-  if(!FP.on)return;FP.on=false;FP.keys={};if(document.pointerLockElement)document.exitPointerLock();
+  if(!FP.on)return;FP.on=false;FP.keys={};FP.last={x:FP.pos.x,z:FP.pos.z,yaw:FP.yaw,pitch:FP.pitch};unlockPointer();
   const dir=new THREE.Vector3();camera.getWorldDirection(dir);
   camera.rotation.order='XYZ';camera.fov=42;camera.updateProjectionMatrix();
   controls.target.copy(camera.position).addScaledVector(dir,8);controls.enabled=true;controls.update();
@@ -44,7 +47,7 @@ function pickCenter(){camera.updateMatrixWorld();ray.setFromCamera(new THREE.Vec
 function actionLabel(d){if(d.type==='cb')return d.state?'UIT schakelen':'IN schakelen';if(d.type==='ds'||d.type==='es')return d.state?'openen':'sluiten';return null;}
 function updateFP(dt){
   if(!FP.on)return;
-  const k=FP.keys,run=k.ShiftLeft||k.ShiftRight,sp=run?4.5:1.9;
+  const k=FP.keys,run=k.ShiftLeft||k.ShiftRight,sp=run?8:2.2;
   const fx=-Math.sin(FP.yaw),fz=-Math.cos(FP.yaw),rx=Math.cos(FP.yaw),rz=-Math.sin(FP.yaw);
   let mx=0,mz=0;
   if(k.KeyW||k.ArrowUp){mx+=fx;mz+=fz;}if(k.KeyS||k.ArrowDown){mx-=fx;mz-=fz;}
@@ -67,15 +70,18 @@ function updateFP(dt){
 }
 addEventListener('mousemove',e=>{if(!FP.on||document.pointerLockElement!==canvasEl)return;
   FP.yaw-=e.movementX*0.0022;FP.pitch=clamp(FP.pitch-e.movementY*0.0022,-1.45,1.45);});
-document.addEventListener('pointerlockchange',()=>document.body.classList.toggle('fplocked',document.pointerLockElement===canvasEl));
-canvasEl.addEventListener('click',()=>{if(!FP.on)return;if(document.pointerLockElement!==canvasEl){canvasEl.requestPointerLock?.();return;}if(FP.look)selectDevice(FP.look);});
+function unlockPointer(){if(document.pointerLockElement){FP.expectUnlock=true;document.exitPointerLock();}}
+document.addEventListener('pointerlockchange',()=>{const locked=document.pointerLockElement===canvasEl;document.body.classList.toggle('fplocked',locked);
+  if(!locked&&FP.on&&!FP.expectUnlock)openMenu();   // Esc tijdens rondlopen → pauzemenu
+  FP.expectUnlock=false;});
+canvasEl.addEventListener('click',()=>{if(!FP.on||menuOpen())return;if(document.pointerLockElement!==canvasEl){canvasEl.requestPointerLock?.();return;}if(FP.look)selectDevice(FP.look);});
 addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;
   if(e.code==='KeyV'){toggleFP();return;}
   // E sluit een geopend paneel weer (en hervat het rondlopen)
   if(e.code==='KeyE'&&SEL&&(!FP.on||document.pointerLockElement!==canvasEl)){e.preventDefault();selectDevice(null);if(FP.on)canvasEl.requestPointerLock?.();return;}
   if(!FP.on)return;FP.keys[e.code]=true;
   if(e.code==='KeyF'&&FP.look){const d=D[FP.look];if(actionLabel(d))operate(FP.look,d.state?0:1);}
-  if(e.code==='KeyE'&&FP.look){selectDevice(FP.look);if(document.pointerLockElement)document.exitPointerLock();}});
+  if(e.code==='KeyE'&&FP.look){selectDevice(FP.look);unlockPointer();}});
 addEventListener('keyup',e=>{FP.keys[e.code]=false;});
 addEventListener('blur',()=>{FP.keys={};});
 $('#fpBtn').addEventListener('click',toggleFP);

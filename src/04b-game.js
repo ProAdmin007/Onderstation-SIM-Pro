@@ -37,7 +37,7 @@ const MODES={
       Object.assign(D.T1,{blocked:true,resettable:false,blockText:'onderhoud trappenschakelaar',blockKind:'maint'});D.T3.oil=62;FEEDERS[5].interruptible=true;
       pushAlarm('T1 staat uit bedrijf voor onderhoud – gereed verwacht rond 17:50. Reservetransformator T3 voedt de 10 kV.','info');
       pushAlarm('Glastuinbouw Oost (F6) heeft een afschakelbaar contract: afschakelen kost maar 10% klantminuten','info');
-      at(80,()=>{D.T1.resettable=true;pushAlarm('Onderhoud T1 gereed – reset blokkeerrelais 86, sluit T1-Q1 en neem T1 weer in bedrijf','ok');});},
+      at(80,()=>{D.T1.resettable=true;readyNotice('Onderhoud T1 gereed – reset blokkeerrelais 86, sluit T1-Q1 en neem T1 weer in bedrijf','T1',()=>D.T1.blocked);});},
     obj:()=>[{t:'T3 wordt niet thermisch afgeschakeld',check:()=>GAME.stats.thermal?'fail':null,final:()=>true},
       {t:'Ziekenhuis (F5) blijft onder spanning',check:()=>GAME.flags.hospRun>1?'fail':null,final:()=>true},
       {t:'T1 vóór 18:30 weer in bedrijf',check:()=>EN.has('T1l')&&D['V-T1'].state?'done':SIM.t>18.5*60?'fail':null},
@@ -88,17 +88,16 @@ function gameTick(dm,dtReal){
   if(GAME.endT&&SIM.t>=GAME.endT)endGame();
 }
 function grade(s){return s>=1400?['A+',5]:s>=1250?['A',4]:s>=1100?['B',3]:s>=950?['C',2]:s>=750?['D',1]:['E',0];}
-function endGame(){
-  GAME.ended=true;SIM.paused=true;syncSpeed();
+function finalizeGame(){if(GAME.ended)return;GAME.ended=true;SIM.paused=true;
   GAME.obj.forEach(o=>{if(o.state)return;const ok=o.final?o.final():false;o.state=ok?'done':'fail';award(ok?100:-150);});
-  if(!SIM.incidents)award(200,'Veilig gewerkt');
-  showReport();
-}
+  if(!SIM.incidents&&SIM.t-GAME.t0>=60)award(200,'Veilig gewerkt');}   // bonus pas na minimaal een uur dienst
+function saveBest(){const s=Math.round(GAME.score),best=getBest(GAME.mode,GAME.diff),rec=s>best;if(rec){try{localStorage.setItem(bestKey(GAME.mode,GAME.diff),s);}catch(e){}}return {s,best,rec};}
+function endGame(){finalizeGame();syncSpeed();showReport();}
 function bestKey(id,diff){return `osz-best-${id}-${diff}`;}
 function getBest(id,diff){try{return +localStorage.getItem(bestKey(id,diff))||0;}catch(e){return 0;}}
 function showReport(){
   const m=MODES[GAME.mode],s=Math.round(GAME.score),[g,stars]=grade(s),st=GAME.stats;
-  const best=getBest(GAME.mode,GAME.diff),rec=s>best;if(rec){try{localStorage.setItem(bestKey(GAME.mode,GAME.diff),s);}catch(e){}}
+  const {best,rec}=saveBest();
   const badges=[];
   if(!SIM.incidents)badges.push(['Veilig gewerkt','geen enkel veiligheidsincident']);
   if(st.hospMin<0.01)badges.push(['Zorgzaam','het ziekenhuis bleef aan het net']);
