@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#0b0f14;--panel:rgba(13,17,22,.80);--line:rgba(255,255,255,.09);--line2:rgba(255,255,255,.18);--text:#e7ecf1;--muted:#8d99a6;--dim:#5d6873;--accent:#f0a43a;--red:#e5484d;--green:#3fcf72;--hv:#ff6b3d;--mv:#4aa3ff;--earth:#e8c547;--mv20:#c07cff;--dead:#56616b;--mono:'JetBrains Mono',ui-monospace,monospace}
+:root{--alarmH:clamp(300px,46vh,460px);--bg:#0b0f14;--panel:rgba(13,17,22,.80);--line:rgba(255,255,255,.09);--line2:rgba(255,255,255,.18);--text:#e7ecf1;--muted:#8d99a6;--dim:#5d6873;--accent:#f0a43a;--red:#e5484d;--green:#3fcf72;--hv:#ff6b3d;--mv:#4aa3ff;--earth:#e8c547;--mv20:#c07cff;--dead:#56616b;--mono:'JetBrains Mono',ui-monospace,monospace}
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font:13px/1.35 Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
 #scene{position:fixed;inset:0}
@@ -42,7 +42,7 @@ button:disabled{opacity:.35;cursor:not-allowed}
 .icon{width:36px;height:36px;padding:0;display:grid;place-items:center}
 .ph{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--line);font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);font-weight:600}
 .tag{font-family:var(--mono);font-size:10px;color:var(--accent);letter-spacing:.3px}
-#tasks{top:82px;left:12px;width:330px;max-height:calc(100% - 340px);overflow:auto}
+#tasks{top:82px;left:12px;width:330px;max-height:calc(100% - 118px - var(--alarmH));overflow:auto}
 #taskBody{padding:12px 14px 14px}
 #taskBody h3{margin:0 0 4px;font-size:14px}
 #taskBody p{margin:0 0 10px;color:var(--muted);font-size:12px}
@@ -53,7 +53,7 @@ button:disabled{opacity:.35;cursor:not-allowed}
 .step.cur{color:var(--text);font-weight:600}
 .step.cur .b{border-color:var(--accent);box-shadow:0 0 0 3px rgba(240,164,58,.2)}
 .idle{color:var(--muted);font-size:12px}
-#alarms{left:12px;bottom:12px;width:410px;height:232px;display:flex;flex-direction:column}
+#alarms{left:12px;bottom:12px;width:410px;height:var(--alarmH);display:flex;flex-direction:column}
 #alarmList{overflow:auto;flex:1;padding:4px 0}
 .al{display:grid;grid-template-columns:44px 8px 1fr;gap:8px;padding:5px 14px;font-size:12px;align-items:start}
 .al .tm{font-family:var(--mono);color:var(--dim);font-size:11px}
@@ -202,7 +202,7 @@ body.fp #views .walk{background:var(--accent);color:#1a1206;font-weight:700}
 body.fp #labels{opacity:.75}
 #loading{position:fixed;inset:0;display:grid;place-items:center;color:var(--muted);font-family:var(--mono);z-index:20;background:var(--bg)}
 @media (max-width:1250px){#tasks{width:290px}#devpanel{left:314px}#scada{width:400px}.kpi{min-width:90px;padding:3px 9px}}
-@media (max-width:1050px){.kpis .kpi:nth-child(n+3){display:none}#views{left:12px;bottom:256px}}
+@media (max-width:1050px){.kpis .kpi:nth-child(n+3){display:none}#views{left:12px;bottom:calc(var(--alarmH) + 24px)}}
 </style>
 </head>
 <body>
@@ -1847,6 +1847,8 @@ document.addEventListener('pointerlockchange',()=>document.body.classList.toggle
 canvasEl.addEventListener('click',()=>{if(!FP.on)return;if(document.pointerLockElement!==canvasEl){canvasEl.requestPointerLock?.();return;}if(FP.look)selectDevice(FP.look);});
 addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;
   if(e.code==='KeyV'){toggleFP();return;}
+  // E sluit een geopend paneel weer (en hervat het rondlopen)
+  if(e.code==='KeyE'&&SEL&&(!FP.on||document.pointerLockElement!==canvasEl)){e.preventDefault();selectDevice(null);if(FP.on)canvasEl.requestPointerLock?.();return;}
   if(!FP.on)return;FP.keys[e.code]=true;
   if(e.code==='KeyF'&&FP.look){const d=D[FP.look];if(actionLabel(d))operate(FP.look,d.state?0:1);}
   if(e.code==='KeyE'&&FP.look){selectDevice(FP.look);if(document.pointerLockElement)document.exitPointerLock();}});

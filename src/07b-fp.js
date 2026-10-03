@@ -71,6 +71,8 @@ document.addEventListener('pointerlockchange',()=>document.body.classList.toggle
 canvasEl.addEventListener('click',()=>{if(!FP.on)return;if(document.pointerLockElement!==canvasEl){canvasEl.requestPointerLock?.();return;}if(FP.look)selectDevice(FP.look);});
 addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;
   if(e.code==='KeyV'){toggleFP();return;}
+  // E sluit een geopend paneel weer (en hervat het rondlopen)
+  if(e.code==='KeyE'&&SEL&&(!FP.on||document.pointerLockElement!==canvasEl)){e.preventDefault();selectDevice(null);if(FP.on)canvasEl.requestPointerLock?.();return;}
   if(!FP.on)return;FP.keys[e.code]=true;
   if(e.code==='KeyF'&&FP.look){const d=D[FP.look];if(actionLabel(d))operate(FP.look,d.state?0:1);}
   if(e.code==='KeyE'&&FP.look){selectDevice(FP.look);if(document.pointerLockElement)document.exitPointerLock();}});

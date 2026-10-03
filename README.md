@@ -16,7 +16,7 @@ Een 3D-onderstationsimulator die in de browser draait (Three.js, geen installati
 - `1`–`7` camerastandpunten (6 = binnen 10 kV, 7 = binnen 20 kV)
 - **Rondlopen (first person):** druk op `V` of op de knop *Rondlopen*.
   - Je loopt met `WASD`, rent met `Shift` en kijkt rond met de muis.
-  - Richt het kruis op een schakelaar: `F` schakelt direct, `E` opent het apparaatpaneel.
+  - Richt het kruis op een schakelaar: `F` schakelt direct, `E` opent het apparaatpaneel en met nog een keer `E` sluit je het weer en loop je verder.
   - Je loopt niet door apparatuur, muren of het hek; de gebouwen kun je via de deuren in.
   - Met `Esc` geef je de muis vrij, met `V` stop je met rondlopen. · `spatie` pauze · `L` labels · `M` geluid · `Esc` deselecteren
 
