@@ -32,11 +32,12 @@ const MODES={
       {t:'Ziekenhuis nooit langer dan 5 min zonder net',check:()=>GAME.flags.hospRun>5?'fail':null,final:()=>true},
       {t:'Minder dan 40.000 klantminuten',check:()=>SIM.cml>40000?'fail':null,final:()=>SIM.cml<=40000},noIncidents]},
   piek:{scen:true,name:'Avondpiek op één poot',tag:'Scenario · gemiddeld',start:16.5,dur:150,
-    desc:'T2 staat in onderhoud en de avondpiek komt eraan. Houd T1 heel — de kassen hebben een afschakelbaar contract.',
+    desc:'T2 staat in onderhoud en de avondpiek komt eraan. Houd T1 heel: schakel de kassen af of zet reservetrafo T4 om naar 10 kV.',
     setup(){setCB('T2-Q0',0);setCB('V-T2',0);setCB('T2-Q1',0);setCB('V-K',1);
       Object.assign(D.T2,{blocked:true,resettable:false,blockText:'onderhoud trappenschakelaar',blockKind:'maint'});D.T1.oil=62;FEEDERS[5].interruptible=true;
       pushAlarm('T2 staat uit bedrijf voor onderhoud – gereed verwacht rond 17:50','info');
       pushAlarm('Glastuinbouw Oost (F6) heeft een afschakelbaar contract: afschakelen kost maar 10% klantminuten','info');
+      pushAlarm('Reservetransformator T4 staat warm op 20 kV. Omschakelen naar 10 kV kan alleen spanningsloos.','info');
       at(80,()=>{D.T2.resettable=true;pushAlarm('Onderhoud T2 gereed – reset blokkeerrelais 86, sluit T2-Q1 en neem T2 weer in bedrijf','ok');});},
     obj:()=>[{t:'T1 wordt niet thermisch afgeschakeld',check:()=>GAME.stats.thermal?'fail':null,final:()=>true},
       {t:'Ziekenhuis (F5) blijft onder spanning',check:()=>GAME.flags.hospRun>1?'fail':null,final:()=>true},
@@ -78,7 +79,7 @@ function gameTick(dm,dtReal){
   GAME.score-=FEEDERS.reduce((s,f)=>s+custOff(f)*(f.interruptible?0.1:1),0)*dm/500;
   const hosp=FEEDERS[4];
   if(!EN.has(hosp.node)&&!hosp.backfed){GAME.score-=5*dm;GAME.flags.hospRun=(GAME.flags.hospRun||0)+dm;GAME.stats.hospMin+=dm;}else GAME.flags.hospRun=0;
-  ['T1','T2'].forEach(T=>GAME.stats.maxOil=Math.max(GAME.stats.maxOil,D[T].oil));
+  TR.forEach(T=>GAME.stats.maxOil=Math.max(GAME.stats.maxOil,D[T].oil));
   const canRestore=SIM.lines.L1.avail||SIM.lines.L2.avail;
   FEEDERS.forEach(f=>{if(f.unplanned&&!EN.has(f.node)&&canRestore&&!(f.fault&&f.fault.stage==='search'))f.wait=(f.wait||0)+dtReal;});
   GAME.obj.forEach(o=>{if(o.state||!o.check)return;const r=o.check();if(!r)return;o.state=r;

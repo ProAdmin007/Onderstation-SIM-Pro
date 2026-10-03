@@ -1,7 +1,8 @@
 
-// ============================================================ 10 kV-gebouw: interieur
-const IN={x0:-19.7,x1:19.7,z0:46.3,z1:55.7,y0:0.45,y1:5.18};
-const camInside=()=>{const p=camera.position;return p.x>IN.x0&&p.x<IN.x1&&p.z>IN.z0&&p.z<IN.z1&&p.y<IN.y1;};
+// ============================================================ MS-gebouwen: interieur (10 kV en 20 kV)
+const ROOMS=BUILDINGS.map((b,i)=>({idx:i+1,x0:b.x0+0.3,x1:b.x1-0.3,z0:b.z0+0.3,z1:b.z1-0.3,y0:0.45,y1:5.18,doors:b.doors}));
+const IN=ROOMS[0];
+const camInside=()=>{const p=camera.position;const r=ROOMS.find(r=>p.x>r.x0&&p.x<r.x1&&p.z>r.z0&&p.z<r.z1&&p.y<r.y1);return r?r.idx:0;};
 const IM={
   panel:mat({color:0xd5d7d1,metalness:0.3,roughness:0.42}),
   door:mat({color:0xcbcec8,metalness:0.3,roughness:0.36}),
@@ -39,10 +40,12 @@ function posterTex(){const c=cnv(512,700),g=c.getContext('2d');g.fillStyle='#fbf
 
 const PANELS=[{title:'Reserve'},{id:'V-T1',kind:'inc',node:'T1l'},{id:'V-F1',kind:'feed',node:'F1'},{id:'V-F2',kind:'feed',node:'F2'},{id:'V-F3',kind:'feed',node:'F3'},
   {title:'Meetveld A',kind:'meas'},{id:'V-K',kind:'coup',node:'RB'},{title:'Meetveld B',kind:'meas'},
-  {id:'V-F4',kind:'feed',node:'F4'},{id:'V-F5',kind:'feed',node:'F5'},{id:'V-F6',kind:'feed',node:'F6'},{id:'V-T2',kind:'inc',node:'T2l'},{title:'Reserve'}];
-const SCREENS=[],MIMICS={};
-function buildPanel(i,p){
-  const x=4.8-i*0.8,Y=IN.y0,F=-0.66,root=grp(x,54.85,Y);
+  {id:'V-F4',kind:'feed',node:'F4'},{id:'V-F5',kind:'feed',node:'F5'},{id:'V-F6',kind:'feed',node:'F6'},{id:'V-T2',kind:'inc',node:'T2l'},{id:'V-T4',kind:'inc',node:'T4l'}];
+const PANELS20=[{title:'Reserve'},{id:'W-T3',kind:'inc',node:'T3l'},{id:'W-G1',kind:'feed',node:'G1'},{id:'W-G2',kind:'feed',node:'G2'},{title:'Meetveld C',kind:'meas'},
+  {id:'W-G3',kind:'feed',node:'G3'},{id:'W-G4',kind:'feed',node:'G4'},{id:'W-T4',kind:'inc',node:'T4l'}];
+const SCREENS=[];
+function buildPanel(i,p,row){
+  const x=row.cx+(row.n-1)/2*0.8-i*0.8,Y=row.room.y0,F=-0.66,root=grp(x,54.85,Y);
   box(0.8,0.1,1.3,MAT.black,root,0,0.05,0);
   box(0.79,2.2,1.3,IM.panel,root,0,1.2,0);
   box(0.7,0.62,0.02,IM.door,root,0,1.95,F);
@@ -67,31 +70,41 @@ function buildPanel(i,p){
   for(let k=0;k<3;k++){const l=cyl(0.013,0.013,0.02,lamp,root,0.15+k*0.06,1.76,F-0.015,10);l.rotation.x=Math.PI/2;l.userData.dyn=true;}
   const eMat=mat({color:0x222222,emissive:0xffc400,emissiveIntensity:0});if(esId){const em=box(0.09,0.05,0.02,eMat,root,-0.2,0.62,F-0.02);em.userData.dyn=true;}
   regView(p.id,root,()=>{const d=D[p.id];ind.emissive.setHex(d.state?0xff2020:0x20ff50);lamp.emissiveIntensity=EN.has(p.node)?3:0;if(esId)eMat.emissiveIntensity=D[esId].state?2.5:0;},
-    {inside:true,labelPos:V3(x,Y+2.75,54.2),arcPos:V3(x,Y+1.0,54.1),flyPos:V3(x-0.7,Y+1.7,51.6),flyTarget:V3(x,Y+1.35,54.2)});
+    {inside:row.room.idx,labelPos:V3(x,Y+2.75,54.2),arcPos:V3(x,Y+1.0,54.1),flyPos:V3(x-0.7,Y+1.7,51.6),flyTarget:V3(x,Y+1.35,54.2)});
+}
+function buildRoomShell(r){
+  const Y=r.y0,W=r.x1-r.x0,H=r.y1-Y,cx=(r.x0+r.x1)/2,cy=(Y+r.y1)/2,cz=(r.z0+r.z1)/2,D2=r.z1-r.z0;
+  groundQuad(r.x0,r.z0,r.x1,r.z1,Y+0.004,IM.floor,4);
+  iplane(W,H,IM.plaster,cx,cy,r.z0+0.01,0);iplane(W,H,IM.plaster,cx,cy,r.z1-0.01,Math.PI);
+  iplane(D2,H,IM.plaster,r.x0+0.01,cy,cz,Math.PI/2);iplane(D2,H,IM.plaster,r.x1-0.01,cy,cz,-Math.PI/2);
+  iplane(W,D2,IM.ceiling,cx,r.y1-0.01,cz,0,Math.PI/2);
+  r.doors.forEach(x=>{box(2.1,2.65,0.05,MAT.door,staticRoot,x,Y+1.32,r.z0+0.03);box(0.04,0.04,0.12,MAT.trim,staticRoot,x+0.15,Y+1.2,r.z0+0.1);});
+  box(W-0.6,0.04,0.012,MAT.copper,staticRoot,cx,Y+0.4,r.z0+0.02);
+  for(let x=r.x0+4;x<r.x1-2;x+=6)for(const z of[49,53]){box(1.4,0.06,0.22,IM.led,staticRoot,x,r.y1-0.35,z);for(const s of[-0.6,0.6])rod(V3(x+s,r.y1-0.32,z),V3(x+s,r.y1,z),0.006,MAT.galv,staticRoot,4);}
+  for(let x=r.x0+W/6;x<r.x1;x+=W/3){const l=new THREE.PointLight(0xf4f2ea,70,9,2);l.position.set(x,r.y1-0.5,51);scene.add(l);}
+  r.doors.forEach(x=>{cyl(0.08,0.08,0.55,IM.redPaint,staticRoot,x+1.6,Y+0.3,r.z0+0.15,14);cyl(0.03,0.03,0.08,MAT.black,staticRoot,x+1.6,Y+0.61,r.z0+0.15,8);});
+}
+function buildPanelRow(panels,cx,room){
+  const n=panels.length,Y=room.y0,half=n*0.4;
+  panels.forEach((p,i)=>buildPanel(i,p,{cx,n,room}));
+  groundQuad(cx-half-0.6,52.7,cx+half+0.6,54.15,Y+0.008,IM.rubber,2);
+  box(n*0.8+0.2,0.3,0.7,IM.panel,staticRoot,cx,Y+2.45,54.9);
+  for(let x=cx-half;x<cx+half;x+=0.6)rod(V3(x,Y+2.6,54.9),V3(x,room.y1,54.9),0.012,MAT.galv,staticRoot,4);
+  for(const s of[-1,1])iplane(0.4,0.5,MAT.hazard,cx+s*(half+0.01),Y+1.6,54.5,s*Math.PI/2);
 }
 let deskScreens=null;
 function buildInterior(){
-  const Y=IN.y0,W=IN.x1-IN.x0,H=IN.y1-Y,cy=(Y+IN.y1)/2,cz=(IN.z0+IN.z1)/2,D2=IN.z1-IN.z0;
-  groundQuad(IN.x0,IN.z0,IN.x1,IN.z1,Y+0.004,IM.floor,4);
-  groundQuad(-5.4,52.7,5.4,54.15,Y+0.008,IM.rubber,2);
-  iplane(W,H,IM.plaster,0,cy,IN.z0+0.01,0);iplane(W,H,IM.plaster,0,cy,IN.z1-0.01,Math.PI);
-  iplane(D2,H,IM.plaster,IN.x0+0.01,cy,cz,Math.PI/2);iplane(D2,H,IM.plaster,IN.x1-0.01,cy,cz,-Math.PI/2);
-  iplane(W,D2,IM.ceiling,0,IN.y1-0.01,cz,0,Math.PI/2);
-  [-14,-6,6].forEach(x=>{box(2.1,2.65,0.05,MAT.door,staticRoot,x,Y+1.32,IN.z0+0.03);box(0.04,0.04,0.12,MAT.trim,staticRoot,x+0.15,Y+1.2,IN.z0+0.1);});
-  box(39,0.04,0.012,MAT.copper,staticRoot,0,Y+0.4,IN.z0+0.02);
-  for(const x of[-15,-9,-3,3,9,15])for(const z of[49,53]){box(1.4,0.06,0.22,IM.led,staticRoot,x,IN.y1-0.35,z);for(const s of[-0.6,0.6])rod(V3(x+s,IN.y1-0.32,z),V3(x+s,IN.y1,z),0.006,MAT.galv,staticRoot,4);}
-  [-12,0,12].forEach(x=>{const l=new THREE.PointLight(0xf4f2ea,70,9,2);l.position.set(x,IN.y1-0.5,51);scene.add(l);});
-  // schakelveldenrij
-  PANELS.forEach((p,i)=>buildPanel(i,p));
-  box(10.6,0.3,0.7,IM.panel,staticRoot,0,Y+2.45,54.9);
-  for(let x=-5.3;x<5.4;x+=0.6)rod(V3(x,Y+2.6,54.9),V3(x,IN.y1,54.9),0.012,MAT.galv,staticRoot,4);
-  for(const s of[-1,1]){const hz=iplane(0.4,0.5,MAT.hazard,s*5.21,Y+1.6,54.5,s*Math.PI/2);}
-  // beveiligingskasten
-  const rt=mat({map:relayTex(),roughness:0.4});
-  for(let k=0;k<6;k++){const x=-18.9+k*0.82;box(0.8,2.2,0.8,MAT.cabinet,staticRoot,x,Y+1.1,55.25);
-    iplane(0.66,1.6,rt,x,Y+1.25,54.84,Math.PI);box(0.7,1.75,0.015,MAT.glassDark,staticRoot,x,Y+1.25,54.835).material=new THREE.MeshPhysicalMaterial({color:0x223038,transparent:true,opacity:0.25,roughness:0.05});
-    plate('+R'+(k+1),staticRoot,x,Y+2.1,54.83,Math.PI,0.26);}
+  ROOMS.forEach(buildRoomShell);
+  buildPanelRow(PANELS,0,ROOMS[0]);
+  buildPanelRow(PANELS20,61,ROOMS[1]);
+  const Y=IN.y0;
+  // beveiligingskasten (10 kV-ruimte en 20 kV-ruimte)
+  const rt=mat({map:relayTex(),roughness:0.4}),glass=new THREE.MeshPhysicalMaterial({color:0x223038,transparent:true,opacity:0.25,roughness:0.05});
+  const cab=(x,i)=>{box(0.8,2.2,0.8,MAT.cabinet,staticRoot,x,Y+1.1,55.25);iplane(0.66,1.6,rt,x,Y+1.25,54.84,Math.PI);box(0.7,1.75,0.015,glass,staticRoot,x,Y+1.25,54.835);plate('+R'+i,staticRoot,x,Y+2.1,54.83,Math.PI,0.26);};
+  for(let k=0;k<6;k++)cab(-18.9+k*0.82,k+1);
+  for(let k=0;k<4;k++)cab(48.4+k*0.82,k+11);
   iplane(1.3,1.78,mat({map:posterTex(),roughness:0.7}),-11.2,Y+1.7,IN.z1-0.02,Math.PI);
+  iplane(1.3,1.78,mat({map:posterTex(),roughness:0.7}),70.5,Y+1.7,ROOMS[1].z1-0.02,Math.PI);
   // bedieningsbureau met SCADA-schermen
   box(3.0,0.05,0.9,IM.wood,staticRoot,-15.5,Y+0.75,47.2);
   for(const sx of[-1.4,1.4])box(0.05,0.73,0.8,MAT.galvDark,staticRoot,-15.5+sx,Y+0.37,47.2);
@@ -109,8 +122,6 @@ function buildInterior(){
   plate('ACCU 110 V DC',staticRoot,15.6,Y+1.75,54.9,Math.PI,0.6);
   // eigenbedrijfstransformator
   box(1.3,1.7,1.0,MAT.trafo,staticRoot,17.6,Y+0.85,47.6);iplane(0.9,0.7,MAT.louvre,17.6,Y+1.0,48.11,0);plate('EB 10/0,4 kV',staticRoot,17.6,Y+1.55,48.11,0,0.5);
-  // blusmiddelen
-  [-12.5,-4.6,7.6].forEach(x=>{cyl(0.08,0.08,0.55,IM.redPaint,staticRoot,x,Y+0.3,IN.z0+0.15,14);cyl(0.03,0.03,0.08,MAT.black,staticRoot,x,Y+0.61,IN.z0+0.15,8);});
 }
 function drawPanelScreens(){
   SCREENS.forEach(s=>{const d=D[s.id],g=s.g;g.fillStyle='#08160f';g.fillRect(0,0,256,128);g.fillStyle='#7dffa8';g.font='bold 26px monospace';g.fillText(s.id,14,32);
@@ -118,10 +129,10 @@ function drawPanelScreens(){
     g.font='22px monospace';g.fillText(`I ${String(Math.round(d.I)).padStart(4)} A`,14,66);g.fillText(`U ${EN.has(s.node)?nodeU(s.node).toFixed(2).replace('.',','):' 0,00'} kV`,14,96);
     g.fillStyle=st==='IN'?'#ff7a7a':st==='TRIP'?'#ffcc33':'#7dffa8';g.font='bold 22px monospace';g.fillText(st,190,32);if(!springOk(d)){g.fillStyle='#ffcc33';g.font='16px monospace';g.fillText('VEER',190,96);}if(s.es&&D[s.es].state){g.fillStyle='#ffd23a';g.font='bold 16px monospace';g.fillText('GEAARD',176,66);}s.t.needsUpdate=true;});
   if(!deskScreens)return;
-  const [a,b]=deskScreens;let g=a.g;g.fillStyle='#0d1117';g.fillRect(0,0,512,320);g.fillStyle='#e7ecf1';g.font='bold 22px Arial';g.fillText('OS ZUIDWOLDE · 10 kV',18,34);
-  g.font='16px monospace';g.fillStyle='#9fd0ff';g.fillText(`Rail A ${FLOW.U.RA.toFixed(2)} kV   Rail B ${FLOW.U.RB.toFixed(2)} kV`,18,62);
-  FEEDERS.forEach((f,i)=>{const on=EN.has(f.node),y=96+i*34;g.fillStyle=on?'#4aa3ff':'#56616b';g.fillRect(18,y-14,10,18);g.fillStyle='#e7ecf1';g.fillText(`${f.id} ${f.short.padEnd(10)} ${on?f.P.toFixed(1).padStart(5)+' MW':'   UIT  '}`,40,y);
-    g.fillStyle=D[f.cb].state?'#e5484d':'#3fcf72';g.fillRect(470,y-14,18,18);});
+  const [a,b]=deskScreens;let g=a.g;g.fillStyle='#0d1117';g.fillRect(0,0,512,320);g.fillStyle='#e7ecf1';g.font='bold 22px Arial';g.fillText('OS ZUIDWOLDE · MS',18,34);
+  g.font='16px monospace';g.fillStyle='#9fd0ff';g.font='14px monospace';g.fillText(`A ${FLOW.U.RA.toFixed(2)}  B ${FLOW.U.RB.toFixed(2)}  C ${FLOW.U.RC.toFixed(2)} kV`,18,60);
+  FEEDERS.forEach((f,i)=>{const on=EN.has(f.node),y=88+i*23;g.fillStyle=on?(f.bus==='RC'?'#c07cff':'#4aa3ff'):'#56616b';g.fillRect(18,y-12,10,15);g.fillStyle='#e7ecf1';g.fillText(`${f.id} ${f.short.padEnd(10)} ${on?f.P.toFixed(1).padStart(5)+' MW':'   UIT  '}`,40,y);
+    g.fillStyle=D[f.cb].state?'#e5484d':'#3fcf72';g.fillRect(470,y-12,15,15);});
   a.t.needsUpdate=true;
   g=b.g;g.fillStyle='#0d1117';g.fillRect(0,0,512,320);g.fillStyle='#e7ecf1';g.font='bold 22px Arial';g.fillText('MELDINGEN',18,34);g.font='14px monospace';
   [...document.querySelectorAll('#alarmList .al')].slice(0,9).forEach((el,i)=>{const lv=el.className.match(/crit|warn|ok|info|op/)?.[0];g.fillStyle={crit:'#ff8f92',warn:'#f0a43a',ok:'#6fe39a',info:'#9fd0ff',op:'#8d99a6'}[lv]||'#ccc';

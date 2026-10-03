@@ -4,7 +4,7 @@ const PH = [-2.2,0,2.2];          // faseafstand binnen een veld
 const BUSZ = [-2.4,0,2.4];        // fasen van de 110 kV-rail
 const BUSY = 8.32;
 const W_G = [-4,0,4];             // fasen bij het lijnportaal
-const BAYS = {L1:{x:-30},L2:{x:30},T1:{x:-10},T2:{x:10}};
+const BAYS = {L1:{x:-30},L2:{x:30},T1:{x:-10},T2:{x:10},T3:{x:50},T4:{x:70}};
 const VIEWS = {}, pickables = [];
 const pickMat = new THREE.MeshBasicMaterial({visible:false});
 const easeIO = t => t<0.5?2*t*t:1-Math.pow(-2*t+2,2)/2;
@@ -14,8 +14,8 @@ function regView(id,root,update,opt={}){
   const box3=opt.box||new THREE.Box3().setFromObject(root);
   const c=box3.getCenter(new THREE.Vector3()),s=box3.getSize(new THREE.Vector3());
   const pm=new THREE.Mesh(new THREE.BoxGeometry(s.x+0.4,s.y+0.4,s.z+0.4),pickMat);pm.position.copy(c);
-  pm.userData={devId:id,vol:(s.x+0.4)*(s.y+0.4)*(s.z+0.4),noBake:true,inside:!!opt.inside};scene.add(pm);pickables.push(pm);
-  VIEWS[id]={id,root,box:box3,center:c,arcPos:opt.arcPos||V3(c.x,box3.max.y-0.5,c.z),labelPos:opt.labelPos||V3(c.x,box3.max.y+0.7,c.z),update:update||null,inside:!!opt.inside,flyPos:opt.flyPos,flyTarget:opt.flyTarget};
+  pm.userData={devId:id,vol:(s.x+0.4)*(s.y+0.4)*(s.z+0.4),noBake:true,inside:opt.inside||0};scene.add(pm);pickables.push(pm);
+  VIEWS[id]={id,root,box:box3,center:c,arcPos:opt.arcPos||V3(c.x,box3.max.y-0.5,c.z),labelPos:opt.labelPos||V3(c.x,box3.max.y+0.7,c.z),update:update||null,inside:opt.inside||0,flyPos:opt.flyPos,flyTarget:opt.flyTarget};
   return VIEWS[id];
 }
 function approach(cur,target,step){return target>cur?Math.min(target,cur+step):Math.max(target,cur-step);}
@@ -120,7 +120,7 @@ function buildSA(id,bx,z0){
 }
 
 // --- vermogenstransformator 110/10,5 kV
-function buildTR(id,cx,cz){
+function buildTR(id,cx,cz,ratioText='110/10,5 kV'){
   const root=grp(cx,cz),fans=[];
   for(const s of[-1,1]){box(11,0.45,0.25,MAT.concrete,root,0,0.225,s*3.8);box(0.25,0.45,7.6,MAT.concrete,root,s*5.5,0.225,0);}
   groundQuad(cx-5.4,cz-3.7,cx+5.4,cz+3.7,0.05,MAT.gravelDark,3);
@@ -158,7 +158,7 @@ function buildTR(id,cx,cz){
   box(0.7,1.1,0.35,MAT.cabinet,root,-2.0,1.9,1.68);
   box(0.9,1.4,0.45,MAT.cabinet,root,2.0,1.9,1.73);
   plate(id,root,-0.6,1.6,1.515,0,0.7);
-  plate('110/10,5 kV',root,0.45,1.6,1.515,0,0.7);
+  plate(ratioText,root,0.45,1.6,1.515,0,0.7);if(id==='T4'){box(0.5,0.6,0.3,MAT.cabinet,root,-2.4,3.4,-1.62);plate('10 ⇄ 20 kV',root,-2.4,3.85,-1.78,Math.PI,0.4);}
   const hz=mesh(new THREE.PlaneGeometry(0.4,0.5),MAT.hazard,root,1.2,1.65,1.515);hz.castShadow=false;
   const st={fan:0};
   regView(id,root,(dt)=>{const t=D[id];const target=(t.fans&&EN.has(t.a))?16:0;st.fan+=(target-st.fan)*Math.min(1,dt*0.5);fans.forEach(f=>f.rotation.x+=st.fan*dt);},{arcPos:V3(cx,5,cz)});
@@ -168,12 +168,12 @@ function buildTR(id,cx,cz){
 // --- 110 kV-rail
 function buildBus(){
   const root=grp();
-  [-38,-20,0,20,38].forEach(x=>{support(root,x,-3.7,6.3);support(root,x,3.7,6.3);box(0.3,0.35,8.0,MAT.galv,root,x,6.475,0);
+  [-38,-20,0,20,40,60,78].forEach(x=>{support(root,x,-3.7,6.3);support(root,x,3.7,6.3);box(0.3,0.35,8.0,MAT.galv,root,x,6.475,0);
     BUSZ.forEach(z=>{insulator(root,1.6,0.1,0.22,10,MAT.porcelain,6.65,x,z);box(0.22,0.14,0.22,MAT.alu,root,x,8.28,z);});});
-  BUSZ.forEach(z=>{const m=mesh(new THREE.CylinderGeometry(0.06,0.06,77,16),MAT.alu,root,0,BUSY,z);m.rotation.z=Math.PI/2;
-    for(const x of[-38.5,38.5])mesh(new THREE.SphereGeometry(0.09,12,8),MAT.alu,root,x,BUSY,z);});
+  BUSZ.forEach(z=>{const m=mesh(new THREE.CylinderGeometry(0.06,0.06,117,16),MAT.alu,root,20,BUSY,z);m.rotation.z=Math.PI/2;
+    for(const x of[-38.5,78.5])mesh(new THREE.SphereGeometry(0.09,12,8),MAT.alu,root,x,BUSY,z);});
   plate('RAIL 110 kV',root,-38,2.2,-3.55,0,0.6);
-  regView('RAIL',root,null,{box:new THREE.Box3(V3(-38.6,7.6,-3),V3(38.6,8.7,3)),labelPos:V3(-41,9.2,0)});
+  regView('RAIL',root,null,{box:new THREE.Box3(V3(-38.6,7.6,-3),V3(78.6,8.7,3)),labelPos:V3(-41,9.2,0)});
 }
 
 // --- vakwerk: portaal en mast

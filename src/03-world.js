@@ -1,6 +1,6 @@
 
 // ============================================================ omgeving
-const FENCE = {x0:-48,x1:48,z0:-44,z1:68,gate:[20,30]};
+const FENCE = {x0:-48,x1:92,z0:-44,z1:68,gate:[20,30]};
 function buildGround(){
   groundQuad(-10000,-10000,10000,10000,-0.5,MAT.water,20);
   // kavels met sloten (Nederlands polderlandschap)
@@ -20,14 +20,14 @@ function buildGround(){
   // wegen
   groundQuad(22,38,28,3000,0.04,MAT.asphalt,6);
   groundQuad(-30,38,22,44,0.04,MAT.asphalt,6);
-  groundQuad(28,38,34,44,0.04,MAT.asphalt,6);
+  groundQuad(28,38,86,44,0.04,MAT.asphalt,6);
   // kabelgoten
-  for(const bx of[-10,10])for(let z=35.2;z<37.8;z+=0.62)box(0.9,0.1,0.58,MAT.concreteDark,staticRoot,bx,0.07,z);
-  for(let x=-40;x<40;x+=0.62)if(Math.abs(x)>3)box(0.58,0.1,0.7,MAT.concreteDark,staticRoot,x,0.07,-3.9);
+  for(const bx of[-10,10,50,70])for(let z=35.2;z<37.8;z+=0.62)box(0.9,0.1,0.58,MAT.concreteDark,staticRoot,bx,0.07,z);
+  for(let x=-40;x<80;x+=0.62)if(Math.abs(x)>3&&Math.abs(x-40)>3)box(0.58,0.1,0.7,MAT.concreteDark,staticRoot,x,0.07,-3.9);
 }
 
 function buildFence(){
-  const {x0,x1,z0,z1,gate}=FENCE,H=2.2,cx=0,cz=12;
+  const {x0,x1,z0,z1,gate}=FENCE,H=2.2,cx=22,cz=12;
   const segs=[[V3(x0,0,z0),V3(x1,0,z0)],[V3(x1,0,z0),V3(x1,0,z1)],[V3(x1,0,z1),V3(gate[1],0,z1)],[V3(gate[0],0,z1),V3(x0,0,z1)],[V3(x0,0,z1),V3(x0,0,z0)]];
   const base=toTex(C.chain);
   segs.forEach(([a,b])=>{
@@ -55,27 +55,29 @@ function buildFence(){
   for(const x of[16,18])cyl(0.04,0.04,2.5,MAT.galv,staticRoot,x,1.25,z1+1.45,8);
 }
 
-function buildBuilding(){
-  const x0=-20,x1=20,z0=46,z1=56,H=5.2,root=grp(),bt=C.brick;
+const BUILDINGS=[{id:'MS',x0:-20,x1:20,z0:46,z1:56,doors:[-14,-6,6],label:'OS ZUIDWOLDE  ·  10 kV'},
+  {id:'MS20',x0:46,x1:76,z0:46,z1:56,doors:[51,59,69],label:'OS ZUIDWOLDE  ·  20 kV'}];
+function buildBuilding({id,x0,x1,z0,z1,doors,label}){
+  const H=5.2,root=grp(),bt=C.brick,W=x1-x0,Dz=z1-z0,cx=(x0+x1)/2,cz=(z0+z1)/2;
   const brick=(len)=>{const t=toTex(bt,len/1.76,H/1.5);return mat({map:t,bumpMap:toTex(bt,len/1.76,H/1.5,false),bumpScale:0.8,roughness:0.88});};
-  const bl=brick(40),bs=brick(10);
-  box(40,H,0.3,bl,root,0,H/2,z0+0.15);box(40,H,0.3,bl,root,0,H/2,z1-0.15);
-  box(0.3,H,10,bs,root,x0+0.15,H/2,(z0+z1)/2);box(0.3,H,10,bs,root,x1-0.15,H/2,(z0+z1)/2);
-  box(40.1,0.45,10.1,MAT.concreteDark,root,0,0.22,(z0+z1)/2);
-  box(40.3,0.25,10.3,MAT.roof,root,0,H+0.12,(z0+z1)/2);
-  for(const z of[z0-0.03,z1+0.03])box(40.5,0.3,0.12,MAT.trim,root,0,H+0.22,z);
-  for(const x of[x0-0.03,x1+0.03])box(0.12,0.3,10.5,MAT.trim,root,x,H+0.22,(z0+z1)/2);
-  box(2.2,1.2,1.4,MAT.cabinet,root,8,H+0.85,51);box(1.2,0.6,1.2,MAT.cabinet,root,-10,H+0.55,50);
-  [-14,-6,6].forEach(x=>{box(2.3,2.75,0.12,MAT.trim,root,x,1.4+0.03,z0-0.03);box(1.0,2.6,0.08,MAT.door,root,x-0.52,1.35,z0-0.08);box(1.0,2.6,0.08,MAT.door,root,x+0.52,1.35,z0-0.08);
+  const bl=brick(W),bs=brick(Dz);
+  box(W,H,0.3,bl,root,cx,H/2,z0+0.15);box(W,H,0.3,bl,root,cx,H/2,z1-0.15);
+  box(0.3,H,Dz,bs,root,x0+0.15,H/2,cz);box(0.3,H,Dz,bs,root,x1-0.15,H/2,cz);
+  box(W+0.1,0.45,Dz+0.1,MAT.concreteDark,root,cx,0.22,cz);
+  box(W+0.3,0.25,Dz+0.3,MAT.roof,root,cx,H+0.12,cz);
+  for(const z of[z0-0.03,z1+0.03])box(W+0.5,0.3,0.12,MAT.trim,root,cx,H+0.22,z);
+  for(const x of[x0-0.03,x1+0.03])box(0.12,0.3,Dz+0.5,MAT.trim,root,x,H+0.22,cz);
+  box(2.2,1.2,1.4,MAT.cabinet,root,cx+W*0.2,H+0.85,cz);box(1.2,0.6,1.2,MAT.cabinet,root,cx-W*0.25,H+0.55,cz-1);
+  doors.forEach(x=>{box(2.3,2.75,0.12,MAT.trim,root,x,1.4+0.03,z0-0.03);box(1.0,2.6,0.08,MAT.door,root,x-0.52,1.35,z0-0.08);box(1.0,2.6,0.08,MAT.door,root,x+0.52,1.35,z0-0.08);
     box(0.04,0.3,0.05,MAT.trim,root,x-0.12,1.3,z0-0.14);
     const hz=mesh(new THREE.PlaneGeometry(0.4,0.5),MAT.hazard,root,x,3.15,z0-0.1);hz.rotation.y=Math.PI;hz.castShadow=false;
     box(0.4,0.12,0.25,MAT.lamp,root,x,3.65,z0-0.15);});
-  [-17,-10,-2,2,10,17].forEach(x=>{const lv=mesh(new THREE.PlaneGeometry(1.2,0.8),MAT.louvre,root,x,3.6,z1+0.01);lv.castShadow=false;});
-  [-3,13].forEach(x=>{const lv=mesh(new THREE.PlaneGeometry(1.2,0.8),MAT.louvre,root,x,4.1,z0-0.01);lv.rotation.y=Math.PI;lv.castShadow=false;});
-  box(1.1,2.3,0.08,MAT.door,root,14,1.6,z1+0.05);box(2,0.1,1.2,MAT.trim,root,14,3.0,z1+0.6);
-  const nb=toTex(textCanvas('OS ZUIDWOLDE  ·  10 kV',{w:1024,h:128,bg:'#1d2b45',fg:'#ffffff',font:'bold 64px Arial',border:false}));
-  const sg=mesh(new THREE.PlaneGeometry(6,0.75),mat({map:nb,roughness:0.5}),root,0,4.4,z0-0.02);sg.rotation.y=Math.PI;sg.castShadow=false;
-  regView('MS',root,null,{labelPos:V3(0,H+1.6,(z0+z1)/2)});
+  for(let x=x0+3;x<x1-2;x+=W/6){const lv=mesh(new THREE.PlaneGeometry(1.2,0.8),MAT.louvre,root,x,3.6,z1+0.01);lv.castShadow=false;}
+  [x0+W*0.42,x0+W*0.82].forEach(x=>{const lv=mesh(new THREE.PlaneGeometry(1.2,0.8),MAT.louvre,root,x,4.1,z0-0.01);lv.rotation.y=Math.PI;lv.castShadow=false;});
+  box(1.1,2.3,0.08,MAT.door,root,x1-6,1.6,z1+0.05);box(2,0.1,1.2,MAT.trim,root,x1-6,3.0,z1+0.6);
+  const nb=toTex(textCanvas(label,{w:1024,h:128,bg:'#1d2b45',fg:'#ffffff',font:'bold 64px Arial',border:false}));
+  const sg=mesh(new THREE.PlaneGeometry(6,0.75),mat({map:nb,roughness:0.5}),root,doors[1]+3.6,4.4,z0-0.02);sg.rotation.y=Math.PI;sg.castShadow=false;
+  regView(id,root,null,{labelPos:V3(cx,H+1.6,cz)});
 }
 
 const crownGeos=[0,1,2].map(i=>{let g=new THREE.IcosahedronGeometry(1,2);g.deleteAttribute('normal');g.deleteAttribute('uv');g=mergeVertices(g);
@@ -87,8 +89,8 @@ function tree(x,z,s=1,cast=false){const h=rr(4,6)*s;const t=cyl(0.18*s,0.28*s,h,
 function poplar(x,z){const h=rr(14,18);cyl(0.2,0.3,h*0.5,MAT.bark,staticRoot,x,h*0.25,z,7).castShadow=false;const c=mesh(crownGeos[Math.floor(R()*3)],MAT.leaf[0],staticRoot,x,h*0.58,z);c.scale.set(rr(1.3,1.8),h*0.42,rr(1.3,1.8));c.castShadow=Math.abs(x)<200&&Math.abs(z)<200;}
 function buildTrees(){
   for(let z=78;z<1200;z+=rr(9,13)){tree(17+rr(-0.5,0.5),z,rr(0.9,1.1),z<160);tree(33+rr(-0.5,0.5),z,rr(0.9,1.1),z<160);}
-  for(let z=-70;z<110;z+=rr(8,11))poplar(-64+rr(-1,1),z);
-  for(let x=-64;x<70;x+=rr(8,11))poplar(x,-62+rr(-1,1));
+  for(let z=-70;z<110;z+=rr(8,11)){poplar(-64+rr(-1,1),z);poplar(108+rr(-1,1),z);}
+  for(let x=-64;x<110;x+=rr(8,11))poplar(x,-62+rr(-1,1));
   for(let k=0;k<26;k++){const cx=rr(-2200,2200),cz=rr(-2200,2200);if(Math.abs(cx)<300&&Math.abs(cz)<300)continue;const n=4+Math.floor(R()*10);for(let i=0;i<n;i++)tree(cx+rr(-30,30),cz+rr(-30,30),rr(1.2,1.8));}
   for(let x=-2000;x<2000;x+=rr(10,16))tree(x,-1300+rr(-3,3),1.5);
 }
@@ -117,10 +119,10 @@ function van(x,z,ry){const g=grp(x,z);g.rotation.y=ry;const vw=mat({color:0xf2f2
 
 const SPOTS=[];
 function buildLights(){
-  [[-45,-41],[45,-41],[-45,65],[45,65]].forEach(([x,z])=>{cyl(0.09,0.14,12,MAT.galv,staticRoot,x,6,z,10);box(0.6,0.6,0.6,MAT.concrete,staticRoot,x,0.2,z);
+  [[-45,-41],[89,-41],[-45,65],[89,65],[22,-41]].forEach(([x,z])=>{cyl(0.09,0.14,12,MAT.galv,staticRoot,x,6,z,10);box(0.6,0.6,0.6,MAT.concrete,staticRoot,x,0.2,z);
     const dx=-Math.sign(x),dz=z<0?1:-1;const hd=box(0.6,0.15,0.4,MAT.lamp,staticRoot,x+dx*0.35,12,z+dz*0.35);hd.rotation.y=Math.atan2(dx,dz);
     const s=new THREE.SpotLight(0xffe2b8,0,140,0.85,0.7,1.6);s.position.set(x+dx*0.4,11.8,z+dz*0.4);s.target.position.set(x+dx*40,0,z+dz*40);scene.add(s,s.target);SPOTS.push(s);});
-  for(const x of[-44,44]){cyl(0.08,0.3,24,MAT.galv,staticRoot,x,12,-8,10);box(1,0.6,1,MAT.concrete,staticRoot,x,0.15,-8);}
+  for(const x of[-44,88]){cyl(0.08,0.3,24,MAT.galv,staticRoot,x,12,-8,10);box(1,0.6,1,MAT.concrete,staticRoot,x,0.15,-8);}
 }
 
 const glowTex=(()=>{const c=cnv(128),g=c.getContext('2d');const gr=g.createRadialGradient(64,64,0,64,64,64);gr.addColorStop(0,'rgba(255,255,255,1)');gr.addColorStop(0.15,'rgba(210,228,255,0.9)');gr.addColorStop(0.45,'rgba(120,160,255,0.25)');gr.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=gr;g.fillRect(0,0,128,128);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t;})();
@@ -134,8 +136,8 @@ const envGroundMat=new THREE.MeshBasicMaterial({color:0x4f5446});const eg=new TH
 const pmrem=new THREE.PMREMGenerator(renderer);let envRT=null,lastEnvElev=-999;
 function updateEnv(){const rt=pmrem.fromScene(envScene,0.02,0.1,200);if(envRT)envRT.dispose();envRT=rt;scene.environment=rt.texture;}
 const sun=new THREE.DirectionalLight(0xffffff,3);sun.castShadow=true;sun.shadow.mapSize.set(4096,4096);
-Object.assign(sun.shadow.camera,{left:-90,right:90,top:90,bottom:-90,near:10,far:520});sun.shadow.bias=-0.0003;sun.shadow.normalBias=0.03;
-sun.target.position.set(0,0,10);scene.add(sun,sun.target);
+Object.assign(sun.shadow.camera,{left:-100,right:100,top:95,bottom:-95,near:10,far:540});sun.shadow.bias=-0.0003;sun.shadow.normalBias=0.03;
+sun.target.position.set(22,0,10);scene.add(sun,sun.target);
 const hemi=new THREE.HemisphereLight(0xbfd4ff,0x4a4436,0.3);scene.add(hemi);
 const flashLight=new THREE.DirectionalLight(0xdfe8ff,0);flashLight.position.set(0,300,-400);scene.add(flashLight);
 const arcLight=new THREE.PointLight(0xcfe0ff,0,0,2);scene.add(arcLight);

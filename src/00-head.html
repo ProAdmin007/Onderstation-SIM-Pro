@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#0b0f14;--panel:rgba(13,17,22,.80);--line:rgba(255,255,255,.09);--line2:rgba(255,255,255,.18);--text:#e7ecf1;--muted:#8d99a6;--dim:#5d6873;--accent:#f0a43a;--red:#e5484d;--green:#3fcf72;--hv:#ff6b3d;--mv:#4aa3ff;--earth:#e8c547;--dead:#56616b;--mono:'JetBrains Mono',ui-monospace,monospace}
+:root{--bg:#0b0f14;--panel:rgba(13,17,22,.80);--line:rgba(255,255,255,.09);--line2:rgba(255,255,255,.18);--text:#e7ecf1;--muted:#8d99a6;--dim:#5d6873;--accent:#f0a43a;--red:#e5484d;--green:#3fcf72;--hv:#ff6b3d;--mv:#4aa3ff;--earth:#e8c547;--mv20:#c07cff;--dead:#56616b;--mono:'JetBrains Mono',ui-monospace,monospace}
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font:13px/1.35 Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
 #scene{position:fixed;inset:0}
@@ -73,7 +73,7 @@ button:disabled{opacity:.35;cursor:not-allowed}
 .mini{padding:1px 8px;font-size:13px;line-height:1.2}
 #sld .w{stroke-width:3;stroke-linecap:round;fill:none}
 #sld .bus{stroke-width:6}
-#sld .hv{stroke:var(--hv)} #sld .mv{stroke:var(--mv)} #sld .dead{stroke:var(--dead)} #sld .earth{stroke:var(--earth);stroke-dasharray:5 3}
+#sld .hv{stroke:var(--hv)} #sld .mv{stroke:var(--mv)} #sld .mv20{stroke:var(--mv20)} #sld .arrow.mv20{fill:var(--mv20)} #sld .dead{stroke:var(--dead)} #sld .earth{stroke:var(--earth);stroke-dasharray:5 3}
 #sld .arrow{stroke:none} #sld .arrow.hv{fill:var(--hv)} #sld .arrow.mv{fill:var(--mv)} #sld .arrow.dead{fill:var(--dead)}
 #sld .dev{cursor:pointer}
 #sld .dev .hit{fill:transparent}
@@ -88,6 +88,9 @@ button:disabled{opacity:.35;cursor:not-allowed}
 #sld .piv{fill:#0f1418;stroke:#9aa5b1;stroke-width:1.5}
 #sld text{fill:var(--muted);font:10px 'JetBrains Mono',monospace}
 #sld text.dl{fill:#c3ccd5;font-weight:500}
+#sld text.fs{font-size:9px}
+.tabs{display:flex;gap:3px;margin-left:auto;margin-right:8px}
+.tabs button{padding:2px 9px;font-size:11px;letter-spacing:.3px}
 #sld text.h{fill:var(--text);font-weight:700;font-size:11px}
 #sld text.m{fill:#9fd0ff}
 #sld text.mh{fill:#ffb59c}
@@ -218,10 +221,10 @@ body.nolabels #labels{display:none}
 <aside id="tasks" class="panel"><div class="ph"><span id="taskTitle">Werkopdracht</span><span id="taskCode" class="tag"></span></div><div id="taskBody"><div class="idle">Geen actieve opdracht.</div></div></aside>
 <aside id="alarms" class="panel"><div class="ph"><span>Meldingen &amp; gebeurtenissen</span><span class="cnt" id="alarmCnt">0</span></div><div id="alarmList"></div></aside>
 <aside id="scada" class="panel">
-  <div class="ph"><span>SCADA · Eénlijnschema</span><button id="scadaToggle" class="mini" title="In-/uitklappen">–</button></div>
-  <svg id="sld" viewBox="0 0 460 575"></svg>
+  <div class="ph"><span>SCADA · Eénlijnschema</span><div class="tabs" id="sldTabs"><button data-t="10" class="on">10 kV</button><button data-t="20">20 kV</button></div><button id="scadaToggle" class="mini" title="In-/uitklappen">–</button></div>
+  <svg id="sld" viewBox="0 0 470 575"></svg>
   <div class="legend">
-    <span><i style="background:var(--hv)"></i>110 kV</span><span><i style="background:var(--mv)"></i>10 kV</span><span><i style="background:var(--dead)"></i>spanningsloos</span><span><i style="background:var(--earth)"></i>geaard</span>
+    <span><i style="background:var(--hv)"></i>110 kV</span><span><i style="background:var(--mv)"></i>10 kV</span><span><i style="background:var(--mv20)"></i>20 kV</span><span><i style="background:var(--dead)"></i>spanningsloos</span><span><i style="background:var(--earth)"></i>geaard</span>
     <span><i class="sq" style="background:var(--red)"></i>gesloten</span><span><i class="sq" style="border:2px solid var(--green)"></i>open</span>
   </div>
 </aside>
@@ -230,9 +233,10 @@ body.nolabels #labels{display:none}
   <button data-v="0"><kbd>1</kbd>Overzicht</button>
   <button data-v="1"><kbd>2</kbd>Lijnvelden</button>
   <button data-v="2"><kbd>3</kbd>Transformatoren</button>
-  <button data-v="3"><kbd>4</kbd>10 kV-gebouw</button>
+  <button data-v="3"><kbd>4</kbd>MS-gebouwen</button>
   <button data-v="4"><kbd>5</kbd>Vogelvlucht</button>
-  <button data-v="5"><kbd>6</kbd>Binnen</button>
+  <button data-v="5"><kbd>6</kbd>Binnen 10 kV</button>
+  <button data-v="6"><kbd>7</kbd>Binnen 20 kV</button>
 </nav>
 <div id="tooltip"></div>
 <div id="toast"></div>
@@ -249,7 +253,7 @@ body.nolabels #labels{display:none}
       </ul>
       <div class="mh">Moeilijkheid</div>
       <div class="seg" id="diff"><button data-d="rustig">Rustig</button><button data-d="normaal" class="on">Normaal</button><button data-d="zwaar">Zwaar</button></div>
-      <div class="keys">slepen: draaien · rechts: schuiven · scroll: zoom<br>1–6 camera · spatie pauze · L labels · M geluid</div>
+      <div class="keys">slepen: draaien · rechts: schuiven · scroll: zoom<br>1–7 camera · spatie pauze · L labels · M geluid</div>
     </div>
     <div id="menu"></div>
   </div>

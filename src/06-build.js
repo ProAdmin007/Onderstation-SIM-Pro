@@ -29,7 +29,7 @@ function buildTrafoBay(T){
   const q0=buildCB(T+'-Q0',bx,13.5,-1);
   const ct=buildCT(T+'-CT',bx,18.5);
   const sa=buildSA(T+'-SA',bx,25.0);
-  const tr=buildTR(T,bx,31);
+  const tr=buildTR(T,bx,31,{T3:'110/21 kV',T4:'110/10,5-21 kV'}[T]||'110/10,5 kV');
   PH.forEach((p,i)=>{
     wire(V3(bx+p,BUSY-0.07,BUSZ[i]),q1.A[i],0.35);
     wire(q1.B[i],q0.low[i],0.12);
@@ -40,11 +40,11 @@ function buildTrafoBay(T){
 }
 buildGround();
 buildFence();
-buildBuilding();
+BUILDINGS.forEach(buildBuilding);
 buildBus();
 buildLineBay('L1');buildLineBay('L2');
-buildTrafoBay('T1');buildTrafoBay('T2');
-box(0.35,8,9,MAT.concreteDark,staticRoot,0,4,31);  // brandwand
+buildTrafoBay('T1');buildTrafoBay('T2');buildTrafoBay('T3');buildTrafoBay('T4');
+box(0.35,8,9,MAT.concreteDark,staticRoot,0,4,31);box(0.35,8,9,MAT.concreteDark,staticRoot,60,4,31);  // brandwanden
 buildLights();
 buildTrees();
 farm(-420,520,0.3);farm(610,-380,-0.2);farm(-760,-520,1.4);farm(380,820,0.1);

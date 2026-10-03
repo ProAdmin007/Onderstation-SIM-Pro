@@ -7,7 +7,18 @@ Een 3D-onderstationsimulator die in de browser draait (Three.js, geen installati
 ## Bediening
 - Klik op een schakelaar in 3D of in het SCADA-schema en kies vervolgens IN/UIT of SLUITEN/OPENEN.
 - Linker muisknop draaien, rechter muisknop schuiven, scrollen om te zoomen.
-- `1`–`6` camerastandpunten (6 = binnen in het 10 kV-gebouw) · `spatie` pauze · `L` labels · `M` geluid · `Esc` deselecteren
+- `1`–`7` camerastandpunten (6 = binnen 10 kV, 7 = binnen 20 kV) · `spatie` pauze · `L` labels · `M` geluid · `Esc` deselecteren
+
+## Installatie
+- **110 kV:** twee lijnvelden (L1 Hoogeveen, L2 Meppel), een railsysteem en vier transformatorvelden.
+- **T1 en T2** (110/10,5 kV) voeden de 10 kV-installatie: rail A en B, railkoppeling V-K, velden F1–F6.
+- **T3** (110/21 kV) voedt de 20 kV-installatie in een tweede gebouw: rail C met G1 Zonnepark (productie en teruglevering), G2 Industrieterrein Noord, G3 Buitengebied Oost en G4 Waterzuivering.
+- **T4** is een omschakelbare reservetransformator (110/10,5-21 kV).
+  - Hij staat als warme reserve op 20 kV.
+  - Via **V-T4** voedt hij 10 kV-rail B, via **W-T4** 20 kV-rail C.
+  - Omschakelen kan alleen spanningsloos (T4-Q0, V-T4 en W-T4 UIT).
+  - Inschakelen op de verkeerde spanning blokkeert de vergrendeling. Met de vergrendelingen uit leidt het tot een incident en wikkelingsschade.
+- **SCADA** heeft tabbladen voor 10 kV en 20 kV.
 
 ## Spelmodi en score
 - **Vrije dienst:** eindeloos spelen.
@@ -50,4 +61,4 @@ De broncode staat in `src/` (HTML/CSS plus JS-modules in volgorde). Bouw `index.
 ./build.ps1
 ```
 
-URL-parameters om te testen: `?autostart`, `?t=18.5` (starttijd), `?view=0..5`, `?night`, `?play=zkh|storm|piek|blackout|day|eve|free&diff=rustig|normaal|zwaar`.
+URL-parameters om te testen: `?autostart`, `?t=18.5` (starttijd), `?view=0..6`, `?night`, `?play=zkh|storm|piek|blackout|day|eve|free&diff=rustig|normaal|zwaar`.
