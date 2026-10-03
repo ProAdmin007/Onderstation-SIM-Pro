@@ -160,5 +160,7 @@ function updateSky(h){
   envGroundMat.color.setRGB(0.3*day+0.01,0.32*day+0.012,0.27*day+0.015);
   stars.material.opacity=NIGHT;
   SPOTS.forEach(s=>s.intensity=NIGHT>0.35?900:0);MAT.lamp.emissiveIntensity=NIGHT>0.35?6:0;
+  if(GAME.storm){sun.intensity*=0.15;hemi.intensity*=0.8;scene.environmentIntensity*=0.5;scene.fog.density=0.0026;scene.fog.color.multiplyScalar(0.6);su.turbidity.value=20;su.rayleigh.value=0.6;su.mieCoefficient.value=0.03;}
+  else{scene.fog.density=0.0008;su.turbidity.value=5.5;su.rayleigh.value=1.5;su.mieCoefficient.value=0.004;}
   if(Math.abs(el-lastEnvElev)>0.6){lastEnvElev=el;updateEnv();}
 }

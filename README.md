@@ -9,6 +9,20 @@ Een 3D-onderstationsimulator die in de browser draait (Three.js, geen installati
 - Linker muisknop draaien, rechter muisknop schuiven, scrollen om te zoomen.
 - `1`–`6` camerastandpunten (6 = binnen in het 10 kV-gebouw) · `spatie` pauze · `L` labels · `M` geluid · `Esc` deselecteren
 
+## Spelmodi en score
+- **Vrije dienst:** eindeloos spelen.
+- **Dagdienst** (07–15 u) en **Avonddienst** (15–23 u): een dienst van 8 uur met een dienstrapport, een cijfer (A+ t/m E), sterren, badges en een highscore.
+- **Scenario's:**
+  - *Kabelstoring ziekenhuis*: T2 valt uit en het ziekenhuis draait op noodstroom.
+  - *Storm boven Drenthe*: regen, onweer, blikseminslagen en een defect AR-relais.
+  - *Avondpiek op één poot*: T2 staat in onderhoud; schakel de kassen af om T1 heel te houden.
+  - *Black-out*: bouw het station weer op.
+- **Moeilijkheid:** Rustig, Normaal of Zwaar. Dit bepaalt hoe vaak storingen optreden en hoe vaak een fout blijvend is.
+- **Score:** je begint met 1.000 punten.
+  - Erbij: snel herstel van een onverwachte onderbreking (+20 of +40), een behaald doel (+100), een voltooide werkopdracht (+150) en een dienst zonder incidenten (+200).
+  - Eraf: klantminuten, het ziekenhuis zonder net, veiligheidsincidenten (−150), een gemist doel (−150), thermische trips (−100), inschakelen op een fout (−40), overbelasting (−30), spanningsafwijkingen en circulatiestroom (−20).
+- Tijdens een pauze kun je niet schakelen.
+
 ## 10 kV-gebouw
 Binnen staat een rij van 13 metaalomsloten schakelvelden (V-T1, F1–F3, meetveld, koppeling V-K, F4–F6, V-T2). Elk veld heeft een live display, mimic-schema met standmelder en spanningslampjes. Klik op een veld om het te bedienen. Verder: beveiligingskasten, bedieningsbureau met live SCADA- en meldingenscherm, accubatterij en eigenbedrijfstransformator.
 
@@ -36,4 +50,4 @@ De broncode staat in `src/` (HTML/CSS plus JS-modules in volgorde). Bouw `index.
 ./build.ps1
 ```
 
-URL-parameters om te testen: `?autostart`, `?t=18.5` (starttijd), `?view=0..5`, `?night`.
+URL-parameters om te testen: `?autostart`, `?t=18.5` (starttijd), `?view=0..5`, `?night`, `?play=zkh|storm|piek|blackout|day|eve|free&diff=rustig|normaal|zwaar`.

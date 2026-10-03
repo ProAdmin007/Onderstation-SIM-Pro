@@ -139,6 +139,52 @@ body.nolabels #labels{display:none}
 #intro .keys{font-size:12px;color:var(--muted);margin:14px 0 22px;font-family:var(--mono)}
 #startBtn{background:var(--accent);color:#1a1206;border:none;font-weight:700;font-size:15px;padding:12px 26px;border-radius:10px}
 #startBtn:hover{filter:brightness(1.1)}
+#intro{overflow:auto;padding:20px 0}
+#intro .card.wide{width:min(1080px,95vw);display:grid;grid-template-columns:320px 1fr;gap:30px;padding:30px 32px}
+#intro .wide h1{font-size:28px;white-space:nowrap}
+.mh{font-size:10.5px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-weight:700;margin:16px 0 8px}
+#menu .mh:first-child{margin-top:4px}
+.mgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(205px,1fr));gap:10px}
+.mode{text-align:left;display:flex;flex-direction:column;gap:5px;padding:14px 15px;border-radius:11px;background:rgba(255,255,255,.035);min-height:128px}
+.mode:hover{border-color:var(--accent);background:rgba(240,164,58,.08)}
+.mode b{font-size:15px}
+.mt{font-size:10px;text-transform:uppercase;color:var(--accent);letter-spacing:.8px;font-weight:700}
+.md{color:var(--muted);font-size:12px;line-height:1.45}
+.mb{font-family:var(--mono);font-size:11px;color:var(--green);margin-top:auto}
+.seg{display:inline-flex;gap:3px;background:rgba(255,255,255,.04);padding:3px;border-radius:9px;border:1px solid var(--line)}
+.seg button{border:none;background:none;padding:6px 12px;font-size:12px}
+.seg button.on{background:var(--accent);color:#1a1206;font-weight:700}
+.kpi.score .v{color:var(--accent)}
+#scoreFeed{position:fixed;top:78px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:4px;pointer-events:none;z-index:7}
+.sf{font:700 13px var(--mono);padding:5px 12px;border-radius:7px;background:rgba(13,17,22,.88);border:1px solid var(--line);animation:sfa 4.2s ease-out forwards}
+.sf.plus{color:#7cf0a4;border-color:rgba(63,207,114,.4)} .sf.min{color:#ff9a9c;border-color:rgba(229,72,77,.4)}
+@keyframes sfa{0%{opacity:0;transform:translateY(-6px)}8%{opacity:1;transform:none}75%{opacity:1}100%{opacity:0;transform:translateY(-10px)}}
+.gh{padding-bottom:10px;margin-bottom:12px;border-bottom:1px solid var(--line)}
+.gt{display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:13.5px;margin-bottom:8px;gap:8px}
+.gcd{display:flex;justify-content:space-between;align-items:center;background:rgba(240,164,58,.12);border:1px solid rgba(240,164,58,.35);color:#ffd59a;border-radius:8px;padding:7px 10px;margin-bottom:8px;font-size:12px}
+.gcd b{font-family:var(--mono);font-size:15px}
+.gcd.hot{background:rgba(229,72,77,.18);border-color:var(--red);color:#ffc4c5;animation:pulse 1s infinite}
+@keyframes pulse{50%{opacity:.6}}
+.step.fail{color:#ff9a9c}
+.step.fail .b{background:var(--red);border-color:var(--red);color:#fff}
+#report{position:fixed;inset:0;display:grid;place-items:center;background:rgba(6,9,12,.72);z-index:12;overflow:auto;padding:20px 0}
+.card.rep{width:min(700px,94vw);padding:28px 32px;background:rgba(13,17,22,.94);border:1px solid var(--line);border-radius:16px}
+.rep h2{margin:6px 0 16px;font-size:26px}
+.rep-top{display:flex;align-items:center;gap:22px;margin-bottom:8px}
+.grade{width:88px;height:88px;border-radius:50%;display:grid;place-items:center;font:800 34px Inter;border:3px solid currentColor}
+.gAp,.gA{color:var(--green)} .gB{color:#9fd0ff} .gC{color:var(--accent)} .gD,.gE{color:var(--red)}
+.rs{font:700 30px var(--mono)} .rs span{font-size:13px;color:var(--muted);font-family:Inter}
+.stars{color:var(--accent);font-size:20px;letter-spacing:2px} .stars span{color:#39414a}
+.rec{color:var(--green);font-weight:700;font-size:13px} .prev{color:var(--muted);font-size:12px}
+.rep-h{font-size:10.5px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-weight:700;margin:18px 0 6px}
+.rep-grid{display:grid;grid-template-columns:1fr 1fr;column-gap:24px}
+.badges{display:flex;flex-wrap:wrap;gap:8px}
+.badge{background:rgba(240,164,58,.1);border:1px solid rgba(240,164,58,.35);border-radius:9px;padding:7px 11px;display:flex;flex-direction:column;font-size:11.5px}
+.badge b{color:#ffd59a;font-size:12.5px} .badge span{color:var(--muted)}
+.rep-btns{display:flex;gap:8px;margin-top:22px}
+.rep-btns button{padding:10px 16px;font-weight:600}
+.rep-btns .primary{background:var(--accent);color:#1a1206;border:none}
+@media (max-width:820px){#intro .card.wide{grid-template-columns:1fr}.rep-grid{grid-template-columns:1fr}}
 #loading{position:fixed;inset:0;display:grid;place-items:center;color:var(--muted);font-family:var(--mono);z-index:20;background:var(--bg)}
 @media (max-width:1250px){#tasks{width:290px}#devpanel{left:314px}#scada{width:400px}.kpi{min-width:90px;padding:3px 9px}}
 @media (max-width:1050px){.kpis .kpi:nth-child(n+3){display:none}#views{left:12px;bottom:256px}}
@@ -163,13 +209,13 @@ body.nolabels #labels{display:none}
   <div class="kpis">
     <div class="kpi" id="kpiOff"><span class="k">Klanten zonder stroom</span><span class="v" id="kOff">0</span></div>
     <div class="kpi"><span class="k">Klantminuten (CML)</span><span class="v" id="kCml">0</span></div>
-    <div class="kpi"><span class="k">Opdrachten</span><span class="v" id="kTasks">0</span></div>
+    <div class="kpi score"><span class="k">Score</span><span class="v" id="kScore">1.000</span></div>
     <div class="kpi" id="kpiInc"><span class="k">Veiligheidsincidenten</span><span class="v" id="kInc">0</span></div>
   </div>
   <label class="toggle" title="Elektrische vergrendelingen voorkomen verkeerde schakelhandelingen"><input type="checkbox" id="interlock" checked><span class="sw"></span><span>Vergrendelingen</span></label>
   <button id="mute" class="icon" title="Geluid (M)"><svg id="muteIco" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/></svg></button>
 </header>
-<aside id="tasks" class="panel"><div class="ph"><span>Werkopdracht</span><span id="taskCode" class="tag"></span></div><div id="taskBody"><div class="idle">Geen actieve opdracht.</div></div></aside>
+<aside id="tasks" class="panel"><div class="ph"><span id="taskTitle">Werkopdracht</span><span id="taskCode" class="tag"></span></div><div id="taskBody"><div class="idle">Geen actieve opdracht.</div></div></aside>
 <aside id="alarms" class="panel"><div class="ph"><span>Meldingen &amp; gebeurtenissen</span><span class="cnt" id="alarmCnt">0</span></div><div id="alarmList"></div></aside>
 <aside id="scada" class="panel">
   <div class="ph"><span>SCADA · Eénlijnschema</span><button id="scadaToggle" class="mini" title="In-/uitklappen">–</button></div>
@@ -191,18 +237,24 @@ body.nolabels #labels{display:none}
 <div id="tooltip"></div>
 <div id="toast"></div>
 <div id="intro" class="hidden">
-  <div class="card">
-    <div class="eyebrow">Onderstation Simulator</div>
-    <h1>OS Zuidwolde <span>110/10 kV</span></h1>
-    <p>Je hebt dienst als operator. Twee 110 kV-lijnen voeden via twee transformatoren de 10 kV-installatie met zes uitgaande velden: ruim 11.800 klanten.</p>
-    <ul>
-      <li><b>Klik</b> op een schakelaar in 3D of in het SCADA-schema om hem te bedienen.</li>
-      <li><b>Volgorde:</b> eerst de vermogenschakelaar (Q0) uit, dan pas scheiders (Q1/Q9) openen. Andersom geeft een vlamboog.</li>
-      <li>Reageer op <b>storingen</b>, voer <b>werkopdrachten</b> veilig uit en houd de uitvalminuten laag.</li>
-    </ul>
-    <div class="keys">links slepen: draaien · rechts: schuiven · scroll: zoom<br>1–6 camera · spatie pauze · L labels · M geluid · Esc deselecteren</div>
-    <button id="startBtn">Dienst starten</button>
+  <div class="card wide">
+    <div class="about">
+      <div class="eyebrow">Onderstation Simulator</div>
+      <h1>OS Zuidwolde <span>110/10 kV</span></h1>
+      <p>Je hebt dienst als operator. Twee 110 kV-lijnen voeden via twee transformatoren de 10 kV-installatie met zes uitgaande velden: ruim 11.800 klanten.</p>
+      <ul>
+        <li><b>Klik</b> op een schakelaar in 3D of in het SCADA-schema om hem te bedienen.</li>
+        <li><b>Volgorde:</b> eerst de vermogenschakelaar (Q0) uit, dan pas scheiders openen. Andersom geeft een vlamboog.</li>
+        <li><b>Score:</b> snel herstel en behaalde doelen leveren punten op; klantminuten, incidenten en overbelasting kosten punten.</li>
+      </ul>
+      <div class="mh">Moeilijkheid</div>
+      <div class="seg" id="diff"><button data-d="rustig">Rustig</button><button data-d="normaal" class="on">Normaal</button><button data-d="zwaar">Zwaar</button></div>
+      <div class="keys">slepen: draaien · rechts: schuiven · scroll: zoom<br>1–6 camera · spatie pauze · L labels · M geluid</div>
+    </div>
+    <div id="menu"></div>
   </div>
 </div>
+<div id="report" class="hidden"></div>
+<div id="scoreFeed"></div>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"}}</script>
 <script type="module">

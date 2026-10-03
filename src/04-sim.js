@@ -95,6 +95,7 @@ function syncCheck(d){if(d.id!=='V-K'||!EN.has('RA')||!EN.has('RB'))return null;
   return dU>0.25?`Synchrocheck: spanningsverschil ${dU.toFixed(2).replace('.',',')} kV te groot (max 0,25) – breng de trappen gelijk`:null;}
 function operate(id,to){
   const d=D[id];if(!d||!['cb','ds','es'].includes(d.type)||d.state===to)return;
+  if(SIM.paused)return deny(GAME.ended?'De dienst is afgelopen':'Simulatie gepauzeerd – hervat om te schakelen');
   if(d.busy)return deny('Bediening loopt nog…');
   if(d.type==='cb'&&to===1){
     if(d.tr&&D[d.tr].blocked)return deny(`${d.tr} geblokkeerd door relais 86 (${D[d.tr].blockText}) – eerst resetten`);
@@ -105,17 +106,17 @@ function operate(id,to){
   let arc=null;
   if(d.type==='ds'){const cb=D[d.cb];if(cb.state===1&&(EN.has(d.a)||EN.has(d.b)))arc=d.a;}
   const trDead=d.tr&&id.endsWith('-Q0')&&!EN.has(d.tr+'h');
-  d.state=to;d.ops++;if(d.type==='cb'&&to===1)d.springAt=performance.now()+7000;
+  d.state=to;d.ops++;SIM.manualFlag=true;if(d.type==='cb'&&to===1)d.springAt=performance.now()+7000;
   pushAlarm(`Bediening ${id} ${actionText(d,to)}`,'op');
   const v=VIEWS[id];
   if(d.type==='cb')AudioSys.breaker(v?distGain(v.center):0.5);else{d.busy=!!v;AudioSys.motor(d.type==='es'?2.2:2.8,v?distGain(v.center):0.5);}
-  if(arc){SIM.incidents++;pushAlarm(`${id} geschakeld met ${d.cb} IN – vlamboog! Beveiliging grijpt in`,'crit');spawnArc(v?v.arcPos:null,1.3);tripFrom(arc);}
-  else{const sc=shortNode();if(sc){SIM.incidents++;
+  if(arc){incident();pushAlarm(`${id} geschakeld met ${d.cb} IN – vlamboog! Beveiliging grijpt in`,'crit');spawnArc(v?v.arcPos:null,1.3);tripFrom(arc);}
+  else{const sc=shortNode();if(sc){incident();
     pushAlarm(d.type==='es'?`Aardschakelaar ${id} op spanning gesloten – kortsluiting!`:d.type==='cb'?`${id} ingeschakeld op geaard deel – kortsluiting!`:`Kortsluiting na bediening ${id}!`,'crit');
     spawnArc(v?v.arcPos:null,1.4);tripFrom(sc);}}
   if(trDead&&to===1){computeFlows();if(EN.has(d.tr+'h'))pushAlarm(`${d.tr}: inschakelstroom (inrush) – 2e-harmonische blokkering voorkomt onterechte differentiaaltrip`,'info');}
   const f=d.feeder;
-  if(d.type==='cb'&&to===1&&f&&f.fault&&f.fault.stage==='search'){setTimeout(()=>{computeFlows();if(d.state===1&&EN.has(f.node)){d.state=0;AudioSys.breaker(0.5);pushAlarm(`${id}: ingeschakeld op kortsluiting – I>> momentaan trip. Wacht op de storingsdienst!`,'warn');refreshAll();}},220);}
+  if(d.type==='cb'&&to===1&&f&&f.fault&&f.fault.stage==='search'){setTimeout(()=>{computeFlows();if(d.state===1&&EN.has(f.node)){d.state=0;AudioSys.breaker(0.5);GAME.stats.recloseFault++;award(-40,'Ingeschakeld op kortsluiting');pushAlarm(`${id}: ingeschakeld op kortsluiting – I>> momentaan trip. Wacht op de storingsdienst!`,'warn');refreshAll();}},220);}
   refreshAll();
 }
 function tripFrom(node){
@@ -132,11 +133,11 @@ function lineRestore(L){const ln=SIM.lines[L];if(ln.avail||ln.maint)return;
   ln.avail=true;ln.reason='';pushAlarm(`TenneT: lijn ${L} ${ln.name} weer onder spanning – ${L}-Q0 mag weer IN`,'ok');}
 function lineLockout(L){const ln=SIM.lines[L];ln.avail=false;ln.reason='blijvende fout, ploeg onderweg';const m=rnd(25,50);
   pushAlarm(`TenneT: blijvende fout op lijn ${L} – herstel verwacht over ±${Math.round(m)} min`,'warn');addTimer(m,()=>lineRestore(L));}
-function toggleAR(L){const ln=SIM.lines[L];ln.ar=!ln.ar;pushAlarm(`Automatische herinschakeling ${L} ${ln.ar?'IN':'UIT'}bedrijf gesteld`,'op');refreshAll();}
+function toggleAR(L){const ln=SIM.lines[L];if(ln.arBroken)return deny(`AR-relais ${L} is defect`);ln.ar=!ln.ar;pushAlarm(`Automatische herinschakeling ${L} ${ln.ar?'IN':'UIT'}bedrijf gesteld`,'op');refreshAll();}
 
 // ---------------------------------------------------------- transformator: blokkering 86, trappenschakelaar
 function tripTrafo(T,reason,inspectMin,kind){const t=D[T];tripBreaker(T+'-Q0');tripBreaker('V-'+T);
-  t.blocked=true;t.resettable=false;t.blockText=reason;t.blockKind=kind;
+  t.blocked=true;t.resettable=false;t.blockText=reason;t.blockKind=kind;if(kind==='temp'){GAME.stats.thermal++;award(-100,`${T} thermisch afgeschakeld`);}
   pushAlarm(`${T}: ${reason} – ${T}-Q0 en V-${T} UIT, blokkeerrelais 86 aangesproken`,'crit');
   if(inspectMin)addTimer(inspectMin,()=>{t.resettable=true;pushAlarm(`${T}: inspectie gereed, geen schade gevonden – reset blokkeerrelais 86 in het transformatorpaneel`,'ok');});
   setTimeout(()=>{computeFlows();if(FEEDERS.some(f=>!EN.has(f.node)&&D[f.cb].state===1))pushAlarm('Tip: sluit railkoppeling V-K om de klanten via de andere transformator te voeden (let op de belasting!)','info');},600);}
@@ -156,9 +157,9 @@ function regulate(dm){
     const dev=t.Ulv-U_SET;
     if(Math.abs(dev)>U_BAND){t.avrT+=dm;if(t.avrT>=1){moveTap(T,dev<0?1:-1);t.avrT=0.75;}}else t.avrT=0;});
   const dk=Math.abs(D.T1.tap-D.T2.tap);
-  if(both&&dk>=2&&!SIM.circAlarm){SIM.circAlarm=true;pushAlarm(`Circulatiestroom tussen T1 en T2 (${dk} trappen verschil) – breng de trappen gelijk of zet de regelaars op AUTO`,'warn');}
+  if(both&&dk>=2&&!SIM.circAlarm){SIM.circAlarm=true;award(-20,'Circulatiestroom');pushAlarm(`Circulatiestroom tussen T1 en T2 (${dk} trappen verschil) – breng de trappen gelijk of zet de regelaars op AUTO`,'warn');}
   if(!both||dk<2)SIM.circAlarm=false;
-  ['RA','RB'].forEach(b=>{const U=FLOW.U[b],k='uAl'+b;if(U>0&&(U<10.0||U>11.0)){if(!SIM[k]){SIM[k]=true;pushAlarm(`Rail ${b==='RA'?'A':'B'}: spanning ${U.toFixed(2).replace('.',',')} kV buiten band (10,0 – 11,0 kV)`,'warn');}}else if(U>=10.1&&U<=10.9)SIM[k]=false;});
+  ['RA','RB'].forEach(b=>{const U=FLOW.U[b],k='uAl'+b;if(U>0&&(U<10.0||U>11.0)){if(!SIM[k]){SIM[k]=true;GAME.stats.volt++;award(-20,'Spanning buiten band');pushAlarm(`Rail ${b==='RA'?'A':'B'}: spanning ${U.toFixed(2).replace('.',',')} kV buiten band (10,0 – 11,0 kV)`,'warn');}}else if(U>=10.1&&U<=10.9)SIM[k]=false;});
 }
 function thermal(dm){const h=hourOf(),amb=11+5*Math.sin((h-9)/24*2*Math.PI);
   ['T1','T2'].forEach(T=>{const t=D[T],on=EN.has(T+'h'),k=t.S/(t.fans?25:20);
@@ -178,13 +179,13 @@ function feederTick(dm){FEEDERS.forEach(f=>{const on=EN.has(f.node);
     if(dur>5){f.clp=Math.max(f.clp,1+0.6*Math.min(1,dur/90));if(f.clp>1.12)pushAlarm(`${f.id} ${f.name}: koude-lastopname na ${Math.round(dur)} min uitval – belasting +${Math.round((f.clp-1)*100)}%`,'info');}}
   f.clp=1+(f.clp-1)*Math.exp(-dm/18);
   const r=f.P/(f.base*1.15);
-  if(r>1.3&&D[f.cb].state===1){f.oc+=dm*(r*r-1)/10;if(f.oc>=1){f.oc=0;tripBreaker(f.cb);pushAlarm(`${f.cb} ${f.name}: overstroombeveiliging I> na ${Math.round(r*100)}% belasting (koude-lastopname)`,'warn');}}
+  if(r>1.3&&D[f.cb].state===1){f.oc+=dm*(r*r-1)/10;if(f.oc>=1){f.oc=0;tripBreaker(f.cb);GAME.stats.clpTrips++;award(-30,`${f.id} overbelast afgeschakeld`);pushAlarm(`${f.cb} ${f.name}: overstroombeveiliging I> na ${Math.round(r*100)}% belasting (koude-lastopname)`,'warn');}}
   else f.oc=Math.max(0,f.oc-dm*0.1);});}
 
 // ---------------------------------------------------------- storingen
 function randomEvent(){const r=Math.random();if(r<0.3)return lineFault();if(r<0.75)return feederFault();return trafoFault();}
-function lineFault(){const c=['L1','L2'].filter(L=>SIM.lines[L].avail&&!SIM.lines[L].maint&&D[L+'-Q0'].state===1);if(!c.length)return feederFault();const L=pick(c),ln=SIM.lines[L];
-  lightning(L);const perm=Math.random()<0.35;
+function lineFault(forceL,forcePerm){const c=['L1','L2'].filter(L=>SIM.lines[L].avail&&!SIM.lines[L].maint&&D[L+'-Q0'].state===1&&(!forceL||L===forceL));if(!c.length)return forceL?null:feederFault();const L=pick(c),ln=SIM.lines[L];
+  lightning(L);const perm=forcePerm??(Math.random()<DIFFS[GAME.diff].perm);
   setTimeout(()=>{tripBreaker(L+'-Q0');pushAlarm(`${L} ${ln.name}: blikseminslag – distantiebeveiliging zone 1, ${L}-Q0 UIT`,'crit');
     if(ln.ar){pushAlarm(`${L}: automatische herinschakeling gestart (dode tijd 1 s)`,'info');
       setTimeout(()=>{const d=D[L+'-Q0'];if(d.state!==0||!ln.avail)return;
@@ -196,17 +197,17 @@ function lineFault(){const c=['L1','L2'].filter(L=>SIM.lines[L].avail&&!SIM.line
     else if(perm)lineLockout(L);
     else pushAlarm(`TenneT: lijn ${L} na herinschakeling aan de overzijde weer onder spanning – ${L}-Q0 mag weer IN`,'info');
     refreshAll();},700);}
-function feederFault(){const c=FEEDERS.filter(f=>D[f.cb].state===1&&EN.has(f.node)&&!f.fault&&!f.backfed);if(!c.length)return;const f=pick(c);
-  tripBreaker(f.cb);f.fault={stage:'search',frac:rnd(0.12,0.35)};
+function feederFault(forceF,searchMin){const c=FEEDERS.filter(f=>D[f.cb].state===1&&EN.has(f.node)&&!f.fault&&!f.backfed&&(!forceF||f.id===forceF));if(!c.length)return;const f=pick(c);
+  tripBreaker(f.cb);f.fault={stage:'search',frac:f.prio?0:rnd(0.12,0.35)};
   const why=pick(['kabelbeschadiging door graafwerk','mofstoring','kortsluiting in een middenspanningsruimte','kabelfout (veroudering)']);
-  const ts=rnd(12,25);
+  const ts=searchMin||rnd(12,25);
   pushAlarm(`${f.cb} ${f.name}: overstroombeveiliging I>> – ${why}`,'crit');
   pushAlarm(`Storingsdienst: monteur onderweg naar ${f.id}, foutzoeken ±${Math.round(ts)} min. Veld nog niet inschakelen!`,'info');
   addTimer(ts,()=>{f.fault.stage='isolated';f.outFrac=f.fault.frac;
     pushAlarm(`Storingsdienst: fout in ${f.id} gelokaliseerd en weggeschakeld – ${f.cb} mag IN. ${Math.round(f.cust*f.outFrac)} klanten wachten op reparatie`,'ok');
     addTimer(rnd(40,80),()=>{f.fault=null;f.outFrac=0;pushAlarm(`Storingsdienst: kabel ${f.id} gerepareerd – alle klanten van ${f.name} terug`,'ok');});});
   refreshAll();}
-function trafoFault(){const c=['T1','T2'].filter(T=>!D[T].blocked&&D[T+'-Q0'].state===1&&EN.has(T+'h')&&!(TASK&&TASK.tr===T));if(!c.length)return feederFault();const T=pick(c);
+function trafoFault(forceT){const c=['T1','T2'].filter(T=>!D[T].blocked&&D[T+'-Q0'].state===1&&EN.has(T+'h')&&!(TASK&&TASK.tr===T)&&(!forceT||T===forceT));if(!c.length)return forceT?null:feederFault();const T=pick(c);
   const v=VIEWS[T];if(v)spawnArc(v.arcPos,0.6);
   tripTrafo(T,pick(['Buchholz-beveiliging (gasontwikkeling)','differentiaalbeveiliging','drukontlastklep aangesproken']),rnd(40,80),'prot');refreshAll();}
 
@@ -249,7 +250,7 @@ function taskTick(){if(!TASK)return;let guard=0;
   while(TASK&&guard++<20){const st=TASK.steps[TASK.i];
     if(st.wait!=null){if(st.until==null)st.until=SIM.t+st.wait;if(SIM.t<st.until)break;}else if(!st.ok())break;
     st.done&&st.done();TASK.i++;
-    if(TASK.i>=TASK.steps.length){SIM.tasksDone++;pushAlarm(`Werkopdracht ${TASK.code} voltooid ✓`,'ok');AudioSys.chime();TASK=null;SIM.nextTaskAt=SIM.t+rnd(50,90);}
+    if(TASK.i>=TASK.steps.length){SIM.tasksDone++;award(150,'Werkopdracht voltooid');pushAlarm(`Werkopdracht ${TASK.code} voltooid ✓`,'ok');AudioSys.chime();TASK=null;SIM.nextTaskAt=SIM.t+rnd(50,90);}
     renderTasks();}}
 
 function initTaps(){for(let i=0;i<3;i++){computeFlows();['T1','T2'].forEach(T=>{const t=D[T];if(t.Ulv>0)t.tap=clamp(t.tap+Math.round((U_SET-t.Ulv)/(10.5*TAP_STEP)),1,17);});}computeFlows();}
@@ -261,11 +262,11 @@ function simStep(dtReal){
   FEEDERS.forEach(f=>{f.noise+=(-f.noise*0.08+(Math.random()-0.5)*0.03)*Math.min(1,dm);});
   computeFlows();thermal(dm);regulate(dm);feederTick(dm);
   let off=0;FEEDERS.forEach(f=>{const on=EN.has(f.node);off+=custOff(f);
-    if(on!==f.wasOn){f.wasOn=on;if(on)pushAlarm(`${f.id} ${f.name}: spanning hersteld`,'ok');
+    if(on!==f.wasOn){f.wasOn=on;restoreTrack(f,on);if(on)pushAlarm(`${f.id} ${f.name}: spanning hersteld`,'ok');
       else if(f.backfed)pushAlarm(`${f.id} ${f.name}: veld spanningsloos – klanten via terugvoeding gevoed`,'info');
       else pushAlarm(`${f.id} ${f.name}: spanningsloos – ${f.cust.toLocaleString('nl-NL')} ${f.cust===1?'aansluiting (prioriteit!)':'klanten'} zonder stroom`,f.prio?'crit':'warn');}});
-  SIM.off=off;SIM.cml+=off*dm;
-  if(SIM.t>=SIM.nextEvent){randomEvent();SIM.nextEvent=SIM.t+rnd(35,75);}
-  if(!TASK&&SIM.t>=SIM.nextTaskAt)offerTask();
-  taskTick();
+  SIM.off=off;SIM.cml+=FEEDERS.reduce((s,f)=>s+custOff(f)*(f.interruptible?0.1:1),0)*dm;SIM.manualFlag=false;
+  if(GAME.events&&SIM.t>=SIM.nextEvent){randomEvent();SIM.nextEvent=SIM.t+rnd(35,75)*DIFFS[GAME.diff].ev;}
+  if(GAME.tasks&&!TASK&&SIM.t>=SIM.nextTaskAt)offerTask();
+  taskTick();gameTick(dm,dtReal);
 }

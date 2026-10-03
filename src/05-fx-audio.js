@@ -21,15 +21,16 @@ function spawnArc(pos,k=1){
     if(t>5.5){[glow,pts,...smokes].forEach(o=>{scene.remove(o);o.material.dispose();});geo.dispose();arcLight.intensity=0;return false;}return true;}});
   shake=Math.max(shake,0.5*k);AudioSys.arc(k*distGain(pos));
 }
-function lightning(L){
-  const x=BAYS[L].x,target=V3(x,27.5,-360),start=V3(x+rnd(-80,80),430,-360+rnd(-120,40)),pts=[];
+function lightning(L){lightningAt(V3(BAYS[L].x,27.5,-360));}
+function lightningAt(target,thunderDelay=1300){
+  const start=V3(target.x+rnd(-80,80),430,target.z+rnd(-120,40)),pts=[];
   for(let i=0;i<=22;i++){const q=start.clone().lerp(target,i/22);if(i>0&&i<22){q.x+=rnd(-16,16);q.z+=rnd(-16,16);}pts.push(q);}
   const m=new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts,false,'catmullrom',0.05),160,0.9,5,false),new THREE.MeshBasicMaterial({color:0xeef3ff,fog:false,transparent:true}));scene.add(m);
   const g=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true,fog:false}));g.position.copy(target);g.scale.setScalar(70);scene.add(g);
   FX.push({t:0,update(dt){this.t+=dt;const t=this.t;const on=(t<0.09)||(t>0.15&&t<0.32)||(t>0.4&&t<0.46);
     m.visible=g.visible=on;flashLight.intensity=on?7:0;
     if(t>0.6){scene.remove(m,g);m.geometry.dispose();m.material.dispose();g.material.dispose();flashLight.intensity=0;return false;}return true;}});
-  setTimeout(()=>AudioSys.thunder(),1300);
+  setTimeout(()=>AudioSys.thunder(),thunderDelay);
 }
 
 // ============================================================ geluid (Web Audio, volledig synthetisch)
@@ -39,7 +40,7 @@ const AudioSys={ctx:null,muted:false,
     const len=c.sampleRate*2,b=c.createBuffer(1,len,c.sampleRate),d=b.getChannelData(0);for(let i=0;i<len;i++)d[i]=Math.random()*2-1;this.nbuf=b;
     this.hum=c.createGain();this.hum.gain.value=0;const lp=c.createBiquadFilter();lp.type='lowpass';lp.frequency.value=700;this.hum.connect(lp);lp.connect(this.master);
     [[100,1],[200,0.5],[300,0.22],[400,0.12],[500,0.05]].forEach(([f,a])=>{const o=c.createOscillator();o.frequency.value=f+(Math.random()-0.5)*0.4;const g=c.createGain();g.gain.value=a;o.connect(g);g.connect(this.hum);o.start();});
-    this.fan=this.loopNoise('bandpass',380,0.8,0);this.wind=this.loopNoise('lowpass',320,0.5,0.03);},
+    this.fan=this.loopNoise('bandpass',380,0.8,0);this.wind=this.loopNoise('lowpass',320,0.5,0.03);this.rain=this.loopNoise('highpass',1100,0.4,0);},
   loopNoise(type,f,q,gain){const c=this.ctx,s=c.createBufferSource();s.buffer=this.nbuf;s.loop=true;const fl=c.createBiquadFilter();fl.type=type;fl.frequency.value=f;fl.Q.value=q;const g=c.createGain();g.gain.value=gain;s.connect(fl);fl.connect(g);g.connect(this.master);s.start();return g;},
   set(g,v){if(this.ctx)g.gain.setTargetAtTime(v,this.ctx.currentTime,0.3);},
   burst({type='bandpass',f=1000,q=1,gain=0.5,dur=0.3,attack=0.003,delay=0}={}){if(!this.ctx||gain<=0.001)return;const c=this.ctx,t=c.currentTime+delay;const s=c.createBufferSource();s.buffer=this.nbuf;
@@ -62,4 +63,13 @@ function distGain(p){const d=camera.position.distanceTo(p);return clamp(1.2/(1+(
 function updateAudio(){if(!AudioSys.ctx)return;let hum=0,fan=0;
   ['T1','T2'].forEach(T=>{const v=VIEWS[T];if(!v)return;const d=camera.position.distanceTo(v.center),att=1/(1+(d/16)**2);
     if(EN.has(T+'h'))hum+=(0.35+0.65*D[T].S/25)*att;if(D[T].fans&&EN.has(T+'h'))fan+=att;});
-  AudioSys.set(AudioSys.hum,clamp(hum*0.2,0,0.3));AudioSys.set(AudioSys.fan,clamp(fan*0.12,0,0.15));}
+  AudioSys.set(AudioSys.hum,clamp(hum*0.2,0,0.3));AudioSys.set(AudioSys.fan,clamp(fan*0.12,0,0.15));AudioSys.set(AudioSys.rain,GAME.storm?(camInside()?0.025:0.07):0);AudioSys.set(AudioSys.wind,GAME.storm?0.09:0.03);}
+
+// regen (alleen tijdens storm)
+const RAIN=(()=>{const N=3500,pos=new Float32Array(N*6),drops=[];for(let i=0;i<N;i++)drops.push([rnd(-70,70),rnd(0,45),rnd(-70,70),rnd(24,32)]);
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  const ls=new THREE.LineSegments(g,new THREE.LineBasicMaterial({color:0x9aa6b4,transparent:true,opacity:0.3,depthWrite:false}));ls.frustumCulled=false;ls.visible=false;scene.add(ls);return{N,pos,drops,g,ls};})();
+function updateRain(dt){const r=RAIN;r.ls.visible=!!GAME.storm&&!camInside();if(!r.ls.visible)return;r.ls.position.set(camera.position.x,0,camera.position.z);
+  for(let i=0;i<r.N;i++){const d=r.drops[i];d[1]-=d[3]*dt;d[0]+=4*dt;if(d[1]<0){d[1]+=45;d[0]=rnd(-70,70);}if(d[0]>70)d[0]-=140;
+    const k=i*6;r.pos[k]=d[0];r.pos[k+1]=d[1];r.pos[k+2]=d[2];r.pos[k+3]=d[0]-0.12;r.pos[k+4]=d[1]+0.9;r.pos[k+5]=d[2];}
+  r.g.attributes.position.needsUpdate=true;}
