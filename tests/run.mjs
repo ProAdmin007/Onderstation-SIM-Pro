@@ -103,6 +103,17 @@ const TESTS = [
         OS.enterKiosk('MS1'); OS.camera.position.set(OS.FP.pos.x, 2, OS.FP.pos.z); OS.updateAudio(); out.push(OS.camInside()); return out; });
       assert(r[2] === 1 && r[3] > 2, `plekherkenning klopt niet: ${r}`);
   } },
+  { name: 'portofoon: schakelen bij monteur vraagt eerst melden', query: '?autostart&t=13', async run(p) {
+      await p.evaluate(() => { T.quiet(); OS.SIM.paused = false; });
+      const r = await p.evaluate(async () => {
+        OS.crewDispatch({ box: OS.boxOf('T2'), say: 'Test', until: () => false, rel: ['T2-Q0'] }); T.step(0.1);
+        OS.operate('T2-Q0', 0); const modal = !document.querySelector('#radio').classList.contains('hidden'), voor = OS.D['T2-Q0'].state;
+        document.querySelector('[data-rd=\"meld\"]').click(); await T.sleep(2200);
+        return { modal, voor, na: OS.D['T2-Q0'].state, msgs: [...document.querySelectorAll('#alarmList .al.radio')].length }; });
+      assert(r.modal && r.voor === 1, `geen portofoonvenster (modal ${r.modal}, stand ${r.voor})`);
+      assert(r.na === 0, 'na melden niet geschakeld');
+      assert(r.msgs >= 2, `te weinig portofoonberichten: ${r.msgs}`);
+  } },
   { name: 'Esc opent pauzemenu en pauzeert', query: '?autostart', async run(p) {
       await p.keyboard.press('Escape'); await sleep(800);
       const r = await p.evaluate(() => ({ menu: !document.querySelector('#pauseMenu').classList.contains('hidden'), paused: OS.SIM.paused }));

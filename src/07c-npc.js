@@ -51,13 +51,14 @@ function standPoints(box,n,from){const c=box.getCenter(V3()),pts=[];
   cand.sort((p,q)=>p.distanceTo(from)-q.distanceTo(from));
   for(const p of cand){const f=nearestFree(p.x,p.z);if(!f)continue;const q=V3(GRID.x0+f[0]+0.5,0,GRID.z0+f[1]+0.5);if(pts.every(o=>o.distanceTo(q)>1.4))pts.push(q);if(pts.length>=n)break;}
   return pts;}
-function crewDispatch({box,say,until,n=2,from=CREW_FROM}){
-  if(!box)return;const look=box.getCenter(V3());
+const CREW_NAMES=['Henk','Sandra','Kees','Mo','Fatima','Joris','Ilse','Daan','Ruud','Esra','Bram','Lotte'];let crewSeq=0;
+function crewDispatch({box,say,until,n=2,from=CREW_FROM,rel=[]}){
+  if(!box)return;const look=box.getCenter(V3()),relSet=new Set(rel);
   standPoints(box,n,from).forEach((sp,i)=>{
     const start=from.clone().add(V3(i*0.9,0,i*0.6)),path=findPath(start.x,start.z,sp.x,sp.z);if(!path)return;
     const P=makePerson(NPCS.length+i);P.g.position.copy(path[0]);
     const el=document.createElement('div');el.className='npc';el.textContent=say;$('#labels').appendChild(el);
-    NPCS.push({P,path,i:1,state:'in',look,until,home:start,phase:Math.random()*6,el,say,t:0,talk:i===0});
+    NPCS.push({P,path,i:1,state:'in',look,until,home:start,phase:Math.random()*6,el,say,t:0,talk:i===0,name:CREW_NAMES[(crewSeq++)%CREW_NAMES.length],rel:relSet,bubble:0});
   });}
 function npcWalk(n,dt,spd){const tgt=n.path[n.i];if(!tgt)return true;const p=n.P.g.position,d=V3(tgt.x-p.x,0,tgt.z-p.z),L=d.length();
   if(L<0.15){n.i++;return n.i>=n.path.length;}
@@ -69,14 +70,34 @@ const _np=new THREE.Vector3();
 function updateNPCs(dt){
   const spd=SIM.paused?0:1.5*clamp(SIM.speed/30,1,3.5),w=innerWidth,h=innerHeight,ins=camInside();
   for(let k=NPCS.length-1;k>=0;k--){const n=NPCS[k];n.t+=dt;
-    if(n.state==='in'){if(spd&&npcWalk(n,dt,spd)){n.state='work';n.P.legL.rotation.x=n.P.legR.rotation.x=0;}}
+    if(n.state==='in'){if(spd&&npcWalk(n,dt,spd)){n.state='work';n.P.legL.rotation.x=n.P.legR.rotation.x=0;if(n.talk)radio(n,`Ik ben ter plaatse. ${n.say} – meld je even als je hier wilt schakelen.`);}}
     else if(n.state==='work'){
       const d=V3(n.look.x-n.P.g.position.x,0,n.look.z-n.P.g.position.z);n.P.g.rotation.y=Math.atan2(d.x,d.z);
       n.P.armR.rotation.x=-1.1-Math.sin(n.t*1.3)*0.25;n.P.armL.rotation.x=-0.3;n.P.head.rotation.x=-0.25+Math.sin(n.t*0.7)*0.15;n.P.head.rotation.y=Math.sin(n.t*0.4)*0.4;
-      if(n.until()){const back=findPath(n.P.g.position.x,n.P.g.position.z,n.home.x,n.home.z);n.path=back||[n.home];n.i=0;n.state='out';n.el.textContent='Klaar, op weg terug';n.P.head.rotation.set(0,0,0);n.P.armL.rotation.x=n.P.armR.rotation.x=0;}}
+      if(n.until()){if(n.talk)radio(n,'Werk gereed, wij zijn vrij. Je kunt weer schakelen.');const back=findPath(n.P.g.position.x,n.P.g.position.z,n.home.x,n.home.z);n.path=back||[n.home];n.i=0;n.state='out';n.el.textContent='Klaar, op weg terug';n.P.head.rotation.set(0,0,0);n.P.armL.rotation.x=n.P.armR.rotation.x=0;}}
+    if(n.bubble>0){n.bubble-=dt;if(n.bubble<=0)n.el.textContent=n.state==='out'?'Klaar, op weg terug':n.say;}
     else if(n.state==='out'){if(spd&&npcWalk(n,dt,spd)){scene.remove(n.P.g);n.el.remove();NPCS.splice(k,1);continue;}}
     // tekstwolkje boven het hoofd
     _np.copy(n.P.g.position).setY(2.25).project(camera);const dist=camera.position.distanceTo(n.P.g.position);
-    const vis=!ins&&dist<60&&(n.talk||n.state!=='work');
+    const vis=!ins&&dist<60&&(n.talk||n.state!=='work'||n.bubble>0);
     if(vis&&_np.z<1&&Math.abs(_np.x)<1.1&&Math.abs(_np.y)<1.1){n.el.style.display='';n.el.style.transform=`translate(${((_np.x+1)/2*w).toFixed(1)}px,${((1-_np.y)/2*h).toFixed(1)}px) translate(-50%,-100%)`;}
     else n.el.style.display='none';}}
+
+// ---- portofoon: berichten van en naar de monteurs ter plaatse
+function radio(n,text,fromPlayer=false){pushAlarm(fromPlayer?`📻 Jij → ${n.name}: ${text}`:`📻 ${n.name}: ${text}`,'radio');
+  if(!fromPlayer){n.el.textContent=`📻 ${text.length>46?text.slice(0,45)+'…':text}`;n.bubble=5;AudioSys.tone({f:1250,gain:0.03,dur:0.06});AudioSys.burst({type:'bandpass',f:1800,q:2,gain:0.05,dur:0.18});}}
+// werkt er een monteur aan of vlakbij dit apparaat?
+function crewNear(id){const v=VIEWS[id],ins=v&&v.inside,room=ins&&ROOMS[ins-1];
+  return NPCS.find(n=>n.talk&&n.state!=='out'&&(n.rel.has(id)||(n.state==='work'&&v&&!(room&&!room.kiosk)&&v.center.distanceTo(n.P.g.position)<15)))||null;}
+let RADIO=null;
+function openRadio(n,id,to){const d=D[id],act=actionText(d,to).toLowerCase();RADIO={n,id,to};if(FP.on)unlockPointer();
+  $('#radio').innerHTML=`<div class="card pm"><div class="eyebrow">📻 Portofoon · ${n.name}</div><div class="pm-mode">${n.name} werkt ${n.state==='work'?'bij':'op weg naar'} deze installatie</div>
+    <p class="rmsg">Je wilt <b>${id}</b> ${act}. Monteurs ter plaatse moeten weten wat je doet voordat je schakelt.</p>
+    <button class="primary" data-rd="meld">Melden: “${n.name}, ik ga ${id} ${act}. Sta je vrij?”</button>
+    <button data-rd="zonder">Zonder melden schakelen</button><button data-rd="annuleer">Annuleren</button></div>`;
+  $('#radio').classList.remove('hidden');}
+function closeRadio(){$('#radio').classList.add('hidden');if(FP.on&&!menuOpen())canvasEl.requestPointerLock?.();}
+$('#radio').addEventListener('click',e=>{const b=e.target.closest('[data-rd]');if(!b||!RADIO)return;const {n,id,to}=RADIO,a=b.dataset.rd,act=actionText(D[id],to).toLowerCase();RADIO=null;closeRadio();
+  if(a==='meld'){radio(n,`${n.name}, ik ga ${id} ${act}. Sta je vrij?`,true);setTimeout(()=>{radio(n,'Ik sta vrij, ga je gang.');award(10,'Netjes gemeld');operate(id,to,{radio:true});},1400);}
+  else if(a==='zonder'){operate(id,to,{radio:true});GAME.stats.unannounced=(GAME.stats.unannounced||0)+1;award(-50,'Niet gemeld aan monteur');
+    setTimeout(()=>radio(n,'Hé! Ik stond hier nog te werken! Meld je de volgende keer even voordat je schakelt.'),900);}});

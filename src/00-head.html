@@ -228,6 +228,9 @@ body.menu #fpPause{display:none!important}
 .swr button{padding:4px 0;font-size:11px;font-weight:700}.swr .cur{opacity:.35}
 .npc{position:absolute;left:0;top:0;background:rgba(242,140,26,.92);color:#1a1206;font:600 11px Inter;padding:3px 8px;border-radius:10px;white-space:nowrap;will-change:transform}
 .wx{font-size:12px;color:var(--text);background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:8px;padding:5px 10px;white-space:nowrap}
+#radio{position:fixed;inset:0;display:grid;place-items:center;background:rgba(6,9,12,.5);z-index:11}
+#radio .rmsg{color:#c4ccd4;font-size:13px;margin:4px 0 10px;line-height:1.5}
+.al.radio .lv{background:#b48cff;border-radius:50%}.al.radio{color:#e2d4ff}
 #loading{position:fixed;inset:0;display:grid;place-items:center;color:var(--muted);font-family:var(--mono);z-index:20;background:var(--bg)}
 @media (max-width:1250px){#tasks{width:290px}#devpanel{left:314px}#scada{width:min(calc(400px * var(--sldz,1)),64vw)}.kpi{min-width:90px;padding:3px 9px}}
 @media (max-width:1050px){.kpis .kpi:nth-child(n+3){display:none}#views{left:12px;bottom:calc(var(--alarmH) + 24px)}}
@@ -288,6 +291,7 @@ body.menu #fpPause{display:none!important}
 <div id="fpPause"><b>Cursor vrij</b><span>Schakel in het paneel of het SCADA-schema · <kbd>E</kbd> of klik in beeld om verder te lopen</span></div>
 <div id="toast"></div>
 <div id="notice"></div>
+<div id="radio" class="hidden"></div>
 <div id="pauseMenu" class="hidden"><div class="card pm">
   <div class="eyebrow">Gepauzeerd</div><div class="pm-mode" id="pmMode"></div>
   <div class="pm-score"><span id="pmScore">0</span><small>punten</small><em id="pmBest"></em></div>
