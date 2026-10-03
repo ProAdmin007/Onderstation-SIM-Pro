@@ -64,6 +64,7 @@ const RING={secs:[],stations:[]};   // alle stations en kabelsecties van alle ri
 const RING_MV=new Set(),RING_LV=new Set(),LVG=[];
 RINGS.forEach(rg=>{const st=rg.stations,n=st.length,cable=[rg.from];
   for(let i=1;i<n;i++)cable.push('K'+st[i-1].id.slice(2)+st[i].id.slice(2));cable.push(rg.to);cable.forEach(c=>RING_MV.add(c));rg.cable=cable;
+  st.forEach(s=>s.groups.push(['Openbare verlichting',0,'ovl',0.015]));
   st.forEach((s,i)=>{const M='M'+s.id.slice(2);Object.assign(s,{node:M,ring:rg,flag:false,wasOn:true,unplanned:false,wait:0,P:0,cust:0});
     RING_MV.add(M);RING_MV.add(M+'t');RING_LV.add(M+'v');RING.stations.push(s);
     dev(s.id,{type:'kiosk',bay:s.id,label:'MS-station '+s.name+' · 10/0,4 kV 1600 kVA',node:M,st:s});
@@ -73,7 +74,7 @@ RINGS.forEach(rg=>{const st=rg.stations,n=st.length,cable=[rg.from];
     dev(s.id+'-TR',{type:'mstr',bay:s.id,label:'Distributietransformator 10/0,4 kV',a:M+'t',b:M+'v',state:1});
     s.groups=s.groups.map(([name,cust,kind,base],j)=>{const id=s.id+'-G'+(j+1);RING_LV.add(id);s.cust+=cust;
       const g={id,name,short:name,cust,kind,base,node:id,st:s,noise:0,clp:1,offSince:null,outFrac:0,backfed:false,Pc:0};LVG.push(g);
-      dev(id,{type:'lvs',bay:s.id,label:'Laagspanningsveld · '+name,a:M+'v',b:id,state:1,lvg:g});return g;});});
+      dev(id,{type:'lvs',bay:s.id,label:'Laagspanningsveld · '+name,a:M+'v',b:id,state:1,lvg:g});if(kind==='ovl')s.ovl=id;return g;});});
   for(let i=0;i<=n;i++)RING.secs.push({id:cable[i],node:cable[i],ring:rg,a:i?st[i-1].id:null,b:i<n?st[i].id:null,fault:false,located:false});});
 const CONS=FEEDERS.filter(f=>!f.ring).concat(LVG);   // alle afnemers (MS-velden en LS-groepen in de ring)
 dev('RAIL',{type:'bb',label:'110 kV-railsysteem',node:'BB'});
@@ -100,6 +101,7 @@ function profile(k,h){const g=(m,s)=>Math.exp(-(((h-m)/s)**2));
     case 'ind':return h>6.5&&h<17.5?0.85+0.08*Math.sin(h*1.3):0.33;
     case 'hosp':return 0.72+0.18*g(11,4);
     case 'green':return (h<6.5||h>17.5)?1.0:0.32+0.1*g(12,3);
+    case 'ovl':return (h<7.7||h>19.1)?1:0;   // schemerschakeling straatverlichting
     case 'pv':return -Math.max(0,Math.sin(Math.PI*(h-8)/11))*(0.75+0.25*Math.sin(SIM.t*0.011));}return 1;}
 let EN=new Set(),ER=new Set();
 const FLOW={P110:0,U110:110,U:{RA:0,RB:0,RC:0},lineP:{L1:0,L2:0},load:0,load20:0,groups:[]};

@@ -305,7 +305,7 @@ body.menu #fpPause{display:none!important}
       </ul>
       <div class="mh">Moeilijkheid</div>
       <div class="seg" id="diff"><button data-d="rustig">Rustig</button><button data-d="normaal" class="on">Normaal</button><button data-d="zwaar">Zwaar</button></div>
-      <div class="keys">slepen: draaien · rechts: schuiven · scroll: zoom<br>1–9 camera · V rondlopen · spatie pauze · Esc menu · L labels · M geluid</div>
+      <div class="keys">slepen: draaien · rechts: schuiven · scroll: zoom<br>1–9 camera · V rondlopen · spatie/P pauze · Esc menu · L labels · M geluid</div>
     </div>
     <div id="menu"></div>
   </div>
@@ -983,7 +983,7 @@ function kiosk(s){
   for(let k=0;k<4;k++)box(1.55,0.035,0.012,MAT.copper,root,0.2,Y+1.62+k*0.07,lf-0.05);
   box(0.36,0.3,0.16,MAT.black,root,-0.36,Y+1.25,lf-0.04);plate('HOOFD',root,-0.36,Y+1.48,lf+0.05,0,0.22);
   wrect(-0.65,-KD/2,1.05,lf+0.05);
-  s.groups.forEach((gr,j)=>{const px=-0.02+j*0.24,g=new THREE.Group();g.position.set(px,0,0);root.add(g);
+  s.groups.forEach((gr,j)=>{const px=-0.02+j*Math.min(0.24,1.0/s.groups.length),g=new THREE.Group();g.position.set(px,0,0);root.add(g);
     box(0.13,0.48,0.12,MAT.black,g,0,Y+1.1,lf-0.02);
     const lid=new THREE.Group();lid.position.set(0,Y+1.34,lf+0.04);lid.userData.dyn=true;g.add(lid);box(0.12,0.46,0.03,mat({color:0x9aa1a6,roughness:0.5}),lid,0,-0.23,0);
     plate('G'+(j+1),g,0,Y+1.43,lf+0.05,0,0.12);rod(V3(px,Y+0.86,lf-0.02),V3(px,Y+0.02,lf-0.02),0.03,MAT.cable,root,6);
@@ -1039,7 +1039,14 @@ function aptBlock(x0,z0,x1,z1,floors){const W=x1-x0,Dz=z1-z0,H=floors*3+3.6,cx=(
   for(const s of[-1,1]){const f=mesh(new THREE.PlaneGeometry(Dz,floors*3),facade(Dz),staticRoot,cx+s*(W/2+0.02),3.6+floors*1.5,cz);f.rotation.y=s*Math.PI/2;f.castShadow=false;}
   box(W+0.4,0.6,Dz+0.4,MAT.concreteDark,staticRoot,cx,H+0.3,cz);box(3,1.4,2,MAT.cabinet,staticRoot,cx-W/4,H+1.3,cz);box(2,1,2,MAT.cabinet,staticRoot,cx+W/4,H+1.1,cz);
   DISTRICT_RECTS.push([x0,z0-1.7,x1,z1+1.7]);}
-function streetLight(x,z){cyl(0.06,0.09,7,MAT.galv,staticRoot,x,3.5,z,8);box(0.7,0.12,0.25,MAT.lamp,staticRoot,x+0.3,7,z);}
+// straatlantaarn, gevoed uit het LS-veld openbare verlichting van het dichtstbijzijnde MS-station
+const poolTex=(()=>{const c=cnv(128),g=c.getContext('2d'),gr=g.createRadialGradient(64,64,0,64,64,64);gr.addColorStop(0,'rgba(255,214,150,0.9)');gr.addColorStop(0.45,'rgba(255,190,110,0.35)');gr.addColorStop(1,'rgba(255,170,90,0)');g.fillStyle=gr;g.fillRect(0,0,128,128);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t;})();
+function streetLight(x,z){
+  const s=RING.stations.reduce((a,b)=>Math.hypot(b.pos[0]-x,b.pos[1]-z)<Math.hypot(a.pos[0]-x,a.pos[1]-z)?b:a);
+  if(!s.lampMat){s.lampMat=mat({color:0x2a2c2e,emissive:0xffd9a0,emissiveIntensity:0});s.poolMat=new THREE.MeshBasicMaterial({map:poolTex,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false,fog:false});s.lamps=0;}
+  s.lamps++;cyl(0.06,0.09,7,MAT.galv,staticRoot,x,3.5,z,8);box(0.7,0.12,0.25,s.lampMat,staticRoot,x+0.3,7,z);
+  const pool=new THREE.Mesh(new THREE.PlaneGeometry(11,11),s.poolMat);pool.rotation.x=-Math.PI/2;pool.position.set(x+0.3,0.07,z);pool.renderOrder=2;staticRoot.add(pool);}
+function updateStreetLights(){RING.stations.forEach(s=>{if(!s.lampMat)return;const on=NIGHT>0.3&&EN.has(s.ovl);s.lampMat.emissiveIntensity=on?5:0;s.poolMat.opacity=on?0.55*NIGHT:0;});}
 function buildDistrict(){
   // straten
   groundQuad(-150,98,165,104,0.04,MAT.asphalt,6);groundQuad(-150,236,165,242,0.04,MAT.asphalt,6);
@@ -1131,6 +1138,7 @@ const RING={secs:[],stations:[]};   // alle stations en kabelsecties van alle ri
 const RING_MV=new Set(),RING_LV=new Set(),LVG=[];
 RINGS.forEach(rg=>{const st=rg.stations,n=st.length,cable=[rg.from];
   for(let i=1;i<n;i++)cable.push('K'+st[i-1].id.slice(2)+st[i].id.slice(2));cable.push(rg.to);cable.forEach(c=>RING_MV.add(c));rg.cable=cable;
+  st.forEach(s=>s.groups.push(['Openbare verlichting',0,'ovl',0.015]));
   st.forEach((s,i)=>{const M='M'+s.id.slice(2);Object.assign(s,{node:M,ring:rg,flag:false,wasOn:true,unplanned:false,wait:0,P:0,cust:0});
     RING_MV.add(M);RING_MV.add(M+'t');RING_LV.add(M+'v');RING.stations.push(s);
     dev(s.id,{type:'kiosk',bay:s.id,label:'MS-station '+s.name+' · 10/0,4 kV 1600 kVA',node:M,st:s});
@@ -1140,7 +1148,7 @@ RINGS.forEach(rg=>{const st=rg.stations,n=st.length,cable=[rg.from];
     dev(s.id+'-TR',{type:'mstr',bay:s.id,label:'Distributietransformator 10/0,4 kV',a:M+'t',b:M+'v',state:1});
     s.groups=s.groups.map(([name,cust,kind,base],j)=>{const id=s.id+'-G'+(j+1);RING_LV.add(id);s.cust+=cust;
       const g={id,name,short:name,cust,kind,base,node:id,st:s,noise:0,clp:1,offSince:null,outFrac:0,backfed:false,Pc:0};LVG.push(g);
-      dev(id,{type:'lvs',bay:s.id,label:'Laagspanningsveld · '+name,a:M+'v',b:id,state:1,lvg:g});return g;});});
+      dev(id,{type:'lvs',bay:s.id,label:'Laagspanningsveld · '+name,a:M+'v',b:id,state:1,lvg:g});if(kind==='ovl')s.ovl=id;return g;});});
   for(let i=0;i<=n;i++)RING.secs.push({id:cable[i],node:cable[i],ring:rg,a:i?st[i-1].id:null,b:i<n?st[i].id:null,fault:false,located:false});});
 const CONS=FEEDERS.filter(f=>!f.ring).concat(LVG);   // alle afnemers (MS-velden en LS-groepen in de ring)
 dev('RAIL',{type:'bb',label:'110 kV-railsysteem',node:'BB'});
@@ -1167,6 +1175,7 @@ function profile(k,h){const g=(m,s)=>Math.exp(-(((h-m)/s)**2));
     case 'ind':return h>6.5&&h<17.5?0.85+0.08*Math.sin(h*1.3):0.33;
     case 'hosp':return 0.72+0.18*g(11,4);
     case 'green':return (h<6.5||h>17.5)?1.0:0.32+0.1*g(12,3);
+    case 'ovl':return (h<7.7||h>19.1)?1:0;   // schemerschakeling straatverlichting
     case 'pv':return -Math.max(0,Math.sin(Math.PI*(h-8)/11))*(0.75+0.25*Math.sin(SIM.t*0.011));}return 1;}
 let EN=new Set(),ER=new Set();
 const FLOW={P110:0,U110:110,U:{RA:0,RB:0,RC:0},lineP:{L1:0,L2:0},load:0,load20:0,groups:[]};
@@ -2004,9 +2013,9 @@ function rowsFor(d){const r=[],A=(k,f)=>r.push([k,f]);
   A('Status',()=>{const s=statusOf(d);return `<span class="chip ${s[1]}">${s[0]}</span>`;});
   if(['cb','ds','lbs','lvs'].includes(d.type))A('Spanning',()=>fmtKV(Math.max(nodeU(d.a),nodeU(d.b))));
   if(d.type==='mstr'){A('Belasting',()=>`${(d.id&&RING.stations.find(s=>s.id+'-TR'===d.id).P*1000).toFixed(0)} kW · ${Math.round(RING.stations.find(s=>s.id+'-TR'===d.id).P/1.52*100)}% van 1600 kVA`);A('LS-spanning',()=>`${Math.round(nodeU(d.b)*1000)} V`);}
-  if(d.type==='lvs')A('Klanten',()=>d.lvg.cust.toLocaleString('nl-NL'));
+  if(d.type==='lvs')A(d.lvg.kind==='ovl'?'Lantaarns':'Klanten',()=>d.lvg.kind==='ovl'?`${d.lvg.st.lamps||0} (schemerschakeling)`:d.lvg.cust.toLocaleString('nl-NL'));
   if(d.type==='lvs')A('Belasting',()=>`${(d.lvg.Pc*1000).toFixed(0)} kW`);
-  if(d.type==='kiosk'){const s=d.st;A('Klanten',()=>s.cust.toLocaleString('nl-NL'));A('Belasting',()=>`${s.P.toFixed(2)} MW`);
+  if(d.type==='kiosk'){const s=d.st;A('Klanten',()=>s.cust.toLocaleString('nl-NL'));A('Straatverlichting',()=>`${s.lamps||0} lantaarns · ${EN.has(s.ovl)?(profile('ovl',hourOf())?'<span class="warnc">brandt</span>':'uit (dag)'):'<span class="bad">geen spanning</span>'}`);A('Belasting',()=>`${s.P.toFixed(2)} MW`);
     A('Gevoed via',()=>{const t=FLOW.TAG[s.node];return t&&t.cb?`${t.cb} (rail ${t.bus.slice(1)})`:'<span class="bad">geen voeding</span>';});
     A('Kortsluitverklikker',()=>s.flag?'<span class="warnc">⚑ AANGESPROKEN</span>':'normaal');}
   if(d.type==='es')A(d.cb?'Spanning kabelzijde':'Spanning lijnzijde',()=>fmtKV(nodeU(d.a)));
@@ -2162,7 +2171,7 @@ function pickCenter(){camera.updateMatrixWorld();ray.setFromCamera(new THREE.Vec
 function actionLabel(d){if(d.type==='cb'||d.type==='lvs')return d.state?'UIT schakelen':'IN schakelen';if(['ds','es','lbs'].includes(d.type))return d.state?'openen':'sluiten';return null;}
 function updateFP(dt){
   if(!FP.on)return;
-  const k=FP.keys,run=k.ShiftLeft||k.ShiftRight,sp=run?8:2.2;
+  const k=FP.keys,run=k.ShiftLeft||k.ShiftRight,sprint=k.KeyQ,sp=sprint?16:run?8:2.2;
   const fx=-Math.sin(FP.yaw),fz=-Math.cos(FP.yaw),rx=Math.cos(FP.yaw),rz=-Math.sin(FP.yaw);
   let mx=0,mz=0;
   if(k.KeyW||k.ArrowUp){mx+=fx;mz+=fz;}if(k.KeyS||k.ArrowDown){mx-=fx;mz-=fz;}
@@ -2174,7 +2183,9 @@ function updateFP(dt){
     if(ph!==FP.stepPhase){FP.stepPhase=ph;const inside=camInside();
       if(inside)AudioSys.burst({type:'lowpass',f:500,q:0.7,gain:0.12,dur:0.07});else AudioSys.burst({f:1700+Math.random()*900,q:0.9,gain:0.1+(run?0.05:0),dur:0.13});}}
   const fl=floorAt(FP.pos.x,FP.pos.z);FP.y=FP.y==null?fl:lerp(FP.y,fl,Math.min(1,dt*10));
-  camera.position.set(FP.pos.x,FP.y+1.68+(moving?Math.sin(FP.bob)*0.035:0),FP.pos.z);
+  // springen: eenvoudige zwaartekracht, landen met een plof
+  if(FP.jh>0||FP.vy>0){FP.jh=(FP.jh||0)+FP.vy*dt;FP.vy-=13*dt;if(FP.jh<=0){FP.jh=0;FP.vy=0;AudioSys.burst({type:'lowpass',f:camInside()?400:900,q:0.7,gain:0.18,dur:0.12});}}
+  camera.position.set(FP.pos.x,FP.y+1.68+(FP.jh||0)+(moving&&!FP.jh?Math.sin(FP.bob)*0.035:0),FP.pos.z);
   camera.rotation.set(FP.pitch,FP.yaw,0);
   // waar kijk je naar?
   const id=pickCenter();
@@ -2198,6 +2209,7 @@ addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;
     else if(SEL)selectDevice(null);
     return;}
   if(!FP.on)return;FP.keys[e.code]=true;
+  if(e.code==='Space'){e.preventDefault();if(!FP.jh&&document.pointerLockElement===canvasEl){FP.vy=4.6;FP.jh=0.001;}return;}
   if(e.code==='KeyF'&&FP.look){const d=D[FP.look];if(actionLabel(d))operate(FP.look,d.state?0:1);}
 });
 addEventListener('keyup',e=>{FP.keys[e.code]=false;});
@@ -2307,7 +2319,8 @@ $('#scadaToggle').addEventListener('click',()=>{const s=$('#scada');s.classList.
 $('#views').addEventListener('click',e=>{const b=e.target.closest('button');if(b&&b.dataset.v){const v=VIEWPOS[+b.dataset.v];flyTo(v[0].clone(),v[1].clone());}});
 addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;
   if(e.key>='1'&&e.key<='9'){const v=VIEWPOS[+e.key-1];flyTo(v[0].clone(),v[1].clone());}
-  else if(e.code==='Space'){e.preventDefault();if($('#intro').classList.contains('hidden'))setSpeed(0);}
+  else if(e.code==='Space'&&!FP.on){e.preventDefault();if($('#intro').classList.contains('hidden'))setSpeed(0);}
+  else if(e.code==='KeyP'){if($('#intro').classList.contains('hidden'))setSpeed(0);}
   else if(e.key==='l'||e.key==='L')document.body.classList.toggle('nolabels');
   else if(e.key==='m'||e.key==='M')$('#mute').click();
   else if(e.key==='Escape'){if(menuOpen()){if(performance.now()-menuAt>350)closeMenu();}else if(SEL&&!document.pointerLockElement)selectDevice(null);else openMenu();}});
@@ -2362,7 +2375,7 @@ renderer.setAnimationLoop(()=>{
   else{if(fly){fly.t+=dt;const k=easeIO(clamp(fly.t/fly.dur,0,1));camera.position.lerpVectors(fly.p0,fly.p1,k);controls.target.lerpVectors(fly.t0,fly.t1,k);if(fly.t>=fly.dur)fly=null;}
   controls.minDistance=camInside()?1.2:4;controls.update();}
   if((skyT+=dt)>0.25){skyT=0;if(!params.has('night'))updateSky(hourOf());}
-  if((hudT+=dt)>0.25){hudT=0;updateHUD();updateSLD();refreshDevPanel();updateAudio();drawPanelScreens();renderTasks();}
+  if((hudT+=dt)>0.25){hudT=0;updateHUD();updateSLD();refreshDevPanel();updateAudio();drawPanelScreens();renderTasks();updateStreetLights();}
   updateHover();updateLabels();updateRain(dt);updateNPCs(dt);updateKioskLight();
   let off=null;if(shake>0.01){off=V3((Math.random()-0.5)*shake,(Math.random()-0.5)*shake,(Math.random()-0.5)*shake);camera.position.add(off);shake*=Math.pow(0.02,dt);}
   renderer.render(scene,camera);

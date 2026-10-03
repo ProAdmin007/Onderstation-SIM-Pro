@@ -86,7 +86,7 @@ function kiosk(s){
   for(let k=0;k<4;k++)box(1.55,0.035,0.012,MAT.copper,root,0.2,Y+1.62+k*0.07,lf-0.05);
   box(0.36,0.3,0.16,MAT.black,root,-0.36,Y+1.25,lf-0.04);plate('HOOFD',root,-0.36,Y+1.48,lf+0.05,0,0.22);
   wrect(-0.65,-KD/2,1.05,lf+0.05);
-  s.groups.forEach((gr,j)=>{const px=-0.02+j*0.24,g=new THREE.Group();g.position.set(px,0,0);root.add(g);
+  s.groups.forEach((gr,j)=>{const px=-0.02+j*Math.min(0.24,1.0/s.groups.length),g=new THREE.Group();g.position.set(px,0,0);root.add(g);
     box(0.13,0.48,0.12,MAT.black,g,0,Y+1.1,lf-0.02);
     const lid=new THREE.Group();lid.position.set(0,Y+1.34,lf+0.04);lid.userData.dyn=true;g.add(lid);box(0.12,0.46,0.03,mat({color:0x9aa1a6,roughness:0.5}),lid,0,-0.23,0);
     plate('G'+(j+1),g,0,Y+1.43,lf+0.05,0,0.12);rod(V3(px,Y+0.86,lf-0.02),V3(px,Y+0.02,lf-0.02),0.03,MAT.cable,root,6);
@@ -142,7 +142,14 @@ function aptBlock(x0,z0,x1,z1,floors){const W=x1-x0,Dz=z1-z0,H=floors*3+3.6,cx=(
   for(const s of[-1,1]){const f=mesh(new THREE.PlaneGeometry(Dz,floors*3),facade(Dz),staticRoot,cx+s*(W/2+0.02),3.6+floors*1.5,cz);f.rotation.y=s*Math.PI/2;f.castShadow=false;}
   box(W+0.4,0.6,Dz+0.4,MAT.concreteDark,staticRoot,cx,H+0.3,cz);box(3,1.4,2,MAT.cabinet,staticRoot,cx-W/4,H+1.3,cz);box(2,1,2,MAT.cabinet,staticRoot,cx+W/4,H+1.1,cz);
   DISTRICT_RECTS.push([x0,z0-1.7,x1,z1+1.7]);}
-function streetLight(x,z){cyl(0.06,0.09,7,MAT.galv,staticRoot,x,3.5,z,8);box(0.7,0.12,0.25,MAT.lamp,staticRoot,x+0.3,7,z);}
+// straatlantaarn, gevoed uit het LS-veld openbare verlichting van het dichtstbijzijnde MS-station
+const poolTex=(()=>{const c=cnv(128),g=c.getContext('2d'),gr=g.createRadialGradient(64,64,0,64,64,64);gr.addColorStop(0,'rgba(255,214,150,0.9)');gr.addColorStop(0.45,'rgba(255,190,110,0.35)');gr.addColorStop(1,'rgba(255,170,90,0)');g.fillStyle=gr;g.fillRect(0,0,128,128);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t;})();
+function streetLight(x,z){
+  const s=RING.stations.reduce((a,b)=>Math.hypot(b.pos[0]-x,b.pos[1]-z)<Math.hypot(a.pos[0]-x,a.pos[1]-z)?b:a);
+  if(!s.lampMat){s.lampMat=mat({color:0x2a2c2e,emissive:0xffd9a0,emissiveIntensity:0});s.poolMat=new THREE.MeshBasicMaterial({map:poolTex,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false,fog:false});s.lamps=0;}
+  s.lamps++;cyl(0.06,0.09,7,MAT.galv,staticRoot,x,3.5,z,8);box(0.7,0.12,0.25,s.lampMat,staticRoot,x+0.3,7,z);
+  const pool=new THREE.Mesh(new THREE.PlaneGeometry(11,11),s.poolMat);pool.rotation.x=-Math.PI/2;pool.position.set(x+0.3,0.07,z);pool.renderOrder=2;staticRoot.add(pool);}
+function updateStreetLights(){RING.stations.forEach(s=>{if(!s.lampMat)return;const on=NIGHT>0.3&&EN.has(s.ovl);s.lampMat.emissiveIntensity=on?5:0;s.poolMat.opacity=on?0.55*NIGHT:0;});}
 function buildDistrict(){
   // straten
   groundQuad(-150,98,165,104,0.04,MAT.asphalt,6);groundQuad(-150,236,165,242,0.04,MAT.asphalt,6);

@@ -51,7 +51,7 @@ function pickCenter(){camera.updateMatrixWorld();ray.setFromCamera(new THREE.Vec
 function actionLabel(d){if(d.type==='cb'||d.type==='lvs')return d.state?'UIT schakelen':'IN schakelen';if(['ds','es','lbs'].includes(d.type))return d.state?'openen':'sluiten';return null;}
 function updateFP(dt){
   if(!FP.on)return;
-  const k=FP.keys,run=k.ShiftLeft||k.ShiftRight,sp=run?8:2.2;
+  const k=FP.keys,run=k.ShiftLeft||k.ShiftRight,sprint=k.KeyQ,sp=sprint?16:run?8:2.2;
   const fx=-Math.sin(FP.yaw),fz=-Math.cos(FP.yaw),rx=Math.cos(FP.yaw),rz=-Math.sin(FP.yaw);
   let mx=0,mz=0;
   if(k.KeyW||k.ArrowUp){mx+=fx;mz+=fz;}if(k.KeyS||k.ArrowDown){mx-=fx;mz-=fz;}
@@ -63,7 +63,9 @@ function updateFP(dt){
     if(ph!==FP.stepPhase){FP.stepPhase=ph;const inside=camInside();
       if(inside)AudioSys.burst({type:'lowpass',f:500,q:0.7,gain:0.12,dur:0.07});else AudioSys.burst({f:1700+Math.random()*900,q:0.9,gain:0.1+(run?0.05:0),dur:0.13});}}
   const fl=floorAt(FP.pos.x,FP.pos.z);FP.y=FP.y==null?fl:lerp(FP.y,fl,Math.min(1,dt*10));
-  camera.position.set(FP.pos.x,FP.y+1.68+(moving?Math.sin(FP.bob)*0.035:0),FP.pos.z);
+  // springen: eenvoudige zwaartekracht, landen met een plof
+  if(FP.jh>0||FP.vy>0){FP.jh=(FP.jh||0)+FP.vy*dt;FP.vy-=13*dt;if(FP.jh<=0){FP.jh=0;FP.vy=0;AudioSys.burst({type:'lowpass',f:camInside()?400:900,q:0.7,gain:0.18,dur:0.12});}}
+  camera.position.set(FP.pos.x,FP.y+1.68+(FP.jh||0)+(moving&&!FP.jh?Math.sin(FP.bob)*0.035:0),FP.pos.z);
   camera.rotation.set(FP.pitch,FP.yaw,0);
   // waar kijk je naar?
   const id=pickCenter();
@@ -87,6 +89,7 @@ addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;
     else if(SEL)selectDevice(null);
     return;}
   if(!FP.on)return;FP.keys[e.code]=true;
+  if(e.code==='Space'){e.preventDefault();if(!FP.jh&&document.pointerLockElement===canvasEl){FP.vy=4.6;FP.jh=0.001;}return;}
   if(e.code==='KeyF'&&FP.look){const d=D[FP.look];if(actionLabel(d))operate(FP.look,d.state?0:1);}
 });
 addEventListener('keyup',e=>{FP.keys[e.code]=false;});
