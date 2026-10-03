@@ -20,7 +20,7 @@ Een 3D-onderstationsimulator die in de browser draait (Three.js, geen installati
 - `1`–`8` camerastandpunten (6 = binnen 10 kV, 7 = binnen 20 kV, 8 = wijk en ring)
 - **Rondlopen (first person):** druk op `V` of op de knop *Rondlopen*.
   - Je loopt met `WASD`, rent met `Shift` en kijkt rond met de muis.
-  - Richt het kruis op een schakelaar: `F` schakelt direct, `E` opent het apparaatpaneel en met nog een keer `E` sluit je het weer en loop je verder.
+  - Richt het kruis op een schakelaar: `F` schakelt direct. `E` maakt de cursor vrij (en opent het paneel als je naar een schakelaar kijkt), zodat je ook in het SCADA-schema kunt schakelen. Met nog een keer `E` loop je verder.
   - Je loopt niet door apparatuur, muren, huizen of het hek. De gebouwen kun je via de deuren in, en via de open poort loop je de wijk in naar de MS-stations.
   - Met `V` stop je met rondlopen; met nog een keer `V` ga je verder waar je was.
   - Lopen gaat met 2,2 m/s, rennen met `Shift` met 8 m/s.
@@ -47,7 +47,7 @@ Een 3D-onderstationsimulator die in de browser draait (Three.js, geen installati
   - de distributietransformator achter een gaashek.
   Schakelen gaat met het richtkruis: `F` voor direct schakelen, `E` voor het paneel.
 - **Monteurs:** collega's in een veiligheidsvest lopen het station of de wijk in bij inspecties, werkopdrachten en kabelfouten, en vertrekken weer als het werk klaar is.
-- **SCADA** heeft tabbladen voor 10 kV, 20 kV en de ring.
+- **SCADA** heeft tabbladen voor 10 kV, 20 kV en de ring. Zoomen kan met de knoppen **−/+**, met `Ctrl` + scrollwiel of met de toetsen `+` en `−` (75–250 %). Het paneel wordt dan mee breder.
 
 ## Spelmodi en score
 - **Vrije dienst:** eindeloos spelen.

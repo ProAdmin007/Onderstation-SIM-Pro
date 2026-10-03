@@ -81,11 +81,14 @@ document.addEventListener('pointerlockchange',()=>{const locked=document.pointer
 canvasEl.addEventListener('click',()=>{if(!FP.on||menuOpen())return;if(document.pointerLockElement!==canvasEl){canvasEl.requestPointerLock?.();return;}if(FP.look)selectDevice(FP.look);});
 addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;
   if(e.code==='KeyV'){toggleFP();return;}
-  // E sluit een geopend paneel weer (en hervat het rondlopen)
-  if(e.code==='KeyE'&&SEL&&(!FP.on||document.pointerLockElement!==canvasEl)){e.preventDefault();selectDevice(null);if(FP.on)canvasEl.requestPointerLock?.();return;}
+  // E: tijdens rondlopen cursor vrijgeven (paneel open als je naar iets kijkt), nog een keer E = verder lopen
+  if(e.code==='KeyE'){e.preventDefault();
+    if(FP.on){if(document.pointerLockElement===canvasEl){if(FP.look)selectDevice(FP.look);FP.keys={};unlockPointer();}else{if(SEL)selectDevice(null);if(!menuOpen())canvasEl.requestPointerLock?.();}}
+    else if(SEL)selectDevice(null);
+    return;}
   if(!FP.on)return;FP.keys[e.code]=true;
   if(e.code==='KeyF'&&FP.look){const d=D[FP.look];if(actionLabel(d))operate(FP.look,d.state?0:1);}
-  if(e.code==='KeyE'&&FP.look){selectDevice(FP.look);unlockPointer();}});
+});
 addEventListener('keyup',e=>{FP.keys[e.code]=false;});
 addEventListener('blur',()=>{FP.keys={};});
 $('#fpBtn').addEventListener('click',toggleFP);
