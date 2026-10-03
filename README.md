@@ -13,7 +13,12 @@ Een 3D-onderstationsimulator die in de browser draait (Three.js, geen installati
 ## Bediening
 - Klik op een schakelaar in 3D of in het SCADA-schema en kies vervolgens IN/UIT of SLUITEN/OPENEN.
 - Linker muisknop draaien, rechter muisknop schuiven, scrollen om te zoomen.
-- `1`–`7` camerastandpunten (6 = binnen 10 kV, 7 = binnen 20 kV) · `spatie` pauze · `L` labels · `M` geluid · `Esc` deselecteren
+- `1`–`7` camerastandpunten (6 = binnen 10 kV, 7 = binnen 20 kV)
+- **Rondlopen (first person):** druk op `V` of op de knop *Rondlopen*.
+  - Je loopt met `WASD`, rent met `Shift` en kijkt rond met de muis.
+  - Richt het kruis op een schakelaar: `F` schakelt direct, `E` opent het apparaatpaneel.
+  - Je loopt niet door apparatuur, muren of het hek; de gebouwen kun je via de deuren in.
+  - Met `Esc` geef je de muis vrij, met `V` stop je met rondlopen. · `spatie` pauze · `L` labels · `M` geluid · `Esc` deselecteren
 
 ## Installatie
 - **110 kV:** twee lijnvelden (L1 Hoogeveen, L2 Meppel), een railsysteem en drie transformatorvelden.

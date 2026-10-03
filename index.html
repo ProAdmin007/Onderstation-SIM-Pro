@@ -188,6 +188,18 @@ body.nolabels #labels{display:none}
 .rep-btns button{padding:10px 16px;font-weight:600}
 .rep-btns .primary{background:var(--accent);color:#1a1206;border:none}
 @media (max-width:820px){#intro .card.wide{grid-template-columns:1fr}.rep-grid{grid-template-columns:1fr}}
+#fpCross,#fpHint,#fpPause{display:none}
+body.fp #fpCross{display:block;position:fixed;left:50%;top:50%;width:6px;height:6px;margin:-3px 0 0 -3px;border-radius:50%;background:#fff;box-shadow:0 0 0 2px rgba(0,0,0,.45);pointer-events:none;z-index:6}
+body.fp:not(.fplocked) #fpCross{display:none}
+#fpHint{position:fixed;left:50%;top:calc(50% + 26px);transform:translateX(-50%);background:rgba(10,14,18,.86);border:1px solid var(--line2);border-radius:8px;padding:7px 12px;font-size:12.5px;text-align:center;pointer-events:none;z-index:6;line-height:1.6}
+body:not(.fp) #fpHint{display:none!important}
+#fpHint b{font-family:var(--mono)}
+kbd{font-family:var(--mono);font-size:11px;background:rgba(255,255,255,.12);border:1px solid var(--line2);border-radius:4px;padding:0 5px}
+body.fp:not(.fplocked) #fpPause{display:flex;position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);flex-direction:column;align-items:center;gap:6px;background:rgba(13,17,22,.88);border:1px solid var(--line);border-radius:14px;padding:22px 30px;z-index:7;pointer-events:none;text-align:center}
+#fpPause b{font-size:18px}#fpPause .k{color:var(--muted);font-size:12px;font-family:var(--mono)}
+#views .walk{background:rgba(240,164,58,.14);border-color:rgba(240,164,58,.4)}
+body.fp #views .walk{background:var(--accent);color:#1a1206;font-weight:700}
+body.fp #labels{opacity:.75}
 #loading{position:fixed;inset:0;display:grid;place-items:center;color:var(--muted);font-family:var(--mono);z-index:20;background:var(--bg)}
 @media (max-width:1250px){#tasks{width:290px}#devpanel{left:314px}#scada{width:400px}.kpi{min-width:90px;padding:3px 9px}}
 @media (max-width:1050px){.kpis .kpi:nth-child(n+3){display:none}#views{left:12px;bottom:256px}}
@@ -237,8 +249,12 @@ body.nolabels #labels{display:none}
   <button data-v="4"><kbd>5</kbd>Vogelvlucht</button>
   <button data-v="5"><kbd>6</kbd>Binnen 10 kV</button>
   <button data-v="6"><kbd>7</kbd>Binnen 20 kV</button>
+  <button id="fpBtn" class="walk"><kbd>V</kbd>Rondlopen</button>
 </nav>
 <div id="tooltip"></div>
+<div id="fpCross"></div>
+<div id="fpHint"></div>
+<div id="fpPause"><b>Rondlopen</b><span>Klik om verder te lopen</span><span class="k">WASD lopen · Shift rennen · muis kijken · F schakelen · E paneel · V stoppen</span></div>
 <div id="toast"></div>
 <div id="intro" class="hidden">
   <div class="card wide">
@@ -253,7 +269,7 @@ body.nolabels #labels{display:none}
       </ul>
       <div class="mh">Moeilijkheid</div>
       <div class="seg" id="diff"><button data-d="rustig">Rustig</button><button data-d="normaal" class="on">Normaal</button><button data-d="zwaar">Zwaar</button></div>
-      <div class="keys">slepen: draaien · rechts: schuiven · scroll: zoom<br>1–7 camera · spatie pauze · L labels · M geluid</div>
+      <div class="keys">slepen: draaien · rechts: schuiven · scroll: zoom<br>1–7 camera · V rondlopen · spatie pauze · L labels · M geluid</div>
     </div>
     <div id="menu"></div>
   </div>
@@ -1743,10 +1759,10 @@ function pickAt(cx,cy){ndc.set(cx/innerWidth*2-1,-(cy/innerHeight)*2+1);ray.setF
   return hits.filter(h=>h.distance<d0+8).sort((a,b)=>a.object.userData.vol-b.object.userData.vol)[0].object.userData.devId;}
 let downXY=null,hoverId=null,moveEv=null;
 renderer.domElement.addEventListener('pointerdown',e=>{downXY=[e.clientX,e.clientY];fly=null;});
-renderer.domElement.addEventListener('pointerup',e=>{if(!downXY||e.button!==0)return;if(Math.hypot(e.clientX-downXY[0],e.clientY-downXY[1])<5)selectDevice(pickAt(e.clientX,e.clientY));downXY=null;});
+renderer.domElement.addEventListener('pointerup',e=>{if(FP.on||!downXY||e.button!==0)return;if(Math.hypot(e.clientX-downXY[0],e.clientY-downXY[1])<5)selectDevice(pickAt(e.clientX,e.clientY));downXY=null;});
 renderer.domElement.addEventListener('pointermove',e=>{moveEv=e;});
 renderer.domElement.addEventListener('pointerleave',()=>{moveEv=null;hoverId=null;hovBox.visible=false;$('#tooltip').style.display='none';});
-function updateHover(){if(!moveEv)return;const e=moveEv;moveEv=null;const id=e.buttons?null:pickAt(e.clientX,e.clientY);const tt=$('#tooltip');
+function updateHover(){if(FP.on||!moveEv)return;const e=moveEv;moveEv=null;const id=e.buttons?null:pickAt(e.clientX,e.clientY);const tt=$('#tooltip');
   if(id!==hoverId){hoverId=id;hovBox.visible=!!id&&id!==SEL;if(id)hovBox.box.copy(VIEWS[id].box).expandByScalar(0.15);renderer.domElement.style.cursor=id?'pointer':'';}
   if(id){const d=D[id];const s=statusOf(d);tt.innerHTML=`<b>${id}</b> · ${d.label}<br><span style="color:var(--muted)">${s[0].toLowerCase()} · klik om te bedienen</span>`;tt.style.display='block';tt.style.left=(e.clientX+14)+'px';tt.style.top=(e.clientY+14)+'px';}
   else tt.style.display='none';}
@@ -1755,8 +1771,88 @@ function updateHover(){if(!moveEv)return;const e=moveEv;moveEv=null;const id=e.b
 const VIEWPOS=[[V3(100,52,118),V3(22,3,8)],[V3(-4,13,-2),V3(-30,5,-22)],[V3(88,17,14),V3(32,3,32)],[V3(64,11,32),V3(30,3,50)],[V3(22.1,215,34),V3(22,0,10)],
   [V3(-2.2,2.5,47.6),V3(0.4,1.6,54.2)],[V3(58.8,2.5,47.6),V3(61.4,1.6,54.2)]];
 let fly=null;
-function flyTo(pos,target,dur=1.5){fly={t:0,dur,p0:camera.position.clone(),t0:controls.target.clone(),p1:pos,t1:target};controls.autoRotate=false;}
+function flyTo(pos,target,dur=1.5){if(FP.on)exitFP();fly={t:0,dur,p0:camera.position.clone(),t0:controls.target.clone(),p1:pos,t1:target};controls.autoRotate=false;}
 function fmtClock(t){const m=((t%1440)+1440)%1440;return `${String(Math.floor(m/60)).padStart(2,'0')}:${String(Math.floor(m%60)).padStart(2,'0')}`;}
+
+
+// ============================================================ rondlopen (first person)
+const FP={on:false,yaw:0,pitch:0,keys:{},pos:new THREE.Vector3(),y:null,bob:0,stepPhase:0,look:null,rects:[]};
+const REACH=6;
+function addRect(x0,z0,x1,z1){FP.rects.push([Math.min(x0,x1),Math.min(z0,z1),Math.max(x0,x1),Math.max(z0,z1)]);}
+function buildColliders(){
+  FP.rects=[];
+  // apparatuur: de selectieboxen van alle velden en panelen
+  Object.values(VIEWS).forEach(v=>{const d=D[v.id];if(!d||['bld','line','bb','es'].includes(d.type))return;addRect(v.box.min.x,v.box.min.z,v.box.max.x,v.box.max.z);});
+  // portaalkolommen en railsteunen
+  for(const L of['L1','L2'])for(const sx of[-6,6]){const x=BAYS[L].x+sx;addRect(x-0.6,-36.6,x+0.6,-35.4);}
+  for(const x of[-38,-20,0,18,44,70])for(const z of[-3.7,3.7])addRect(x-0.45,z-0.45,x+0.45,z+0.45);
+  // gebouwmuren met deuropeningen aan de noordzijde
+  BUILDINGS.forEach(b=>{const t=0.3;addRect(b.x0,b.z1-t,b.x1,b.z1);addRect(b.x0,b.z0,b.x0+t,b.z1);addRect(b.x1-t,b.z0,b.x1,b.z1);
+    let x=b.x0;[...b.doors].sort((a,c)=>a-c).forEach(dx=>{addRect(x,b.z0,dx-1.05,b.z0+t);x=dx+1.05;});addRect(x,b.z0,b.x1,b.z0+t);});
+  // inrichting binnen
+  addRect(-19.4,54.8,-14.0,55.7);addRect(-17.1,46.7,-13.9,47.7);addRect(13.3,54.9,17.9,55.5);addRect(16.9,47.0,18.3,48.2);addRect(47.9,54.8,51.2,55.7);
+  addRect(37.2,39.9,43.0,42.1);   // busje
+}
+function blockedAt(x,z){const r=0.3,F=FENCE;if(x<F.x0+0.5||x>F.x1-0.5||z<F.z0+0.5||z>F.z1-0.5)return true;
+  for(const q of FP.rects)if(x>q[0]-r&&x<q[2]+r&&z>q[1]-r&&z<q[3]+r)return true;return false;}
+function floorAt(x,z){return ROOMS.some(r=>x>r.x0-0.05&&x<r.x1+0.05&&z>r.z0-0.05&&z<r.z1+0.05)?0.45:0.02;}
+const canvasEl=renderer.domElement;
+function enterFP(){
+  if(FP.on)return;FP.on=true;fly=null;controls.enabled=false;controls.autoRotate=false;
+  const ins=camInside();
+  if(ins&&!blockedAt(camera.position.x,camera.position.z))FP.pos.set(camera.position.x,0,camera.position.z);else FP.pos.set(25,0,62);
+  const dir=new THREE.Vector3();camera.getWorldDirection(dir);FP.yaw=ins?Math.atan2(-dir.x,-dir.z):0;FP.pitch=0;FP.y=null;
+  camera.rotation.order='YXZ';camera.fov=70;camera.updateProjectionMatrix();
+  document.body.classList.add('fp');hovBox.visible=false;$('#tooltip').style.display='none';
+  canvasEl.requestPointerLock?.();pushAlarm('Rondlopen: WASD lopen, muis kijken, F schakelen, E paneel, V stoppen','info');
+}
+function exitFP(){
+  if(!FP.on)return;FP.on=false;FP.keys={};if(document.pointerLockElement)document.exitPointerLock();
+  const dir=new THREE.Vector3();camera.getWorldDirection(dir);
+  camera.rotation.order='XYZ';camera.fov=42;camera.updateProjectionMatrix();
+  controls.target.copy(camera.position).addScaledVector(dir,8);controls.enabled=true;controls.update();
+  document.body.classList.remove('fp');FP.look=null;hovBox.visible=false;
+}
+function toggleFP(){FP.on?exitFP():enterFP();}
+function pickCenter(){camera.updateMatrixWorld();ray.setFromCamera(new THREE.Vector2(0,0),camera);ray.far=REACH;const ins=camInside();
+  const hits=ray.intersectObjects(pickables,false).filter(h=>h.object.userData.inside===ins);ray.far=Infinity;if(!hits.length)return null;
+  const d0=hits[0].distance;return hits.filter(h=>h.distance<d0+2.5).sort((a,b)=>a.object.userData.vol-b.object.userData.vol)[0].object.userData.devId;}
+function actionLabel(d){if(d.type==='cb')return d.state?'UIT schakelen':'IN schakelen';if(d.type==='ds'||d.type==='es')return d.state?'openen':'sluiten';return null;}
+function updateFP(dt){
+  if(!FP.on)return;
+  const k=FP.keys,run=k.ShiftLeft||k.ShiftRight,sp=run?4.5:1.9;
+  const fx=-Math.sin(FP.yaw),fz=-Math.cos(FP.yaw),rx=Math.cos(FP.yaw),rz=-Math.sin(FP.yaw);
+  let mx=0,mz=0;
+  if(k.KeyW||k.ArrowUp){mx+=fx;mz+=fz;}if(k.KeyS||k.ArrowDown){mx-=fx;mz-=fz;}
+  if(k.KeyD||k.ArrowRight){mx+=rx;mz+=rz;}if(k.KeyA||k.ArrowLeft){mx-=rx;mz-=rz;}
+  const len=Math.hypot(mx,mz),moving=len>0&&!!document.pointerLockElement;
+  if(moving){mx=mx/len*sp*dt;mz=mz/len*sp*dt;
+    if(!blockedAt(FP.pos.x+mx,FP.pos.z))FP.pos.x+=mx;if(!blockedAt(FP.pos.x,FP.pos.z+mz))FP.pos.z+=mz;
+    FP.bob+=dt*sp*3.2;const ph=Math.floor(FP.bob/Math.PI);
+    if(ph!==FP.stepPhase){FP.stepPhase=ph;const inside=camInside();
+      if(inside)AudioSys.burst({type:'lowpass',f:500,q:0.7,gain:0.12,dur:0.07});else AudioSys.burst({f:1700+Math.random()*900,q:0.9,gain:0.1+(run?0.05:0),dur:0.13});}}
+  const fl=floorAt(FP.pos.x,FP.pos.z);FP.y=FP.y==null?fl:lerp(FP.y,fl,Math.min(1,dt*10));
+  camera.position.set(FP.pos.x,FP.y+1.68+(moving?Math.sin(FP.bob)*0.035:0),FP.pos.z);
+  camera.rotation.set(FP.pitch,FP.yaw,0);
+  // waar kijk je naar?
+  const id=pickCenter();
+  if(id!==FP.look){FP.look=id;const v=id&&VIEWS[id];hovBox.visible=!!v&&id!==SEL;if(v)hovBox.box.copy(v.box).expandByScalar(0.1);}
+  const hint=$('#fpHint');
+  if(id){const d=D[id],a=actionLabel(d);hint.innerHTML=`<b>${id}</b> · ${d.label}<br>${a?`<kbd>F</kbd> ${a} &nbsp; `:''}<kbd>E</kbd> paneel`;hint.style.display='block';}
+  else hint.style.display='none';
+}
+addEventListener('mousemove',e=>{if(!FP.on||document.pointerLockElement!==canvasEl)return;
+  FP.yaw-=e.movementX*0.0022;FP.pitch=clamp(FP.pitch-e.movementY*0.0022,-1.45,1.45);});
+document.addEventListener('pointerlockchange',()=>document.body.classList.toggle('fplocked',document.pointerLockElement===canvasEl));
+canvasEl.addEventListener('click',()=>{if(!FP.on)return;if(document.pointerLockElement!==canvasEl){canvasEl.requestPointerLock?.();return;}if(FP.look)selectDevice(FP.look);});
+addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;
+  if(e.code==='KeyV'){toggleFP();return;}
+  if(!FP.on)return;FP.keys[e.code]=true;
+  if(e.code==='KeyF'&&FP.look){const d=D[FP.look];if(actionLabel(d))operate(FP.look,d.state?0:1);}
+  if(e.code==='KeyE'&&FP.look){selectDevice(FP.look);if(document.pointerLockElement)document.exitPointerLock();}});
+addEventListener('keyup',e=>{FP.keys[e.code]=false;});
+addEventListener('blur',()=>{FP.keys={};});
+$('#fpBtn').addEventListener('click',toggleFP);
 
 
 // ============================================================ HUD + bediening
@@ -1775,7 +1871,7 @@ $('#speed').addEventListener('click',e=>{const b=e.target.closest('button');if(b
 $('#interlock').addEventListener('change',e=>{SIM.interlock=e.target.checked;pushAlarm(SIM.interlock?'Vergrendelingen ingeschakeld':'Let op: vergrendelingen UITGESCHAKELD – verkeerde handelingen worden niet tegengehouden',SIM.interlock?'info':'warn');refreshDevPanel();});
 $('#mute').addEventListener('click',()=>{const m=AudioSys.toggleMute();$('#mute').style.opacity=m?0.45:1;});
 $('#scadaToggle').addEventListener('click',()=>{const s=$('#scada');s.classList.toggle('min');$('#scadaToggle').textContent=s.classList.contains('min')?'+':'–';});
-$('#views').addEventListener('click',e=>{const b=e.target.closest('button');if(b){const v=VIEWPOS[+b.dataset.v];flyTo(v[0].clone(),v[1].clone());}});
+$('#views').addEventListener('click',e=>{const b=e.target.closest('button');if(b&&b.dataset.v){const v=VIEWPOS[+b.dataset.v];flyTo(v[0].clone(),v[1].clone());}});
 addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;
   if(e.key>='1'&&e.key<='7'){const v=VIEWPOS[+e.key-1];flyTo(v[0].clone(),v[1].clone());}
   else if(e.code==='Space'){e.preventDefault();if($('#intro').classList.contains('hidden'))setSpeed(0);}
@@ -1791,7 +1887,7 @@ $('#diff').addEventListener('click',e=>{const b=e.target.closest('[data-d]');if(
 addEventListener('pointerdown',()=>AudioSys.init(),{once:true});
 
 // ============================================================ start
-buildSLD();buildLabels();initTaps();updateSky(hourOf());updateSLD();updateHUD();renderTasks();
+buildSLD();buildLabels();buildColliders();initTaps();updateSky(hourOf());updateSLD();updateHUD();renderTasks();
 document.querySelectorAll('#speed button').forEach(b=>b.classList.remove('on'));
 $('#loading').remove();
 if(DIFFS[params.get('diff')])GAME.diff=params.get('diff');
@@ -1801,7 +1897,7 @@ else{renderMenu();$('#intro').classList.remove('hidden');controls.autoRotate=tru
 if(params.has('night'))updateSky(22);
 if(params.has('view')){const v=VIEWPOS[+params.get('view')];camera.position.copy(v[0]);controls.target.copy(v[1]);controls.autoRotate=false;controls.update();}
 
-window.OS={SIM,D,setRatio,setTab,GAME,MODES,applyMode,endGame,EN:()=>EN,FLOW,operate,tapStep,setAVR,resetLockout,toggleAR,regulate,computeFlows,randomEvent,lineFault,feederFault,trafoFault,offerTask,simStep,FEEDERS};
+window.OS={SIM,D,FP,enterFP,exitFP,pickCenter,camera,camInside,setRatio,setTab,GAME,MODES,applyMode,endGame,EN:()=>EN,FLOW,operate,tapStep,setAVR,resetLockout,toggleAR,regulate,computeFlows,randomEvent,lineFault,feederFault,trafoFault,offerTask,simStep,FEEDERS};
 const clock=new THREE.Clock();let hudT=0,skyT=0;
 renderer.setAnimationLoop(()=>{
   const dt=Math.min(0.1,clock.getDelta());
@@ -1810,8 +1906,9 @@ renderer.setAnimationLoop(()=>{
   for(let i=FX.length-1;i>=0;i--)if(!FX[i].update(dt))FX.splice(i,1);
   ROTORS.forEach(r=>r.r.rotation.z+=r.s*dt);
   const blink=(performance.now()%1500)<300?NIGHT:0;BEACONS.forEach(b=>b.material.opacity=blink);
-  if(fly){fly.t+=dt;const k=easeIO(clamp(fly.t/fly.dur,0,1));camera.position.lerpVectors(fly.p0,fly.p1,k);controls.target.lerpVectors(fly.t0,fly.t1,k);if(fly.t>=fly.dur)fly=null;}
-  controls.minDistance=camInside()?1.2:4;controls.update();
+  if(FP.on)updateFP(dt);
+  else{if(fly){fly.t+=dt;const k=easeIO(clamp(fly.t/fly.dur,0,1));camera.position.lerpVectors(fly.p0,fly.p1,k);controls.target.lerpVectors(fly.t0,fly.t1,k);if(fly.t>=fly.dur)fly=null;}
+  controls.minDistance=camInside()?1.2:4;controls.update();}
   if((skyT+=dt)>0.25){skyT=0;if(!params.has('night'))updateSky(hourOf());}
   if((hudT+=dt)>0.25){hudT=0;updateHUD();updateSLD();refreshDevPanel();updateAudio();drawPanelScreens();renderTasks();}
   updateHover();updateLabels();updateRain(dt);

@@ -15,7 +15,7 @@ $('#speed').addEventListener('click',e=>{const b=e.target.closest('button');if(b
 $('#interlock').addEventListener('change',e=>{SIM.interlock=e.target.checked;pushAlarm(SIM.interlock?'Vergrendelingen ingeschakeld':'Let op: vergrendelingen UITGESCHAKELD – verkeerde handelingen worden niet tegengehouden',SIM.interlock?'info':'warn');refreshDevPanel();});
 $('#mute').addEventListener('click',()=>{const m=AudioSys.toggleMute();$('#mute').style.opacity=m?0.45:1;});
 $('#scadaToggle').addEventListener('click',()=>{const s=$('#scada');s.classList.toggle('min');$('#scadaToggle').textContent=s.classList.contains('min')?'+':'–';});
-$('#views').addEventListener('click',e=>{const b=e.target.closest('button');if(b){const v=VIEWPOS[+b.dataset.v];flyTo(v[0].clone(),v[1].clone());}});
+$('#views').addEventListener('click',e=>{const b=e.target.closest('button');if(b&&b.dataset.v){const v=VIEWPOS[+b.dataset.v];flyTo(v[0].clone(),v[1].clone());}});
 addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;
   if(e.key>='1'&&e.key<='7'){const v=VIEWPOS[+e.key-1];flyTo(v[0].clone(),v[1].clone());}
   else if(e.code==='Space'){e.preventDefault();if($('#intro').classList.contains('hidden'))setSpeed(0);}
@@ -31,7 +31,7 @@ $('#diff').addEventListener('click',e=>{const b=e.target.closest('[data-d]');if(
 addEventListener('pointerdown',()=>AudioSys.init(),{once:true});
 
 // ============================================================ start
-buildSLD();buildLabels();initTaps();updateSky(hourOf());updateSLD();updateHUD();renderTasks();
+buildSLD();buildLabels();buildColliders();initTaps();updateSky(hourOf());updateSLD();updateHUD();renderTasks();
 document.querySelectorAll('#speed button').forEach(b=>b.classList.remove('on'));
 $('#loading').remove();
 if(DIFFS[params.get('diff')])GAME.diff=params.get('diff');
@@ -41,7 +41,7 @@ else{renderMenu();$('#intro').classList.remove('hidden');controls.autoRotate=tru
 if(params.has('night'))updateSky(22);
 if(params.has('view')){const v=VIEWPOS[+params.get('view')];camera.position.copy(v[0]);controls.target.copy(v[1]);controls.autoRotate=false;controls.update();}
 
-window.OS={SIM,D,setRatio,setTab,GAME,MODES,applyMode,endGame,EN:()=>EN,FLOW,operate,tapStep,setAVR,resetLockout,toggleAR,regulate,computeFlows,randomEvent,lineFault,feederFault,trafoFault,offerTask,simStep,FEEDERS};
+window.OS={SIM,D,FP,enterFP,exitFP,pickCenter,camera,camInside,setRatio,setTab,GAME,MODES,applyMode,endGame,EN:()=>EN,FLOW,operate,tapStep,setAVR,resetLockout,toggleAR,regulate,computeFlows,randomEvent,lineFault,feederFault,trafoFault,offerTask,simStep,FEEDERS};
 const clock=new THREE.Clock();let hudT=0,skyT=0;
 renderer.setAnimationLoop(()=>{
   const dt=Math.min(0.1,clock.getDelta());
@@ -50,8 +50,9 @@ renderer.setAnimationLoop(()=>{
   for(let i=FX.length-1;i>=0;i--)if(!FX[i].update(dt))FX.splice(i,1);
   ROTORS.forEach(r=>r.r.rotation.z+=r.s*dt);
   const blink=(performance.now()%1500)<300?NIGHT:0;BEACONS.forEach(b=>b.material.opacity=blink);
-  if(fly){fly.t+=dt;const k=easeIO(clamp(fly.t/fly.dur,0,1));camera.position.lerpVectors(fly.p0,fly.p1,k);controls.target.lerpVectors(fly.t0,fly.t1,k);if(fly.t>=fly.dur)fly=null;}
-  controls.minDistance=camInside()?1.2:4;controls.update();
+  if(FP.on)updateFP(dt);
+  else{if(fly){fly.t+=dt;const k=easeIO(clamp(fly.t/fly.dur,0,1));camera.position.lerpVectors(fly.p0,fly.p1,k);controls.target.lerpVectors(fly.t0,fly.t1,k);if(fly.t>=fly.dur)fly=null;}
+  controls.minDistance=camInside()?1.2:4;controls.update();}
   if((skyT+=dt)>0.25){skyT=0;if(!params.has('night'))updateSky(hourOf());}
   if((hudT+=dt)>0.25){hudT=0;updateHUD();updateSLD();refreshDevPanel();updateAudio();drawPanelScreens();renderTasks();}
   updateHover();updateLabels();updateRain(dt);
