@@ -23,7 +23,7 @@ function buildColliders(){
 }
 function blockedAt(x,z){const r=0.3;if(x<-200||x>250||z<-110||z>330)return true;
   for(const q of FP.rects)if(x>q[0]-r&&x<q[2]+r&&z>q[1]-r&&z<q[3]+r)return true;return false;}
-function floorAt(x,z){return ROOMS.some(r=>x>r.x0-0.05&&x<r.x1+0.05&&z>r.z0-0.05&&z<r.z1+0.05)?0.45:0.02;}
+function floorAt(x,z){const r=ROOMS.find(r=>x>r.x0-0.05&&x<r.x1+0.05&&z>r.z0-0.05&&z<r.z1+0.05);return r?r.y0:0.02;}
 const canvasEl=renderer.domElement;
 function enterFP(){
   if(FP.on)return;FP.on=true;fly=null;controls.enabled=false;controls.autoRotate=false;
@@ -48,7 +48,7 @@ function toggleFP(){FP.on?exitFP():enterFP();}
 function pickCenter(){camera.updateMatrixWorld();ray.setFromCamera(new THREE.Vector2(0,0),camera);ray.far=REACH;const ins=camInside();
   const hits=ray.intersectObjects(pickables,false).filter(h=>h.object.userData.inside===ins);ray.far=Infinity;if(!hits.length)return null;
   const d0=hits[0].distance;return hits.filter(h=>h.distance<d0+2.5).sort((a,b)=>a.object.userData.vol-b.object.userData.vol)[0].object.userData.devId;}
-function actionLabel(d){if(d.type==='cb')return d.state?'UIT schakelen':'IN schakelen';if(d.type==='ds'||d.type==='es')return d.state?'openen':'sluiten';return null;}
+function actionLabel(d){if(d.type==='cb'||d.type==='lvs')return d.state?'UIT schakelen':'IN schakelen';if(['ds','es','lbs'].includes(d.type))return d.state?'openen':'sluiten';return null;}
 function updateFP(dt){
   if(!FP.on)return;
   const k=FP.keys,run=k.ShiftLeft||k.ShiftRight,sp=run?8:2.2;

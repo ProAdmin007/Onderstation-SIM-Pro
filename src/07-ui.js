@@ -124,6 +124,7 @@ function feederState(f){if(f.ring)return ringState();if(f.fault&&f.fault.stage==
 function rowsFor(d){const r=[],A=(k,f)=>r.push([k,f]);
   A('Status',()=>{const s=statusOf(d);return `<span class="chip ${s[1]}">${s[0]}</span>`;});
   if(['cb','ds','lbs','lvs'].includes(d.type))A('Spanning',()=>fmtKV(Math.max(nodeU(d.a),nodeU(d.b))));
+  if(d.type==='mstr'){A('Belasting',()=>`${(d.id&&RING.stations.find(s=>s.id+'-TR'===d.id).P*1000).toFixed(0)} kW · ${Math.round(RING.stations.find(s=>s.id+'-TR'===d.id).P/1.52*100)}% van 1600 kVA`);A('LS-spanning',()=>`${Math.round(nodeU(d.b)*1000)} V`);}
   if(d.type==='lvs')A('Klanten',()=>d.lvg.cust.toLocaleString('nl-NL'));
   if(d.type==='lvs')A('Belasting',()=>`${(d.lvg.Pc*1000).toFixed(0)} kW`);
   if(d.type==='kiosk'){const s=d.st;A('Klanten',()=>s.cust.toLocaleString('nl-NL'));A('Belasting',()=>`${s.P.toFixed(2)} MW`);
@@ -164,6 +165,7 @@ function renderDevPanel(){
   else if(d.type==='tr')ctl=`<div class="dp-ctl"><button data-act="avr"></button><button data-act="tap-1" title="Trap lager">▼ trap</button><button data-act="tap1" title="Trap hoger">▲ trap</button></div>`;
   const sub=[];if(VIEWS[SEL])sub.push(`<button data-act="fly">Bekijk in 3D</button>`);if(d.type==='bld')sub.push(`<button data-act="inside">Ga naar binnen</button>`);if(d.type==='bld'||VIEWS[SEL]?.inside)sub.push(`<button data-act="scada">Toon in SCADA</button>`);
   if(d.type==='tr')sub.push(`<button data-act="reset">Reset blokkeerrelais 86</button>`);
+  if(d.type==='kiosk')sub.push(`<button data-act="kin">Naar binnen (rondlopen)</button>`);
   if(d.id===RES)sub.push(`<button data-act="ratio10">Omschakelen → 10 kV</button>`,`<button data-act="ratio20">Omschakelen → 20 kV</button>`);
   const ln=d.line||(d.type==='line'&&d.line);if(d.line)sub.push(`<button data-act="ar"></button>`);
   if(d.feeder)sub.push(`<button data-act="sel:${d.feeder.id}-Q8">Aardschakelaar ${d.feeder.id}-Q8</button>`);
@@ -182,7 +184,7 @@ function refreshDevPanel(){if(!SEL)return;const p=$('#devpanel'),d=D[SEL];
 $('#devpanel').addEventListener('click',e=>{const op=e.target.closest('[data-op]');if(op){const [id,v]=op.dataset.op.split(':');operate(id,+v);return;}
   const b=e.target.closest('[data-act]');if(!b||b.disabled)return;const a=b.dataset.act;
   if(a==='1'||a==='0')operate(SEL,+a);else if(a==='x')selectDevice(null);else if(a==='fly')flyToDevice(SEL);else if(a==='inside'){const v=VIEWPOS[SEL==='MS20'?6:5];flyTo(v[0].clone(),v[1].clone(),2);}
-  else if(a.startsWith('ratio'))setRatio(a.slice(5));
+  else if(a.startsWith('ratio'))setRatio(a.slice(5));else if(a==='kin')enterKiosk(SEL);
   else if(a==='avr')setAVR(SEL,D[SEL].avr==='auto'?'hand':'auto');else if(a.startsWith('tap'))tapStep(SEL,+a.slice(3));
   else if(a==='reset')resetLockout(SEL);else if(a==='ar')toggleAR(D[SEL].line);else if(a.startsWith('sel:'))selectDevice(a.slice(4));
   else if(a==='scada'){$('#scada').classList.remove('min');$('#scada').animate([{boxShadow:'0 0 0 3px #f0a43a'},{boxShadow:'0 0 0 0 transparent'}],{duration:900});}});
@@ -205,7 +207,7 @@ function updateLabels(force){const w=innerWidth,h=innerHeight,ins=camInside();
     if(!vis){if(L.el.style.display!=='none')L.el.style.display='none';continue;}
     if(L.el.style.display==='none')L.el.style.display='';
     L.el.style.transform=`translate(${((_p.x+1)/2*w).toFixed(1)}px,${((1-_p.y)/2*h).toFixed(1)}px) translate(-50%,-100%)`;
-    const d=L.d;const c=(d.type==='es'?(d.state?'earth':'open'):['cb','ds'].includes(d.type)?(d.state?'':'open'):d.type==='tr'?(EN.has(d.a)?'':'open'):d.type==='line'?(SIM.lines[d.line].avail?'':'open'):'info')+(d.id===SEL?' sel':'')+(READY.has(d.id)?' ready':'');
+    const d=L.d;const c=(d.type==='es'?(d.state?'earth':'open'):['cb','ds','lbs','lvs'].includes(d.type)?(d.state?'':'open'):d.type==='tr'?(EN.has(d.a)?'':'open'):d.type==='line'?(SIM.lines[d.line].avail?'':'open'):'info')+(d.id===SEL?' sel':'')+(READY.has(d.id)?' ready':'');
     if(c!==L.cls||force){L.cls=c;L.el.className='lbl '+c;}}}
 const ray=new THREE.Raycaster(),ndc=new THREE.Vector2();
 function pickAt(cx,cy){ndc.set(cx/innerWidth*2-1,-(cy/innerHeight)*2+1);ray.setFromCamera(ndc,camera);

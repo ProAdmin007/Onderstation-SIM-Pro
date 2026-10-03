@@ -94,7 +94,7 @@ function buildPanelRow(panels,cx,room){
 }
 let deskScreens=null;
 function buildInterior(){
-  ROOMS.forEach(buildRoomShell);
+  ROOMS.filter(r=>!r.kiosk).forEach(buildRoomShell);
   buildPanelRow(PANELS,0,ROOMS[0]);
   buildPanelRow(PANELS20,61,ROOMS[1]);
   const Y=IN.y0;

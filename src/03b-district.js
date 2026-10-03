@@ -35,16 +35,84 @@ function hall(cx,cz,w,d,h,label,blue){box(w,h,d,blue?DM.hallBlue:DM.hall,staticR
   for(let i=0;i<3;i++){const p=mesh(new THREE.PlaneGeometry(4,4.5),MAT.louvre,staticRoot,cx-w/2+5+i*6,2.25,cz-d/2-0.02);p.rotation.y=Math.PI;p.castShadow=false;}
   const t=toTex(textCanvas(label,{w:1024,h:160,bg:'#ffffff',fg:'#1d2b45',font:'bold 92px Arial',border:false}));const sg=mesh(new THREE.PlaneGeometry(9,1.4),mat({map:t,roughness:0.5}),staticRoot,cx+w/2-7,h-1.4,cz-d/2-0.03);sg.rotation.y=Math.PI;sg.castShadow=false;
   DISTRICT_RECTS.push([cx-w/2,cz-d/2,cx+w/2,cz+d/2]);}
-function kiosk(s){const [x,z]=s.pos,root=grp(x,z);root.rotation.y=[Math.PI,-Math.PI/2,0][s.face];
-  box(3.4,2.5,2.4,DM.kiosk,root,0,1.25,0);box(3.7,0.18,2.7,MAT.concreteDark,root,0,2.59,0);box(3.5,0.25,2.5,MAT.concreteDark,root,0,0.12,0);
-  for(const dx of[-0.85,0.85]){box(1.0,2.0,0.05,MAT.door,root,dx,1.15,1.22);box(0.03,0.2,0.05,MAT.trim,root,dx+(dx<0?0.38:-0.38),1.15,1.26);}
-  const hz=mesh(new THREE.PlaneGeometry(0.32,0.4),MAT.hazard,root,-0.85,1.6,1.25);hz.castShadow=false;
-  plate(s.id,root,0.85,1.75,1.25,0,0.42);
-  for(const sx of[-1,1]){const lv=mesh(new THREE.PlaneGeometry(1.2,0.5),MAT.louvre,root,sx*1.71,1.9,0);lv.rotation.y=sx*Math.PI/2;lv.castShadow=false;}
-  const nm=toTex(textCanvas(s.name,{w:512,h:96,bg:'#f3f3ee',fg:'#1d2b45',font:'bold 46px Arial',border:false}));const np=mesh(new THREE.PlaneGeometry(1.5,0.28),mat({map:nm,roughness:0.5}),root,0,2.3,1.22);np.castShadow=false;
-  const fl=mat({color:0x331a00,emissive:0xff8a00,emissiveIntensity:0});const lamp=cyl(0.09,0.09,0.16,fl,root,1.3,2.76,0.9,12);lamp.userData.dyn=true;
-  regView(s.id,root,()=>{fl.emissiveIntensity=s.flag&&(performance.now()%900<450)?4:0;},{labelPos:V3(x,3.6,z)});
-  const w=s.face===1?[2.6,3.8]:[3.8,2.6];DISTRICT_RECTS.push([x-w[0]/2,z-w[1]/2,x+w[0]/2,z+w[1]/2]);}
+// inloop-MS-station: 5 × 3,2 m, deur aan de straatkant (lokaal +z), binnen RMU, LS-rek en trafo achter gaas
+const KW=5.0,KD=3.2,KH=2.8,KT=0.15,KY=0.25;
+const kioskLight=new THREE.PointLight(0xf4f2ea,0,7,2);scene.add(kioskLight);const KUPD=[];
+function kioskVpis(on){return mat({color:0x3a3320,emissive:0xffd23a,emissiveIntensity:on?3:0});}
+function kiosk(s){
+  const [x,z]=s.pos,ry=[Math.PI,-Math.PI/2,0][s.face],root=grp(x,z);root.rotation.y=ry;
+  const cs=Math.cos(ry),sn=Math.sin(ry),L2W=(lx,lz)=>[x+lx*cs+lz*sn,z-lx*sn+lz*cs];
+  const wrect=(lx0,lz0,lx1,lz1)=>{const a=L2W(lx0,lz0),b=L2W(lx1,lz1);DISTRICT_RECTS.push([Math.min(a[0],b[0]),Math.min(a[1],b[1]),Math.max(a[0],b[0]),Math.max(a[1],b[1])]);};
+  const Y=KY,fz=KD/2-KT/2,hw=KW/2;
+  // casco
+  box(KW+0.1,KY,KD+0.1,MAT.concreteDark,root,0,KY/2,0);
+  box(KW,KH,KT,DM.kiosk,root,0,Y+KH/2,-fz);box(KT,KH,KD,DM.kiosk,root,-hw+KT/2,Y+KH/2,0);box(KT,KH,KD,DM.kiosk,root,hw-KT/2,Y+KH/2,0);
+  box(0.55,KH,KT,DM.kiosk,root,-2.225,Y+KH/2,fz);box(3.35,KH,KT,DM.kiosk,root,0.825,Y+KH/2,fz);box(1.1,0.6,KT,DM.kiosk,root,-1.4,Y+KH-0.3,fz);
+  box(KW+0.3,0.18,KD+0.3,MAT.concreteDark,root,0,Y+KH+0.09,0);
+  const fl=mesh(new THREE.PlaneGeometry(KW-0.3,KD-0.3),IM.floor,root,0,Y+0.01,0);fl.rotation.x=-Math.PI/2;fl.castShadow=false;
+  // openstaande deur en dichte trafodeur
+  const dg=new THREE.Group();dg.position.set(-1.95,Y,fz+0.08);dg.rotation.y=-1.75;root.add(dg);box(1.1,2.15,0.05,MAT.door,dg,0.55,1.08,0);
+  box(1.3,2.15,0.05,MAT.door,root,1.65,Y+1.08,fz+0.1);
+  const hz=mesh(new THREE.PlaneGeometry(0.32,0.4),MAT.hazard,root,1.65,Y+1.6,fz+0.135);hz.castShadow=false;
+  plate(s.id,root,0.4,Y+1.9,fz+0.08,0,0.42);
+  const nm=toTex(textCanvas(s.name,{w:512,h:96,bg:'#f3f3ee',fg:'#1d2b45',font:'bold 46px Arial',border:false}));const np=mesh(new THREE.PlaneGeometry(1.6,0.3),mat({map:nm,roughness:0.5}),root,0.4,Y+2.45,fz+0.08);np.castShadow=false;
+  for(const sx of[-1,1]){const lv=mesh(new THREE.PlaneGeometry(1.2,0.5),MAT.louvre,root,sx*(hw+0.01),Y+2.1,0.6);lv.rotation.y=sx*Math.PI/2;lv.castShadow=false;}
+  const flm=mat({color:0x331a00,emissive:0xff8a00,emissiveIntensity:0});const lamp=cyl(0.09,0.09,0.16,flm,root,2.1,Y+KH+0.26,1.2,12);lamp.userData.dyn=true;
+  regView(s.id,root,()=>{flm.emissiveIntensity=s.flag&&(performance.now()%900<450)?4:0;},{box:(()=>{const a=L2W(-hw,-KD/2),b=L2W(hw,KD/2);return new THREE.Box3(V3(Math.min(a[0],b[0]),0,Math.min(a[1],b[1])),V3(Math.max(a[0],b[0]),Y+KH+0.3,Math.max(a[1],b[1])));})(),labelPos:V3(x,4,z)});
+  // botsingsvlakken: muren met deuropening, inrichting
+  wrect(-hw,-KD/2,hw,-KD/2+KT);wrect(-hw,-KD/2,-hw+KT,KD/2);wrect(hw-KT,-KD/2,hw,KD/2);wrect(-hw,KD/2-KT,-1.95,KD/2);wrect(-0.85,KD/2-KT,hw,KD/2);
+  const idx=ROOMS.length+1,ri=L2W(-hw+KT,-KD/2+KT),rj=L2W(hw-KT,KD/2-KT);
+  const room={idx,kiosk:true,kioskId:s.id,x0:Math.min(ri[0],rj[0]),x1:Math.max(ri[0],rj[0]),z0:Math.min(ri[1],rj[1]),z1:Math.max(ri[1],rj[1]),y0:Y,y1:Y+KH,doors:[],
+    cx:L2W(-0.8,0.6)[0],cz:L2W(-0.8,0.6)[1],yaw:ry};ROOMS.push(room);
+  const inside=(id,g,lx,ly,lz,fx,fz2)=>{const w=L2W(lx,lz),f=L2W(fx,fz2);regView(id,g,g.userData.upd||null,{inside:idx,labelPos:V3(w[0],ly,w[1]),flyPos:V3(f[0],Y+1.65,f[1]),flyTarget:V3(w[0],Y+1.1,w[1])});};
+  // ---- RMU (drie velden: L, T, R)
+  const rz=-KD/2+KT+0.375,rf=rz+0.38;
+  box(1.32,0.2,0.75,MAT.black,root,-1.6,Y+0.1,rz);wrect(-2.26,-KD/2,-0.94,rf);
+  [['L',-2.03,s.id+'-L'],['T',-1.6,s.id+'-T'],['R',-1.17,s.id+'-R']].forEach(([lbl,px,id])=>{const d=D[id],g=new THREE.Group();g.position.set(px,0,0);root.add(g);
+    box(0.42,1.4,0.75,IM.panel,g,0,Y+0.9,rz);box(0.36,0.5,0.02,IM.door,g,0,Y+0.5,rf);
+    const mp=mesh(new THREE.PlaneGeometry(0.36,0.135),mat({map:mimicTex(lbl==='T'?'feed':'inc'),roughness:0.5}),g,0,Y+1.18,rf+0.012);mp.castShadow=false;
+    const ind=mat({color:0x111111,emissive:0xff2020,emissiveIntensity:2.2});const im=box(0.05,0.05,0.02,ind,g,0,Y+1.18,rf+0.02);im.userData.dyn=true;
+    cyl(0.03,0.03,0.04,MAT.black,g,0,Y+1.0,rf+0.02,12).rotation.x=Math.PI/2;
+    const vp=kioskVpis(false);for(let k=0;k<3;k++){const l=cyl(0.011,0.011,0.02,vp,g,-0.08+k*0.08,Y+1.42,rf+0.012,8);l.rotation.x=Math.PI/2;l.userData.dyn=true;}
+    plate(lbl,g,0,Y+1.52,rf+0.012,0,0.16);
+    g.userData.upd=()=>{ind.emissive.setHex(d.state?0xff2020:0x20ff50);vp.emissiveIntensity=EN.has(lbl==='T'?d.b:(lbl==='L'?d.a:d.b))?3:0;};
+    inside(id,g,px,Y+1.9,rz,px+0.3,0.7);});
+  const ksv=mat({color:0x331a00,emissive:0xff8a00,emissiveIntensity:0});box(0.5,0.14,0.2,MAT.black,root,-1.6,Y+1.7,rz+0.2);const kl=box(0.42,0.06,0.02,ksv,root,-1.6,Y+1.7,rz+0.31);kl.userData.dyn=true;
+  plate('KSV',root,-1.6,Y+1.86,rz+0.3,0,0.18);
+  KUPD.push(()=>{ksv.emissiveIntensity=s.flag&&(performance.now()%700<350)?4:0;});
+  // ---- laagspanningsrek met NH-lastscheiders per LS-veld
+  const lz=-KD/2+KT+0.18,lf=lz+0.18;
+  box(1.62,1.95,0.06,MAT.galvDark,root,0.2,Y+0.975,lz-0.12);for(const sx of[-0.6,1.0])box(0.05,1.95,0.36,MAT.galv,root,sx,Y+0.975,lz);
+  for(let k=0;k<4;k++)box(1.55,0.035,0.012,MAT.copper,root,0.2,Y+1.62+k*0.07,lf-0.05);
+  box(0.36,0.3,0.16,MAT.black,root,-0.36,Y+1.25,lf-0.04);plate('HOOFD',root,-0.36,Y+1.48,lf+0.05,0,0.22);
+  wrect(-0.65,-KD/2,1.05,lf+0.05);
+  s.groups.forEach((gr,j)=>{const px=-0.02+j*0.24,g=new THREE.Group();g.position.set(px,0,0);root.add(g);
+    box(0.13,0.48,0.12,MAT.black,g,0,Y+1.1,lf-0.02);
+    const lid=new THREE.Group();lid.position.set(0,Y+1.34,lf+0.04);lid.userData.dyn=true;g.add(lid);box(0.12,0.46,0.03,mat({color:0x9aa1a6,roughness:0.5}),lid,0,-0.23,0);
+    plate('G'+(j+1),g,0,Y+1.43,lf+0.05,0,0.12);rod(V3(px,Y+0.86,lf-0.02),V3(px,Y+0.02,lf-0.02),0.03,MAT.cable,root,6);
+    const d=D[gr.id];let o=-1;g.userData.upd=(dt)=>{const t=d.state?0:1;if(o<0)o=t;o=approach(o,t,(dt||0.016)*4);lid.rotation.x=-o*0.95;};
+    inside(gr.id,g,px,Y+1.75,lz,px-0.4,0.8);});
+  // ---- distributietrafo achter gaashek
+  const gm=mat({map:(()=>{const t=toTex(C.chain);t.repeat.set(KD/0.11,2.2/0.11);t.needsUpdate=true;return t;})(),alphaTest:0.45,side:THREE.DoubleSide,metalness:0.6,roughness:0.45});
+  const mesh2=new THREE.Mesh(new THREE.PlaneGeometry(KD-0.3,2.2),gm);mesh2.position.set(1.15,Y+1.1,0);mesh2.rotation.y=Math.PI/2;root.add(mesh2);wrect(1.1,-KD/2,1.2,KD/2);
+  const tg=new THREE.Group();root.add(tg);
+  box(1.0,1.1,0.8,MAT.trafo,tg,1.75,Y+0.75,0.1);
+  for(let k=0;k<6;k++){box(0.03,0.85,0.25,MAT.trafo,tg,1.3+k*0.18,Y+0.72,0.62);box(0.03,0.85,0.25,MAT.trafo,tg,1.3+k*0.18,Y+0.72,-0.42);}
+  for(let k=0;k<3;k++){const bx=1.5+k*0.25;cyl(0.05,0.06,0.18,MAT.black,tg,bx,Y+1.4,0.25,10);rod(V3(bx,Y+1.48,0.25),V3(bx,Y+1.6,0.25),0.035,MAT.cable,tg,6);
+    rod(V3(bx,Y+1.6,0.25),V3(-1.6+(k-1)*0.12,Y+0.05,-0.6),0.035,MAT.cable,root,6);}
+  for(let k=0;k<4;k++){const bx=1.45+k*0.2;cyl(0.03,0.03,0.14,MAT.white,tg,bx,Y+1.37,-0.15,8);rod(V3(bx,Y+1.45,-0.15),V3(1.0,Y+1.65+k*0.07,lf-0.05),0.018,MAT.copper,root,5);}
+  const tw=L2W(1.75,0.1);D[s.id+'-TR'].node=s.node+'v';
+  regView(s.id+'-TR',tg,null,{inside:idx,labelPos:V3(tw[0],Y+1.9,tw[1]),flyPos:V3(...L2W(0.3,0.9).flatMap((v,i)=>i?[Y+1.65,v]:[v])),flyTarget:V3(tw[0],Y+0.9,tw[1])});
+  // ---- inrichting
+  box(0.9,0.05,0.2,IM.led,root,-0.8,Y+KH-0.04,0.2);
+  cyl(0.08,0.08,0.55,IM.redPaint,root,-2.2,Y+0.3,1.2,14);
+  for(let k=0;k<3;k++)rod(V3(-hw+KT+0.02,Y+1.6,-0.2+k*0.25),V3(-hw+KT+0.02,Y+0.9,-0.1+k*0.25),0.02,mat({color:0x5aa02c,roughness:0.6}),root,5);
+  const po=mesh(new THREE.PlaneGeometry(0.55,0.75),mat({map:posterTex(),roughness:0.7}),root,-hw+KT+0.01,Y+1.4,0.75);po.rotation.y=Math.PI/2;po.castShadow=false;
+}
+function updateKioskLight(){KUPD.forEach(f=>f());const i=camInside(),r=i&&ROOMS[i-1];if(r&&r.kiosk){kioskLight.position.set((r.x0+r.x1)/2,r.y1-0.3,(r.z0+r.z1)/2);kioskLight.intensity=22;}else kioskLight.intensity=0;}
+function enterKiosk(id){const r=ROOMS.find(r=>r.kioskId===id);if(!r)return;FP.last={x:r.cx,z:r.cz,yaw:r.yaw,pitch:-0.08};
+  if(FP.on){FP.pos.set(r.cx,0,r.cz);FP.yaw=r.yaw;FP.pitch=-0.08;}else enterFP();if(SEL)selectDevice(null);}
+
 function streetLight(x,z){cyl(0.06,0.09,7,MAT.galv,staticRoot,x,3.5,z,8);box(0.7,0.12,0.25,MAT.lamp,staticRoot,x+0.3,7,z);}
 function buildDistrict(){
   // straten
