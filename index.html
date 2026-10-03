@@ -240,6 +240,7 @@ body.menu #fpPause{display:none!important}
 .bf-list{margin:0;padding-left:22px}.bf-list li{display:flex;align-items:center;gap:6px;padding:5px 0;font-size:12.5px;border-bottom:1px solid var(--line)}
 .bf-list li span{flex:1}.bf-msg{margin-top:12px;padding:9px 12px;border-radius:8px;background:rgba(240,164,58,.1);border:1px solid rgba(240,164,58,.35);font-size:12.5px;color:#ffe2b5}
 .bf-status{font-size:12px;color:var(--accent);margin:4px 0 8px}.bf-status.ok{color:var(--green)}
+.bf-opt{width:100%;font-size:12px;margin:0 0 8px;border-style:dashed;color:var(--accent)}
 .bf-open{background:var(--accent);color:#1a1206;border:none;font-weight:700;width:100%;padding:9px}
 @media (max-width:760px){.bf-cols{grid-template-columns:1fr}}
 #loading{position:fixed;inset:0;display:grid;place-items:center;color:var(--muted);font-family:var(--mono);z-index:20;background:var(--bg)}
@@ -2144,8 +2145,9 @@ function renderTasks(){
   if(!TASK&&!GAME.tasks){$('#taskCode').textContent='';body.innerHTML=gh||'<div class="idle">Geen werkopdrachten in dit scenario.</div>';return;}
   if(!TASK){$('#taskCode').textContent='';body.innerHTML=gh+`<div class="idle">Geen actieve werkopdracht. Houd de installatie in de gaten en reageer op meldingen.<br><br><b style="color:var(--text)">Volgende opdracht</b> rond ${fmtClock(SIM.nextTaskAt)}.</div>`;return;}
   $('#taskCode').textContent=TASK.code;
-  if(TASK.pool&&!TASK.approved){body.innerHTML=gh+`<h3>${TASK.title}</h3><p>${TASK.desc}</p><div class="bf-status">📝 Schakelbrief nog niet goedgekeurd${TASK.tries?` · ${TASK.tries}× afgekeurd`:''}</div><button class="primary bf-open" data-brief>Schakelbrief opstellen</button>`;return;}
-  body.innerHTML=gh+`<h3>${TASK.title}</h3><p>${TASK.desc}</p>${TASK.pool?'<div class="bf-status ok">✓ Schakelbrief goedgekeurd</div>':''}`+TASK.steps.map((s,i)=>`<div class="step ${i<TASK.i?'done':i===TASK.i?'cur':''}"><span class="b">${i<TASK.i?'✓':''}</span><span>${s.t}${i===TASK.i&&s.wait!=null&&s.until!=null?` <span class="tag">tot ${fmtClock(s.until)}</span>`:''}</span></div>`).join('');
+  if(TASK.pool&&TASK.briefMode&&!TASK.approved){body.innerHTML=gh+`<h3>${TASK.title}</h3><p>${TASK.desc}</p><div class="bf-status">📝 Schakelbrief in de maak${TASK.tries?` · ${TASK.tries}× afgekeurd`:''} – stappen verborgen tot goedkeuring</div><button class="primary bf-open" data-brief>Schakelbrief verder opstellen</button>`;return;}
+  const bf=!TASK.pool?'':TASK.approved?'<div class="bf-status ok">✓ Eigen schakelbrief goedgekeurd</div>':(TASK.i===0?'<button class="bf-opt" data-brief>📝 Zelf een schakelbrief opstellen (optioneel, +40)</button>':'');
+  body.innerHTML=gh+`<h3>${TASK.title}</h3><p>${TASK.desc}</p>${bf}`+TASK.steps.map((s,i)=>`<div class="step ${i<TASK.i?'done':i===TASK.i?'cur':''}"><span class="b">${i<TASK.i?'✓':''}</span><span>${s.t}${i===TASK.i&&s.wait!=null&&s.until!=null?` <span class="tag">tot ${fmtClock(s.until)}</span>`:''}</span></div>`).join('');
 }
 
 // ============================================================ apparaatpaneel
@@ -2476,7 +2478,7 @@ $('#radio').addEventListener('click',e=>{const b=e.target.closest('[data-rd]');i
     setTimeout(()=>radio(n,'Hé! Ik stond hier nog te werken! Meld je de volgende keer even voordat je schakelt.'),900);}});
 
 
-// ============================================================ schakelbrieven: eerst opstellen en laten controleren, dan uitvoeren
+// ============================================================ schakelbrieven (optioneel): zelf opstellen en laten controleren voor bonuspunten
 const CHIEF='Marieke (wachtchef)';
 const actKey=a=>a[0]+':'+a[1];
 function actLabel(key){const [id,v]=key.split(':'),to=+v,d=D[id];if(!d)return key;
@@ -2497,7 +2499,7 @@ function briefCheck(t){const exp=taskActs(t),got=t.brief;let gi=0;
     if(have.length<want.length||!want.every(w=>have.includes(w)))return {ok:false,pos:gi+1,why:exp[i].why,next:want[0]};gi+=want.length;i=j;}
   if(got.length>gi)return {ok:false,pos:gi+1,why:'Deze handeling hoort niet in deze schakelbrief.'};return {ok:true};}
 let briefPrev=false;
-function briefOpen(){if(!TASK||!TASK.pool)return;briefPrev=SIM.paused;SIM.paused=true;syncSpeed();if(FP.on)unlockPointer();briefRender();$('#brief').classList.remove('hidden');}
+function briefOpen(){if(!TASK||!TASK.pool)return;TASK.briefMode=true;briefPrev=SIM.paused;SIM.paused=true;syncSpeed();if(FP.on)unlockPointer();briefRender();$('#brief').classList.remove('hidden');}
 function briefClose(){$('#brief').classList.add('hidden');SIM.paused=briefPrev;syncSpeed();}
 function briefRender(msg=''){const t=TASK;if(!t)return briefClose();
   const left=t.pool.filter(k=>!t.brief.includes(k));
@@ -2518,7 +2520,7 @@ $('#brief').addEventListener('click',e=>{const t=TASK;if(!t)return;const b=e.tar
   else if(b.dataset.bf==='close')briefClose();});
 // tijdens uitvoeren: schakelen buiten of afwijkend van de schakelbrief kost punten
 function briefWatch(id,to){const t=TASK;if(!t||!t.devs||!t.devs.has(id))return;const key=id+':'+to;
-  if(!t.approved){if(!t.nobrief){t.nobrief=true;award(-25,'Geen goedgekeurde schakelbrief');pushAlarm(`${CHIEF}: je schakelt ${id} zonder goedgekeurde schakelbrief voor ${t.code}!`,'warn');}return;}
+  if(!t.approved)return;   // zonder eigen schakelbrief: vrij schakelen volgens de stappen
   let i=t.i;while(i<t.steps.length&&!t.steps[i].act)i++;if(i>=t.steps.length)return;
   const g=t.steps[i].grp,group=[t.steps[i]];for(let j=i+1;g&&j<t.steps.length&&t.steps[j].grp===g;j++)group.push(t.steps[j]);
   if(!group.some(s=>actKey(s.act)===key)){award(-25,'Afwijking van de schakelbrief');pushAlarm(`${CHIEF}: afwijking van de schakelbrief – volgende stap is „${actLabel(actKey(t.steps[i].act))}”`,'warn');}}
@@ -2589,7 +2591,7 @@ else{renderMenu();$('#intro').classList.remove('hidden');controls.autoRotate=tru
 if(params.has('night'))updateSky(22);
 if(params.has('view')){const v=VIEWPOS[+params.get('view')];camera.position.copy(v[0]);controls.target.copy(v[1]);controls.autoRotate=false;controls.update();}
 
-window.OS={SIM,D,RINGS,task:()=>TASK,briefSubmit,briefCheck,actKey,taskActs,crewNear,boxOf:id=>VIEWS[id]&&VIEWS[id].box,AudioSys,updateAudio,WX,setWeather,setSeason,SEASONS,ambient,enterKiosk,ROOMS,blockedAt,RING,NPCS,crewDispatch,ringFault,FP,enterFP,exitFP,pickCenter,camera,camInside,setRatio,setTab,GAME,MODES,applyMode,endGame,EN:()=>EN,FLOW,operate,tapStep,setAVR,resetLockout,toggleAR,regulate,computeFlows,randomEvent,lineFault,feederFault,trafoFault,offerTask,simStep,FEEDERS};
+window.OS={SIM,D,RINGS,task:()=>TASK,briefSubmit,briefCheck,briefWatch,actKey,taskActs,crewNear,boxOf:id=>VIEWS[id]&&VIEWS[id].box,AudioSys,updateAudio,WX,setWeather,setSeason,SEASONS,ambient,enterKiosk,ROOMS,blockedAt,RING,NPCS,crewDispatch,ringFault,FP,enterFP,exitFP,pickCenter,camera,camInside,setRatio,setTab,GAME,MODES,applyMode,endGame,EN:()=>EN,FLOW,operate,tapStep,setAVR,resetLockout,toggleAR,regulate,computeFlows,randomEvent,lineFault,feederFault,trafoFault,offerTask,simStep,FEEDERS};
 const clock=new THREE.Clock();let hudT=0,skyT=0;
 renderer.setAnimationLoop(()=>{
   const dt=Math.min(0.1,clock.getDelta());

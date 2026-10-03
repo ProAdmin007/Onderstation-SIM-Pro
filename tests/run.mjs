@@ -116,10 +116,15 @@ const TESTS = [
   } },
   { name: 'schakelbrief: foute volgorde afgekeurd, goede goedgekeurd, afwijking bestraft', query: '?autostart&t=10', async run(p) {
       const r = await p.evaluate(() => { T.quiet(); OS.SIM.paused = false; OS.offerTask(); const t = OS.task(), keys = OS.taskActs(t).map(s => OS.actKey(s.act));
+        const vrij = !!document.querySelector('#taskBody .bf-opt') && document.querySelectorAll('#taskBody .step').length > 0;   // brief is optioneel: stappen direct zichtbaar
+        const e0 = OS.GAME.score; OS.briefWatch(...keys[0].split(':').map((v, i) => i ? +v : v)); const zonder = Math.round(e0 - OS.GAME.score);
+        if (zonder) return { zonder };
         t.brief = keys.slice().reverse(); const fout = OS.briefSubmit();
         t.brief = keys.slice(); const goed = OS.briefSubmit(); const s0 = OS.GAME.score;
         const verkeerd = keys.find((k, i) => i > 1 && OS.D[k.split(':')[0]].state !== +k.split(':')[1]).split(':'); OS.operate(verkeerd[0], +verkeerd[1]);   // een latere stap eerst = afwijking
-        return { n: keys.length, fout, goed, approved: t.approved, straf: Math.round(s0 - OS.GAME.score) }; });
+        return { vrij, zonder, n: keys.length, fout, goed, approved: t.approved, straf: Math.round(s0 - OS.GAME.score) }; });
+      assert(!r.zonder, `straf zonder schakelbrief terwijl die optioneel is: ${r.zonder}`);
+      assert(r.vrij, 'stappen niet zichtbaar of knop voor optionele schakelbrief ontbreekt');
       assert(r.n >= 4, `te weinig stappen in de schakelbrief: ${r.n}`);
       assert(!r.fout && r.goed && r.approved, `controle klopt niet: fout ${r.fout} goed ${r.goed}`);
       assert(r.straf >= 25, `geen straf voor afwijking: ${r.straf}`);

@@ -51,9 +51,9 @@ Een 3D-onderstationsimulator die in de browser draait (Three.js, geen installati
   - een laagspanningsrek met een hoofdschakelaar en NH-lastscheiders per LS-veld (de klep gaat echt open of dicht);
   - de distributietransformator achter een gaashek.
   Schakelen gaat met het richtkruis: `F` voor direct schakelen, `E` voor het paneel.
-- **Schakelbrieven:** bij een werkopdracht stel je eerst zelf de schakelbrief op. Je kiest de handelingen (er zitten afleiders tussen), zet ze in volgorde en dient de brief in bij wachtchef Marieke.
+- **Schakelbrieven (optioneel):** bij een werkopdracht zie je de stappen meteen en kun je gewoon schakelen. Wil je bonuspunten, kies dan vóór de eerste stap *Zelf een schakelbrief opstellen*. Je kiest de handelingen (er zitten afleiders tussen), zet ze in volgorde en dient de brief in bij wachtchef Marieke.
   - Goedgekeurd: +40 (+15 na correcties). Afgekeurd: −10, met uitleg waarom die stap niet klopt. Hint: −5.
-  - Pas na goedkeuring zie je de stappen. Schakelen zonder goedgekeurde brief of afwijken van de brief kost −25.
+  - Ben je aan een brief begonnen, dan zie je de stappen pas na goedkeuring. Wijk je daarna af van je goedgekeurde brief, dan kost dat −25. Zonder brief is er geen straf.
 - **Portofoon:** monteurs hebben een naam en melden zich bij aankomst en als het werk klaar is. Wil je schakelen aan of vlakbij hun werk, dan opent eerst het portofoonvenster:
   - **melden**: de monteur bevestigt en daarna wordt er geschakeld (+10);
   - **zonder melden schakelen**: −50 en een boze monteur;

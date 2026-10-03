@@ -1,5 +1,5 @@
 
-// ============================================================ schakelbrieven: eerst opstellen en laten controleren, dan uitvoeren
+// ============================================================ schakelbrieven (optioneel): zelf opstellen en laten controleren voor bonuspunten
 const CHIEF='Marieke (wachtchef)';
 const actKey=a=>a[0]+':'+a[1];
 function actLabel(key){const [id,v]=key.split(':'),to=+v,d=D[id];if(!d)return key;
@@ -20,7 +20,7 @@ function briefCheck(t){const exp=taskActs(t),got=t.brief;let gi=0;
     if(have.length<want.length||!want.every(w=>have.includes(w)))return {ok:false,pos:gi+1,why:exp[i].why,next:want[0]};gi+=want.length;i=j;}
   if(got.length>gi)return {ok:false,pos:gi+1,why:'Deze handeling hoort niet in deze schakelbrief.'};return {ok:true};}
 let briefPrev=false;
-function briefOpen(){if(!TASK||!TASK.pool)return;briefPrev=SIM.paused;SIM.paused=true;syncSpeed();if(FP.on)unlockPointer();briefRender();$('#brief').classList.remove('hidden');}
+function briefOpen(){if(!TASK||!TASK.pool)return;TASK.briefMode=true;briefPrev=SIM.paused;SIM.paused=true;syncSpeed();if(FP.on)unlockPointer();briefRender();$('#brief').classList.remove('hidden');}
 function briefClose(){$('#brief').classList.add('hidden');SIM.paused=briefPrev;syncSpeed();}
 function briefRender(msg=''){const t=TASK;if(!t)return briefClose();
   const left=t.pool.filter(k=>!t.brief.includes(k));
@@ -41,7 +41,7 @@ $('#brief').addEventListener('click',e=>{const t=TASK;if(!t)return;const b=e.tar
   else if(b.dataset.bf==='close')briefClose();});
 // tijdens uitvoeren: schakelen buiten of afwijkend van de schakelbrief kost punten
 function briefWatch(id,to){const t=TASK;if(!t||!t.devs||!t.devs.has(id))return;const key=id+':'+to;
-  if(!t.approved){if(!t.nobrief){t.nobrief=true;award(-25,'Geen goedgekeurde schakelbrief');pushAlarm(`${CHIEF}: je schakelt ${id} zonder goedgekeurde schakelbrief voor ${t.code}!`,'warn');}return;}
+  if(!t.approved)return;   // zonder eigen schakelbrief: vrij schakelen volgens de stappen
   let i=t.i;while(i<t.steps.length&&!t.steps[i].act)i++;if(i>=t.steps.length)return;
   const g=t.steps[i].grp,group=[t.steps[i]];for(let j=i+1;g&&j<t.steps.length&&t.steps[j].grp===g;j++)group.push(t.steps[j]);
   if(!group.some(s=>actKey(s.act)===key)){award(-25,'Afwijking van de schakelbrief');pushAlarm(`${CHIEF}: afwijking van de schakelbrief – volgende stap is „${actLabel(actKey(t.steps[i].act))}”`,'warn');}}
