@@ -2996,7 +2996,7 @@ function stationOptions(){return RING.stations.map(s=>`<option value="${s.id}">$
 function renderPhone(){const el=$('#phone');const c=PHONE.cur,w=PHONE.queue.filter(x=>x!==c);
   if(!c&&!w.length){el.className='hidden';el.innerHTML='';return;}
   if(!c){el.className='ring';el.innerHTML=`<span class="ph-i">☎</span><span><b>Inkomend gesprek${w.length>1?` (${w.length})`:''}</b><br>${w[0].who} · ${w[0].addr}</span><button class="primary" data-ph="take">Opnemen</button>`;return;}
-  el.className='open';el.innerHTML=`<div class="ph-h">☎ ${c.who}<span>${c.addr}</span></div><div class="ph-q">“${c.say}”</div>
+  el.className='open';el.innerHTML=`<div class="ph-h">☎ ${c.who}<span>${c.addr}${w.length?` · <b style="color:var(--green)">+${w.length} wachtend</b>`:''}</span></div><div class="ph-q">“${c.say}”</div>
     <div class="ph-a"><label>Monteur sturen naar <select data-ph="st"><option value="">– kies MS-station –</option>${stationOptions()}</select></label><button data-ph="send">Stuur monteur</button></div>
     <div class="ph-a"><button data-ph="known">“Dat is bekend, we werken eraan”</button><button data-ph="own">“Laat uw installateur kijken”</button></div>
     <div class="ph-n">Tip: klik in het ringschema op een station om te zien welke straten en bedrijven erop zitten.</div>`;}

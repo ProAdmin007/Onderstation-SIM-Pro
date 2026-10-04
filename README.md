@@ -29,7 +29,10 @@ Een 3D-onderstationsimulator die in de browser draait (Three.js, geen installati
 
 ## Installatie
 - **110 kV:** twee lijnvelden (L1 Hoogeveen, L2 Meppel), een railsysteem en drie transformatorvelden.
-- **T1** (110/10,5 kV, 31,5/40 MVA) voedt de 10 kV-installatie: rail A en B, normaal gekoppeld via V-K, met de velden F1–F6.
+- **T1** (110/10,5 kV, 31,5/40 MVA) voedt de 10 kV-installatie. Dat is een **dubbelrailsysteem**: rail A en rail B, normaal gekoppeld via V-K, met de velden F1–F6.
+  - Elk veld (ook V-T1 en V-T3) heeft twee **railkeuzescheiders**: QA naar rail A en QB naar rail B. Normaal staan F1–F3 en T1 op rail A, en F4–F6 en T3 op rail B.
+  - **Omzetten onder last** mag alleen als V-K gesloten is: eerst de scheider naar de nieuwe rail sluiten, dan de oude openen. Zonder koppeling blokkeert de vergrendeling (of, met de vergrendelingen uit, ontstaat er een vlamboog). V-K kan niet open zolang een veld op beide rails staat.
+  - Railaardschakelaars RA-Q8 en RB-Q8 zitten in de meetvelden.
 - **T2** (110/21 kV, 20/25 MVA) voedt de 20 kV-installatie in het tweede gebouw. Die heeft twee railhelften:
   - **rail C1** met W-T2, G1 Zonnepark (productie en teruglevering) en G2 Industrieterrein Noord;
   - **rail C2** met W-T3, G3 Buitengebied Oost en G4 Waterzuivering;
@@ -62,6 +65,18 @@ Een 3D-onderstationsimulator die in de browser draait (Three.js, geen installati
   - **zonder melden schakelen**: −50 en een boze monteur;
   - **annuleren**.
 - **Monteurs:** collega's in een veiligheidsvest lopen het station of de wijk in bij inspecties, werkopdrachten en kabelfouten, en vertrekken weer als het werk klaar is.
+- **Dienstoverdracht** (bij diensten en scenario's, niet bij vrij spelen of de lessen): bij de start geeft de operator van de vorige dienst een overdracht.
+  - Je ziet alle afwijkingen van de normale toestand, automatisch uit de installatie gehaald, plus het weer en de verwachte piek.
+  - Bij dag- en avonddiensten begint het station met 2–3 willekeurige afwijkingen. Voorbeelden: AR van een lijn nog uit na een relaistest, het normaal-open punt verlegd, F5 tijdelijk op rail A, T3 nog op 20 kV, L2 in onderhoud, of de kassen uit tot een afgesproken tijd.
+  - Open punten staan links bij je dienst; elk netjes afgehandeld punt geeft +25. Afspraken niet nakomen (bijvoorbeeld te vroeg inschakelen) kost −20.
+- **Belastingprognose** (tabblad *Prognose*): de verwachte belasting op 10 en 20 kV voor de komende 8 uur, met seizoen en het huidige weer, afgezet tegen de capaciteit van de transformatoren in bedrijf (en met T3 erbij).
+  - Je ziet de piek, het moment van overbelasting en een advies (T3 bijschakelen, kassen afschakelen), plus een N-1-tip.
+  - Dreigt er binnen 1,5 uur overbelasting, dan krijg je een melding.
+- **Telefoon en klantmeldingen:** klanten bellen bij uitval. De telefoon gaat over bovenin beeld; neem op en kies je antwoord:
+  - *“Dat is bekend, we werken eraan”* bij uitval die je in SCADA ziet (+5);
+  - *“Laat uw installateur kijken”* als alleen één woning zonder stroom zit (+10);
+  - *monteur sturen naar een MS-station* bij een **LS-storing**: een doorgebrande zekering in een laagspanningsveld. Die zie je **niet** in SCADA, alleen via klantmeldingen. Zoek het adres op in het ringschema (welke straat hangt aan welk station) en stuur de monteur naar het goede station (+60 bij snel herstel, −20 bij een verkeerd station). Ook vanuit het stationspaneel kun je een monteur sturen.
+  - Neemt niemand op, dan hangt de klant na ±45 s op (−5).
 - **Werk staken:** onder elke werkopdracht staat *Werk staken*. Dat gebruik je bij een storing waarvoor je de installatie nodig hebt, bijvoorbeeld T3 die bij onderhoud aan T2 meedraait terwijl T1 uitvalt.
   - Alles wat al geschakeld is, wordt een herstelprogramma in omgekeerde volgorde (eerst de aarding eraf, als laatste de reserve terug).
   - Na het herstel krijg je +30. Staken zonder storing kost −20; staken vanwege een storing kost niets.
@@ -69,7 +84,7 @@ Een 3D-onderstationsimulator die in de browser draait (Three.js, geen installati
   - **I> per uitgaand veld** (110–150 %) en een **tijdfactor** (×0,5–×2). Te scherp: koude-lastopname leidt tot afschakeling. Te ruim: een langdurig overbelaste kabel raakt beschadigd.
   - **AR dode tijd per lijn** (0,3 / 1 / 3 s). Kort: de herinschakeling mislukt soms omdat de boog nog niet gedoofd is. 3 s: altijd raak, maar draait het station op één lijn, dan vallen processen bij klanten uit.
   - **Thermische trip per trafo** (95 / 100 / 110 °C). Hoog geeft meer reserve, maar boven 105 °C ontstaat gasvorming en dreigt een Buchholz-trip met een lange inspectie.
-- **SCADA** heeft tabbladen voor 10 kV, 20 kV en de ring. Zoomen kan met de knoppen **−/+**, met `Ctrl` + scrollwiel of met de toetsen `+` en `−` (75–250 %). Het paneel wordt dan mee breder.
+- **SCADA** heeft tabbladen voor 10 kV, 20 kV, de ring en de **prognose**. Zoomen kan met de knoppen **−/+**, met `Ctrl` + scrollwiel of met de toetsen `+` en `−` (75–250 %). Het paneel wordt dan mee breder.
 
 ## Geluid
 Alle geluid wordt in de browser gemaakt (Web Audio) en hangt af van waar je bent:
@@ -111,6 +126,13 @@ Alle geluid wordt in de browser gemaakt (Web Audio) en hangt af van waar je bent
   - *Hittegolf* (zomer, ±36 °C): de ventilatoren van T1 vallen uit en een kabel in het centrum bezwijkt door de hitte.
   - *Winteravond met sneeuw*: hoge belasting, een ringfout met terugvoeden zonder kabels te overbelasten, en daarna een lijnstoring.
   - *Dubbele kabelfout in de woonwijk*: twee fouten tegelijk; een eiland tussen de fouten komt pas na de eerste reparatie terug.
+  - *Aanrijding MS-station*: een vrachtwagen ramt MS5. De RMU is onbedienbaar; isoleer vanaf MS4 en voed terug via het normaal-open punt. Later volgt een noodaggregaat.
+  - *Cyberaanval op SCADA*: bediening op afstand valt weg. Loop het station in (`V`) en schakel lokaal aan het veld, terwijl de kassen en lijn L1 uitvallen.
+  - *Overstroming De Vaart*: het water stijgt bij MS9. Sluit het normaal-open punt, haal MS9 uit de ring (MS8-R open, V-F2 uit) vóór het water er is, en neem MS9 na het droogvallen weer in bedrijf.
+  - *Zonnepiek*: een uitgebreid zonnepark (60 MWp) levert op een lentedag meer terug dan T2 aankan. Zet T3 op 20 kV parallel om T2 heel te houden zonder het zonnepark af te schakelen.
+- **Rapport met tijdlijn en herhaling:** na afloop zie je een tijdlijn met klanten zonder stroom, je score, storingen (rood), je handelingen en behaalde doelen.
+  - *Leermomenten* noemen de langste onderbrekingen (met je reactietijd) en waar je punten liet liggen, met een tip per fout.
+  - Met *▶ Herhaling*, of door op de tijdlijn of een leermoment te klikken, speel je de dienst opnieuw af. SCADA, de 3D-installatie en de tellers tonen dan de toestand van dat moment; met de schuifbalk spoel je door.
 - **Moeilijkheid:** Rustig, Normaal of Zwaar. Dit bepaalt hoe vaak storingen optreden en hoe vaak een fout blijvend is.
 - **Score:** je begint met 1.000 punten.
   - Erbij: snel herstel van een onverwachte onderbreking (+20 of +40), een behaald doel (+100), een voltooide werkopdracht (+150) en een dienst zonder incidenten (+200).
@@ -123,11 +145,12 @@ Binnen staat een rij van 13 metaalomsloten schakelvelden (V-T1, F1–F3, meetvel
 ## Spelregels (bewust simpel)
 - Een scheider (Q1/Q9) schakel je alleen als de vermogenschakelaar (Q0) van hetzelfde veld UIT staat. Doe je dat met de vergrendelingen uit, dan ontstaat er een vlamboog.
 - Sluit een aardschakelaar (Q8) alleen op een spanningsloze lijn.
-- Willekeurige storingen: blikseminslag op een lijn, kabelfouten, transformatortrips (hooguit één keer per trafo per dienst) en af en toe een **railfout**. Bij een railfout schakelt de railbeveiliging alle velden van één railhelft af; die helft blijft spanningsloos tot de monteur klaar is. Inschakelen op de rail geeft een nieuwe trip.
+- Willekeurige storingen: blikseminslag op een lijn, kabelfouten, LS-storingen (alleen via de telefoon te vinden), transformatortrips (hooguit één keer per trafo per dienst) en af en toe een **railfout**. Bij een railfout schakelt de railbeveiliging alle velden van één railhelft af; die helft blijft spanningsloos tot de monteur klaar is. Inschakelen op de rail geeft een nieuwe trip.
 - Werkopdrachten (alleen als de uitgangssituatie normaal is):
   - lijnveld vrijschakelen en aarden;
   - kabelwerk aan een veld of een ringkabel;
   - onderhoud T1 of T2 met de reservetransformator;
+  - **onderhoud rail B (10 kV)**: alle velden van rail B onder last naar rail A omzetten, V-K open en rail B aarden, zonder dat één klant iets merkt;
   - **onderhoud railhelft C2**: G3/G4 omschakelen, W-K open en de rail aarden;
   - **onderhoud MS-station**: de klanten op een noodaggregaat, de ring sluiten en het station eruit halen;
   - **thermografie-ronde**: loop (`V`) of vlieg langs drie onderdelen. Dichtbij zie je met de warmtebeeldcamera een gloeiende hotspot, en daarna volgt direct de herstelopdracht.
@@ -144,7 +167,7 @@ Binnen staat een rij van 13 metaalomsloten schakelvelden (V-T1, F1–F3, meetvel
 - **Aardschakelaars kabelzijde** (F1-Q8 … F6-Q8) met een opdracht voor kabelwerk, waarbij de klanten eerst via het net worden omgeschakeld.
 
 ## Tests
-Automatische tests sturen de simulator aan in headless Chrome. Ze dekken onder meer vergrendelingen, vlamboog, reservetransformator, ringfout met terugvoeding, spanningsregelaar, schakelbrief, portofoon, de railsplitsing met railfout, beveiligingsinstellingen, werk staken, de nieuwe onderhoudstypes, alle vijf de lessen en het pauzemenu.
+Automatische tests sturen de simulator aan in headless Chrome. Ze dekken onder meer vergrendelingen, vlamboog, reservetransformator, ringfout met terugvoeding, spanningsregelaar, schakelbrief, portofoon, de railsplitsing met railfout, het dubbelrailsysteem, beveiligingsinstellingen, werk staken, de onderhoudstypes, alle vijf de lessen, de prognose, de telefoon, de dienstoverdracht, de nieuwe scenario's, de tijdlijn met herhaling en het pauzemenu.
 
 ```powershell
 npm install
@@ -164,4 +187,4 @@ De broncode staat in `src/` (HTML/CSS plus JS-modules in volgorde). Bouw `index.
 ./build.ps1
 ```
 
-URL-parameters om te testen: `?autostart`, `?t=18.5` (starttijd), `?view=0..6`, `?night`, `?play=zkh|storm|piek|blackout|hitte|winter|dubbel|les1…les5|day|eve|free&diff=rustig|normaal|zwaar`.
+URL-parameters om te testen: `?autostart`, `?t=18.5` (starttijd), `?view=0..6`, `?night`, `?play=zkh|storm|piek|blackout|hitte|winter|dubbel|aanrijding|cyber|overstroming|zonnepiek|les1…les5|day|eve|free&diff=rustig|normaal|zwaar`.
