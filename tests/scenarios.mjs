@@ -18,6 +18,8 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 async function bot(process_full) {
   const O = window.OS, D = O.D, S = O.SIM, G = O.GAME, wait = ms => new Promise(r => setTimeout(r, ms));
   const log = [], note = m => log.push(`${String(Math.floor(S.t / 60) % 24).padStart(2, '0')}:${String(Math.floor(S.t % 60)).padStart(2, '0')} ${m}`);
+  O.closeHandover && O.closeHandover();
+  S.localTest = true;   // de bot kan niet lopen: bij de cyberaanval doet hij alsof hij ter plaatse staat
   S.speed = 1;   // eigen animatielus laat de tijd dan nauwelijks lopen; de bot stapt zelf
   const step = min => { const p = S.paused; S.paused = false; for (let i = 0; i < min * 4; i++) O.simStep(0.25 * 60 / S.speed); S.paused = p; };
   const failAt = {}, isOpen = () => !document.querySelector('#radio').classList.contains('hidden');
@@ -54,6 +56,9 @@ async function bot(process_full) {
     step(0.5); await wait(60); watchAlarms();
     if (Math.floor(S.t / 60) !== lastH) { lastH = Math.floor(S.t / 60); console.log(`[bot] ${lastH}:00 score ${Math.round(G.score)} uit ${S.off}`); }
     for (const c of O.FEEDERS.filter(f => !f.gen && !f.ring).concat(O.RING.stations)) if (!EN().has(c.node)) offMin[c.id] = (offMin[c.id] || 0) + 0.5;
+    // 0. telefoon: opnemen en de juiste diagnose stellen
+    if (O.PHONE.queue.length && !O.PHONE.cur) { const c = O.PHONE.cur = O.PHONE.queue[0], g = c.g;
+      if (g.lvf && EN().has(g.node)) { O.phoneAnswer('send', g.st.id); note(`telefoon: monteur naar ${g.st.id}`); } else O.phoneAnswer(!EN().has(g.node) ? 'known' : 'own'); }
     // 1. lijnen: weer inschakelen zodra TenneT spanning geeft
     for (const L of ['L1', 'L2']) if (S.lines[L].avail && !mine(L + '-Q0') && D[L + '-Q0'].state === 0 && D[L + '-Q9'].state && D[L + '-Q1'].state) await op(L + '-Q0', 1);
     // 2. ringen: fout isoleren, terugvoeden via normaal-open punt, na reparatie normaliseren
@@ -63,6 +68,10 @@ async function bot(process_full) {
       if (!s.fault && s.handled) { if (!s.a) await op(cbOf(s.ring.from), 1); if (!s.b) await op(cbOf(s.ring.to), 1); for (const id of iso) await op(id, 1); s.handled = false; note(`kabel ${s.id} weer in bedrijf`);
         if (!O.RING.secs.some(x => x.ring === s.ring && x.handled)) await op(s.ring.nop, 0); }
     }
+    // 2b. beschadigd of te ontruimen MS-station: vanaf de buren isoleren en terugvoeden; daarna terug
+    for (const s of O.RING.stations) { const st = s.ring.stations, i = st.indexOf(s), L = st[i - 1], R = st[i + 1], iso = [L && L.id + '-R', R && R.id + '-L'].filter(Boolean);
+      if ((s.damaged || s.evac) && !s.botIso) { if (!iso.includes(s.ring.nop)) await op(s.ring.nop, 1); for (const id of iso) await op(id, 0); if (i === 0) await op(cbOf(s.ring.from), 0); if (i === st.length - 1) await op(cbOf(s.ring.to), 0); s.botIso = true; note(`${s.id} geïsoleerd`); }
+      if (!s.damaged && !s.evac && s.botIso) { s.botIso = false; for (const id of iso) await op(id, 1); if (i === 0) await op(cbOf(s.ring.from), 1); if (i === st.length - 1) await op(cbOf(s.ring.to), 1); await op(s.ring.nop, 0); note(`${s.id} weer in de ring`); } }
     // 3. transformatoren: geblokkeerd → reserve inzetten; na reset weer terug
     await doTask();
     if (T3().blocked && T3().resettable) { O.resetLockout('T3'); note('T3 gereset'); }
@@ -73,7 +82,7 @@ async function bot(process_full) {
       if (!t.blocked && D[T + '-Q0'].state === 0) { await op(T + '-Q1', 1); await op(T + '-Q0', 1); }
       const busOf = { 'V-T1': 'RA', 'W-T2': 'RC', 'V-T3': 'RB', 'W-T3': 'RD' };
       if (!t.blocked && EN().has(T + 'h') && D[lv].state === 0 && !O.BUSF[busOf[lv]]) await op(lv, 1);
-      const need = T === 'T1' ? '10' : '20', res = T === 'T1' ? 'V-T3' : 'W-T3', down = t.blocked || D[lv].state === 0 || (T === 'T1' && t.fanFail);
+      const need = T === 'T1' ? '10' : '20', res = T === 'T1' ? 'V-T3' : 'W-T3', down = t.blocked || D[lv].state === 0 || (T === 'T1' && t.fanFail) || t.oil > 85;
       if (down && !T3().blocked && D[res].state === 0 && !O.BUSF[busOf[res]]) {
         if (T3().ratio !== need && !D['V-T3'].state && !D['W-T3'].state) { await op('T3-Q0', 0); O.setRatio(need); await wait(3300); await op('T3-Q0', 1); }
         if (T3().ratio === need) { await op(res, 1); note(`reserve T3 op ${need} kV ingezet`); }
@@ -88,9 +97,9 @@ async function bot(process_full) {
     if (!hot && shed.has('V-F6') && ['T1', 'T3'].every(T => D[T].oil < 78)) { shed.delete('V-F6'); await op('V-F6', 1); }
     // 5. uitgaande velden: na isolatie van een kabelfout of na een overstroomtrip weer inschakelen
     for (const f of O.FEEDERS) {
-      if (D[f.cb].state || shed.has(f.cb) || f.backfed || mine(f.cb)) continue;
+      if (D[f.cb].state || shed.has(f.cb) || f.backfed || mine(f.cb) || (G.hold && G.hold[f.cb] > S.t)) continue;
       if (f.fault && f.fault.stage === 'search') continue;
-      if (f.ring) { const head = O.RING.secs.find(s => s.node === f.id); if (head.fault) continue; }
+      if (f.ring) { const head = O.RING.secs.find(s => s.node === f.id), hs = head.a ? O.RING.stations.find(x => x.id === head.a) : O.RING.stations.find(x => x.id === head.b); if (head.fault || hs.damaged || hs.evac || hs.botIso) continue; }
       if (EN().has(f.bus)) await op(f.cb, 1);
     }
   }
@@ -101,7 +110,8 @@ async function bot(process_full) {
 const RUNS = [
   { name: 'zkh', query: '?play=zkh' }, { name: 'storm', query: '?play=storm' }, { name: 'piek', query: '?play=piek' },
   { name: 'blackout', query: '?play=blackout' }, { name: 'hitte', query: '?play=hitte' }, { name: 'winter', query: '?play=winter' },
-  { name: 'dubbel', query: '?play=dubbel' }, { name: 'dagdienst', query: '?play=day' }, { name: 'avonddienst', query: '?play=eve&diff=zwaar' },
+  { name: 'dubbel', query: '?play=dubbel' }, { name: 'aanrijding', query: '?play=aanrijding' }, { name: 'cyber', query: '?play=cyber' },
+  { name: 'overstroming', query: '?play=overstroming' }, { name: 'zonnepiek', query: '?play=zonnepiek' }, { name: 'dagdienst', query: '?play=day' }, { name: 'avonddienst', query: '?play=eve&diff=zwaar' },
 ];
 const browser = await puppeteer.launch({ executablePath: chrome, headless: 'new', protocolTimeout: 30 * 60 * 1000,
   args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--no-sandbox', '--window-size=1100,700'], defaultViewport: { width: 1100, height: 700 } });

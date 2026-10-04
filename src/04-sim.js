@@ -168,6 +168,8 @@ function syncCheck(d){const c=COUPLERS[d.id];if(!c||!EN.has(c[0])||!EN.has(c[1])
 function operate(id,to,opts={}){
   const d=D[id];if(!d||!['cb','ds','es','lbs','lvs'].includes(d.type)||d.state===to)return;
   if(SIM.paused)return deny(GAME.ended?'De dienst is afgelopen':'Simulatie gepauzeerd – hervat om te schakelen');
+  const dst=d.bay&&RING.stations.find(s=>s.id===d.bay);if(dst&&dst.damaged)return deny(`${dst.id} is beschadigd (${dst.damaged}) – niet bedienbaar. Isoleer vanaf het buurstation.`);
+  if(SCADA_DOWN()&&!localOk(id))return deny('SCADA-verbinding verbroken – loop erheen (V) en bedien lokaal aan het veld');
   if(d.busy)return deny('Bediening loopt nog…');
   if(d.type==='cb'&&to===1){
     if(d.tr&&D[d.tr].blocked)return deny(`${d.tr} geblokkeerd door relais 86 (${D[d.tr].blockText}) – eerst resetten`);
@@ -241,7 +243,8 @@ function regulate(dm){
   const followers=new Set();
   FLOW.groups.forEach(g=>{const auto=g.tf.filter(T=>D[T].avr==='auto');auto.slice(1).forEach(T=>{followers.add(T);const t=D[T];if(!t.tapBusy&&t.tap!==D[auto[0]].tap)moveTap(T,Math.sign(D[auto[0]].tap-t.tap));});
     const taps=g.tf.map(T=>D[T].tap),dk=g.tf.length>1?Math.max(...taps)-Math.min(...taps):0,k='circ'+g.buses.join('');
-    if(dk>=2&&!SIM[k]){SIM[k]=true;award(-20,'Circulatiestroom');pushAlarm(`Circulatiestroom tussen ${g.tf.join(' en ')} (${dk} trappen verschil) – breng de trappen gelijk of zet de regelaars op AUTO`,'warn');}
+    SIM['t'+k]=dk>=2?(SIM['t'+k]||0)+dm:0;   // de volgregelaar krijgt 1 min om de trappen gelijk te trekken
+    if(dk>=2&&SIM['t'+k]>=1&&!SIM[k]){SIM[k]=true;award(-20,'Circulatiestroom');pushAlarm(`Circulatiestroom tussen ${g.tf.join(' en ')} (${dk} trappen verschil) – breng de trappen gelijk of zet de regelaars op AUTO`,'warn');}
     if(dk<2)SIM[k]=false;});
   TR.forEach(T=>{const t=D[T];if(followers.has(T)||t.avr!=='auto'||!EN.has(T+'h')||t.tapBusy){t.avrT=0;return;}
     const set=trafoUn(T),dev=t.Ulv-set;
@@ -281,7 +284,7 @@ function feederTick(dm){
   ringProtection(dm);}
 
 // ---------------------------------------------------------- storingen
-function randomEvent(){const r=Math.random();if(r<(WX.cur.thunder>0.5?0.65:0.3))return lineFault();if(r<0.72)return feederFault();
+function randomEvent(){const r=Math.random();if(r<(WX.cur.thunder>0.5?0.65:0.3))return lineFault();if(r<0.62)return feederFault();if(r<0.72)return lvFault();
   if(r<0.8&&!GAME.flags.busf){GAME.flags.busf=true;return busFault(pick(['RC','RD','RB']));}return trafoFault();}
 function lineFault(forceL,forcePerm){const c=['L1','L2'].filter(L=>SIM.lines[L].avail&&!SIM.lines[L].maint&&D[L+'-Q0'].state===1&&(!forceL||L===forceL));if(!c.length)return forceL?null:feederFault();const L=pick(c),ln=SIM.lines[L];
   lightning(L);const perm=forcePerm??(Math.random()<DIFFS[GAME.diff].perm);
@@ -469,5 +472,5 @@ function simStep(dtReal){
   SIM.off=off;SIM.cml+=CONS.reduce((s,c)=>s+custOff(c)*(c.interruptible?0.1:1),0)*dm;SIM.manualFlag=false;
   if(GAME.events&&SIM.t>=SIM.nextEvent){randomEvent();SIM.nextEvent=SIM.t+rnd(35,75)*DIFFS[GAME.diff].ev;}
   if(GAME.tasks&&!TASK&&SIM.t>=SIM.nextTaskAt)offerTask();
-  taskTick();gameTick(dm,dtReal);
+  taskTick();gameTick(dm,dtReal);recTick();
 }

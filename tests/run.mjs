@@ -38,6 +38,7 @@ async function openPage(browser, query) {
   await page.goto(pageUrl + query, { waitUntil: 'load', timeout: 120000 });
   for (let i = 0; i < 120 && !(await page.evaluate(() => !!window.OS)); i++) await sleep(500);
   await page.evaluate(PAGE_HELPERS);
+  await page.evaluate(() => window.OS.closeHandover && window.OS.closeHandover());
   return { page, errors };
 }
 
@@ -226,6 +227,46 @@ const TESTS = [
         return { omgezet, bDood, geweigerd1, geweigerd2, klaar: !O.task(), maxOff, normaal: rail('F5') === 'RB' && D['V-K'].state === 1 }; });
       for (const [k, v] of Object.entries(r)) if (k !== 'maxOff') assert(v, `${k} klopt niet: ${JSON.stringify(r)}`);
       assert(r.maxOff === 0, `klanten zonder stroom tijdens onderhoud rail B: ${r.maxOff}`);
+  } },
+  { name: 'belastingprognose: verwachting en waarschuwing zonder voeding', query: '?autostart&t=15', async run(p) {
+      const r = await p.evaluate(() => { T.quiet(); const O = OS; O.SIM.paused = false; T.step(0.5); const a = O.progAdvice();
+        const piek = Math.max(...a.f.map(x => x.p10)); O.D['V-T1'].state = 0; O.computeFlows(); const b = O.progAdvice();
+        return { n: a.f.length, piek, cap: a.cap.c10, ok: a.out.some(o => o.lvl === 'ok'), warn: b.out.some(o => o.key === '10') }; });
+      assert(r.n === 33 && r.piek > 10 && r.cap > 30, `prognose klopt niet: ${JSON.stringify(r)}`);
+      assert(r.ok && r.warn, `advies klopt niet: ${JSON.stringify(r)}`);
+  } },
+  { name: 'telefoon: LS-storing alleen via klantmeldingen te vinden', query: '?autostart&t=11', async run(p) {
+      const r = await p.evaluate(async () => { T.quiet(); const O = OS, P = O.PHONE; O.SIM.paused = false; T.step(0.3);
+        const g = O.LVG.find(x => x.id === 'MS1-G2'); O.lvFault('MS1-G2'); T.step(0.2); const off0 = O.SIM.off, scada = O.EN().has(g.node);
+        for (let k = 0; k < 40 && !P.queue.length; k++) T.step(0.5);
+        const call = P.queue[0]; P.cur = call; const s0 = O.GAME.score; O.phoneAnswer('send', 'MS4'); T.step(25); const fout = O.GAME.score - s0 < 0 && !!g.lvf;
+        g.lvf.at = O.SIM.t; O.dispatchLV('MS1'); T.step(25);
+        return { off0, scada, gebeld: !!call, adres: call && call.addr, fout, opgelost: !g.lvf && g.outFrac === 0 }; });
+      assert(r.off0 > 50 && r.scada, `LS-storing niet stil of zonder uitval: ${JSON.stringify(r)}`);
+      assert(r.gebeld && /Lindehof/.test(r.adres), `geen klant gebeld vanaf de Lindehof: ${JSON.stringify(r)}`);
+      assert(r.fout && r.opgelost, `verkeerd/juist station klopt niet: ${JSON.stringify(r)}`);
+  } },
+  { name: 'dienstoverdracht: afwijkingen en open punten', query: '?play=day', async run(p) {
+      const r = await p.evaluate(() => { const O = OS, G = O.GAME, h = G.handover; const it = Object.create(O.HO_POOL.find(x => x.id === 'avr')); it.setup(); h.items.push(it);
+        const dev = O.deviations().join(' '), s0 = G.score; O.setAVR('T1', 'auto'); O.handoverTick();
+        return { items: h.items.length, gesloten: !h.open && document.querySelector('#handover').classList.contains('hidden'), avr: /T1/.test(dev), done: it.done, pts: Math.round(G.score - s0) }; });
+      assert(r.items >= 3 && r.gesloten, `overdracht niet goed opgezet: ${JSON.stringify(r)}`);
+      assert(r.avr && r.done && r.pts >= 25 && r.pts % 25 === 0, `open punt niet afgehandeld: ${JSON.stringify(r)}`);
+  } },
+  { name: 'nieuwe scenario\'s: aanrijding, cyberaanval en zonnepiek', query: '?play=zonnepiek', async run(p) {
+      const r = await p.evaluate(() => { const O = OS; T.step(100); const zon = O.D.T2.blocked && O.D.T2.blockKind === 'temp';
+        const s = O.RING.stations.find(x => x.id === 'MS5'); O.stationDamage(s, 'test'); O.operate('MS5-L', 0); const kapot = O.D['MS5-L'].state === 1;
+        O.GAME.flags.scadaDown = true; O.operate('V-F6', 0); const opAfstand = O.D['V-F6'].state === 1; O.SIM.localTest = true; O.operate('V-F6', 0); const lokaal = O.D['V-F6'].state === 0;
+        return { zon, kapot, opAfstand, lokaal }; });
+      for (const [k, v] of Object.entries(r)) assert(v, `${k} klopt niet: ${JSON.stringify(r)}`);
+  } },
+  { name: 'tijdlijn, leermomenten en herhaling', query: '?play=zkh', async run(p) {
+      const r = await p.evaluate(async () => { const O = OS; T.step(20); O.endGame(); await T.sleep(300);
+        const tl = !!document.querySelector('#report svg.tl'), ins = document.querySelectorAll('#report .tl-i').length, live = O.D['V-T1'].state + ':' + O.D['T1-Q0'].state;
+        O.startReplay(O.GAME.t0 + 0.5); const terug = O.D['V-T1'].state, rp = !document.querySelector('#replay').classList.contains('hidden');
+        O.stopReplay(); return { n: O.REC.samples.length, tl, ins, terug, rp, hersteld: O.D['V-T1'].state + ':' + O.D['T1-Q0'].state === live }; });
+      assert(r.n >= 15 && r.tl && r.ins >= 1, `tijdlijn ontbreekt: ${JSON.stringify(r)}`);
+      assert(r.rp && r.terug === 1 && r.hersteld, `herhaling klopt niet: ${JSON.stringify(r)}`);
   } },
   { name: 'Esc opent pauzemenu en pauzeert', query: '?autostart', async run(p) {
       await p.keyboard.press('Escape'); await sleep(800);

@@ -84,7 +84,7 @@ const MODES={
       {t:'Minder dan 25.000 klantminuten',check:()=>SIM.cml>25000?'fail':null,final:()=>SIM.cml<=25000}]},
 };
 
-function award(pts,text){GAME.score+=pts;if(!text)return;const el=document.createElement('div');el.className='sf '+(pts>=0?'plus':'min');
+function award(pts,text){GAME.score+=pts;if(!text)return;recEvent(SIM.t,'score',text,pts);const el=document.createElement('div');el.className='sf '+(pts>=0?'plus':'min');
   el.textContent=`${pts>0?'+':''}${pts}  ${text}`;$('#scoreFeed').prepend(el);setTimeout(()=>el.remove(),4200);}
 function incident(){SIM.incidents++;award(-150,'Veiligheidsincident');}
 function restoreTrack(f,on){if(!on){f.unplanned=!SIM.manualFlag;f.wait=0;return;}
@@ -97,6 +97,7 @@ function applyMode(id){
   FEEDERS.concat(RING.stations).forEach(f=>{f.unplanned=false;f.wait=0;});
   setSeason(m.season||GAME.season);if(m.weather)setWeather(m.weather,true,true);else if(!WX.lock)setWeather(pickWeather(),false,true);
   initTaps();m.setup&&m.setup();
+  GAME.handover=null;if(GAME.mode!=='free'&&!m.les)handoverInit(m);
   GAME.obj=m.obj?m.obj().map(o=>({...o,state:null})):[];
   computeFlows();FEEDERS.concat(RING.stations).forEach(f=>{f.wasOn=EN.has(f.node);});
   updateSky(hourOf());refreshAll();renderTasks();
@@ -109,7 +110,7 @@ function gameTick(dm,dtReal){
   TR.forEach(T=>GAME.stats.maxOil=Math.max(GAME.stats.maxOil,D[T].oil));
   const canRestore=SIM.lines.L1.avail||SIM.lines.L2.avail;
   FEEDERS.concat(RING.stations).forEach(f=>{if(f.unplanned&&!EN.has(f.node)&&canRestore&&!(f.fault&&f.fault.stage==='search'))f.wait=(f.wait||0)+dtReal;});
-  lessonTick();
+  lessonTick();handoverTick();MODES[GAME.mode]?.tick?.(dm);
   GAME.obj.forEach(o=>{if(o.state||!o.check)return;const r=o.check();if(!r)return;o.state=r;
     if(r==='done'){award(100,'Doel behaald');pushAlarm(`Doel behaald: ${o.t}`,'ok');}else{award(-150,'Doel gemist');pushAlarm(`Doel gemist: ${o.t}`,'warn');}});
   if(GAME.countdown&&GAME.obj.every(o=>o.state))GAME.countdown=null;
@@ -118,7 +119,7 @@ function gameTick(dm,dtReal){
 }
 function grade(s){return s>=1400?['A+',5]:s>=1250?['A',4]:s>=1100?['B',3]:s>=950?['C',2]:s>=750?['D',1]:['E',0];}
 function finalizeGame(){if(GAME.ended)return;GAME.ended=true;SIM.paused=true;
-  GAME.obj.forEach(o=>{if(o.state)return;const ok=o.final?o.final():false;o.state=ok?'done':'fail';award(ok?100:-150);});
+  GAME.obj.forEach(o=>{if(o.state)return;const ok=o.final?o.final():false;o.state=ok?'done':'fail';award(ok?100:-150,ok?'Doel behaald':'Doel gemist');});
   if(!SIM.incidents&&SIM.t-GAME.t0>=60)award(200,'Veilig gewerkt');}   // bonus pas na minimaal een uur dienst
 function saveBest(){const s=Math.round(GAME.score),best=getBest(GAME.mode,GAME.diff),rec=s>best;if(rec){try{localStorage.setItem(bestKey(GAME.mode,GAME.diff),s);}catch(e){}}return {s,best,rec};}
 function endGame(){finalizeGame();syncSpeed();showReport();}
@@ -135,18 +136,20 @@ function showReport(){
   if(SIM.tasksDone>=2)badges.push(['Planner',`${SIM.tasksDone} werkopdrachten afgerond`]);
   const rows=[['Klantminuten (CML)',Math.round(SIM.cml).toLocaleString('nl-NL')],['Uitvalduur per klant',`${(SIM.cml/TOTAL_CUST).toFixed(1).replace('.',',')} min`],
     ['Veiligheidsincidenten',SIM.incidents],['Werkopdrachten',SIM.tasksDone],['Snelle herstellingen',st.fast],['Thermische trips',st.thermal],
-    ['Spanningsafwijkingen',st.volt],['Hoogste olietemperatuur',`${Math.round(st.maxOil)} °C`]];
+    ['Spanningsafwijkingen',st.volt],['Telefoon: goed / fout / gemist',`${PHONE.stats.ok} / ${PHONE.stats.bad} / ${PHONE.stats.missed}`],['Hoogste olietemperatuur',`${Math.round(st.maxOil)} °C`]];
   $('#report').innerHTML=`<div class="card rep">
     <div class="eyebrow">${m.scen?'Scenario afgerond':'Dienstrapport'} · ${DIFFS[GAME.diff].label}</div><h2>${m.name}</h2>
     <div class="rep-top"><div class="grade g${g.replace('+','p')}">${g}</div><div><div class="rs">${s.toLocaleString('nl-NL')} <span>punten</span></div>
       <div class="stars">${'★'.repeat(stars)}<span>${'★'.repeat(5-stars)}</span></div>${rec?'<div class="rec">Nieuw record!</div>':best?`<div class="prev">Beste score: ${best.toLocaleString('nl-NL')}</div>`:''}</div></div>
     ${GAME.obj.length?`<div class="rep-h">Doelen</div>${GAME.obj.map(o=>`<div class="step ${o.state==='done'?'done':'fail'}"><span class="b">${o.state==='done'?'✓':'✕'}</span><span>${o.t}</span></div>`).join('')}`:''}
     <div class="rep-h">Statistieken</div><div class="rep-grid">${rows.map(r=>`<div class="row"><span>${r[0]}</span><b>${r[1]}</b></div>`).join('')}</div>
+    ${timelineHTML()}
     ${badges.length?`<div class="rep-h">Badges</div><div class="badges">${badges.map(b=>`<div class="badge"><b>${b[0]}</b><span>${b[1]}</span></div>`).join('')}</div>`:''}
-    <div class="rep-btns"><button class="primary" data-r="again">Opnieuw spelen</button><button data-r="menu">Hoofdmenu</button><button data-r="cont">Vrij doorspelen</button></div></div>`;
+    <div class="rep-btns"><button class="primary" data-r="again">Opnieuw spelen</button><button data-r="menu">Hoofdmenu</button>${REC.samples.length>2?'<button data-r="replay">▶ Herhaling</button>':''}<button data-r="cont">Vrij doorspelen</button></div></div>`;
   $('#report').classList.remove('hidden');
 }
 $('#report').addEventListener('click',e=>{const b=e.target.closest('[data-r]');if(!b)return;const a=b.dataset.r;
+  if(a==='replay')return startReplay();
   if(a==='again')location.search=`?play=${GAME.mode}&diff=${GAME.diff}`;
   else if(a==='menu')location.search='';
   else{$('#report').classList.add('hidden');GAME.endT=null;GAME.ended=false;GAME.events=true;GAME.tasks=true;GAME.countdown=null;SIM.nextTaskAt=SIM.t+5;setSpeed(60);}});
@@ -154,7 +157,7 @@ function renderMenu(){
   const card=id=>{const m=MODES[id],b=getBest(id,GAME.diff);return `<button class="mode" data-mode="${id}"><span class="mt">${m.tag}</span><b>${m.name}</b><span class="md">${m.desc}</span>${b?`<span class="mb">Beste: ${b.toLocaleString('nl-NL')} (${grade(b)[0]})</span>`:''}</button>`;};
   $('#menu').innerHTML=`<div class="mh">Dienst draaien</div><div class="mgrid">${['free','day','eve'].map(card).join('')}</div>
     <div class="mh">Leren · begeleide lessen</div><div class="mgrid">${Object.keys(LESSONS).map(card).join('')}</div>
-    <div class="mh">Scenario's</div><div class="mgrid">${['zkh','storm','piek','hitte','winter','blackout','dubbel'].map(card).join('')}</div>`;
+    <div class="mh">Scenario's</div><div class="mgrid">${['zkh','storm','piek','hitte','winter','blackout','dubbel','aanrijding','cyber','overstroming','zonnepiek'].map(card).join('')}</div>`;
   document.querySelectorAll('#diff button').forEach(b=>b.classList.toggle('on',b.dataset.d===GAME.diff));
   document.querySelectorAll('#season button').forEach(b=>b.classList.toggle('on',b.dataset.s===GAME.season));
 }
@@ -163,4 +166,4 @@ function gameHeader(){if(GAME.mode==='free'||GAME.lesson)return '';const m=MODES
   let h=`<div class="gh"><div class="gt"><span>${m.scen?'Scenario':'Dienst'} · ${m.name}</span>${GAME.endT?`<span class="tag">nog ${fmtDur(GAME.endT-SIM.t)}</span>`:''}</div>`;
   if(GAME.countdown&&SIM.t<GAME.countdown.until){const left=GAME.countdown.until-SIM.t;h+=`<div class="gcd ${left<5?'hot':''}">${GAME.countdown.label}<b>${fmtDur(left)}</b></div>`;}
   h+=GAME.obj.map(o=>`<div class="step ${o.state==='done'?'done':o.state==='fail'?'fail':''}"><span class="b">${o.state==='done'?'✓':o.state==='fail'?'✕':''}</span><span>${o.t}</span></div>`).join('');
-  return h+'</div>';}
+  return h+handoverPanel()+'</div>';}

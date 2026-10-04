@@ -247,6 +247,26 @@ body.menu #fpPause{display:none!important}
 .les-n{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}.les-bar{height:4px;background:rgba(255,255,255,.08);border-radius:3px;margin:6px 0 10px;overflow:hidden}
 .les-bar i{display:block;height:100%;background:var(--accent);transition:width .4s}.les h3{margin:0 0 6px}.les-txt{font-size:13px;line-height:1.55;color:#d6dde4}
 .les-next{width:100%;margin-top:12px;padding:9px}.les-wait{margin-top:12px;padding:8px 10px;border-radius:8px;background:rgba(63,207,114,.1);border:1px solid rgba(63,207,114,.35);color:var(--green);font-size:12.5px}
+.pg-row{font-size:11.5px;line-height:1.35;color:#d6dde4;padding:4px 8px;border-left:3px solid;background:rgba(255,255,255,.03);border-radius:0 6px 6px 0;height:38px;overflow:hidden}.pg-row b{color:#fff}
+#phone{position:fixed;top:84px;left:50%;transform:translateX(-50%);z-index:9;background:rgba(13,17,22,.95);border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.45);font-size:12.5px}
+#phone.hidden{display:none}#phone.ring{display:flex;align-items:center;gap:12px;padding:9px 12px;border-color:rgba(63,207,114,.6);animation:phring 1.1s ease-in-out infinite}
+#phone .ph-i{font-size:22px;animation:phshake .5s ease-in-out infinite}@keyframes phshake{0%,100%{transform:rotate(-12deg)}50%{transform:rotate(12deg)}}
+@keyframes phring{0%,100%{box-shadow:0 0 0 0 rgba(63,207,114,.5)}50%{box-shadow:0 0 0 6px rgba(63,207,114,0)}}
+#phone.open{width:min(460px,92vw);padding:12px 14px}.ph-h{font-weight:700;font-size:13.5px;display:flex;justify-content:space-between;gap:10px}.ph-h span{color:var(--muted);font-weight:500}
+.ph-q{margin:8px 0 10px;font-style:italic;color:#e7ecf1;font-size:13.5px}.ph-a{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:6px}.ph-a label{display:flex;gap:6px;align-items:center;color:var(--muted)}
+.ph-a select{background:#0b0f14;color:var(--text);border:1px solid var(--line);border-radius:6px;padding:4px 6px;font:inherit}.ph-n{margin-top:8px;color:var(--muted);font-size:11px}
+#handover{position:fixed;inset:0;display:grid;place-items:center;background:rgba(6,9,12,.7);z-index:13;overflow:auto;padding:20px 0}#handover.hidden{display:none}
+.card.ho{width:min(640px,94vw);padding:22px 26px;background:rgba(13,17,22,.97);border:1px solid var(--line);border-radius:16px}.ho h2{margin:6px 0}
+.ho-from{font-size:13.5px;line-height:1.5;color:#d6dde4}.ho-list{margin:4px 0 10px;padding-left:20px;font-size:13px;line-height:1.55}.ho-list li::marker{color:var(--accent)}.ho-n li::marker{color:var(--green)}
+.ho-p{font-size:12.5px;color:#c4ccd4;line-height:1.5}.ho-open{margin-top:8px}.ho-open .mh{margin-top:4px}
+#scada.down #sld{opacity:.12;pointer-events:none;filter:grayscale(1)}#scada.down::after{content:'⚠ SCADA-VERBINDING VERBROKEN\A Bedien lokaal: loop het station in (V)';white-space:pre;position:absolute;left:50%;top:45%;transform:translate(-50%,-50%);text-align:center;color:var(--red);font:700 14px/1.6 var(--mono);background:rgba(13,17,22,.9);border:1px solid var(--red);border-radius:10px;padding:12px 16px;animation:phring 1.4s infinite}
+#replay{position:fixed;left:50%;bottom:70px;transform:translateX(-50%);z-index:11;width:min(760px,94vw);display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 12px;background:rgba(13,17,22,.95);border:1px solid var(--accent);border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.5)}
+#replay.hidden{display:none}#replay input{flex:1;accent-color:var(--accent)}#replay b{font-family:var(--mono);color:var(--accent);min-width:46px}#replay select{background:#0b0f14;color:var(--text);border:1px solid var(--line);border-radius:6px;padding:4px}
+#rpEv{flex-basis:100%;font-size:12px}#rpEv .al{padding:2px 0}
+svg.tl{width:100%;height:auto;display:block;margin:4px 0 2px}.tl-ax{font:10px var(--mono);fill:var(--muted)}.tl-m,.tl-hit{cursor:pointer}.tl-m:hover polygon,.tl-m:hover circle{filter:brightness(1.6)}
+.tl-leg{font-weight:400;font-size:10.5px;color:var(--muted);text-transform:none;letter-spacing:0;margin-left:8px}.tl-leg i{display:inline-block;width:9px;height:9px;border-radius:2px;margin:0 3px 0 8px;vertical-align:-1px}
+.tl-ins{display:flex;flex-direction:column;gap:5px;margin-bottom:6px}.tl-i{font-size:12.5px;line-height:1.45;padding:6px 10px;border-left:3px solid var(--muted);background:rgba(255,255,255,.03);border-radius:0 6px 6px 0}
+.tl-i[data-tt]{cursor:pointer}.tl-i.out{border-color:var(--red)}.tl-i.neg{border-color:var(--accent)}.tl-i.pos{border-color:var(--green)}.tl-i i{color:#9fd0ff}
 .bf-open{background:var(--accent);color:#1a1206;border:none;font-weight:700;width:100%;padding:9px}
 @media (max-width:760px){.bf-cols{grid-template-columns:1fr}}
 #prot{position:fixed;inset:0;display:grid;place-items:center;background:rgba(6,9,12,.66);z-index:12;overflow:auto;padding:20px 0}
@@ -290,7 +310,7 @@ body.menu #fpPause{display:none!important}
 <aside id="tasks" class="panel"><div class="ph"><span id="taskTitle">Werkopdracht</span><span id="taskCode" class="tag"></span></div><div id="taskBody"><div class="idle">Geen actieve opdracht.</div></div></aside>
 <aside id="alarms" class="panel"><div class="ph"><span>Meldingen &amp; gebeurtenissen</span><span class="cnt" id="alarmCnt">0</span></div><div id="alarmList"></div></aside>
 <aside id="scada" class="panel">
-  <div class="ph"><span>SCADA</span><div class="zoom" title="Zoomen: Ctrl + scrollwiel of + / −"><button id="zOut" class="mini">−</button><span id="zVal">100%</span><button id="zIn" class="mini">+</button></div><div class="tabs" id="sldTabs"><button data-t="10" class="on">10 kV</button><button data-t="20">20 kV</button><button data-t="R">Ring</button></div><button id="scadaToggle" class="mini" title="In-/uitklappen">–</button></div>
+  <div class="ph"><span>SCADA</span><div class="zoom" title="Zoomen: Ctrl + scrollwiel of + / −"><button id="zOut" class="mini">−</button><span id="zVal">100%</span><button id="zIn" class="mini">+</button></div><div class="tabs" id="sldTabs"><button data-t="10" class="on">10 kV</button><button data-t="20">20 kV</button><button data-t="R">Ring</button><button data-t="P" title="Belastingprognose komende 8 uur">Prognose</button></div><button id="scadaToggle" class="mini" title="In-/uitklappen">–</button></div>
   <svg id="sld" viewBox="0 0 470 575"></svg>
   <div class="legend">
     <span><i style="background:var(--hv)"></i>110 kV</span><span><i style="background:var(--mv)"></i>10 kV</span><span><i style="background:var(--mv20)"></i>20 kV</span><span><i style="background:var(--dead)"></i>spanningsloos</span><span><i style="background:var(--earth)"></i>geaard</span>
@@ -320,6 +340,11 @@ body.menu #fpPause{display:none!important}
 <div id="radio" class="hidden"></div>
 <div id="brief" class="hidden"></div>
 <div id="prot" class="hidden"></div>
+<div id="phone" class="hidden"></div>
+<div id="handover" class="hidden"></div>
+<div id="replay" class="hidden"><button data-rp="back" title="10 min terug">⏮</button><button id="rpPlay" class="primary" data-rp="play">▶</button><button data-rp="fwd" title="10 min verder">⏭</button>
+  <input type="range" id="rpSlider" min="0" max="1" value="0"><b id="rpTime">--:--</b><select id="rpSpeed"><option value="2">2 min/s</option><option value="6" selected>6 min/s</option><option value="20">20 min/s</option></select>
+  <button data-rp="exit">Terug naar rapport</button><div id="rpEv"></div></div>
 <div id="pauseMenu" class="hidden"><div class="card pm">
   <div class="eyebrow">Gepauzeerd</div><div class="pm-mode" id="pmMode"></div>
   <div class="pm-score"><span id="pmScore">0</span><small>punten</small><em id="pmBest"></em></div>
