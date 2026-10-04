@@ -45,9 +45,13 @@ function ringFault(f,forced,repairMin){
 // een kabel met fout die weer onder spanning komt: beveiliging schakelt direct af
 function ringProtection(dm=0){
   RING.secs.forEach(s=>{
-    if(s.load>1){if(!s.ovl){s.ovl=true;award(-20,'Kabel overbelast');pushAlarm(`Kabel ${secName(s)} overbelast: ${Math.round(s.I)} A (${Math.round(s.load*100)}% van ${s.rate} A) – verleg het normaal-open punt of zet flexibel vermogen in (C)`,'warn');}
-      if(s.load>1.3&&!s.fault){s.ot+=dm;if(s.ot>8){s.ot=0;const cb=FLOW.TAG[s.node]?.cb,f=FEEDERS.find(x=>x.cb===cb);GAME.stats.burn=(GAME.stats.burn||0)+1;pushAlarm(`Kabel ${secName(s)} door langdurige overbelasting doorgebrand!`,'crit');if(f)ringFault(f,s);}}}
-    else{if(s.load<0.9)s.ovl=false;s.ot=Math.max(0,s.ot-dm*0.5);}});
+    // kabeltemperatuur (tijdconstante 40 min): even overbelasten mag, lang niet
+    const T=cableHeat(s,s.load,EN.has(s.node)&&!s.fault,dm,40);
+    if(s.load>1&&!s.ovl){s.ovl=true;pushAlarm(`Kabel ${secName(s)} ${Math.round(s.load*100)}% belast (${Math.round(s.I)} A van ${s.rate} A) – de kabel warmt op (nu ${Math.round(T)} °C, max. ${CABLE.max} °C). Verleg het normaal-open punt of zet flex in (C)`,'warn');}
+    if(s.load<0.95)s.ovl=false;
+    if(T>CABLE.max&&!s.hot){s.hot=true;award(-20,'Kabel te warm');pushAlarm(`Kabel ${secName(s)} te warm: ${Math.round(T)} °C – boven ${CABLE.burn} °C raakt hij beschadigd!`,'crit');}
+    if(T<CABLE.max-8)s.hot=false;
+    if(T>=CABLE.burn&&!s.fault){const cb=FLOW.TAG[s.node]?.cb,f=FEEDERS.find(x=>x.cb===cb);s.temp=soilT()+30;GAME.stats.burn=(GAME.stats.burn||0)+1;pushAlarm(`Kabel ${secName(s)} door oververhitting (${Math.round(T)} °C) doorgebrand!`,'crit');if(f)ringFault(f,s);}});
   RING.stations.forEach(st=>{const u=nodeU(st.node);if(u>0&&u<9.9){if(!st.uAl){st.uAl=true;award(-10,'Spanning te laag');pushAlarm(`${st.id} ${st.name}: spanning te laag (${u.toFixed(2).replace('.',',')} kV) – lange voedingsroute`,'warn');}}else if(u>10.0)st.uAl=false;});
   stationProtection();
   RING.secs.forEach(s=>{if(!s.fault||!EN.has(s.node))return;const t=FLOW.TAG[s.node];tripFrom(s.node);GAME.stats.recloseFault++;award(-40,'Ingeschakeld op kabelfout');

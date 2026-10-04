@@ -181,8 +181,8 @@ const TESTS = [
   { name: 'beveiligingsinstellingen bepalen afschakeling en schade', query: '?autostart&t=11', async run(p) {
       const r = await p.evaluate(() => { T.quiet(); const O = OS, f = O.FEEDERS.find(x => x.id === 'F6'); O.SIM.paused = false; T.step(0.2);
         const run = (pick, tms, min) => { O.setProt('f', 'F6', 'pick', pick); O.setProt('f', 'F6', 'tms', tms); Object.assign(f, { oc: 0, heat: 0, fault: null }); O.D['V-F6'].state = 1; O.computeFlows();
-          f.rate = f.P / 1.6; T.step(min); return { uit: O.D['V-F6'].state === 0, schade: !!f.fault }; };
-        const standaard = run(1.3, 1, 9), ruim = run(1.5, 2, 12);
+          f.temp = null; f.rate = f.P / 1.45; T.step(min); return { uit: O.D['V-F6'].state === 0, schade: !!f.fault, temp: Math.round(f.temp) }; };
+        const standaard = run(1.3, 1, 12), ruim = run(1.5, 2, 45);
         O.setProt('tr', 'T1', 'trip', 95); O.D.T1.oil = 96; T.step(0.25);
         return { standaard, ruim, trafo: O.D.T1.blocked && O.D.T1.blockKind === 'temp' }; });
       assert(r.standaard.uit && !r.standaard.schade, `standaardinstelling: ${JSON.stringify(r.standaard)}`);
@@ -327,7 +327,7 @@ const TESTS = [
         O.closeSettings(); O.setGfx('preset', 'hoog'); O.setTab('K'); O.renderCables();
         return { laag, weer, auto, geluid, rijen: document.querySelectorAll('#cabG .cab').length, dicht: $('#settings').classList.contains('hidden') }; });
       for (const [k, v] of Object.entries(r)) if (k !== 'rijen') assert(v, `${k} klopt niet: ${JSON.stringify(r)}`);
-      assert(r.rijen === 26, `tabblad Kabels toont ${r.rijen} rijen in plaats van 26`);
+      assert(r.rijen === 29, `tabblad Kabels toont ${r.rijen} rijen in plaats van 29`);
   } },
   { name: 'vrije dienst: incidenten starten vanzelf', query: '?autostart&t=10', async run(p) {
       const r = await p.evaluate(() => { const O = OS; O.SIM.nextEvent = 1e9; O.SIM.nextTaskAt = 1e9; O.SIM.paused = false; T.step(0.5); O.INC.next = O.SIM.t;
@@ -354,6 +354,23 @@ const TESTS = [
       assert(r.f6 === '10', `kabelfout F6 moet alleen 10 kV laten oplichten: ${r.f6}`);
       assert(r.ring === '10,R', `ringfout moet ook Ring laten oplichten: ${r.ring}`);
       assert(r.rail === '10,20,R' && /railfout rail C2/.test(r.tip), `railfout C2: ${r.rail} · ${r.tip}`);
+  } },
+  { name: 'kabeltemperatuur: kort overbelasten mag, lang niet', query: '?autostart&t=12', async run(p) {
+      const r = await p.evaluate(() => { T.quiet(); const O = OS, s = O.RING.secs.find(x => x.id === 'K12'); O.SIM.paused = false; T.step(0.5);
+        const t0 = s.temp, rate0 = s.rate; s.rate = s.I / 1.4; T.step(10); const kort = { temp: Math.round(s.temp), heel: !s.fault && !O.GAME.stats.burn };
+        T.step(70); return { t0: Math.round(t0), kort, lang: { burn: O.GAME.stats.burn || 0 }, normaal: t0 < 70 }; });
+      assert(r.normaal, `kabel te warm in de normale toestand: ${r.t0} °C`);
+      assert(r.kort.heel && r.kort.temp > r.t0 && r.kort.temp < 105, `na 10 min 140%: ${JSON.stringify(r.kort)}`);
+      assert(r.lang.burn > 0, 'kabel brandde niet door na langdurige overbelasting');
+  } },
+  { name: 'OS Meppel: eigen velden, koppelkabel en geen parallelbedrijf', query: '?autostart&t=18', async run(p) {
+      const r = await p.evaluate(async () => { T.quiet(); const O = OS, D = O.D, EN = () => O.EN(); O.SIM.paused = false; T.step(0.5);
+        const klanten = EN().has('MP1') && EN().has('MP2'), model = O.checkModel(true).length === 0; O.operate('MS5-K', 1); const weigert = D['MS5-K'].state === 0;
+        await T.op('V-F4', 0); await T.op('MS4-R', 0); T.step(0.2); await T.op('MS5-K', 1); T.step(0.3); const terug = EN().has('M5') && O.FD('MP3').P > 0.3;
+        await T.op('MS4-R', 1); await T.op('V-F4', 1); T.step(0.5); const afgeschakeld = D['M-MP3'].state === 0;
+        O.meppelFault(); T.step(0.2); O.updateTabAlarms(); const tab = document.querySelector('#sldTabs [data-t="M"]').classList.contains('alarm') && !EN().has('MP1');
+        return { klanten, weigert, terug, afgeschakeld, tab, model }; });
+      for (const [k, v] of Object.entries(r)) assert(v, `${k} klopt niet: ${JSON.stringify(r)}`);
   } },
   { name: 'Esc opent pauzemenu en pauzeert', query: '?autostart', async run(p) {
       await p.keyboard.press('Escape'); await sleep(800);

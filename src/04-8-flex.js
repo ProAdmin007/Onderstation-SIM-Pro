@@ -17,12 +17,15 @@ RING.stations.forEach(s=>{let pk=0;for(let h=0;h<24;h+=0.25)pk=Math.max(pk,s.gro
   s.peakMW=pk;s.kva=KVA_SIZES.find(k=>k*0.95/1000>=pk*1.25)||4000;D[s.id].label=`MS-station ${s.name} · 10/0,4 kV ${s.kva} kVA`;D[s.id+'-TR'].label=`Distributietransformator 10/0,4 kV · ${s.kva} kVA`;});
 const trMW=s=>s.kva*0.95/1000;
 // veldkabels (niet-ring) op dezelfde manier: rating = winterpiek + 20% marge
-FEEDERS.filter(f=>!f.ring&&!f.gen).forEach(f=>{let pk=0;for(let h=0;h<24;h+=0.25)pk=Math.max(pk,f.base*profile(f.kind,h)*(SEASONS.winter.load[f.kind]??1));f.rate=pk*1.2;});   // vermogen (MW) bij cos φ 0,95
+FEEDERS.filter(f=>!f.ring&&!f.gen&&!f.link).forEach(f=>{let pk=0;for(let h=0;h<24;h+=0.25)pk=Math.max(pk,f.base*profile(f.kind,h)*(SEASONS.winter.load[f.kind]??1));f.rate=pk*1.2;});   // vermogen (MW) bij cos φ 0,95
 // verzoek om vermogen terug te regelen (fractie van het maximum: 0 … 1)
 function setFlex(id,frac){const f=FLEX.find(x=>x.id===id);if(!f)return;frac=clamp(frac,0,1);if(f.req===frac)return;f.req=frac;f.at=SIM.t+FLEX_DELAY;
   pushAlarm(frac?`Flex-verzoek: ${f.name} ${Math.round(frac*f.max*100)}% terugregelen (${f.how}) – actief over ±${FLEX_DELAY} min`:`Flex: ${f.name} vrijgegeven – weer normaal vermogen`,'op');renderFlex?.();}
 const flexSaved=f=>{const c=f.c,k=c.cut||0;return k&&EN.has(c.node)?Math.abs(c.demand)/(1-k)*k:0;};   // MW die nu niet afgenomen of opgewekt wordt
-function flexTick(dm){
+// koppelkabel naar Meppel: parallel met het net van Netbeheer Noord is niet toegestaan – hun beveiliging schakelt de koppeling af
+function linkTick(){const k=D['MS5-K'];if(!k.state||!D['M-MP3'].state||!EN.has('MP3'))return;k.state=0;const par=energized().has('M5');k.state=1;
+  if(par){tripBreaker('M-MP3');award(-40,'Parallel met ander net');pushAlarm('Netbeheer Noord: uw net staat parallel met het onze via de koppelkabel – M-MP3 afgeschakeld. Open eerst MS5-K voordat u de ring weer vanuit Zuidwolde voedt','warn');}}
+function flexTick(dm){linkTick();
   FLEX.forEach(f=>{const want=f.req*f.max;if((f.c.cut||0)!==want&&SIM.t>=f.at){f.c.cut=want;if(want)pushAlarm(`Flex actief: ${f.name} regelt ${fx1(flexSaved(f))} MW terug`,'ok');}
     const mw=flexSaved(f);if(mw>0){const eur=mw*f.eur*dm/60;GAME.stats.flexEur=(GAME.stats.flexEur||0)+eur;GAME.score-=eur/100;}});
   // distributietransformator: zekeringen slaan door na langdurige overbelasting

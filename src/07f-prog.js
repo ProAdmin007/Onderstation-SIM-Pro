@@ -3,7 +3,7 @@
 const PROG={hist:[],lastQ:-1,warned:{}};
 // verwachte vraag per spanningsniveau op uur h (zonder storingen, met seizoen en het huidige weer)
 function demandAt(h){let p10=0,p20=0;h=((h%24)+24)%24;
-  CONS.forEach(c=>{const v=c.base*profile(c.kind,h)*(c.gen?1:seasonMul(c.kind));if(!c.st&&is20(c.bus))p20+=v;else p10+=v;});return {p10,p20};}
+  CONS.forEach(c=>{if(c.bus==='MP')return;const v=c.base*profile(c.kind,h)*(c.gen?1:seasonMul(c.kind));if(!c.st&&is20(c.bus))p20+=v;else p10+=v;});return {p10,p20};}
 const trCap=T=>(D[T].fanFail?D[T].rON:D[T].rAF)*0.95;
 function capNow(){const on=id=>D[id].state===1&&!D[D[id].tr].blocked;
   const c10=(on('V-T1')?trCap('T1'):0)+(on('V-T3')?trCap('T3'):0),c20=(on('W-T2')?trCap('T2'):0)+(on('W-T3')?trCap('T3'):0);

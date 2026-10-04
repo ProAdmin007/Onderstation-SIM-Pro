@@ -32,8 +32,14 @@ function setProt(kind,id,key,val){const o=PROT[kind][id];if(!o||o[key]===val)ret
   pushAlarm(`Beveiliging ${nm}: ${PROT_OPT[key].label.toLowerCase()} → ${protTxt(key,val)}`,'op');if(protOpen())renderProt();refreshDevPanel();}
 // effecten (aangeroepen vanuit de simulatie)
 function arFails(L){const dt=PROT.ln[L].dt;return dt<=0.3?Math.random()<0.3:dt>=3?false:Math.random()<0.04;}
-function overloadHeat(f,r,dm){   // kabel van een uitgaand veld warmt op bij langdurige overbelasting
-  if(f.gen||!D[f.cb].state)return;const q=r*r-1.9;f.heat=Math.max(0,(f.heat||0)+(q>0?q:q*0.3)*dm);
-  if(f.heat>=6&&!f.fault){f.heat=0;GAME.stats.burn=(GAME.stats.burn||0)+1;pushAlarm(`${f.cb} ${f.name}: kabel door langdurige overbelasting beschadigd – de beveiliging stond te ruim ingesteld`,'crit');feederFault(f.id);}}
+// kabeltemperatuur: de geleider warmt langzaam op naar grondtemperatuur + 65 °C × (belasting)² (XLPE: max. 90 °C, beschadiging vanaf 105 °C)
+const CABLE={max:90,warn:85,burn:105,rise:65};
+const soilT=()=>clamp(ambient()*0.45+8,5,22);   // temperatuur van de grond rond de kabel
+function cableHeat(o,load,on,dm,tau){const soil=soilT(),tgt=on?soil+CABLE.rise*load*load:soil;o.temp=o.temp??Math.min(tgt,CABLE.max-10);o.temp+=(tgt-o.temp)*(1-Math.exp(-dm/tau));return o.temp;}
+function overloadHeat(f,r,dm){   // kabel van een uitgaand veld (tijdconstante 30 min)
+  if(f.gen)return;const T=cableHeat(f,Math.max(0,r),D[f.cb].state&&EN.has(f.node),dm,30);
+  if(T>CABLE.warn&&!f.hotWarn){f.hotWarn=true;pushAlarm(`${f.cb} ${f.name}: kabel loopt warm (${Math.round(T)} °C, max. ${CABLE.max} °C) – verlaag de belasting`,'warn');}
+  if(T<CABLE.warn-8)f.hotWarn=false;
+  if(T>=CABLE.burn&&!f.fault){f.temp=soilT()+30;GAME.stats.burn=(GAME.stats.burn||0)+1;pushAlarm(`${f.cb} ${f.name}: kabel door oververhitting (${Math.round(T)} °C) beschadigd – de beveiliging stond te ruim ingesteld`,'crit');feederFault(f.id);}}
 function trafoOverheat(T,t,dm){if(t.oil>105&&EN.has(T+'h')){t.gas=(t.gas||0)+dm;if(t.gas>12){t.gas=0;GAME.stats.thermal++;award(-100,`${T} gasvorming door oververhitting`);
     tripTrafo(T,'Buchholz-beveiliging (gasvorming door oververhitting)',rnd(90,120),'prot');}}else t.gas=Math.max(0,(t.gas||0)-dm*0.5);}

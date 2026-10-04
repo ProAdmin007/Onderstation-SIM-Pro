@@ -63,8 +63,20 @@ function buildSLD(){
       if(s.id+'-R'===rg.nop)T(x+24,Y+20,'NOP','middle','mh fs');});
     RING.secs.filter(c=>c.ring===rg).forEach((sec,i)=>{const x1=i?XS[i-1]+35:14,x2=i<n?XS[i]-35:456;W(x1,RY,x2,RY,sec.node);M('flt'+sec.id,(x1+x2)/2,RY-8,'middle','bad');});};
   RINGS.forEach((rg,k)=>drawRing(rg,k*262));
+  // tabblad OS Meppel: 110 kV en trafo van Netbeheer Noord (grijs, niet bedienbaar), onze uitgaande velden en de koppelkabel naar MS5
+  out.M=[];o=out.M;
+  T(235,22,'OS MEPPEL','middle','h');T(235,36,'110 kV en transformator: Netbeheer Noord','middle','fs dl');T(235,48,'de uitgaande velden zijn van ons','middle','fs dl');
+  o.push('<rect x="150" y="56" width="170" height="146" rx="10" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.25)" stroke-dasharray="5 4"/>');
+  T(235,70,'NETBEHEER NOORD','middle','dl');M('mpst',235,84,'middle','mh');W(235,92,235,150,'MPs');
+  o.push('<g class="dev ext" data-id="MP-TR"><title>MP-TR · '+D['MP-TR'].label+'</title><rect class="hit" x="219" y="148" width="32" height="44" rx="5"/><circle class="w" data-n="MPs" data-c="w" cx="235" cy="162" r="12"/><circle class="w" data-n="MP" data-c="w" cx="235" cy="178" r="12"/></g>');
+  W(235,190,235,250,'MP');W(60,250,410,250,'MP','w bus');T(60,242,'10 kV RAIL OS MEPPEL','start','dl');M('MP',410,242,'end');
+  [['MP1',120],['MP2',235],['MP3',350]].forEach(([id,x])=>{const f=F(id);W(x,250,x,277,'MP');CB(f.cb,x,285,f.cb,-1);W(x,293,x,324,f.node);W(x,304,x+15,304,f.node);ES(f.id+'-Q8',x+15,316,'');
+    if(!f.link){o.push(`<polygon class="w arrow" data-n="${f.node}" data-c="w arrow" points="${x-6},324 ${x+6},324 ${x},336"/>`);T(x,352,f.short,'middle','dl fs');M('f'+f.id,x,365);M('fc'+f.id,x,378,'middle','');}});
+  W(350,324,350,420,'MP3');DS('MS5-K',350,432,'MS5-K',1);W(350,443,350,470,'M5');W(350,470,60,470,'M5');
+  T(60,486,'naar MS5 Bedrijvenpark Zuid (ring woonwijk)','start','fs');T(338,384,'koppelkabel','end','fs dl');T(338,397,'max. 4 MW','end','fs dl');M('lnk',338,410,'end','mh');
+  T(235,516,'MS5-K is normaal open. Sluiten mag alleen als de','middle','fs dl');T(235,529,'ringkant spanningsloos is: dan voedt Meppel MS5 terug.','middle','fs dl');T(235,542,'Parallel met Netbeheer Noord is niet toegestaan.','middle','fs dl');
   T(235,540,'⚑ verklikker aangesproken · ⚡ kabelfout','middle','fs');T(235,553,'klik op een station voor alle schakelaars','middle','fs');
-  const svg=$('#sld');svg.innerHTML=`<g data-tab="10">${out[10].join('')}</g><g data-tab="20" style="display:none">${out[20].join('')}</g><g data-tab="R" style="display:none">${out.R.join('')}</g><g data-tab="P" style="display:none"><g id="progG"></g></g><g data-tab="K" style="display:none"><g id="cabG"></g></g>`;
+  const svg=$('#sld');svg.innerHTML=`<g data-tab="10">${out[10].join('')}</g><g data-tab="20" style="display:none">${out[20].join('')}</g><g data-tab="R" style="display:none">${out.R.join('')}</g><g data-tab="P" style="display:none"><g id="progG"></g></g><g data-tab="K" style="display:none"><g id="cabG"></g></g><g data-tab="M" style="display:none">${out.M.join('')}</g>`;
   SLD.nodes=[...svg.querySelectorAll('[data-n]')];SLD.byNode={};SLD.nodes.forEach(el=>(SLD.byNode[el.dataset.n]??=[]).push(el));
   svg.querySelectorAll('.dev').forEach(el=>{const id=el.dataset.id,tab=el.closest('[data-tab]').dataset.tab;(SLD.devs[id]??=[]).push(el);(SLD.devTab[id]??=new Set()).add(tab);
     el.addEventListener('click',()=>selectDevice(id));});
@@ -72,14 +84,15 @@ function buildSLD(){
   $('#sldTabs').addEventListener('click',e=>{const b=e.target.closest('[data-t]');if(b)setTab(b.dataset.t);});
 }
 // ---- tabbladen laten oplichten zolang er in dat deel van de installatie een storing is
-function tabAlarms(){const out={'10':[],'20':[],R:[]},add=(t,why)=>out[t].push(why),both=why=>{add('10',why);add('20',why);};
+function tabAlarms(){const out={'10':[],'20':[],R:[],M:[]},add=(t,why)=>out[t].push(why),both=why=>{add('10',why);add('20',why);};
   LINES.forEach(L=>{if(!SIM.lines[L].avail&&!SIM.lines[L].maint)both(`lijn ${L} spanningsloos`);});
   if(D.T3.blocked)both('T3 geblokkeerd');
-  BUS_IDS.forEach(b=>{const t=is20(b)?'20':'10',nm=BUSES[b].nm;if(BUSF[b])add(t,`railfout rail ${nm}`);else if(!EN.has(b))add(t,`rail ${nm} spanningsloos`);});
+  if(!SIM.meppel.avail)add('M','storing Netbeheer Noord');
+  BUS_IDS.forEach(b=>{const t=b==='MP'?'M':is20(b)?'20':'10',nm=BUSES[b].nm;if(b==='MP'&&!SIM.meppel.avail)return;if(BUSF[b])add(t,`railfout rail ${nm}`);else if(!EN.has(b))add(t,`rail ${nm} spanningsloos`);});
   if(D.T1.blocked)add('10','T1 geblokkeerd');if(D.T2.blocked)add('20','T2 geblokkeerd');
-  FEEDERS.forEach(f=>{const t=is20(f.bus)?'20':'10';if(f.ring)return;if(f.fault)add(t,`kabelfout ${f.id}`);else if(f.unplanned&&!EN.has(f.node))add(t,`${f.id} spanningsloos`);});
-  CB_IDS.forEach(id=>{const d=D[id];if(d.stuck)add(d.feeder&&is20(d.feeder.bus)?'20':'10',`${id} zit vast`);});
-  RING.secs.forEach(s=>{if(s.fault)add('R',`kabelfout ${secName(s)}`);});
+  FEEDERS.forEach(f=>{const t=f.bus==='MP'?'M':is20(f.bus)?'20':'10';if(f.ring)return;if(f.fault)add(t,`kabelfout ${f.id}`);else if(f.unplanned&&!EN.has(f.node))add(t,`${f.id} spanningsloos`);});
+  CB_IDS.forEach(id=>{const d=D[id];if(d.stuck)add(d.feeder?.bus==='MP'?'M':d.feeder&&is20(d.feeder.bus)?'20':'10',`${id} zit vast`);});
+  RING.secs.forEach(s=>{if(s.fault)add('R',`kabelfout ${secName(s)}`);else if(s.temp>CABLE.max)add('R',`kabel ${secName(s)} te warm`);});
   RING.stations.forEach(s=>{if(s.damaged)add('R',`${s.id} beschadigd`);else if(s.fuse)add('R',`zekeringen ${s.id}`);else if(s.unplanned&&!EN.has(s.node))add('R',`${s.id} spanningsloos`);});
   return out;}
 function updateTabAlarms(){const a=tabAlarms();document.querySelectorAll('#sldTabs button').forEach(b=>{if(b.dataset.tip0==null)b.dataset.tip0=b.title||'';const l=a[b.dataset.t];const on=!!(l&&l.length);
@@ -105,6 +118,7 @@ function updateSLD(){
   RING.secs.forEach(s=>(SLD.byNode[s.node]||[]).forEach(el=>{el.classList.toggle('ovl',s.load>0.85&&s.load<=1);el.classList.toggle('ovl2',s.load>1);}));
   FEEDERS.filter(f=>f.ring).forEach(f=>setM('fa'+f.id,`V-${f.id} · rail ${BUS_BAND[railOf(f.sel)]?.[2]||'–'} · ${Math.round(D[f.cb].I)} A`));
   RING.secs.forEach(s=>setM('flt'+s.id,s.fault?'⚡':''));
+  setM('mpst',SIM.meppel.avail?`in bedrijf · ${fx(FLOW.U.MP,2)} kV`:'STORING',SIM.meppel.avail?'mh':'bad');setM('lnk',D['MS5-K'].state&&EN.has('MP3')?`nu ${fx(FD('MP3').P)} MW`:'open','mh');
   updateTabAlarms();
   FEEDERS.forEach(f=>{const on=EN.has(f.node);setM('f'+f.id,on?`${fx(f.P)} MW`:'UIT',on?(f.gen?'mh':'m'):'bad');setM('fc'+f.id,f.ring?'ring':f.gen?'productie':f.cust>=1000?`${fx(f.cust/1000)}k kl`:`${f.cust} kl`);});
 }
@@ -140,11 +154,12 @@ $('#taskBody').addEventListener('click',e=>{if(e.target.closest('[data-lnext]')&
 // ============================================================ apparaatpaneel
 let SEL=null,panelRows=[];
 const fmtKV=v=>v>0?`${v.toFixed(v<20?2:1).replace('.',',')} kV`:'0 kV';
-function bayName(d){const b=d.bay;if(!b)return 'OS Zuidwolde';const rs=RING.stations.find(s=>s.id===b);if(rs)return `10 kV-ring · ${rs.id} ${rs.name}`;if(b[0]==='L')return `Lijnveld ${b} · ${SIM.lines[b].name}`;if(/^T\d$/.test(b))return `Transformatorveld ${b}${b===RES?' · reserve':''}`;if(b==='K')return '10 kV-installatie';if(b==='WK')return '20 kV-installatie · rail C1/C2';const f=FEEDERS.find(f=>f.id===b);return `${is20(f.bus)?20:10} kV-veld ${b} · ${f.name} · rail ${BUS_BAND[railOf(f.sel)]?.[2]||'–'}`;}
+function bayName(d){const b=d.bay;if(!b)return 'OS Zuidwolde';const rs=RING.stations.find(s=>s.id===b);if(rs)return `10 kV-ring · ${rs.id} ${rs.name}`;if(b[0]==='L')return `Lijnveld ${b} · ${SIM.lines[b].name}`;if(/^T\d$/.test(b))return `Transformatorveld ${b}${b===RES?' · reserve':''}`;if(b==='K')return '10 kV-installatie';if(b==='MPx')return 'OS Meppel · Netbeheer Noord';if(b==='WK')return '20 kV-installatie · rail C1/C2';const f=FEEDERS.find(f=>f.id===b);return `${is20(f.bus)?20:10} kV-veld ${b} · ${f.name} · rail ${BUS_BAND[railOf(f.sel)]?.[2]||'–'}`;}
 function statusOf(d){
   if(d.type==='cb')return d.state?['INGESCHAKELD','on']:['UITGESCHAKELD','off'];
   if(d.type==='ds')return d.state?['GESLOTEN','on']:['OPEN','off'];
   if(d.type==='es')return d.state?['GEAARD','earth']:['OPEN','off'];
+  if(d.type==='ext')return SIM.meppel.avail?['IN BEDRIJF · NETBEHEER NOORD','on']:['STORING · NETBEHEER NOORD','bad'];
   if(d.type==='tr')return d.blocked?['GEBLOKKEERD','bad']:EN.has(d.a)?['IN BEDRIJF','on']:['SPANNINGSLOOS','off'];
   if(d.type==='line')return SIM.lines[d.line].avail?['ONDER SPANNING','on']:['SPANNINGSLOOS','bad'];
   return EN.has(d.node)?['ONDER SPANNING','on']:['SPANNINGSLOOS','off'];}
@@ -159,7 +174,7 @@ function rowsFor(d){const r=[],A=(k,f)=>r.push([k,f]);
   if(d.type==='lvs')A('Belasting',()=>`${(d.lvg.Pc*1000).toFixed(0)} kW`);
   if(d.type==='kiosk'){const s=d.st;A('Klanten',()=>s.cust.toLocaleString('nl-NL'));A('Straatverlichting',()=>`${s.lamps||0} lantaarns · ${EN.has(s.ovl)?(profile('ovl',hourOf())?'<span class="warnc">brandt</span>':'uit (dag)'):'<span class="bad">geen spanning</span>'}`);A('Belasting',()=>`${s.P.toFixed(2)} MW`);
     A('Gevoed via',()=>{const t=FLOW.TAG[s.node];return t&&t.cb?`${t.cb} (rail ${BUS_BAND[t.bus][2]})`:'<span class="bad">geen voeding</span>';});
-    const kab=sec=>()=>sec?(EN.has(sec.node)?`<span class="${sec.load>1?'bad':sec.load>0.85?'warnc':''}">${Math.round(sec.I)} A · ${Math.round(sec.load*100)}%</span>`:'spanningsloos'):'—';
+    const kab=sec=>()=>sec?(EN.has(sec.node)?`<span class="${sec.load>1||sec.temp>CABLE.max?'bad':sec.load>0.85||sec.temp>CABLE.warn?'warnc':''}">${Math.round(sec.I)} A · ${Math.round(sec.load*100)}% · ${Math.round(sec.temp??0)} °C</span>`:'spanningsloos'):'—';
     A('Kabel links',kab(RING.secs.find(x=>x.b===s.id)));A('Kabel rechts',kab(RING.secs.find(x=>x.a===s.id)));
     A('Kortsluitverklikker',()=>s.flag?'<span class="warnc">⚑ AANGESPROKEN</span>':'normaal');}
   if(d.type==='es')A(d.cb?'Spanning kabelzijde':'Spanning lijnzijde',()=>fmtKV(nodeU(d.a)));
@@ -185,7 +200,7 @@ function rowsFor(d){const r=[],A=(k,f)=>r.push([k,f]);
   if(d.id==='MS20'){A('Rail C1',()=>fmtKV(FLOW.U.RC)+(BUSF.RC?' <span class="bad">RAILFOUT</span>':''));A('Rail C2',()=>fmtKV(FLOW.U.RD)+(BUSF.RD?' <span class="bad">RAILFOUT</span>':''));A('Koppeling W-K',()=>D['W-K'].state?'gesloten':'open');A('Netto belasting',()=>`${FLOW.load20.toFixed(1)} MW${FLOW.load20<0?' (teruglevering)':''}`);A('Voeding',()=>['W-T2','W-T3'].filter(id=>D[id].state).join(' + ')||'geen');}
   if(d.sel||(d.feeder&&!is20(d.feeder.bus))||d.id==='V-T1'||d.id==='V-T3'){const bay=d.sel?d.bay:d.feeder?d.feeder.id:d.tr;A('Railkeuze',()=>{const a=D[bay+'-QA'].state,b=D[bay+'-QB'].state;return a&&b?'<span class="warnc">rail A + B (omzetten)</span>':a?'rail A':b?'rail B':'<span class="bad">geen rail</span>';});}
   if(d.feeder){const f=d.feeder;A('Belasting',()=>`${f.P.toFixed(2)} MW${f.clp>1.03?` <span class="warnc">(+${Math.round((f.clp-1)*100)}% KLO)</span>`:''}`);A('Klanten',()=>f.ring?RING.stations.filter(s=>FLOW.TAG[s.node]?.cb===f.cb).reduce((a,s)=>a+s.cust,0).toLocaleString('nl-NL')+' (ring)':f.cust.toLocaleString('nl-NL'));
-    A('Kabel',()=>feederState(f));A('Terugvoeding',()=>f.backfed?'<span class="warnc">actief (via net)</span>':'—');}
+    A('Kabel',()=>feederState(f));if(!f.gen)A('Kabeltemperatuur',()=>f.temp==null?'—':`<span class="${f.temp>CABLE.max?'bad':f.temp>CABLE.warn?'warnc':''}">${Math.round(f.temp)} °C</span> (max. ${CABLE.max} °C)`);A('Terugvoeding',()=>f.backfed?'<span class="warnc">actief (via net)</span>':'—');}
   if(d.type==='sa')A('Ontladingsteller',()=>d.count);
   if(['cb','ds','es','lbs'].includes(d.type))A('Vergrendeling',()=>{if(!SIM.interlock)return '<span class="warnc">UIT</span>';if(d.busy)return 'bezig…';const r=interlockCheck(d,d.state?0:1);return r?`<span class="warnc">${r.replace('Vergrendeling: ','')}</span>`:'vrij';});
   return r;}
@@ -196,7 +211,7 @@ function renderDevPanel(){
   if(d.type==='cb')ctl=`<div class="dp-ctl"><button class="b1" data-act="1">IN</button><button class="b0" data-act="0">UIT</button></div>`;
   else if(d.type==='ds'||d.type==='es'||d.type==='lbs')ctl=`<div class="dp-ctl"><button class="b1" data-act="1">SLUITEN</button><button class="b0" data-act="0">OPENEN</button></div>`;
   else if(d.type==='lvs')ctl=`<div class="dp-ctl"><button class="b1" data-act="1">IN</button><button class="b0" data-act="0">UIT</button></div>`;
-  else if(d.type==='kiosk'){const s=d.st,ids=[s.id+'-L',s.id+'-R',s.id+'-T',...s.groups.map(g=>g.id)];
+  else if(d.type==='kiosk'){const s=d.st,ids=[s.id+'-L',s.id+'-R',s.id+'-T',...(D[s.id+'-K']?[s.id+'-K']:[]),...s.groups.map(g=>g.id)];
     ctl=`<div class="swlist">${ids.map(id=>`<div class="swr"><span><b>${id.slice(s.id.length+1)}</b>${D[id].type==='lvs'?D[id].lvg.name:D[id].label}</span><button class="b1" data-op="${id}:1">${D[id].type==='lvs'?'IN':'DICHT'}</button><button class="b0" data-op="${id}:0">${D[id].type==='lvs'?'UIT':'OPEN'}</button></div>`).join('')}</div>`;}
   else if(d.type==='tr')ctl=`<div class="dp-ctl"><button data-act="avr"></button><button data-act="tap-1" title="Trap lager">▼ trap</button><button data-act="tap1" title="Trap hoger">▲ trap</button></div>`;
   const sub=[];if(VIEWS[SEL])sub.push(`<button data-act="fly">Bekijk in 3D</button>`);if(d.type==='bld')sub.push(`<button data-act="inside">Ga naar binnen</button>`);if(d.type==='bld'||VIEWS[SEL]?.inside)sub.push(`<button data-act="scada">Toon in SCADA</button>`);

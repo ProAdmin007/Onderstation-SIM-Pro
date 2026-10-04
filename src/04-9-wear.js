@@ -2,7 +2,7 @@
 // Veroudering en preventief onderhoud: vermogenschakelaars slijten door schakelen en vooral door het afschakelen van foutstromen.
 // Een versleten schakelaar kan weigeren (50BF: de reservebeveiliging schakelt de hele rail af) en blijft dan mechanisch vastzitten.
 const CB_IDS=Object.values(D).filter(d=>d.type==='cb').map(d=>d.id);
-const MAINT_CBS=FEEDERS.filter(f=>!is20(f.bus)).map(f=>f.cb);   // velden met railkeuzescheiders: te reviseren zonder rail vrij te maken
+const MAINT_CBS=FEEDERS.filter(f=>SEL_BAYS[f.id]).map(f=>f.cb);   // velden met railkeuzescheiders: te reviseren zonder rail vrij te maken
 CB_IDS.forEach(id=>{const d=D[id];d.wear=rnd(0.05,0.5);});
 MAINT_CBS.slice().sort(()=>Math.random()-0.5).slice(0,2).forEach(id=>{D[id].wear=rnd(0.66,0.8);});   // een paar oude schakelaars
 CB_IDS.forEach(id=>{const d=D[id];d.year=2026-Math.round(d.wear*14);d.ops=Math.round(d.wear*2600+rnd(0,300));});

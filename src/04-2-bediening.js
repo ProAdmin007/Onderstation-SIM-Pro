@@ -8,12 +8,14 @@ function interlockCheck(d,to){
   if(d.type==='ds'){const cb=D[d.cb];if(d.sel&&to===1&&D[d.other].state===1&&D['V-K'].state!==1)return 'Vergrendeling: een veld mag alleen op beide rails als koppeling V-K gesloten is';
     if(cb.state===1&&!selPar(d)&&!(cb.stuck&&!EN.has(d.a)&&!EN.has(d.b)))return d.sel?`Vergrendeling: ${cb.id} moet eerst UIT (of: V-K dicht en het veld eerst ook op de andere rail)`:`Vergrendeling: ${cb.id} moet eerst UIT`;if(to===1&&d.es&&D[d.es].state===1)return `Vergrendeling: aardschakelaar ${d.es} is gesloten`;}
   if(d.type==='es'&&to===1){if(d.ds&&D[d.ds].state===1)return `Vergrendeling: ${d.ds} moet eerst open`;if(d.cb&&D[d.cb].state===1&&!(D[d.cb].stuck&&!EN.has(d.a)))return `Vergrendeling: ${d.cb} moet eerst UIT`;if(EN.has(d.a))return 'Vergrendeling: spanning aanwezig (spanningsdetectie)';}
+  if(d.link&&to===1){if(!EN.has(d.b))return 'Vergrendeling: de koppelkabel uit Meppel is spanningsloos – koppelen mag alleen om vanuit Meppel te voeden';
+    if(EN.has(d.a))return 'Vergrendeling: niet parallel schakelen met het net van Netbeheer Noord – maak eerst de ringkant spanningsloos';}
   if(d.id==='V-K'&&to===0){const both=Object.values(D).find(x=>x.sel&&x.id.endsWith('QA')&&x.state===1&&D[x.other].state===1);if(both)return `Vergrendeling: veld ${both.bay} staat op beide rails – open eerst één railkeuzescheider`;}
   if(d.type==='cb'&&to===1&&d.need&&D[d.tr].ratio!==d.need)return `Vergrendeling: ${d.tr} staat op ${D[d.tr].ratio} kV – eerst omschakelen naar ${d.need} kV`;
   if(d.type==='cb'&&to===1){d.state=1;const sc=shortNode();d.state=0;if(sc)return 'Vergrendeling: inschakelen op een geaard deel';}
   return null;}
 // railkoppelingen afgeleid uit BUSES: [rail, rail, max. spanningsverschil synchrocheck]
-const COUPLERS={};BUS_IDS.forEach(b=>(COUPLERS[BUSES[b].coupler]??=[]).push(b));Object.values(COUPLERS).forEach(v=>v.push(BUSES[v[0]].kv===20?0.5:0.25));
+const COUPLERS={};BUS_IDS.forEach(b=>{if(BUSES[b].coupler)(COUPLERS[BUSES[b].coupler]??=[]).push(b);});Object.values(COUPLERS).forEach(v=>v.push(BUSES[v[0]].kv===20?0.5:0.25));
 function syncCheck(d){const c=COUPLERS[d.id];if(!c||!EN.has(c[0])||!EN.has(c[1]))return null;const dU=Math.abs(FLOW.U[c[0]]-FLOW.U[c[1]]);
   return dU>c[2]?`Synchrocheck: spanningsverschil ${dU.toFixed(2).replace('.',',')} kV te groot (max ${String(c[2]).replace('.',',')}) – breng de trappen gelijk`:null;}
 function operate(id,to,opts={}){

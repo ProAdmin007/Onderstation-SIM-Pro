@@ -3,10 +3,12 @@
 // ============================================================ simulatie
 const SIM={t:9*60,speed:60,paused:true,interlock:true,cml:0,incidents:0,tasksDone:0,off:0,
   nextEvent:9*60+16,nextTaskAt:9*60+3,timers:[],
-  lines:{L1:{name:'Hoogeveen',avail:true,reason:'',maint:false,ar:true},L2:{name:'Meppel',avail:true,reason:'',maint:false,ar:true}}};
+  lines:{L1:{name:'Hoogeveen',avail:true,reason:'',maint:false,ar:true},L2:{name:'Meppel',avail:true,reason:'',maint:false,ar:true}},
+  meppel:{avail:true,reason:''}};   // OS Meppel: 110 kV-zijde en trafo van Netbeheer Noord
 // ---------- centrale definities: rails en lijnen staan op één plek, de rest wordt hiervan afgeleid
 const BUSES={RA:{nm:'A',kv:10,band:[10,11],coupler:'V-K'},RB:{nm:'B',kv:10,band:[10,11],coupler:'V-K'},
-  RC:{nm:'C1',kv:20,band:[20,22],coupler:'W-K'},RD:{nm:'C2',kv:20,band:[20,22],coupler:'W-K'}};
+  RC:{nm:'C1',kv:20,band:[20,22],coupler:'W-K'},RD:{nm:'C2',kv:20,band:[20,22],coupler:'W-K'},
+  MP:{nm:'Meppel',kv:10,band:[10,11],coupler:null,ext:true}};   // 10 kV-rail van OS Meppel (Netbeheer Noord); alleen de uitgaande velden zijn van ons
 const BUS_IDS=Object.keys(BUSES),perBus=v=>Object.fromEntries(BUS_IDS.map(b=>[b,typeof v==='function'?v():v]));
 const LINES=Object.keys(SIM.lines);
 if(params.get('t')){SIM.t=parseFloat(params.get('t'))*60;SIM.nextEvent=SIM.t+16;SIM.nextTaskAt=SIM.t+3;}
@@ -20,7 +22,11 @@ const FEEDERS=[
   {id:'G1',name:'Zonnepark De Hoeve',short:'Zonnepark',kind:'pv',base:12,cust:0,bus:'RC',gen:true},
   {id:'G2',name:'Industrieterrein Noord',short:'Ind. Noord',kind:'ind',base:8.5,cust:60,bus:'RC'},
   {id:'G3',name:'Buitengebied Oost',short:'Buitengeb.',kind:'res',base:6.5,cust:5200,bus:'RD'},
-  {id:'G4',name:'Waterzuivering',short:'RWZI',kind:'hosp',base:2.4,cust:1,bus:'RD'}];
+  {id:'G4',name:'Waterzuivering',short:'RWZI',kind:'hosp',base:2.4,cust:1,bus:'RD'},
+  // uitgaande velden in OS Meppel: van ons, de rest van het station is van Netbeheer Noord
+  {id:'MP1',name:'Meppel-Oost',short:'Meppel-O',kind:'res',base:4.2,cust:3800,bus:'MP'},
+  {id:'MP2',name:'Bedrijventerrein Blankenstein',short:'Blankenst.',kind:'ind',base:5,cust:45,bus:'MP'},
+  {id:'MP3',name:'Koppelkabel naar MS5 Zuidwolde',short:'Koppeling',kind:'res',base:0,cust:0,bus:'MP',link:true}];
 const is20=b=>BUSES[b]?.kv===20;
 const FD=id=>FEEDERS.find(f=>f.id===id);   // 20 kV: rail C1 (RC) en rail C2 (RD)
 const D={};
@@ -59,7 +65,7 @@ dev('V-K',{type:'cb',bay:'K',label:'Railkoppeling 10 kV (synchrocheck)',a:'RA',b
 for(const [b,nm] of [['RA','A'],['RB','B']])dev(b+'-Q8',{type:'es',bay:'K',label:'Railaardschakelaar rail '+nm,a:b});
 dev('W-K',{type:'cb',bay:'WK',label:'Railkoppeling 20 kV C1–C2 (synchrocheck)',a:'RC',b:'RD',state:1});
 for(const [b,nm] of [['RC','C1'],['RD','C2']])dev(b+'-Q8',{type:'es',bay:'WK',label:'Railaardschakelaar rail '+nm,a:b});
-FEEDERS.forEach(f=>{const dbl=!is20(f.bus);f.sel=dbl?f.id+'s':f.bus;Object.assign(f,{node:f.id,cb:(is20(f.bus)?'W-':'V-')+f.id,rate:f.ring?9:f.base*1.15,fault:null,outFrac:0,clp:1,offSince:null,oc:0,backfed:false,noise:0,wasOn:true,P:0,demand:0});
+FEEDERS.forEach(f=>{const dbl=f.bus==='RA'||f.bus==='RB';f.sel=dbl?f.id+'s':f.bus;Object.assign(f,{node:f.id,cb:(f.bus==='MP'?'M-':is20(f.bus)?'W-':'V-')+f.id,rate:f.ring?9:f.link?4:f.base*1.15,fault:null,outFrac:0,clp:1,offSince:null,oc:0,backfed:false,noise:0,wasOn:true,P:0,demand:0});
   dev(f.cb,{type:'cb',bay:f.id,label:(f.gen?'Productieveld · ':'Uitgaand veld · ')+f.name,a:f.sel,b:f.id,state:1,feeder:f});if(dbl)selPair(f.id,f.sel,f.cb,f.bus);
   dev(f.id+'-Q8',{type:'es',bay:f.id,label:'Aardschakelaar kabelzijde',a:f.id,cb:f.cb});});
 // ---------- 10 kV-ringen achter het station: elke ring loopt tussen twee uitgaande velden en heeft een normaal-open punt
@@ -91,9 +97,12 @@ RINGS.forEach(rg=>{const st=rg.stations,n=st.length,cable=[rg.from];
       const g={id,name,short:name,cust,kind,base,node:id,st:s,noise:0,clp:1,offSince:null,outFrac:0,backfed:false,Pc:0};LVG.push(g);
       dev(id,{type:'lvs',bay:s.id,label:'Laagspanningsveld · '+name,a:M+'v',b:id,state:1,lvg:g});if(kind==='ovl')s.ovl=id;return g;});});
   for(let i=0;i<=n;i++)RING.secs.push({id:cable[i],node:cable[i],ring:rg,a:i?st[i-1].id:null,b:i<n?st[i].id:null,fault:false,located:false});});
+// OS Meppel: trafo van Netbeheer Noord (altijd 'in', niet bedienbaar) en de koppelkabel naar MS5 (normaal open, tussen twee netbeheerders)
+dev('MP-TR',{type:'ext',bay:'MPx',label:'Transformator 110/10 kV OS Meppel · Netbeheer Noord (niet bedienbaar)',a:'MPs',b:'MP',state:1});
+dev('MS5-K',{type:'lbs',bay:'MS5',label:'Lastscheider koppelkabel naar OS Meppel (normaal open)',a:'M5',b:'MP3',state:0,link:true});
 const CONS=FEEDERS.filter(f=>!f.ring).concat(LVG);   // alle afnemers (MS-velden en LS-groepen in de ring)
 // algemeen belastingsniveau: alle afnemers (niet de opwekking) iets zwaarder; de ratings van de velden schalen mee
-const LOAD_SCALE=1.25;CONS.forEach(c=>{if(c.gen)return;c.base*=LOAD_SCALE;if(c.rate)c.rate=c.base*1.15;});
+const LOAD_SCALE=1.25;CONS.forEach(c=>{if(c.gen)return;c.base*=LOAD_SCALE;if(c.rate&&!c.link)c.rate=c.base*1.15;});
 dev('RAIL',{type:'bb',label:'110 kV-railsysteem',node:'BB'});
 dev('MS',{type:'bld',label:'10 kV-schakelinstallatie (binnen)',node:'RA'});
 dev('MS20',{type:'bld',label:'20 kV-schakelinstallatie (binnen)',node:'RC'});
@@ -103,10 +112,10 @@ function lvl(n){if(RING_LV.has(n))return 0.4;if(RING_MV.has(n))return 10;if(n===
 const trafoUn=T=>T===RES?(D[RES].ratio==='10'?10.5:21):D[T].un;
 const kA=b=>is20(b)?28.9:57.9;   // A per MW bij cos φ 0,95
 const ADJ={};
-Object.values(D).forEach(d=>{if(['cb','ds','tr','lbs','lvs','mstr'].includes(d.type)){(ADJ[d.a]??=[]).push(d);(ADJ[d.b]??=[]).push(d);}if(d.type==='es')(ADJ[d.a]??=[]).push(d);});
+Object.values(D).forEach(d=>{if(['cb','ds','tr','lbs','lvs','mstr','ext'].includes(d.type)){(ADJ[d.a]??=[]).push(d);(ADJ[d.b]??=[]).push(d);}if(d.type==='es')(ADJ[d.a]??=[]).push(d);});
 
-const conducts=d=>d.type==='tr'||d.type==='mstr'||(['cb','ds','lbs','lvs'].includes(d.type)&&d.state===1);
-function energized(){const en=new Set(),q=[];for(const L of LINES)if(SIM.lines[L].avail){en.add(L+'x');q.push(L+'x');}
+const conducts=d=>d.type==='tr'||d.type==='mstr'||d.type==='ext'||(['cb','ds','lbs','lvs'].includes(d.type)&&d.state===1);
+function energized(){const en=new Set(),q=[];for(const L of LINES)if(SIM.lines[L].avail){en.add(L+'x');q.push(L+'x');}if(SIM.meppel.avail){en.add('MPs');q.push('MPs');}
   while(q.length){const n=q.pop();for(const d of ADJ[n]||[]){if(!conducts(d))continue;const m=d.a===n?d.b:d.a;if(!en.has(m)){en.add(m);q.push(m);}}}return en;}
 function earthed(){const er=new Set(),q=[];Object.values(D).forEach(d=>{if(d.type==='es'&&d.state===1&&!er.has(d.a)){er.add(d.a);q.push(d.a);}});
   while(q.length){const n=q.pop();for(const d of ADJ[n]||[]){if(d.type==='tr'||d.type==='mstr'||!conducts(d))continue;const m=d.a===n?d.b:d.a;if(!er.has(m)){er.add(m);q.push(m);}}}return er;}
@@ -149,6 +158,7 @@ function computeFlows(){
     g.forEach(b=>FLOW.U[b]=U);tf.forEach(T=>D[T].Ulv=U);});
   TR.forEach(T=>{const t=D[T];if(!FLOW.groups.some(g=>g.tf.includes(T)))t.Ulv=t.U0;if(t.Sc)t.S=Math.hypot(t.S,t.Sc);
     TR_LV[T].forEach(id=>{const c=D[id];if(c.state===1&&EN.has(T+'l'))c.I=t.S*0.95*kA(c.b);});});
+  FLOW.U.MP=EN.has('MP')?10.55-0.025*Math.max(0,busLoad.MP):0;   // OS Meppel: spanning door Netbeheer Noord geregeld
   let k=0;if(coupled){const genA=feeds.RA.reduce((s,T)=>s+D[T].S*0.95,0);k=Math.abs(genA-busLoad.RA);}D['V-K'].I=k*57.9;
   let k20=0;if(coupled20){const genC=feeds.RC.reduce((s,T)=>s+D[T].S*0.95,0);k20=Math.abs(genC-Math.abs(busLoad.RC));}D['W-K'].I=EN.has('RC')&&EN.has('RD')&&coupled20?k20*28.9:0;
   let P110=0;

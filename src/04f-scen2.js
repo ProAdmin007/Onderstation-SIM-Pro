@@ -46,8 +46,8 @@ Object.assign(MODES,{
       {t:'MS9 weer in bedrijf vóór het einde',check:()=>!stn('MS9').evac&&EN.has('M9')?'done':null,final:()=>EN.has('M9')},noIncidents]},
   zonnepiek:{scen:true,name:'Zonnepiek',tag:'Scenario · gemiddeld',start:11,dur:120,season:'lente',weather:'helder',
     desc:'Een strakblauwe lentedag. Het uitgebreide zonnepark (G1) levert zoveel terug dat T2 het niet alleen aankan. Houd T2 heel en het zonnepark zo veel mogelijk in bedrijf.',
-    setup(){const g=FEEDERS.find(f=>f.id==='G1');g.base=58;g.name='Zonnepark De Hoeve (uitgebreid, 60 MWp)';D.T2.oil=60;initTaps();
-      pushAlarm('Zonnepark De Hoeve is uitgebreid tot 60 MWp – vandaag een recordopbrengst verwacht','info');
+    setup(){const g=FEEDERS.find(f=>f.id==='G1');g.base=64;g.name='Zonnepark De Hoeve (uitgebreid, 66 MWp)';D.T2.oil=60;initTaps();
+      pushAlarm('Zonnepark De Hoeve is uitgebreid tot 66 MWp – vandaag een recordopbrengst verwacht','info');
       pushAlarm('Tip: kijk op het tabblad Prognose naar de teruglevering op 20 kV. T3 kan op 20 kV parallel met T2 (W-T3).','info');},
     tick(dm){if(D['W-G1'].state&&EN.has('G1'))GAME.flags.pvOn=(GAME.flags.pvOn||0)+dm;},
     obj:()=>[{t:'T2 wordt niet thermisch afgeschakeld',check:()=>GAME.stats.thermal?'fail':null,final:()=>true},

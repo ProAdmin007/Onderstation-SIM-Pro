@@ -1,7 +1,11 @@
 
 // Storingen: lijnen, velden, LS, rails en transformatoren
 // ---------------------------------------------------------- storingen
-function randomEvent(){const r=Math.random();if(r<(WX.cur.thunder>0.5?0.65:0.3))return lineFault();if(r<0.62)return feederFault();if(r<0.72)return lvFault();
+// storing aan de 110 kV-kant van OS Meppel (Netbeheer Noord): onze velden daar vallen even weg
+function meppelFault(){if(!SIM.meppel.avail)return feederFault();Object.assign(SIM.meppel,{avail:false,reason:'storing 110 kV-zijde (Netbeheer Noord)'});
+  pushAlarm('Netbeheer Noord: storing in OS Meppel aan de 110 kV-kant – de velden MP1–MP3 zijn spanningsloos. Herstel door Netbeheer Noord','crit');
+  addTimer(rnd(12,25),()=>{Object.assign(SIM.meppel,{avail:true,reason:''});readyNotice('Netbeheer Noord: OS Meppel weer onder spanning – controleer uw velden MP1–MP3',null);refreshAll();});refreshAll();}
+function randomEvent(){const r=Math.random();if(r>0.97)return meppelFault();if(r<(WX.cur.thunder>0.5?0.65:0.3))return lineFault();if(r<0.62)return feederFault();if(r<0.72)return lvFault();
   if(r<0.8&&!GAME.flags.busf){GAME.flags.busf=true;return busFault(pick(['RC','RD','RB']));}return trafoFault();}
 function lineFault(forceL,forcePerm){const c=LINES.filter(L=>SIM.lines[L].avail&&!SIM.lines[L].maint&&D[L+'-Q0'].state===1&&(!forceL||L===forceL));if(!c.length)return forceL?null:feederFault();const L=pick(c),ln=SIM.lines[L];
   lightning(L);const perm=forcePerm??(Math.random()<DIFFS[GAME.diff].perm);
