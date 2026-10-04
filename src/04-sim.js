@@ -156,7 +156,6 @@ function syncCheck(d){if(d.id!=='V-K'||!EN.has('RA')||!EN.has('RB'))return null;
 function operate(id,to,opts={}){
   const d=D[id];if(!d||!['cb','ds','es','lbs','lvs'].includes(d.type)||d.state===to)return;
   if(SIM.paused)return deny(GAME.ended?'De dienst is afgelopen':'Simulatie gepauzeerd – hervat om te schakelen');
-  if(!opts.radio){const n=crewNear(id);if(n)return openRadio(n,id,to);}
   if(d.busy)return deny('Bediening loopt nog…');
   if(d.type==='cb'&&to===1){
     if(d.tr&&D[d.tr].blocked)return deny(`${d.tr} geblokkeerd door relais 86 (${D[d.tr].blockText}) – eerst resetten`);
@@ -164,6 +163,7 @@ function operate(id,to,opts={}){
   computeFlows();
   if(d.type==='cb'&&to===1){const s=syncCheck(d);if(s)return deny(s);}
   if(SIM.interlock){const r=interlockCheck(d,to);if(r)return deny(r);}
+  if(!opts.radio){const n=crewNear(id);if(n)return openRadio(n,id,to);}   // pas melden als de schakeling ook echt mag
   let arc=null;
   if(d.type==='ds'){const cb=D[d.cb];if(cb.state===1&&(EN.has(d.a)||EN.has(d.b)))arc=d.a;}
   const trDead=d.tr&&id.endsWith('-Q0')&&!EN.has(d.tr+'h');

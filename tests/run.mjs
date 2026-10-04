@@ -106,10 +106,13 @@ const TESTS = [
   { name: 'portofoon: schakelen bij monteur vraagt eerst melden', query: '?autostart&t=13', async run(p) {
       await p.evaluate(() => { T.quiet(); OS.SIM.paused = false; });
       const r = await p.evaluate(async () => {
-        OS.crewDispatch({ box: OS.boxOf('T2'), say: 'Test', until: () => false, rel: ['T2-Q0'] }); T.step(0.1);
+        OS.crewDispatch({ box: OS.boxOf('T2'), say: 'Test', until: () => false, rel: ['T2-Q0', 'T2-Q1'] }); T.step(0.1);
+        OS.operate('T2-Q1', 0); const vergrendeld = !document.querySelector('#radio').classList.contains('hidden');   // mag niet: dan ook niet melden
+        if (vergrendeld) return { vergrendeld };
         OS.operate('T2-Q0', 0); const modal = !document.querySelector('#radio').classList.contains('hidden'), voor = OS.D['T2-Q0'].state;
         document.querySelector('[data-rd=\"meld\"]').click(); await T.sleep(2200);
         return { modal, voor, na: OS.D['T2-Q0'].state, msgs: [...document.querySelectorAll('#alarmList .al.radio')].length }; });
+      assert(!r.vergrendeld, 'portofoon opent voor een vergrendelde handeling');
       assert(r.modal && r.voor === 1, `geen portofoonvenster (modal ${r.modal}, stand ${r.voor})`);
       assert(r.na === 0, 'na melden niet geschakeld');
       assert(r.msgs >= 2, `te weinig portofoonberichten: ${r.msgs}`);

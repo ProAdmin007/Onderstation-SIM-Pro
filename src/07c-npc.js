@@ -98,6 +98,6 @@ function openRadio(n,id,to){const d=D[id],act=actionText(d,to).toLowerCase();RAD
   $('#radio').classList.remove('hidden');}
 function closeRadio(){$('#radio').classList.add('hidden');if(FP.on&&!menuOpen())canvasEl.requestPointerLock?.();}
 $('#radio').addEventListener('click',e=>{const b=e.target.closest('[data-rd]');if(!b||!RADIO)return;const {n,id,to}=RADIO,a=b.dataset.rd,act=actionText(D[id],to).toLowerCase();RADIO=null;closeRadio();
-  if(a==='meld'){radio(n,`${n.name}, ik ga ${id} ${act}. Sta je vrij?`,true);setTimeout(()=>{radio(n,'Ik sta vrij, ga je gang.');award(10,'Netjes gemeld');operate(id,to,{radio:true});},1400);}
+  if(a==='meld'){radio(n,`${n.name}, ik ga ${id} ${act}. Sta je vrij?`,true);setTimeout(()=>{radio(n,'Ik sta vrij, ga je gang.');const k=id+':'+to;n.told=n.told||new Set();if(!n.told.has(k)){n.told.add(k);award(10,'Netjes gemeld');}operate(id,to,{radio:true});},1400);}
   else if(a==='zonder'){operate(id,to,{radio:true});GAME.stats.unannounced=(GAME.stats.unannounced||0)+1;award(-50,'Niet gemeld aan monteur');
     setTimeout(()=>radio(n,'Hé! Ik stond hier nog te werken! Meld je de volgende keer even voordat je schakelt.'),900);}});
