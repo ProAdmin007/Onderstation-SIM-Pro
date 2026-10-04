@@ -136,7 +136,7 @@ function showReport(){
   if(SIM.tasksDone>=2)badges.push(['Planner',`${SIM.tasksDone} werkopdrachten afgerond`]);
   const rows=[['Klantminuten (CML)',Math.round(SIM.cml).toLocaleString('nl-NL')],['Uitvalduur per klant',`${(SIM.cml/TOTAL_CUST).toFixed(1).replace('.',',')} min`],
     ['Veiligheidsincidenten',SIM.incidents],['Werkopdrachten',SIM.tasksDone],['Snelle herstellingen',st.fast],['Thermische trips',st.thermal],
-    ['Spanningsafwijkingen',st.volt],['Telefoon: goed / fout / gemist',`${PHONE.stats.ok} / ${PHONE.stats.bad} / ${PHONE.stats.missed}`],['Hoogste olietemperatuur',`${Math.round(st.maxOil)} °C`]];
+    ['Spanningsafwijkingen',st.volt],['Flexkosten',`€ ${Math.round(st.flexEur||0).toLocaleString('nl-NL')}`],['Doorgeslagen zekeringen',st.fuses||0],['Weigeringen vermogenschakelaar (50BF)',st.bf||0],['Telefoon: goed / fout / gemist',`${PHONE.stats.ok} / ${PHONE.stats.bad} / ${PHONE.stats.missed}`],['Hoogste olietemperatuur',`${Math.round(st.maxOil)} °C`]];
   $('#report').innerHTML=`<div class="card rep">
     <div class="eyebrow">${m.scen?'Scenario afgerond':'Dienstrapport'} · ${DIFFS[GAME.diff].label}</div><h2>${m.name}</h2>
     <div class="rep-top"><div class="grade g${g.replace('+','p')}">${g}</div><div><div class="rs">${s.toLocaleString('nl-NL')} <span>punten</span></div>

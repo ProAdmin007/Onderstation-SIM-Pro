@@ -271,6 +271,10 @@ svg.tl{width:100%;height:auto;display:block;margin:4px 0 2px}.tl-ax{font:10px va
 body.fp #torch.on{display:block}
 .bf-open{background:var(--accent);color:#1a1206;border:none;font-weight:700;width:100%;padding:9px}
 @media (max-width:760px){.bf-cols{grid-template-columns:1fr}}
+#assets{position:fixed;inset:0;display:grid;place-items:center;background:rgba(6,9,12,.66);z-index:12;overflow:auto;padding:20px 0}#assets.hidden{display:none}
+#flex{position:fixed;inset:0;display:grid;place-items:center;background:rgba(6,9,12,.66);z-index:12;overflow:auto;padding:20px 0}#flex.hidden{display:none}
+.fx{padding:3px 6px;margin-right:2px;font-size:11px}.fx.on{background:var(--accent);color:#1a1206;border-color:var(--accent)}
+.cgs{display:grid;gap:4px;margin-bottom:8px}.cg{display:grid;grid-template-columns:1.4fr 2fr 48px;gap:8px;align-items:center;font-size:12px}.cg i{height:7px;background:rgba(255,255,255,.07);border-radius:4px;overflow:hidden}.cg b{display:block;height:100%;background:var(--green)}.cg b.warnc{background:var(--accent)}.cg b.bad{background:var(--red)}.cg em{font-style:normal;text-align:right}
 #prot{position:fixed;inset:0;display:grid;place-items:center;background:rgba(6,9,12,.66);z-index:12;overflow:auto;padding:20px 0}
 .card.pr{width:min(760px,95vw);padding:22px 26px;background:rgba(13,17,22,.96);border:1px solid var(--line);border-radius:16px}
 .pr h2{margin:6px 0}.pr table{width:100%;border-collapse:collapse;font-size:12.5px;margin-bottom:6px}
@@ -330,6 +334,8 @@ body.fp #torch.on{display:block}
   <button data-v="6"><kbd>7</kbd>Binnen 20 kV</button>
   <button data-v="7"><kbd>8</kbd>Woonwijk</button>
   <button data-v="8"><kbd>9</kbd>Centrum &amp; Vaart</button>
+  <button id="assetsBtn" class="walk" title="Conditie en onderhoud van de schakelaars"><kbd>O</kbd>Onderhoud</button>
+  <button id="flexBtn" class="walk" title="Netcongestie en flexibel vermogen"><kbd>C</kbd>Flex</button>
   <button id="protBtn" class="walk" title="Beveiligingsinstellingen"><kbd>B</kbd>Beveiliging</button>
   <button id="fpBtn" class="walk"><kbd>V</kbd>Rondlopen</button>
 </nav>
@@ -343,6 +349,8 @@ body.fp #torch.on{display:block}
 <div id="radio" class="hidden"></div>
 <div id="brief" class="hidden"></div>
 <div id="prot" class="hidden"></div>
+<div id="flex" class="hidden"></div>
+<div id="assets" class="hidden"></div>
 <div id="phone" class="hidden"></div>
 <div id="handover" class="hidden"></div>
 <div id="replay" class="hidden"><button data-rp="back" title="10 min terug">⏮</button><button id="rpPlay" class="primary" data-rp="play">▶</button><button data-rp="fwd" title="10 min verder">⏭</button>
@@ -370,7 +378,7 @@ body.fp #torch.on{display:block}
       <div class="seg" id="season"><button data-s="lente">Lente</button><button data-s="zomer">Zomer</button><button data-s="herfst" class="on">Herfst</button><button data-s="winter">Winter</button></div>
       <div class="mh">Moeilijkheid</div>
       <div class="seg" id="diff"><button data-d="rustig">Rustig</button><button data-d="normaal" class="on">Normaal</button><button data-d="zwaar">Zwaar</button></div>
-      <div class="keys">slepen: draaien · rechts: schuiven · scroll: zoom<br>1–9 camera · V rondlopen · spatie/P pauze · Esc menu · B beveiliging · L labels · M geluid</div>
+      <div class="keys">slepen: draaien · rechts: schuiven · scroll: zoom<br>1–9 camera · V rondlopen · spatie/P pauze · Esc menu · B beveiliging · C flex · O onderhoud · L labels · M geluid</div>
     </div>
     <div id="menu"></div>
   </div>

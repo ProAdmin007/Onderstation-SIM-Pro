@@ -45,7 +45,7 @@ function ringFault(f,forced,repairMin){
 // een kabel met fout die weer onder spanning komt: beveiliging schakelt direct af
 function ringProtection(dm=0){
   RING.secs.forEach(s=>{
-    if(s.load>1){if(!s.ovl){s.ovl=true;award(-20,'Kabel overbelast');pushAlarm(`Kabel ${secName(s)} overbelast: ${Math.round(s.I)} A (${Math.round(s.load*100)}% van ${s.rate} A) – verleg het normaal-open punt of verlaag de belasting`,'warn');}
+    if(s.load>1){if(!s.ovl){s.ovl=true;award(-20,'Kabel overbelast');pushAlarm(`Kabel ${secName(s)} overbelast: ${Math.round(s.I)} A (${Math.round(s.load*100)}% van ${s.rate} A) – verleg het normaal-open punt of zet flexibel vermogen in (C)`,'warn');}
       if(s.load>1.3&&!s.fault){s.ot+=dm;if(s.ot>8){s.ot=0;const cb=FLOW.TAG[s.node]?.cb,f=FEEDERS.find(x=>x.cb===cb);GAME.stats.burn=(GAME.stats.burn||0)+1;pushAlarm(`Kabel ${secName(s)} door langdurige overbelasting doorgebrand!`,'crit');if(f)ringFault(f,s);}}}
     else{if(s.load<0.9)s.ovl=false;s.ot=Math.max(0,s.ot-dm*0.5);}});
   RING.stations.forEach(st=>{const u=nodeU(st.node);if(u>0&&u<9.9){if(!st.uAl){st.uAl=true;award(-10,'Spanning te laag');pushAlarm(`${st.id} ${st.name}: spanning te laag (${u.toFixed(2).replace('.',',')} kV) – lange voedingsroute`,'warn');}}else if(u>10.0)st.uAl=false;});

@@ -68,7 +68,7 @@ const RINGS=[
   {id:'MS1',name:'Esdoornlaan',short:'Esdoornln',pos:[-60,108],face:0,groups:[['Woningen Esdoornlaan',600,'res',0.45],['Woningen Lindehof',520,'res',0.4],['Basisschool De Linde',1,'city',0.15],['Supermarkt',1,'city',0.3]]},
   {id:'MS2',name:'Berkenhof',short:'Berkenhof',pos:[-91,170],face:1,groups:[['Woningen Berkenhof',700,'res',0.5],['Woningen Populierenlaan',650,'res',0.45],['Sporthal',1,'city',0.2]]},
   {id:'MS3',name:'Molenweg',short:'Molenweg',pos:[-60,232],face:2,groups:[['Woningen Molenweg',800,'res',0.6],['Appartementen De Molen',420,'res',0.35],['Huisartsenpost',1,'hosp',0.1],['Woningen Kerkpad',500,'res',0.4]]},
-  {id:'MS4',name:'Zuiderveld',short:'Zuiderveld',pos:[86,232],face:2,groups:[['Woningen Zuiderveld',900,'res',0.65],['Woningen Akkerweg',780,'res',0.55],['Laadplein elektrische auto\'s',1,'city',0.4]]},
+  {id:'MS4',name:'Zuiderveld',short:'Zuiderveld',pos:[86,232],face:2,groups:[['Woningen Zuiderveld',900,'res',0.65],['Woningen Akkerweg',780,'res',0.55],['Laadplein elektrische auto\'s',1,'ev',0.6]]},
   {id:'MS5',name:'Bedrijvenpark Zuid',short:'Bedr.park',pos:[118,108],face:0,groups:[['Transportbedrijf',1,'ind',0.6],['Koelhuis',1,'ind',0.8],['Garage en werkplaats',1,'ind',0.25],['Kantoren',25,'city',0.4],['Woningen Zuidrand',520,'res',0.4]]}]},
  {id:'R2',name:'Ring Centrum – De Vaart',from:'F1',to:'F2',nop:'MS7-R',stations:[
   {id:'MS6',name:'Marktplein',short:'Marktplein',pos:[-95,281],face:0,groups:[['Winkels Marktplein',85,'city',0.55],['Horeca Marktplein',30,'city',0.4],['Appartementen De Markt',380,'res',0.3],['Bibliotheek',1,'city',0.12]]},
@@ -116,6 +116,7 @@ function profile(k,h){const g=(m,s)=>Math.exp(-(((h-m)/s)**2));
     case 'city':return 0.42+0.35*g(10.5,3)+0.25*g(15,3)+0.35*g(18.5,2);
     case 'ind':return h>6.5&&h<17.5?0.85+0.08*Math.sin(h*1.3):0.33;
     case 'hosp':return 0.72+0.18*g(11,4);
+    case 'ev':return 0.22+0.25*g(9,2)+0.95*g(18.6,1.6)+0.45*g(21.8,1.4);   // laden na het werk en 's avonds
     case 'green':return (h<SEASON.rise+1||h>SEASON.set-1)?1.0:0.32+0.1*g(12,3);   // assimilatiebelichting als het donker is
     case 'ovl':return isDark(h,0.25)||WX.cur.fog>0.6?1:0;   // schemerschakeling straatverlichting
     case 'pv':{const r=SEASON.rise+0.5,s=SEASON.set-0.5;return -Math.max(0,Math.sin(Math.PI*(h-r)/(s-r)))*SEASON.pv*(1-0.8*WX.cur.cloud)*(1-0.85*WX.cover)*(0.88+0.12*Math.sin(SIM.t*0.011));}}return 1;}
@@ -125,7 +126,7 @@ const TAP_STEP=0.0125,Z_DROP=0.05;
 function computeFlows(){
   EN=energized();ER=earthed();const h=hourOf();const busLoad=perBus(0);
   FLOW.TAG=supplyTags();const feederP={};
-  CONS.forEach(c=>{c.demand=c.base*profile(c.kind,h)*(c.gen?1:seasonMul(c.kind))*(1+c.noise)*(c.gen?1:c.clp);c.Pc=EN.has(c.node)?c.demand*(1-c.outFrac):0;
+  CONS.forEach(c=>{c.demand=c.base*profile(c.kind,h)*(c.gen?1:seasonMul(c.kind))*(1+c.noise)*(c.gen?1:c.clp)*(1-(c.cut||0));c.Pc=EN.has(c.node)?c.demand*(1-c.outFrac):0;
     const t=FLOW.TAG[c.node];if(t&&c.Pc){busLoad[t.bus]+=c.Pc;if(t.cb)feederP[t.cb]=(feederP[t.cb]||0)+c.Pc;}});
   FEEDERS.forEach(f=>{f.P=feederP[f.cb]||0;D[f.cb].I=Math.abs(f.P)*kA(f.bus);});
   RING.stations.forEach(s=>{s.P=s.groups.reduce((a,g)=>a+g.Pc,0);});

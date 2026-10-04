@@ -281,6 +281,27 @@ const TESTS = [
       assert(r.aan && r.I > 0 && r.x < 1, `zaklamp ging niet aan: ${JSON.stringify(r)}`);
       assert(!r.naUit && r.I2 === 0, `zaklamp blijft aan na stoppen met rondlopen: ${JSON.stringify(r)}`);
   } },
+  { name: 'flexibel vermogen en overbelaste distributietrafo', query: '?autostart&t=18.5', async run(p) {
+      const r = await p.evaluate(() => { T.quiet(); const O = OS, f = O.FEEDERS.find(x => x.id === 'F6'); O.SIM.paused = false; T.step(0.5); const p0 = f.P;
+        O.setFlex('F6', 1); T.step(1); const teVroeg = !f.cut; T.step(2); const p1 = f.P, eur = O.GAME.stats.flexEur;
+        const s = O.RING.stations.find(x => x.id === 'MS4'); s.kva = 600; T.step(5); const zeker = s.fuse && O.D['MS4-T'].state === 0;
+        O.operate('MS4-T', 1); const geweigerd = O.D['MS4-T'].state === 0; T.step(25);
+        return { p0, p1, teVroeg, eur, zeker, geweigerd, terug: !s.fuse, cg: O.congestion().length }; });
+      assert(r.teVroeg && r.p1 < r.p0 * 0.4 && r.eur > 0, `flex werkt niet: ${JSON.stringify(r)}`);
+      assert(r.zeker && r.geweigerd && r.terug && r.cg > 0, `zekeringen/congestie kloppen niet: ${JSON.stringify(r)}`);
+  } },
+  { name: 'veroudering: weigering met 50BF, isoleren en revisie', query: '?autostart&t=11', async run(p) {
+      const r = await p.evaluate(async () => { T.quiet(); const O = OS, D = O.D, EN = () => O.EN(); O.SIM.paused = false; T.step(0.3);
+        const ops0 = D['V-F4'].ops, w0 = D['V-F4'].wear; await T.op('V-F4', 0); await T.op('V-F4', 1); const slijt = D['V-F4'].ops === ops0 + 2 && D['V-F4'].wear > w0;
+        D['V-F6'].stuck = true; O.feederFault('F6', 5); T.step(0.2);
+        const railB = !EN().has('RB'), railA = EN().has('RA'), vast = D['V-F6'].state === 1;
+        O.operate('V-F6', 0); const weiger = D['V-F6'].state === 1;
+        const iso = await T.op('F6-QB', 1 - 1); await T.op('V-K', 1); await T.op('V-F5', 1); T.step(0.3); const herstel = EN().has('RB') && EN().has('F5');
+        O.startTask('cbMaintTask', 'V-F6');
+        for (let k = 0; k < 120 && O.task(); k++) { const s = O.task().steps[O.task().i]; if (s.act && !(s.act[0] === 'V-F6' && D['V-F6'].stuck)) await T.op(...s.act); T.step(0.5); }
+        return { slijt, railB, railA, vast, weiger, iso, herstel, klaar: !O.task(), nieuw: !D['V-F6'].stuck && O.cond(D['V-F6']) > 0.9, aan: EN().has('F6') }; });
+      for (const [k, v] of Object.entries(r)) assert(v, `${k} klopt niet: ${JSON.stringify(r)}`);
+  } },
   { name: 'Esc opent pauzemenu en pauzeert', query: '?autostart', async run(p) {
       await p.keyboard.press('Escape'); await sleep(800);
       const r = await p.evaluate(() => ({ menu: !document.querySelector('#pauseMenu').classList.contains('hidden'), paused: OS.SIM.paused }));

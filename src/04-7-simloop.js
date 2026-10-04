@@ -7,7 +7,7 @@ function simStep(dtReal){
   const dm=dtReal*SIM.speed/60;SIM.t+=dm;
   SIM.timers.sort((a,b)=>a.at-b.at);while(SIM.timers.length&&SIM.timers[0].at<=SIM.t)SIM.timers.shift().fn();
   CONS.forEach(f=>{f.noise+=(-f.noise*0.08+(Math.random()-0.5)*0.03)*Math.min(1,dm);});
-  weatherTick(dm);computeFlows();thermal(dm);regulate(dm);feederTick(dm);
+  weatherTick(dm);computeFlows();thermal(dm);regulate(dm);feederTick(dm);flexTick(dm);
   let off=0;CONS.forEach(c=>{off+=custOff(c);});
   FEEDERS.forEach(f=>{if(f.ring)return;const on=EN.has(f.node);
     if(on!==f.wasOn){f.wasOn=on;restoreTrack(f,on);if(on)pushAlarm(`${f.id} ${f.name}: spanning hersteld`,'ok');
