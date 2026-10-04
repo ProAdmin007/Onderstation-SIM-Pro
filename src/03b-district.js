@@ -22,9 +22,21 @@ const DM={
   green:mat({color:0x3d5a3a,roughness:0.6,metalness:0.3}),
   flag:mat({color:0x331a00,emissive:0xff8a00,emissiveIntensity:0}),
 };
+// ---- verlichte ramen: per MS-station een eigen materiaal, zodat de lichten uitgaan als dat station spanningsloos is
+const nearestStation=(x,z)=>RING.stations.reduce((a,b)=>Math.hypot(b.pos[0]-x,b.pos[1]-z)<Math.hypot(a.pos[0]-x,a.pos[1]-z)?b:a);
+const glowRect=(g,x,y,w,h)=>{const gr=g.createLinearGradient(x,y,x,y+h);gr.addColorStop(0,'rgba(255,196,112,0.95)');gr.addColorStop(1,'rgba(240,140,60,0.9)');g.fillStyle=gr;g.fillRect(x,y,w,h);};
+// huisgevel: dezelfde ramen als facadeCanvas, per variant een ander deel aan
+const WIN_TEX=[[1,0,1],[0,1,1],[1,1,0]].map(lit=>{const c=cnv(256,256),g=c.getContext('2d');[[28,40,70,62],[158,40,70,62],[28,150,90,70]].forEach((r,i)=>lit[i]&&glowRect(g,...r));
+  const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t;});
+// appartementen: 4 × 4 tegels met willekeurig verlichte ramen (patroon van aptCanvas)
+const APT_GLOW=(()=>{const c=cnv(1024,1024),g=c.getContext('2d');for(let ty=0;ty<4;ty++)for(let tx=0;tx<4;tx++)for(let i=0;i<2;i++)if(R()<0.55)glowRect(g,tx*256+24+i*128,ty*256+64,80,98);
+  const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.colorSpace=THREE.SRGBColorSpace;return t;})();
+const glowMat=map=>new THREE.MeshBasicMaterial({map,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending});
+function winGlow(s,variant){s.winMats??=[];return s.winMats[variant]??=glowMat(WIN_TEX[variant]);}
 function houseRow(x0,z,n,faceSouth){const W=6,Dp=9,H=5.6,len=n*W,cx=x0+len/2,v=Math.floor(R()*3);
   box(len,H,Dp,DM.brick[v],staticRoot,cx,H/2,z);
-  for(let i=0;i<n;i++){const x=x0+W/2+i*W;for(const s of[-1,1]){const p=mesh(new THREE.PlaneGeometry(W-0.1,H),DM.facades[(v+i)%3],staticRoot,x,H/2,z+s*(Dp/2+0.02));p.rotation.y=s>0?0:Math.PI;p.castShadow=false;}}
+  for(let i=0;i<n;i++){const x=x0+W/2+i*W;for(const s of[-1,1]){const p=mesh(new THREE.PlaneGeometry(W-0.1,H),DM.facades[(v+i)%3],staticRoot,x,H/2,z+s*(Dp/2+0.02));p.rotation.y=s>0?0:Math.PI;p.castShadow=false;
+    const gl=mesh(new THREE.PlaneGeometry(W-0.1,H),winGlow(nearestStation(x,z),(v+i+(s>0?0:1))%3),staticRoot,x,H/2,z+s*(Dp/2+0.05));gl.rotation.y=p.rotation.y;gl.castShadow=gl.receiveShadow=false;gl.renderOrder=1;}}
   const sh=new THREE.Shape();sh.moveTo(-Dp/2-0.4,0);sh.lineTo(0,3.4);sh.lineTo(Dp/2+0.4,0);sh.closePath();
   const rg=new THREE.ExtrudeGeometry(sh,{depth:len+0.4,bevelEnabled:false});rg.rotateY(Math.PI/2);rg.translate(-len/2-0.2,0,0);mesh(rg,DM.roof[v],staticRoot,cx,H,z);
   for(let i=1;i<n;i+=2)box(0.5,1.2,0.5,MAT.concreteDark,staticRoot,x0+i*W,H+2.6,z);   // schoorstenen
@@ -136,10 +148,12 @@ function aptBlock(x0,z0,x1,z1,floors){const W=x1-x0,Dz=z1-z0,H=floors*3+3.6,cx=(
   const facade=(len)=>{const t=APT.tex.clone();t.repeat.set(len/8,floors);t.needsUpdate=true;return mat({map:t,roughness:0.85});};
   const shop=(len)=>{const t=APT.shop.clone();t.repeat.set(len/16,1);t.needsUpdate=true;return mat({map:t,roughness:0.6});};
   box(W,H,Dz,DM.kiosk,staticRoot,cx,H/2,cz);
-  for(const s of[-1,1]){const f=mesh(new THREE.PlaneGeometry(W,floors*3),facade(W),staticRoot,cx,3.6+floors*1.5,cz+s*(Dz/2+0.02));f.rotation.y=s>0?0:Math.PI;f.castShadow=false;
+  const st=nearestStation(cx,cz),glow=(len,x,z,ry)=>{const t=APT_GLOW.clone();t.repeat.set(len/32,floors/4);t.needsUpdate=true;const m=glowMat(t);(st.winApt??=[]).push(m);
+    const g=mesh(new THREE.PlaneGeometry(len,floors*3),m,staticRoot,x,3.6+floors*1.5,z);g.rotation.y=ry;g.castShadow=g.receiveShadow=false;g.renderOrder=1;};
+  for(const s of[-1,1]){const f=mesh(new THREE.PlaneGeometry(W,floors*3),facade(W),staticRoot,cx,3.6+floors*1.5,cz+s*(Dz/2+0.02));f.rotation.y=s>0?0:Math.PI;f.castShadow=false;glow(W,cx,cz+s*(Dz/2+0.05),f.rotation.y);
     const sp=mesh(new THREE.PlaneGeometry(W,3.4),shop(W),staticRoot,cx,1.7,cz+s*(Dz/2+0.02));sp.rotation.y=s>0?0:Math.PI;sp.castShadow=false;
     box(W,0.15,1.6,MAT.trim,staticRoot,cx,3.5,cz+s*(Dz/2+0.8));}
-  for(const s of[-1,1]){const f=mesh(new THREE.PlaneGeometry(Dz,floors*3),facade(Dz),staticRoot,cx+s*(W/2+0.02),3.6+floors*1.5,cz);f.rotation.y=s*Math.PI/2;f.castShadow=false;}
+  for(const s of[-1,1]){const f=mesh(new THREE.PlaneGeometry(Dz,floors*3),facade(Dz),staticRoot,cx+s*(W/2+0.02),3.6+floors*1.5,cz);f.rotation.y=s*Math.PI/2;f.castShadow=false;glow(Dz,cx+s*(W/2+0.05),cz,f.rotation.y);}
   box(W+0.4,0.6,Dz+0.4,MAT.concreteDark,staticRoot,cx,H+0.3,cz);box(3,1.4,2,MAT.cabinet,staticRoot,cx-W/4,H+1.3,cz);box(2,1,2,MAT.cabinet,staticRoot,cx+W/4,H+1.1,cz);
   DISTRICT_RECTS.push([x0,z0-1.7,x1,z1+1.7]);}
 // straatlantaarn, gevoed uit het LS-veld openbare verlichting van het dichtstbijzijnde MS-station

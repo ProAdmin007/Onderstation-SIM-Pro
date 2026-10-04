@@ -204,7 +204,7 @@ body:not(.fp) #fpHint{display:none!important}
 kbd{font-family:var(--mono);font-size:11px;background:rgba(255,255,255,.12);border:1px solid var(--line2);border-radius:4px;padding:0 5px}
 body.fp:not(.fplocked) #fpPause{display:flex;position:fixed;left:50%;top:84px;transform:translateX(-50%);align-items:center;gap:10px;background:rgba(13,17,22,.9);border:1px solid var(--accent);border-radius:10px;padding:8px 16px;z-index:7;pointer-events:none;font-size:12.5px}
 #fpPause b{font-size:13px;color:var(--accent)}#fpPause .k{color:var(--muted);font-size:12px;font-family:var(--mono)}
-#views .walk{background:rgba(240,164,58,.14);border-color:rgba(240,164,58,.4)}
+#views .walk,#views .tool{background:rgba(240,164,58,.14);border-color:rgba(240,164,58,.4)}
 body.fp #views .walk{background:var(--accent);color:#1a1206;font-weight:700}
 body.fp #labels{opacity:.75}
 #notice{position:fixed;left:50%;top:84px;transform:translate(-50%,-12px);min-width:340px;max-width:600px;background:rgba(10,40,24,.94);border:1px solid var(--green);border-radius:10px;padding:10px 18px;z-index:8;opacity:0;pointer-events:none;transition:opacity .3s,transform .3s;display:flex;flex-direction:column;gap:2px;box-shadow:0 0 0 4px rgba(63,207,114,.15),0 12px 30px rgba(0,0,0,.4)}
@@ -334,9 +334,9 @@ body.fp #torch.on{display:block}
   <button data-v="6"><kbd>7</kbd>Binnen 20 kV</button>
   <button data-v="7"><kbd>8</kbd>Woonwijk</button>
   <button data-v="8"><kbd>9</kbd>Centrum &amp; Vaart</button>
-  <button id="assetsBtn" class="walk" title="Conditie en onderhoud van de schakelaars"><kbd>O</kbd>Onderhoud</button>
-  <button id="flexBtn" class="walk" title="Netcongestie en flexibel vermogen"><kbd>C</kbd>Flex</button>
-  <button id="protBtn" class="walk" title="Beveiligingsinstellingen"><kbd>B</kbd>Beveiliging</button>
+  <button id="assetsBtn" class="tool" title="Conditie en onderhoud van de schakelaars"><kbd>O</kbd>Onderhoud</button>
+  <button id="flexBtn" class="tool" title="Netcongestie en flexibel vermogen"><kbd>C</kbd>Flex</button>
+  <button id="protBtn" class="tool" title="Beveiligingsinstellingen"><kbd>B</kbd>Beveiliging</button>
   <button id="fpBtn" class="walk"><kbd>V</kbd>Rondlopen</button>
 </nav>
 <div id="tooltip"></div>

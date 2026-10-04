@@ -302,6 +302,18 @@ const TESTS = [
         return { slijt, railB, railA, vast, weiger, iso, herstel, klaar: !O.task(), nieuw: !D['V-F6'].stuck && O.cond(D['V-F6']) > 0.9, aan: EN().has('F6') }; });
       for (const [k, v] of Object.entries(r)) assert(v, `${k} klopt niet: ${JSON.stringify(r)}`);
   } },
+  { name: 'leven in de wijk: ramen per station, auto\'s en buren bij uitval', query: '?autostart&t=21&night', async run(p) {
+      const r = await p.evaluate(async () => { T.quiet(); const O = OS, s1 = O.RING.stations[0]; O.SIM.paused = false; T.step(0.2); O.updateWindows();
+        const aan = s1.winMats.some(m => m.opacity > 0.3), autos = O.CARS.filter(c => c.g.visible).length;
+        O.D['V-F3'].state = 0; O.computeFlows(); T.step(5); O.updateWindows(); O.updateLife(0.1);
+        return { aan, uit: s1.winMats.every(m => m.opacity === 0), anderAan: O.RING.stations.filter(s => s.ring !== s1.ring).some(s => [...(s.winMats || []), ...(s.winApt || [])].some(m => m.opacity > 0.3)), autos, buren: (s1.crowd || []).length }; });
+      for (const [k, v] of Object.entries(r)) assert(v, `${k} klopt niet: ${JSON.stringify(r)}`);
+  } },
+  ...[['kraan', 'importgrens L2', () => { T.step(95); return OS.FLOW.P110 > 26 || (OS.GAME.flags.overMin || 0) > 5; }],
+    ['evenement', 'MS6 overbelast', () => { T.step(80); const s = OS.RING.stations.find(x => x.id === 'MS6'); return OS.GAME.stats.fuses > 0 || s.trLoad > 1.2; }],
+    ['laadpiek', 'congestie in de woonwijk', () => { T.step(110); return OS.GAME.stats.fuses > 0 || OS.RING.stations.some(s => s.trLoad > 1.2) || OS.RING.secs.some(s => s.load > 1); }]]
+    .map(([id, wat, f]) => ({ name: `scenario ${id}: zonder ingrijpen ontstaat ${wat}`, query: `?play=${id}`, async run(p) {
+      const r = await p.evaluate(`(${f.toString()})()`); assert(r === true, `geen uitdaging: ${wat} treedt niet op`); } })),
   { name: 'Esc opent pauzemenu en pauzeert', query: '?autostart', async run(p) {
       await p.keyboard.press('Escape'); await sleep(800);
       const r = await p.evaluate(() => ({ menu: !document.querySelector('#pauseMenu').classList.contains('hidden'), paused: OS.SIM.paused }));

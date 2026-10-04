@@ -26,6 +26,7 @@ async function bot(process_full) {
   const failAt = {}, isOpen = () => !document.querySelector('#radio').classList.contains('hidden');
   async function op(id, to) {
     const d = D[id], k = id + ':' + to; if (!d || d.state === to) return true;
+    if (to === 1 && (G.flags.mustOpen || []).includes(id)) return false;   // brandweer binnen: niet inschakelen
     if (failAt[k] && S.t - failAt[k] < 5) return false;   // net mislukt: niet elke tick opnieuw proberen
     if (d.springAt && performance.now() < d.springAt) await wait(d.springAt - performance.now() + 50);
     for (let i = 0; d.busy && i < 100; i++) await wait(100);   // motoraandrijving draait nog
@@ -60,6 +61,14 @@ async function bot(process_full) {
     // 0. telefoon: opnemen en de juiste diagnose stellen
     if (O.PHONE.queue.length && !O.PHONE.cur) { const c = O.PHONE.cur = O.PHONE.queue[0], g = c.g;
       if (g.lvf && EN().has(g.node)) { O.phoneAnswer('send', g.st.id); note(`telefoon: monteur naar ${g.st.id}`); } else O.phoneAnswer(!EN().has(g.node) ? 'known' : 'own'); }
+    // 0b. brandweer vraagt de installatie spanningsloos
+    for (const id of G.flags.mustOpen || []) await op(id, 0);
+    // 0c. congestie: flexibel vermogen inzetten bij overbelaste trafo's, kabels of een importgrens; na een kwartier rust weer vrijgeven
+    const lim = G.flags.lineLimit, need = new Set();
+    O.RING.stations.forEach(s => { if ((s.trLoad || 0) > 0.98) O.FLEX.forEach(f => { if (f.c.st === s) need.add(f.id); }); });
+    O.RING.secs.forEach(s => { if (s.load > 0.95) O.FLEX.forEach(f => { if (f.c.st && f.c.st.ring === s.ring) need.add(f.id); }); });
+    if (lim && O.FLOW.P110 > lim * 0.9) O.FLEX.forEach(f => { if (!f.gen) need.add(f.id); });
+    for (const f of O.FLEX) { if (need.has(f.id)) { f.botIdle = 0; if (f.req !== 1) { O.setFlex(f.id, 1); note('flex ' + f.id); } } else if (f.req) { f.botIdle = (f.botIdle || 0) + 0.5; if (f.botIdle > 15) O.setFlex(f.id, 0); } }
     // 1. lijnen: weer inschakelen zodra TenneT spanning geeft
     for (const L of ['L1', 'L2']) if (S.lines[L].avail && !mine(L + '-Q0') && D[L + '-Q0'].state === 0 && D[L + '-Q9'].state && D[L + '-Q1'].state) await op(L + '-Q0', 1);
     // 2. ringen: fout isoleren, terugvoeden via normaal-open punt, na reparatie normaliseren
@@ -88,7 +97,7 @@ async function bot(process_full) {
       const need = T === 'T1' ? '10' : '20', res = T === 'T1' ? 'V-T3' : 'W-T3', down = t.blocked || D[lv].state === 0 || (T === 'T1' && t.fanFail) || t.oil > 85;
       if (down && !T3().blocked && D[res].state === 0 && !O.BUSF[busOf(res)]) {
         if (T3().ratio !== need && !D['V-T3'].state && !D['W-T3'].state) { await op('T3-Q0', 0); O.setRatio(need); await wait(3300); await op('T3-Q0', 1); }
-        if (T3().ratio === need) { await op(res, 1); note(`reserve T3 op ${need} kV ingezet`); }
+        if (T3().ratio === need && await op(res, 1)) note(`reserve T3 op ${need} kV ingezet`);
       }
     }
     if (D['T3-Q0'].state === 0 && !mine('T3-Q0') && !T3().blocked && !T3().ratioBusy) await op('T3-Q0', 1);
@@ -114,7 +123,8 @@ const RUNS = [
   { name: 'zkh', query: '?play=zkh' }, { name: 'storm', query: '?play=storm' }, { name: 'piek', query: '?play=piek' },
   { name: 'blackout', query: '?play=blackout' }, { name: 'hitte', query: '?play=hitte' }, { name: 'winter', query: '?play=winter' },
   { name: 'dubbel', query: '?play=dubbel' }, { name: 'aanrijding', query: '?play=aanrijding' }, { name: 'cyber', query: '?play=cyber' },
-  { name: 'overstroming', query: '?play=overstroming' }, { name: 'zonnepiek', query: '?play=zonnepiek' }, { name: 'dagdienst', query: '?play=day' }, { name: 'avonddienst', query: '?play=eve&diff=zwaar' },
+  { name: 'overstroming', query: '?play=overstroming' }, { name: 'zonnepiek', query: '?play=zonnepiek' }, { name: 'kraan', query: '?play=kraan' }, { name: 'brand', query: '?play=brand' },
+  { name: 'evenement', query: '?play=evenement' }, { name: 'laadpiek', query: '?play=laadpiek' }, { name: 'dagdienst', query: '?play=day' }, { name: 'avonddienst', query: '?play=eve&diff=zwaar' },
 ];
 // parallel: elke werker een eigen browser; de lange diensten eerst, zodat ze niet als laatste overblijven
 const todo = RUNS.filter(r => !only || r.name.includes(only)).sort((a, b) => /dienst/.test(b.name) - /dienst/.test(a.name));

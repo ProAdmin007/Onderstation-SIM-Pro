@@ -25,13 +25,13 @@ function flexTick(dm){
     const mw=flexSaved(f);if(mw>0){const eur=mw*f.eur*dm/60;GAME.stats.flexEur=(GAME.stats.flexEur||0)+eur;GAME.score-=eur/100;}});
   // distributietransformator: zekeringen slaan door na langdurige overbelasting
   RING.stations.forEach(s=>{const k=s.P/trMW(s);s.trLoad=k;
-    if(k>1.2&&D[s.id+'-T'].state){s.trOt=(s.trOt||0)+dm*(k-1)*5;
-      if(!s.trWarn&&s.trOt>2){s.trWarn=true;pushAlarm(`${s.id} ${s.name}: distributietrafo overbelast (${Math.round(k*100)}%) – zet flexibel vermogen in (C) of verleg de belasting`,'warn');}
+    if(k>1.05&&!s.trWarn&&D[s.id+'-T'].state){s.trWarn=true;pushAlarm(`${s.id} ${s.name}: distributietrafo ${Math.round(k*100)}% belast – boven 120% slaan de zekeringen na enkele minuten door. Zet flexibel vermogen in (C)`,'warn');}
+    if(k>1.2&&D[s.id+'-T'].state){s.trOt=(s.trOt||0)+dm*(k-1)*3;
       if(s.trOt>12){s.trOt=0;D[s.id+'-T'].state=0;s.fuse=true;GAME.stats.fuses=(GAME.stats.fuses||0)+1;award(-60,`Zekeringen ${s.id} doorgeslagen`);
         pushAlarm(`${s.id} ${s.name}: MS-zekeringen doorgeslagen door overbelasting – ${s.cust.toLocaleString('nl-NL')} klanten zonder stroom. Monteur onderweg met nieuwe zekeringen`,'crit');
         const v=VIEWS[s.id];if(v)crewDispatch({box:v.box,n:1,say:`Zekeringen ${s.id} vervangen`,from:V3(s.pos[0]+6,0,s.pos[1]-8),until:()=>!s.fuse});
         addTimer(rnd(15,22),()=>{s.fuse=false;readyNotice(`${s.id}: nieuwe zekeringen geplaatst – ${s.id}-T mag weer dicht (verlaag eerst de belasting!)`,s.id+'-T',()=>!D[s.id+'-T'].state);});}}
-    else{s.trOt=Math.max(0,(s.trOt||0)-dm*0.5);if(k<1.05)s.trWarn=false;}});}
+    else{s.trOt=Math.max(0,(s.trOt||0)-dm*0.5);if(k<0.95)s.trWarn=false;}});}
 // zwaarst belaste netdelen voor het congestie-overzicht
 function congestion(){const out=[];
   RING.secs.forEach(s=>{if(EN.has(s.node))out.push({t:`Kabel ${secName(s)}`,k:s.load});});
