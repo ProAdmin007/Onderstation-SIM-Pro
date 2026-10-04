@@ -1380,9 +1380,10 @@ function regulate(dm){
   TR.forEach(T=>{const t=D[T];if(followers.has(T)||t.avr!=='auto'||!EN.has(T+'h')||t.tapBusy){t.avrT=0;return;}
     const set=trafoUn(T),dev=t.Ulv-set;
     if(Math.abs(dev)>set*0.012){t.avrT+=dm;if(t.avrT>=1){moveTap(T,dev<0?1:-1);t.avrT=0.75;}}else t.avrT=0;});
+  // railspanning pas na 2 min buiten de band melden: de regelaar krijgt eerst de kans
   Object.entries(BUS_BAND).forEach(([b,[lo,hi,nm]])=>{const U=FLOW.U[b],k='uAl'+b,m=(hi-lo)*0.1;
-    if(U>0&&(U<lo||U>hi)){if(!SIM[k]){SIM[k]=true;GAME.stats.volt++;award(-20,'Spanning buiten band');pushAlarm(`Rail ${nm}: spanning ${U.toFixed(2).replace('.',',')} kV buiten band (${lo},0 – ${hi},0 kV)`,'warn');}}
-    else if(U>=lo+m&&U<=hi-m)SIM[k]=false;});
+    if(U>0&&(U<lo||U>hi)){SIM['t'+k]=(SIM['t'+k]||0)+dm;if(!SIM[k]&&SIM['t'+k]>=2){SIM[k]=true;GAME.stats.volt++;award(-20,'Spanning buiten band');pushAlarm(`Rail ${nm}: spanning ${U.toFixed(2).replace('.',',')} kV buiten band (${lo},0 – ${hi},0 kV)`,'warn');}}
+    else{SIM['t'+k]=0;if(U>=lo+m&&U<=hi-m)SIM[k]=false;}});
 }
 function thermal(dm){const h=hourOf(),amb=ambient(h);
   TR.forEach(T=>{const t=D[T],on=EN.has(T+'h'),k=t.S/(t.fans&&!t.fanFail?t.rAF:t.rON);
@@ -1436,7 +1437,7 @@ function feederFault(forceF,searchMin){const c=FEEDERS.filter(f=>D[f.cb].state==
     readyNotice(`Storingsdienst: fout in ${f.id} ${f.name} gevonden en weggeschakeld – ${f.cb} mag weer IN${f.outFrac?` (${Math.round(f.cust*f.outFrac)} klanten wachten nog op reparatie)`:''}`,f.cb,()=>!D[f.cb].state);
     addTimer(rnd(40,80),()=>{f.fault=null;f.outFrac=0;pushAlarm(`Storingsdienst: kabel ${f.id} gerepareerd – alle klanten van ${f.name} terug`,'ok');});});
   refreshAll();}
-function trafoFault(forceT){const c=TR.filter(T=>!D[T].blocked&&D[T+'-Q0'].state===1&&EN.has(T+'h')&&!(TASK&&TASK.tr===T)&&(!forceT||T===forceT));if(!c.length)return forceT?null:feederFault();const T=pick(c);
+function trafoFault(forceT){const c=TR.filter(T=>(forceT||!GAME.flags['trf'+T])&&!D[T].blocked&&D[T+'-Q0'].state===1&&EN.has(T+'h')&&!(TASK&&TASK.tr===T)&&(!forceT||T===forceT));if(!c.length)return forceT?null:feederFault();const T=pick(c);GAME.flags['trf'+T]=true;
   const v=VIEWS[T];if(v)spawnArc(v.arcPos,0.6);
   tripTrafo(T,pick(['Buchholz-beveiliging (gasontwikkeling)','differentiaalbeveiliging','drukontlastklep aangesproken']),rnd(40,80),'prot');refreshAll();}
 
