@@ -67,7 +67,7 @@ function railTask(){const g3=FEEDERS.find(x=>x.id==='G3'),g4=FEEDERS.find(x=>x.i
   {t:'Schakel W-G4 IN',act:['W-G4',1],grp:'in',why:'Als laatste de uitgaande velden weer inschakelen.',ok:()=>D['W-G4'].state===1},
   {t:'Wacht: storingsdienst heft de terugvoeding op',wait:3,done:()=>{bf(false);pushAlarm('Storingsdienst: terugvoeding G3/G4 opgeheven – normale situatie','ok');}}]};}
 // onderhoud MS-station: klanten op een noodaggregaat, station uit de ring halen
-function stationTask(){const s=pick(RING.stations.filter(x=>!x.ring.nop.startsWith(x.id+'-'))),nop=s.ring.nop,L=s.id+'-L',R=s.id+'-R',Tt=s.id+'-T',
+function stationTask(stId){const s=stId?RING.stations.find(x=>x.id===stId):pick(RING.stations.filter(x=>!x.ring.nop.startsWith(x.id+'-'))),nop=s.ring.nop,L=s.id+'-L',R=s.id+'-R',Tt=s.id+'-T',
     bf=v=>{s.groups.forEach(g=>g.backfed=v);s.genset=v;};
   return{station:s.id,title:`Onderhoud MS-station ${s.id} ${s.name}`,crew:()=>({box:VIEWS[s.id].box,say:`Onderhoud RMU ${s.id}`,from:V3(s.pos[0]+6,0,s.pos[1]-8),rel:[L,R,Tt]}),
     desc:`De schakelinstallatie (RMU) van ${s.id} krijgt groot onderhoud. Een monteur sluit eerst een noodaggregaat aan voor de ${s.cust.toLocaleString('nl-NL')} klanten. Sluit dan de ring en haal het station eruit.`,
@@ -88,12 +88,14 @@ const nearDev=id=>{const v=VIEWS[id];return !!v&&!camInside()&&camera.position.d
 const THERMO_C=[{id:'T1',ok:()=>canRes('T1'),rep:()=>reserveTask('T1'),where:'de 110 kV-doorvoer van T1'},{id:'T2',ok:()=>canRes('T2'),rep:()=>reserveTask('T2'),where:'de 110 kV-doorvoer van T2'},
   {id:'L1-Q9',ok:()=>canLine(),rep:()=>lineTask('L1'),where:'het contact van lijnscheider L1-Q9'},{id:'L2-Q9',ok:()=>canLine(),rep:()=>lineTask('L2'),where:'het contact van lijnscheider L2-Q9'}];
 const canThermo=()=>THERMO_C.some(c=>c.ok());
-function thermoTask(){const hot=pick(THERMO_C.filter(c=>c.ok())),others=['T1','T2','T3','L1-Q9','L2-Q9'].filter(id=>id!==hot.id).sort(()=>Math.random()-0.5).slice(0,2);
-  const route=[hot.id,...others].sort(()=>Math.random()-0.5),temp=Math.round(rnd(78,112));
-  const t={hot:hot.id,title:'Thermografie-ronde buiten',desc:'Loop (V) of vlieg met de camera langs de installatie en inspecteer de onderdelen met de warmtebeeldcamera. Kom dichtbij genoeg; vind je een hotspot, dan volgt meteen een herstelopdracht.',steps:route.map(id=>({visit:id,
+// (parameters alleen bij het hervatten van een opgeslagen spel: dezelfde hotspot, route en temperatuur)
+function thermoTask(hotId,route0,temp0){const hot=hotId?THERMO_C.find(c=>c.id===hotId):pick(THERMO_C.filter(c=>c.ok())),others=['T1','T2','T3','L1-Q9','L2-Q9'].filter(id=>id!==hot.id).sort(()=>Math.random()-0.5).slice(0,2);
+  const route=route0||[hot.id,...others].sort(()=>Math.random()-0.5),temp=temp0||Math.round(rnd(78,112));
+  const t={hot:hot.id,route,temp,title:'Thermografie-ronde buiten',desc:'Loop (V) of vlieg met de camera langs de installatie en inspecteer de onderdelen met de warmtebeeldcamera. Kom dichtbij genoeg; vind je een hotspot, dan volgt meteen een herstelopdracht.',steps:route.map(id=>({visit:id,
     t:`Inspecteer ${id} met de warmtebeeldcamera (ga er dichtbij staan)`,ok:()=>nearDev(id),done:()=>{if(id!==hot.id)return pushAlarm(`Thermografie ${id}: geen afwijkingen`,'info');
-      t.found=true;GAME.stats.hotspots=(GAME.stats.hotspots||0)+1;award(30,'Hotspot gevonden');pushAlarm(`Thermografie: hotspot van ${temp} °C op ${hot.where} – na de ronde direct vrijschakelen en herstellen`,'warn');
-      const r=hot.rep();t.steps.push(...r.steps.map(s=>({...s})));['tr','line','crew','onAbort','afterAbort','feeder'].forEach(k=>{if(r[k])t[k]=r[k];});t.title='Thermografie → herstel '+hot.id;t.desc=r.desc;renderTasks();}}))};
+      GAME.stats.hotspots=(GAME.stats.hotspots||0)+1;award(30,'Hotspot gevonden');pushAlarm(`Thermografie: hotspot van ${temp} °C op ${hot.where} – na de ronde direct vrijschakelen en herstellen`,'warn');t.reveal();}}))};
+  // hotspot gevonden: de herstelopdracht wordt achter de ronde gezet
+  t.reveal=()=>{t.found=true;const r=hot.rep();t.steps.push(...r.steps.map(s=>({...s})));['tr','line','crew','onAbort','afterAbort','feeder'].forEach(k=>{if(r[k])t[k]=r[k];});t.title='Thermografie → herstel '+hot.id;t.desc=r.desc;renderTasks();};
   return t;}
 let taskCycle=0;
 // werkopdracht alleen aanbieden als de uitgangssituatie normaal is (geen storing of blokkering op de betrokken delen)
@@ -126,7 +128,7 @@ function abortTask(){const t=TASK;if(!t||t.aborted)return;
   if(!emergency)award(-20,'Werk gestaakt');
   pushAlarm(`Werkopdracht ${t.code} gestaakt${emergency?' vanwege de storing':''} – ${ids.length?'zet de installatie terug in de normale toestand':'er was nog niets geschakeld'}`,'warn');
   if(!ids.length){t.afterAbort&&t.afterAbort();TASK=null;SIM.nextTaskAt=SIM.t+rnd(40,70);renderTasks();return;}
-  TASK={aborted:true,code:t.code,tr:t.tr,feeder:t.feeder,afterAbort:t.afterAbort,i:0,title:'Werk gestaakt: '+t.title,
+  TASK={aborted:true,origSpec:specOf(t),code:t.code,tr:t.tr,feeder:t.feeder,afterAbort:t.afterAbort,i:0,title:'Werk gestaakt: '+t.title,
     desc:'De ploeg is van het werk gehaald. Zet de installatie terug in de normale toestand, in omgekeerde volgorde van het vrijschakelen.',
     steps:ids.map(id=>({t:'Herstel: '+actLabel(actKey([id,orig[id]])),act:[id,orig[id]],why:'Terug naar de normale situatie, in omgekeerde volgorde.',ok:()=>D[id].state===orig[id]}))};
   renderTasks();}

@@ -279,6 +279,9 @@ body.fp #torch.on{display:block}
 #settings{position:fixed;inset:0;display:grid;place-items:center;background:rgba(6,9,12,.66);z-index:14;overflow:auto;padding:20px 0}#settings.hidden{display:none}
 .st .st-row{display:flex;align-items:center;gap:12px;margin:6px 0;font-size:13px;flex-wrap:wrap}.st .st-row>span{min-width:170px;color:var(--muted)}.st .st-row input[type=range]{flex:1;min-width:160px;accent-color:var(--accent)}.st .st-row em{font-style:normal;min-width:44px;text-align:right;font-family:var(--mono)}
 .st .seg{flex-wrap:wrap}.st-tgs{display:flex;flex-wrap:wrap;gap:6px 18px;margin:8px 0}.st-tog{display:flex;gap:6px;align-items:center;font-size:12.5px;cursor:pointer}.st-tog input{accent-color:var(--accent)}
+#saved{position:fixed;left:50%;top:84px;transform:translate(-50%,-10px);z-index:15;opacity:0;pointer-events:none;background:rgba(13,17,22,.92);border:1px solid var(--green);color:var(--green);border-radius:10px;padding:7px 14px;font-weight:600;font-size:13px}
+#saved.show{animation:savedIn 2.4s ease forwards}@keyframes savedIn{0%{opacity:0;transform:translate(-50%,-10px)}12%,75%{opacity:1;transform:translate(-50%,0)}100%{opacity:0}}
+.mode.resume{border-color:var(--green)}.mode.resume .mt{color:var(--green)}.mode.delsave{opacity:.75}
 #fps{display:none;position:fixed;right:14px;bottom:14px;z-index:8;font:600 12px var(--mono);color:#9fe39a;background:rgba(13,17,22,.7);padding:3px 8px;border-radius:6px;pointer-events:none}#fps.on{display:block}
 #assets{position:fixed;inset:0;display:grid;place-items:center;background:rgba(6,9,12,.66);z-index:12;overflow:auto;padding:20px 0}#assets.hidden{display:none}
 #flex{position:fixed;inset:0;display:grid;place-items:center;background:rgba(6,9,12,.66);z-index:12;overflow:auto;padding:20px 0}#flex.hidden{display:none}
@@ -363,6 +366,7 @@ body.fp #torch.on{display:block}
 <div id="assets" class="hidden"></div>
 <div id="settings" class="hidden"></div>
 <div id="fps"></div>
+<div id="saved"></div>
 <div id="phone" class="hidden"></div>
 <div id="handover" class="hidden"></div>
 <div id="replay" class="hidden"><button data-rp="back" title="10 min terug">⏮</button><button id="rpPlay" class="primary" data-rp="play">▶</button><button data-rp="fwd" title="10 min verder">⏭</button>
@@ -372,9 +376,10 @@ body.fp #torch.on{display:block}
   <div class="eyebrow">Gepauzeerd</div><div class="pm-mode" id="pmMode"></div>
   <div class="pm-score"><span id="pmScore">0</span><small>punten</small><em id="pmBest"></em></div>
   <button class="primary" data-pm="resume">Hervatten <kbd>Esc</kbd></button>
+  <button data-pm="save" id="pmSave">💾 Spel opslaan <kbd>Ctrl+S</kbd></button>
   <button data-pm="settings">Instellingen (prestaties, weer, geluid)</button>
   <button data-pm="end">Dienst beëindigen · rapport en score opslaan</button>
-  <button data-pm="menu">Score opslaan en naar hoofdmenu</button>
+  <button data-pm="menu" id="pmMenu">Opslaan en naar hoofdmenu</button>
 </div></div>
 <div id="intro" class="hidden">
   <div class="card wide">

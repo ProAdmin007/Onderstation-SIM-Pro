@@ -372,6 +372,26 @@ const TESTS = [
         return { klanten, weigert, terug, afgeschakeld, tab, model }; });
       for (const [k, v] of Object.entries(r)) assert(v, `${k} klopt niet: ${JSON.stringify(r)}`);
   } },
+  { name: 'opslaan en later verder spelen', query: '?play=free&t=11', async run(p) {
+      const voor = await p.evaluate(async () => { T.quiet(); const O = OS, D = O.D; O.closeHandover?.(); O.SIM.paused = false; T.step(1);
+        await T.op('V-F6', 0); O.startTask('stationTask', 'MS2'); T.step(9); O.feederFault('F5', 30); O.ringFault(O.FEEDERS.find(f => f.id === 'F3'), O.RING.secs.find(s => s.id === 'K23'), 60);
+        O.D['V-F2'].wear = 0.9; O.setFlex('MS5-G2', 1); O.GAME.score = 1234; T.step(1); const ok = O.saveGame(true);
+        return { ok, t: Math.round(O.SIM.t), f6: D['V-F6'].state, task: O.task().code + '/' + O.task().i + '/' + O.task().title, f5: O.FEEDERS.find(f => f.id === 'F5').fault?.stage,
+          k23: O.RING.secs.find(s => s.id === 'K23').fault, score: Math.round(O.GAME.score), wear: D['V-F2'].wear, flex: O.FLEX.find(f => f.id === 'MS5-G2').req, rec: O.REC.samples.length }; });
+      assert(voor.ok, 'opslaan mislukt');
+      await p.goto(pageUrl + '?resume&lite', { waitUntil: 'load', timeout: 180000 });
+      for (let i = 0; i < 120 && !(await p.evaluate(() => !!window.OS)); i++) await sleep(500);
+      await p.evaluate(PAGE_HELPERS);
+      const na = await p.evaluate(() => { const O = OS, D = O.D;
+        return { t: Math.round(O.SIM.t), f6: D['V-F6'].state, task: O.task() ? O.task().code + '/' + O.task().i + '/' + O.task().title : null, f5: O.FEEDERS.find(f => f.id === 'F5').fault?.stage,
+          k23: O.RING.secs.find(s => s.id === 'K23').fault, score: Math.round(O.GAME.score), wear: D['V-F2'].wear, flex: O.FLEX.find(f => f.id === 'MS5-G2').req, rec: O.REC.samples.length,
+          menu: document.querySelector('#intro').classList.contains('hidden'), loopt: !O.SIM.paused, mode: O.GAME.mode }; });
+      assert(Math.abs(na.score - voor.score) <= 5 && Math.abs(na.t - voor.t) <= 1, `score/tijd wijken af: ${na.score}/${na.t} ≠ ${voor.score}/${voor.t}`);   // het spel liep nog even door na het opslaan
+      for (const k of ['f6', 'task', 'f5', 'k23', 'wear', 'flex']) assert(JSON.stringify(na[k]) === JSON.stringify(voor[k]), `${k} na hervatten ${JSON.stringify(na[k])} ≠ ${JSON.stringify(voor[k])}`);
+      assert(na.rec >= voor.rec && na.menu && na.loopt && na.mode === 'free', `hervatten niet compleet: ${JSON.stringify(na)}`);
+      const later = await p.evaluate(() => { const O = OS; for (let k = 0; k < 30; k++) T.step(5); return { f5: !O.FEEDERS.find(f => f.id === 'F5').fault, k23: !O.RING.secs.find(s => s.id === 'K23').fault }; });
+      assert(later.f5 && later.k23, `storingen worden na hervatten niet meer gerepareerd: ${JSON.stringify(later)}`);
+  } },
   { name: 'Esc opent pauzemenu en pauzeert', query: '?autostart', async run(p) {
       await p.keyboard.press('Escape'); await sleep(800);
       const r = await p.evaluate(() => ({ menu: !document.querySelector('#pauseMenu').classList.contains('hidden'), paused: OS.SIM.paused }));

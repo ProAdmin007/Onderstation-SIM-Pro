@@ -36,18 +36,21 @@ const menuOpen=()=>!$('#pauseMenu').classList.contains('hidden');
 function openMenu(){if(GAME.ended||menuOpen()||!$('#intro').classList.contains('hidden'))return;menuPrev=SIM.paused;menuAt=performance.now();SIM.paused=true;syncSpeed();unlockPointer();
   const m=MODES[GAME.mode]||MODES.free;$('#pmMode').textContent=`${m.name} · ${DIFFS[GAME.diff].label}`;$('#pmScore').textContent=Math.round(GAME.score).toLocaleString('nl-NL');
   $('#pmBest').textContent=getBest(GAME.mode,GAME.diff)?`beste: ${getBest(GAME.mode,GAME.diff).toLocaleString('nl-NL')}`:'nog geen beste score';
+  $('#pmSave').disabled=!canSave();$('#pmSave').title=canSave()?'':'Opslaan kan in de vrije dienst en in de dag- en avonddienst (niet in scenario\'s en lessen)';
+  $('#pmMenu').textContent=canSave()?'Opslaan en naar hoofdmenu':'Score opslaan en naar hoofdmenu';
   $('#pauseMenu').classList.remove('hidden');document.body.classList.add('menu');}
 function closeMenu(){$('#pauseMenu').classList.add('hidden');document.body.classList.remove('menu');SIM.paused=menuPrev;syncSpeed();if(FP.on)canvasEl.requestPointerLock?.();}
 $('#pauseMenu').addEventListener('click',e=>{const b=e.target.closest('[data-pm]');if(!b)return;const a=b.dataset.pm;
   if(a==='resume')closeMenu();
   else if(a==='settings'){closeMenu();openSettings();}
+  else if(a==='save'){if(saveGame())closeMenu();else deny('Opslaan kan in de vrije dienst en in de dag- en avonddienst');}
   else if(a==='end'){$('#pauseMenu').classList.add('hidden');document.body.classList.remove('menu');if(FP.on)exitFP();endGame();}
-  else if(a==='menu'){finalizeGame();saveBest();location.search='';}});
+  else if(a==='menu'){if(canSave())saveGame(true);else{finalizeGame();saveBest();}location.search='';}});
 addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
 function startGame(id){$('#intro').classList.add('hidden');AudioSys.init();controls.autoRotate=false;
   applyMode(id);pushAlarm(`${MODES[id]?.name||'Vrije dienst'} gestart (${DIFFS[GAME.diff].label})`,'ok');setSpeed(60);if(GAME.handover)openHandover();
   const v=VIEWPOS[0];flyTo(v[0].clone(),v[1].clone(),2);}
-$('#menu').addEventListener('click',e=>{const b=e.target.closest('[data-mode]');if(b)startGame(b.dataset.mode);});
+$('#menu').addEventListener('click',e=>{if(e.target.closest('[data-resume]'))return void(location.search='?resume');if(e.target.closest('[data-delsave]')){deleteSave();return renderMenu();}const b=e.target.closest('[data-mode]');if(b)startGame(b.dataset.mode);});
 $('#diff').addEventListener('click',e=>{const b=e.target.closest('[data-d]');if(b){GAME.diff=b.dataset.d;renderMenu();}});
 $('#season').addEventListener('click',e=>{const b=e.target.closest('[data-s]');if(b){GAME.season=b.dataset.s;setSeason(GAME.season);updateSky(hourOf());renderMenu();}});
 addEventListener('pointerdown',()=>AudioSys.init(),{once:true});
@@ -58,13 +61,14 @@ document.querySelectorAll('#speed button').forEach(b=>b.classList.remove('on'));
 $('#loading').remove();
 if(DIFFS[params.get('diff')])GAME.diff=params.get('diff');if(SEASONS[params.get('season')])GAME.season=params.get('season');setSeason(GAME.season);
 if(params.get('weer')&&WX_TYPES[params.get('weer')])setWeather(params.get('weer'),true,true);
-if(params.has('play'))startGame(params.get('play'));
+if(params.has('resume')&&readSave())resumeGame(readSave());
+else if(params.has('play'))startGame(params.get('play'));
 else if(params.has('autostart')){$('#intro').classList.add('hidden');applyMode('free');setSpeed(60);}
 else{renderMenu();$('#intro').classList.remove('hidden');controls.autoRotate=true;controls.autoRotateSpeed=0.35;}
 if(params.has('night'))updateSky(22);
 if(params.has('view')){const v=VIEWPOS[+params.get('view')];camera.position.copy(v[0]);controls.target.copy(v[1]);controls.autoRotate=false;controls.update();}
 
-window.OS={CABLE,soilT,FD,meppelFault,linkTick,tabAlarms,updateTabAlarms,renderTasks,INC,INCIDENTS,startIncident,endIncident,incidentTick,setTab,renderCables,GFX,setGfx,applyGfx,openSettings,closeSettings,WX_TYPES,renderer,scene,FIRE,CARS,updateWindows,updateLife,stationLive,cbMaintTask,worstCb,cond,breakerFails,CB_IDS,FLEX,setFlex,flexTick,congestion,openFlex,closeFlex,checkModel,homeBus,BUSES,SEL_BAYS,TORCH,setTorch,HO_POOL,handoverTick,REC,RP,startReplay,stopReplay,analyse,stationDamage,closeHandover,deviations,PHONE,lvFault,callFrom,phoneAnswer,dispatchLV,LVG,forecast,progAdvice,PROG,startTask:(k,...a)=>{TASK={cbMaintTask,railTask,railBTask,stationTask,thermoTask,ringTask,feederTask,lineTask,reserveTask}[k](...a);TASK.i=0;TASK.code='WV-TEST';briefInit(TASK);renderTasks();},SIM,D,LESSONS,lessonGo,selectDevice,abortTask,railTask,stationTask,thermoTask,nearDev,VIEWS,PROT,setProt,openProt,closeProt,busFault,BUSF,RINGS,task:()=>TASK,briefSubmit,briefCheck,briefWatch,actKey,taskActs,crewNear,boxOf:id=>VIEWS[id]&&VIEWS[id].box,AudioSys,updateAudio,WX,setWeather,setSeason,SEASONS,ambient,enterKiosk,ROOMS,blockedAt,RING,NPCS,crewDispatch,ringFault,FP,enterFP,exitFP,pickCenter,camera,camInside,setRatio,setTab,GAME,MODES,applyMode,endGame,EN:()=>EN,FLOW,operate,tapStep,setAVR,resetLockout,toggleAR,regulate,computeFlows,randomEvent,lineFault,feederFault,trafoFault,offerTask,simStep,FEEDERS};
+window.OS={saveGame,readSave,deleteSave,resumeGame,canSave,specOf,CABLE,soilT,FD,meppelFault,linkTick,tabAlarms,updateTabAlarms,renderTasks,INC,INCIDENTS,startIncident,endIncident,incidentTick,setTab,renderCables,GFX,setGfx,applyGfx,openSettings,closeSettings,WX_TYPES,renderer,scene,FIRE,CARS,updateWindows,updateLife,stationLive,cbMaintTask,worstCb,cond,breakerFails,CB_IDS,FLEX,setFlex,flexTick,congestion,openFlex,closeFlex,checkModel,homeBus,BUSES,SEL_BAYS,TORCH,setTorch,HO_POOL,handoverTick,REC,RP,startReplay,stopReplay,analyse,stationDamage,closeHandover,deviations,PHONE,lvFault,callFrom,phoneAnswer,dispatchLV,LVG,forecast,progAdvice,PROG,startTask:(k,...a)=>{TASK={cbMaintTask,railTask,railBTask,stationTask,thermoTask,ringTask,feederTask,lineTask,reserveTask}[k](...a);TASK.i=0;TASK.code='WV-TEST';briefInit(TASK);renderTasks();},SIM,D,LESSONS,lessonGo,selectDevice,abortTask,railTask,stationTask,thermoTask,nearDev,VIEWS,PROT,setProt,openProt,closeProt,busFault,BUSF,RINGS,task:()=>TASK,briefSubmit,briefCheck,briefWatch,actKey,taskActs,crewNear,boxOf:id=>VIEWS[id]&&VIEWS[id].box,AudioSys,updateAudio,WX,setWeather,setSeason,SEASONS,ambient,enterKiosk,ROOMS,blockedAt,RING,NPCS,crewDispatch,ringFault,FP,enterFP,exitFP,pickCenter,camera,camInside,setRatio,setTab,GAME,MODES,applyMode,endGame,EN:()=>EN,FLOW,operate,tapStep,setAVR,resetLockout,toggleAR,regulate,computeFlows,randomEvent,lineFault,feederFault,trafoFault,offerTask,simStep,FEEDERS};
 const clock=new THREE.Clock();let hudT=0,skyT=0,progT=0;
 let liteAcc=0;
 renderer.setAnimationLoop(()=>{

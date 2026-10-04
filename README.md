@@ -30,6 +30,12 @@ Een 3D-onderstationsimulator die in de browser draait (Three.js, geen installati
   - **Weer en seizoen:** zet het weer zelf op helder, bewolkt, regen, onweer, sneeuw, mist of hittegolf (geleidelijk; dubbelklik = direct), of laat het automatisch wisselen. Ook het seizoen kun je tijdens het spelen veranderen.
   - **Geluid:** hoofdvolume plus vier kanalen: omgeving (brom, verkeer, vogels, regen), schakelen (vermogenschakelaars, motoren, vlambogen), meldingen en alarmen, en telefoon.
   - Alles wordt in de browser bewaard.
+- **Opslaan en verder spelen** (vrije dienst, dag- en avonddienst):
+  - Opslaan kan met *💾 Spel opslaan* in het pauzemenu of met `Ctrl+S`. Het spel slaat ook elke 2 minuten en bij het sluiten van de pagina automatisch op. *Opslaan en naar hoofdmenu* bewaart je spel.
+  - In het hoofdmenu staat dan bovenaan *Verder spelen*, met de dienst, de tijd, het seizoen, de score en wanneer je opsloeg.
+  - Bewaard worden: de stand van alle schakelaars, storingen, slijtage, temperaturen, de lopende werkopdracht (met je schakelbrief), weer, flex, beveiligingsinstellingen, score, statistieken en de tijdlijn.
+  - Reparaties en andere geplande gebeurtenissen worden bij het hervatten opnieuw ingepland. Een groot incident dat liep, wordt netjes afgerond.
+  - Speel je een dienst tot het einde, dan verdwijnt het opgeslagen spel.
 - **Pauzemenu (`Esc`):** hervatten, de dienst beëindigen met rapport, of de score opslaan en terug naar het hoofdmenu.
 - **Klaar om te schakelen:** als de storingsdienst of TenneT klaar is, of een transformator weer gereset mag worden, hoor je een oplopend klokgeluid en verschijnt een groene banner. Het betreffende veld knippert groen in SCADA en in 3D tot je het schakelt. · `spatie` pauze · `L` labels · `M` geluid · `Esc` deselecteren
 
@@ -49,6 +55,11 @@ Een 3D-onderstationsimulator die in de browser draait (Three.js, geen installati
   - Omschakelen kan alleen spanningsloos (T3-Q0, V-T3 en W-T3 UIT).
   - Inschakelen op de verkeerde spanning blokkeert de vergrendeling. Met de vergrendelingen uit leidt het tot een incident en wikkelingsschade.
   - Let op: T3 is kleiner dan T1. Neemt hij tijdens de avondpiek de hele 10 kV over, dan raakt hij overbelast.
+- **OS Meppel** (aan de andere kant van L2): het 110 kV-deel en de transformator zijn van een andere netbeheerder (*Netbeheer Noord*), grijs in SCADA en niet bedienbaar. Alleen de **uitgaande velden zijn van jou**:
+  - **MP1** Meppel-Oost (woningen);
+  - **MP2** Bedrijventerrein Blankenstein;
+  - **MP3** de **koppelkabel** naar MS5 Bedrijvenpark Zuid in je woonwijkring.
+  De koppeling **MS5-K** is normaal open. Sluiten mag alleen als de ringkant spanningsloos is: dan voedt Meppel MS5 (en verder) terug. Parallel schakelen met Netbeheer Noord is niet toegestaan. De vergrendeling houdt dat tegen, en ontstaat het toch, dan schakelt Netbeheer Noord de koppeling af. Over de koppeling mag maximaal ±4 MW. Af en toe heeft Netbeheer Noord zelf een storing aan de 110 kV-kant; dan vallen je velden in Meppel even weg. Alles zie je op het SCADA-tabblad *Meppel*.
 - **Twee 10 kV-ringen achter het station:**
   - **Ring Woonwijk:** V-F3 (rail A) → MS1–MS5 → V-F4 (rail B), normaal-open punt **MS3-R**.
   - **Ring Centrum – De Vaart:** V-F1 → MS6 Marktplein → MS7 Stationsstraat ‖ MS8 De Vaart Noord → MS9 De Vaart Zuid → V-F2, normaal-open punt **MS7-R**. Het centrum heeft appartementen met winkels, een plein en een station; bedrijventerrein De Vaart heeft hallen, een bouwmarkt en een tankstation.
@@ -56,7 +67,11 @@ Een 3D-onderstationsimulator die in de browser draait (Three.js, geen installati
   - Bij een kabelfout spreken **kortsluitverklikkers** aan bij de stations tussen het voedingspunt en de fout. Isoleer de kabel achter het laatste station met een verklikker, sluit het normaal-open punt en schakel het veld weer in.
 - **Stroom en spanning in de ringkabels:** per kabelsectie wordt de belastingstroom berekend (rating 330 A, kopkabels 400 A), plus de spanning per station inclusief het spanningsverlies over de kabels.
   - In SCADA zie je de stroom per veld, MW en kV per station, en kabels die oranje of rood knipperen bij hoge belasting.
-  - Bij overbelasting krijg je een alarm. Blijft een kabel lang boven 130 %, dan brandt hij door.
+  - **Kabeltemperatuur:** elke ringkabel en veldkabel warmt langzaam op naar de grondtemperatuur plus 65 °C × (belasting)². De tijdconstante is 40 min voor ringkabels en 30 min voor veldkabels. Kort overbelasten mag dus, lang niet:
+    - boven 85 °C krijg je een waarschuwing;
+    - boven 90 °C (het maximum voor XLPE) kost het punten;
+    - vanaf 105 °C brandt de kabel door.
+    Bij 130% duurt dat ongeveer een uur, bij 150% zo'n 40 minuten. De temperatuur staat in het tabblad *Kabels*, in het stationspaneel en in het veldpaneel.
 - **Straatverlichting:** elk MS-station heeft een LS-veld *Openbare verlichting* met een schemerschakeling. Alle lantaarns hangen aan het dichtstbijzijnde station en gaan uit als dat station of het OVL-veld spanningsloos is, met een lichtvlek op straat als ze branden.
 - **Inloop-MS-stations:** elk ringstation kun je in, via de open deur of met de knop *Naar binnen* in het stationspaneel. Binnen staan:
   - een compacte RMU met de velden L, T en R, met standmelders, spanningslampjes en een kortsluitverklikker (KSV);
@@ -99,7 +114,7 @@ Een 3D-onderstationsimulator die in de browser draait (Three.js, geen installati
   - **I> per uitgaand veld** (110–150 %) en een **tijdfactor** (×0,5–×2). Te scherp: koude-lastopname leidt tot afschakeling. Te ruim: een langdurig overbelaste kabel raakt beschadigd.
   - **AR dode tijd per lijn** (0,3 / 1 / 3 s). Kort: de herinschakeling mislukt soms omdat de boog nog niet gedoofd is. 3 s: altijd raak, maar draait het station op één lijn, dan vallen processen bij klanten uit.
   - **Thermische trip per trafo** (95 / 100 / 110 °C). Hoog geeft meer reserve, maar boven 105 °C ontstaat gasvorming en dreigt een Buchholz-trip met een lange inspectie.
-- **SCADA** heeft tabbladen voor 10 kV, 20 kV, de ring, **kabels** en de **prognose**.
+- **SCADA** heeft tabbladen voor 10 kV, 20 kV, de ring, **Meppel**, **kabels** en de **prognose**.
   - Is er een storing in een deel van de installatie, dan **knippert het tabblad rood** tot hij is opgelost. Beweeg over het tabblad om te zien welke storing het is.
     - **10 kV:** kabelfout of uitval van een veld, railfout of dode rail A/B, T1 geblokkeerd, vastzittende schakelaar.
     - **20 kV:** hetzelfde voor rail C1/C2, T2 en de G-velden.
@@ -253,7 +268,7 @@ De broncode staat in `src/`. `build.ps1` plakt de bestanden in strikte naamvolgo
 | `04-9-wear.js` | veroudering, weigering (50BF) en revisies |
 | `04b`–`04g` | spelmodi en score, ring, lessen, dienstoverdracht, extra scenario's |
 | `05`–`06` | effecten, geluid, interieur, opbouw van de scène |
-| `07`–`07n` | SCADA en panelen, rondlopen, monteurs, schakelbrief, beveiligingsvenster, prognose, telefoon, tijdlijn/herhaling, modelcontrole, flex- en onderhoudsvenster, leven in de wijk, instellingen, tabblad Kabels |
+| `07`–`07o` | SCADA en panelen, rondlopen, monteurs, schakelbrief, beveiligingsvenster, prognose, telefoon, tijdlijn/herhaling, modelcontrole, flex- en onderhoudsvenster, leven in de wijk, instellingen, tabblad Kabels, opslaan en hervatten |
 | `08-main.js` | HUD, menu's, start en hoofdlus |
 
 **Rails, lijnen en railkeuzevelden** staan op één plek (`BUSES`, `LINES` en het register `SEL_BAYS` in `04-1-net.js`); de koppelingen, spanningsbanden, SCADA-metingen en werkopdrachten worden daarvan afgeleid. Bij het opstarten controleert `checkModel()` of alle verwijzingen naar apparaten kloppen, of elke schakelaar ergens te bedienen is en of alles in de normale toestand spanning heeft. Een fout verschijnt als consolefout, en de tests vallen er dan direct over.

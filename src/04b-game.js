@@ -97,7 +97,7 @@ function applyMode(id){
   FEEDERS.concat(RING.stations).forEach(f=>{f.unplanned=false;f.wait=0;});
   setSeason(m.season||GAME.season);if(m.weather)setWeather(m.weather,true,true);else if(!WX.lock)setWeather(pickWeather(),false,true);
   initTaps();m.setup&&m.setup();
-  GAME.handover=null;if(GAME.mode!=='free'&&!m.les)handoverInit(m);
+  GAME.handover=null;if(GAME.mode!=='free'&&!m.les&&!RESUMING)handoverInit(m);
   GAME.obj=m.obj?m.obj().map(o=>({...o,state:null})):[];
   computeFlows();FEEDERS.concat(RING.stations).forEach(f=>{f.wasOn=EN.has(f.node);});
   updateSky(hourOf());refreshAll();renderTasks();
@@ -122,7 +122,7 @@ function finalizeGame(){if(GAME.ended)return;GAME.ended=true;SIM.paused=true;
   GAME.obj.forEach(o=>{if(o.state)return;const ok=o.final?o.final():false;o.state=ok?'done':'fail';award(ok?100:-150,ok?'Doel behaald':'Doel gemist');});
   if(!SIM.incidents&&SIM.t-GAME.t0>=60)award(200,'Veilig gewerkt');}   // bonus pas na minimaal een uur dienst
 function saveBest(){const s=Math.round(GAME.score),best=getBest(GAME.mode,GAME.diff),rec=s>best;if(rec){try{localStorage.setItem(bestKey(GAME.mode,GAME.diff),s);}catch(e){}}return {s,best,rec};}
-function endGame(){finalizeGame();syncSpeed();showReport();}
+function endGame(){finalizeGame();syncSpeed();showReport();if(['free','day','eve'].includes(GAME.mode))deleteSave();}   // gespeeld tot het einde: opgeslagen spel is niet meer nodig
 function bestKey(id,diff){return `osz-best-${id}-${diff}`;}
 function getBest(id,diff){try{return +localStorage.getItem(bestKey(id,diff))||0;}catch(e){return 0;}}
 function showReport(){
@@ -155,7 +155,8 @@ $('#report').addEventListener('click',e=>{const b=e.target.closest('[data-r]');i
   else{$('#report').classList.add('hidden');GAME.endT=null;GAME.ended=false;GAME.events=true;GAME.tasks=true;GAME.countdown=null;SIM.nextTaskAt=SIM.t+5;setSpeed(60);}});
 function renderMenu(){
   const card=id=>{const m=MODES[id],b=getBest(id,GAME.diff);return `<button class="mode" data-mode="${id}"><span class="mt">${m.tag}</span><b>${m.name}</b><span class="md">${m.desc}</span>${b?`<span class="mb">Beste: ${b.toLocaleString('nl-NL')} (${grade(b)[0]})</span>`:''}</button>`;};
-  $('#menu').innerHTML=`<div class="mh">Dienst draaien</div><div class="mgrid">${['free','day','eve'].map(card).join('')}</div>
+  const sv=readSave(),svHtml=sv?`<div class="mh">Verder spelen</div><div class="mgrid"><button class="mode resume" data-resume><span class="mt">💾 Opgeslagen spel</span><b>${MODES[sv.mode].name} · ${fmtClock(sv.SIM.t)}</b><span class="md">${DIFFS[sv.diff].label} · ${SEASONS[sv.season].name} · score ${Math.round(sv.GAME.score).toLocaleString('nl-NL')}<br>opgeslagen ${new Date(sv.at).toLocaleString('nl-NL',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</span></button><button class="mode delsave" data-delsave><span class="mt">Opgeslagen spel</span><b>Verwijderen</b><span class="md">Begin opnieuw zonder het opgeslagen spel.</span></button></div>`:'';
+  $('#menu').innerHTML=svHtml+`<div class="mh">Dienst draaien</div><div class="mgrid">${['free','day','eve'].map(card).join('')}</div>
     <div class="mh">Leren · begeleide lessen</div><div class="mgrid">${Object.keys(LESSONS).map(card).join('')}</div>
     <div class="mh">Scenario's</div><div class="mgrid">${['zkh','storm','piek','hitte','winter','blackout','dubbel','aanrijding','cyber','overstroming','zonnepiek','kraan','brand','evenement','laadpiek'].map(card).join('')}</div>`;
   document.querySelectorAll('#diff button').forEach(b=>b.classList.toggle('on',b.dataset.d===GAME.diff));

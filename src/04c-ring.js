@@ -56,8 +56,8 @@ function ringProtection(dm=0){
   stationProtection();
   RING.secs.forEach(s=>{if(!s.fault||!EN.has(s.node))return;const t=FLOW.TAG[s.node];tripFrom(s.node);GAME.stats.recloseFault++;award(-40,'Ingeschakeld op kabelfout');
   pushAlarm(`Kabel ${secName(s)} met fout onder spanning gebracht – ${t&&t.cb?t.cb:'beveiliging'} schakelt af`,'warn');});}
-function ringTask(){const s=pick(RING.secs.filter(x=>x.a&&x.b&&x.a+'-R'!==x.ring.nop)),l=s.a+'-R',r=s.b+'-L',st=RING.stations.find(x=>x.id===s.a),nop=s.ring.nop;
-  return{title:`Kabelwerk ring: ${secName(s)}`,crew:()=>({box:VIEWS[st.id].box,say:`Mof leggen ${secName(s)}`,from:V3(st.pos[0]+6,0,st.pos[1]-8),rel:[l,r]}),
+function ringTask(secId){const s=secId?RING.secs.find(x=>x.id===secId):pick(RING.secs.filter(x=>x.a&&x.b&&x.a+'-R'!==x.ring.nop)),l=s.a+'-R',r=s.b+'-L',st=RING.stations.find(x=>x.id===s.a),nop=s.ring.nop;
+  return{sec:s.id,title:`Kabelwerk ring: ${secName(s)}`,crew:()=>({box:VIEWS[st.id].box,say:`Mof leggen ${secName(s)}`,from:V3(st.pos[0]+6,0,st.pos[1]-8),rel:[l,r]}),
     crewRel:[l,r],desc:`Een kabelploeg legt een nieuwe mof in de kabel tussen ${secName(s)}. Sluit eerst het normaal-open punt, zodat niemand zonder stroom komt, en schakel dan de kabel vrij.`,steps:[
     {t:`Sluit het normaal-open punt ${nop}`,act:[nop,1],why:'Eerst het normaal-open punt sluiten, zodat alle stations gevoed blijven als je de kabel vrijschakelt.',ok:()=>D[nop].state===1},
     {t:`Open lastscheider ${l}`,act:[l,0],grp:'open',why:'Daarna de kabel aan beide kanten vrijschakelen.',ok:()=>D[l].state===0},
