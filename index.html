@@ -388,7 +388,7 @@ body.fp #torch.on{display:block}
         <li><b>Score:</b> snel herstel en behaalde doelen leveren punten op; klantminuten, incidenten en overbelasting kosten punten.</li>
       </ul>
       <div class="mh">Seizoen</div>
-      <div class="seg" id="season"><button data-s="lente">Lente</button><button data-s="zomer">Zomer</button><button data-s="herfst" class="on">Herfst</button><button data-s="winter">Winter</button></div>
+      <div class="seg" id="season"><button data-s="lente">Lente</button><button data-s="zomer" class="on">Zomer</button><button data-s="herfst">Herfst</button><button data-s="winter">Winter</button></div>
       <div class="mh">Moeilijkheid</div>
       <div class="seg" id="diff"><button data-d="rustig">Rustig</button><button data-d="normaal" class="on">Normaal</button><button data-d="zwaar">Zwaar</button></div>
       <div class="keys">slepen: draaien · rechts: schuiven · scroll: zoom<br>1–9 camera · V rondlopen · spatie/P pauze · Esc menu · I instellingen · B beveiliging · C flex · O onderhoud · L labels · M geluid</div>
@@ -1195,14 +1195,14 @@ const SEASONS={
     load:{res:1.0,city:1,ind:1,hosp:1,green:1},wx:{helder:3,bewolkt:4,regen:4,onweer:1,mist:2}},
   winter:{name:'Winter',date:new Date(2026,0,15),rise:8.7,set:16.9,maxEl:15,az:[125,235],amb:[3,3],pv:0.25,
     load:{res:1.22,city:1.12,ind:1.02,hosp:1.05,green:1.15},wx:{helder:3,bewolkt:4,regen:2,sneeuw:3,mist:2}}};
-let SEASON=SEASONS.herfst;
+let SEASON=SEASONS.zomer;   // standaard: zomer
 const WX_TYPES={
   helder:{icon:'☀',name:'Helder',cloud:0.1},bewolkt:{icon:'☁',name:'Bewolkt',cloud:0.75},
   regen:{icon:'🌧',name:'Regen',cloud:0.92,rain:0.8},onweer:{icon:'⛈',name:'Onweer',cloud:1,rain:1,thunder:1},
   sneeuw:{icon:'❄',name:'Sneeuw',cloud:0.85,snow:1,dT:-3},mist:{icon:'🌫',name:'Mist',cloud:0.6,fog:1},
   hitte:{icon:'🔥',name:'Hittegolf',cloud:0,dT:8}};
 const WX={type:'bewolkt',lock:false,next:0,cur:{cloud:0.5,rain:0,snow:0,thunder:0,fog:0,dT:0},cover:0};
-function setSeason(id){SEASON=SEASONS[id]||SEASONS.herfst;lastEnvElev=-999;}
+function setSeason(id){SEASON=SEASONS[id]||SEASONS.zomer;lastEnvElev=-999;}
 function setWeather(type,lock=false,instant=false){const t=WX_TYPES[type]||WX_TYPES.helder;WX.type=type;WX.lock=lock;WX.next=SIM.t+rnd(90,240);
   if(instant){Object.assign(WX.cur,{cloud:t.cloud,rain:t.rain||0,snow:t.snow||0,thunder:t.thunder||0,fog:t.fog||0,dT:t.dT||0});WX.cover=t.snow?0.8:0;}lastEnvElev=-999;}
 function pickWeather(){const w=SEASON.wx;let tot=0;for(const k in w)tot+=w[k];let r=Math.random()*tot;for(const k in w){r-=w[k];if(r<=0)return k;}return 'helder';}
@@ -1849,7 +1849,7 @@ function cbMaintTask(id){const d=D[id],f=d.feeder,F=f.id,rg=f.ring&&RINGS.find(r
 
 // ============================================================ spelmodi, score en scenario's
 const DIFFS={rustig:{label:'Rustig',ev:1.6,perm:0.2},normaal:{label:'Normaal',ev:1,perm:0.35},zwaar:{label:'Zwaar',ev:0.6,perm:0.5}};
-const GAME={mode:'free',diff:'normaal',season:'herfst',score:1000,ended:false,events:true,tasks:true,endT:null,t0:0,obj:[],flags:{},countdown:null,
+const GAME={mode:'free',diff:'normaal',season:'zomer',score:1000,ended:false,events:true,tasks:true,endT:null,t0:0,obj:[],flags:{},countdown:null,
   stats:{fast:0,thermal:0,volt:0,recloseFault:0,clpTrips:0,maxOil:0,hospMin:0}};
 const TOTAL_CUST=CONS.reduce((s,c)=>s+c.cust,0);
 const at=(min,fn)=>SIM.timers.push({at:GAME.t0+min,fn});
@@ -3313,7 +3313,7 @@ function lvFault(force){const c=LVG.filter(g=>g.cust>1&&!g.lvf&&EN.has(g.node)&&
   const g=pick(c);g.lvf={at:SIM.t,frac:rnd(0.2,0.55)};g.outFrac=g.lvf.frac;GAME.stats.lvf=(GAME.stats.lvf||0)+1;
   addTimer(rnd(2,5),()=>g.lvf&&callFrom(g,'lv'));addTimer(rnd(7,11),()=>g.lvf&&callFrom(g,'lv'));
   addTimer(150,()=>{if(!g.lvf)return;g.lvf=null;g.outFrac=0;pushAlarm(`Storingsdienst (0800-nummer): LS-storing ${g.st.id} ${g.name} na veel klachten alsnog verholpen`,'warn');});}
-function callFrom(g,kind){if(PHONE.queue.length>=3||(PHONE.cd[g.id]||-99)>SIM.t-12)return;PHONE.cd[g.id]=SIM.t;const pl=placeOf(g);
+function callFrom(g,kind){if(!g||PHONE.queue.length>=3||(PHONE.cd[g.id]||-99)>SIM.t-12)return;PHONE.cd[g.id]=SIM.t;const pl=placeOf(g);
   const who=pl.biz?`de bedrijfsleider van ${g.name}`:pick(CALLERS);
   const say=kind==='house'?pick(['Ik heb geen stroom, maar de buren wel.','Bij mij is alles uit, bij de overburen brandt gewoon licht.','Mijn aardlekschakelaar springt steeds en nu doet niks het meer.'])
     :kind==='lv'?pick(['Bij ons is de stroom uit, de buren hebben het ook.','Halve straat zit zonder stroom, het licht flikkerde eerst.','Wij hebben geen stroom meer, de straatverlichting doet het nog wel.'])

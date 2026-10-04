@@ -144,7 +144,7 @@ async function play(browser, r) {
   const seed = +process.env.SEED || Math.floor(Math.random() * 1e6);
   await page.evaluateOnNewDocument(sd => { let a = sd >>> 0; Math.random = () => { a = (a + 0x6D2B79F5) >>> 0; let t = Math.imul(a ^ (a >>> 15), a | 1);
     t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }, seed);
-  page.on('pageerror', e => errors.push(e.message));
+  page.on('pageerror', e => errors.push((e.stack || e.message).split('\n').slice(0, 3).join(' ← ')));
   page.on('console', m => { if (process.env.FULLLOG && m.text().startsWith('[bot]')) say('  ' + m.text()); if (m.type() === 'error' && !/AudioContext/.test(m.text())) errors.push(m.text()); });
   try {
     await page.goto(pageUrl + r.query + '&lite', { waitUntil: 'load', timeout: 180000 });

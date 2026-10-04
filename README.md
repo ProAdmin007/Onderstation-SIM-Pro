@@ -121,7 +121,7 @@ Alle geluid wordt in de browser gemaakt (Web Audio) en hangt af van waar je bent
 - **Overal:** wind, regen en onweer.
 
 ## Seizoenen en weer
-- **Seizoenen** (lente, zomer, herfst, winter) kies je in het menu. Ze bepalen:
+- **Seizoenen** (lente, zomer, herfst, winter) kies je in het menu; standaard is het **zomer**. Scenario's en lessen hebben hun eigen seizoen. Ze bepalen:
   - zonsopkomst, zonsondergang en zonnehoogte;
   - de buitentemperatuur;
   - de belasting (winter: verwarming, zomer: airco);

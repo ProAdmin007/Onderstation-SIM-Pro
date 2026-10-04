@@ -37,7 +37,7 @@ const PAGE_HELPERS = `
 async function openPage(browser, query) {
   const page = await browser.newPage();
   const errors = [];
-  page.on('pageerror', e => errors.push(e.message));
+  page.on('pageerror', e => errors.push((e.stack || e.message).split('\n').slice(0, 3).join(' ← ')));
   page.on('console', m => { if (m.type() === 'error' && !/AudioContext/.test(m.text())) errors.push(m.text()); });
   await page.goto(pageUrl + query + (query.includes('?') ? '&' : '?') + 'lite', { waitUntil: 'load', timeout: 180000 });
   for (let i = 0; i < 120 && !(await page.evaluate(() => !!window.OS)); i++) await sleep(500);
@@ -234,8 +234,8 @@ const TESTS = [
         // werkopdracht onderhoud rail B: niemand zonder stroom
         O.startTask('railBTask'); let maxOff = 0;
         for (let k = 0; k < 120 && O.task(); k++) { const s = O.task().steps[O.task().i]; if (s.act) await T.op(...s.act); T.step(0.5); maxOff = Math.max(maxOff, O.SIM.off); }
-        return { omgezet, bDood, geweigerd1, geweigerd2, klaar: !O.task(), maxOff, normaal: rail('F5') === 'RB' && D['V-K'].state === 1 }; });
-      for (const [k, v] of Object.entries(r)) if (k !== 'maxOff') assert(v, `${k} klopt niet: ${JSON.stringify(r)}`);
+        return { omgezet, bDood, geweigerd1, geweigerd2, klaar: !O.task(), maxOff, normaal: rail('F5') === 'RB' && D['V-K'].state === 1, detail: [rail('F5'), D['F5-QA'].state, D['F5-QB'].state, D['V-K'].state, O.task()?.title].join('/') }; });
+      for (const [k, v] of Object.entries(r)) if (k !== 'maxOff' && k !== 'detail') assert(v, `${k} klopt niet: ${JSON.stringify(r)}`);
       assert(r.maxOff === 0, `klanten zonder stroom tijdens onderhoud rail B: ${r.maxOff}`);
   } },
   { name: 'belastingprognose: verwachting en waarschuwing zonder voeding', query: '?autostart&t=15', async run(p) {
@@ -305,7 +305,7 @@ const TESTS = [
         return { slijt, railB, railA, vast, weiger, iso, herstel, klaar: !O.task(), nieuw: !D['V-F6'].stuck && O.cond(D['V-F6']) > 0.9, aan: EN().has('F6') }; });
       for (const [k, v] of Object.entries(r)) assert(v, `${k} klopt niet: ${JSON.stringify(r)}`);
   } },
-  { name: 'leven in de wijk: ramen per station, auto\'s en buren bij uitval', query: '?autostart&t=21&night', async run(p) {
+  { name: 'leven in de wijk: ramen per station, auto\'s en buren bij uitval', query: '?autostart&t=21&night&season=winter', async run(p) {
       const r = await p.evaluate(async () => { T.quiet(); const O = OS, s1 = O.RING.stations[0]; O.SIM.paused = false; T.step(0.2); O.updateWindows();
         const aan = s1.winMats.some(m => m.opacity > 0.3), autos = O.CARS.filter(c => c.g.visible).length;
         O.D['V-F3'].state = 0; O.computeFlows(); T.step(5); O.updateWindows(); O.updateLife(0.1);

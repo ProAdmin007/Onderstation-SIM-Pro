@@ -7,7 +7,7 @@ function lvFault(force){const c=LVG.filter(g=>g.cust>1&&!g.lvf&&EN.has(g.node)&&
   const g=pick(c);g.lvf={at:SIM.t,frac:rnd(0.2,0.55)};g.outFrac=g.lvf.frac;GAME.stats.lvf=(GAME.stats.lvf||0)+1;
   addTimer(rnd(2,5),()=>g.lvf&&callFrom(g,'lv'));addTimer(rnd(7,11),()=>g.lvf&&callFrom(g,'lv'));
   addTimer(150,()=>{if(!g.lvf)return;g.lvf=null;g.outFrac=0;pushAlarm(`Storingsdienst (0800-nummer): LS-storing ${g.st.id} ${g.name} na veel klachten alsnog verholpen`,'warn');});}
-function callFrom(g,kind){if(PHONE.queue.length>=3||(PHONE.cd[g.id]||-99)>SIM.t-12)return;PHONE.cd[g.id]=SIM.t;const pl=placeOf(g);
+function callFrom(g,kind){if(!g||PHONE.queue.length>=3||(PHONE.cd[g.id]||-99)>SIM.t-12)return;PHONE.cd[g.id]=SIM.t;const pl=placeOf(g);
   const who=pl.biz?`de bedrijfsleider van ${g.name}`:pick(CALLERS);
   const say=kind==='house'?pick(['Ik heb geen stroom, maar de buren wel.','Bij mij is alles uit, bij de overburen brandt gewoon licht.','Mijn aardlekschakelaar springt steeds en nu doet niks het meer.'])
     :kind==='lv'?pick(['Bij ons is de stroom uit, de buren hebben het ook.','Halve straat zit zonder stroom, het licht flikkerde eerst.','Wij hebben geen stroom meer, de straatverlichting doet het nog wel.'])

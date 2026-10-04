@@ -9,14 +9,14 @@ const SEASONS={
     load:{res:1.0,city:1,ind:1,hosp:1,green:1},wx:{helder:3,bewolkt:4,regen:4,onweer:1,mist:2}},
   winter:{name:'Winter',date:new Date(2026,0,15),rise:8.7,set:16.9,maxEl:15,az:[125,235],amb:[3,3],pv:0.25,
     load:{res:1.22,city:1.12,ind:1.02,hosp:1.05,green:1.15},wx:{helder:3,bewolkt:4,regen:2,sneeuw:3,mist:2}}};
-let SEASON=SEASONS.herfst;
+let SEASON=SEASONS.zomer;   // standaard: zomer
 const WX_TYPES={
   helder:{icon:'☀',name:'Helder',cloud:0.1},bewolkt:{icon:'☁',name:'Bewolkt',cloud:0.75},
   regen:{icon:'🌧',name:'Regen',cloud:0.92,rain:0.8},onweer:{icon:'⛈',name:'Onweer',cloud:1,rain:1,thunder:1},
   sneeuw:{icon:'❄',name:'Sneeuw',cloud:0.85,snow:1,dT:-3},mist:{icon:'🌫',name:'Mist',cloud:0.6,fog:1},
   hitte:{icon:'🔥',name:'Hittegolf',cloud:0,dT:8}};
 const WX={type:'bewolkt',lock:false,next:0,cur:{cloud:0.5,rain:0,snow:0,thunder:0,fog:0,dT:0},cover:0};
-function setSeason(id){SEASON=SEASONS[id]||SEASONS.herfst;lastEnvElev=-999;}
+function setSeason(id){SEASON=SEASONS[id]||SEASONS.zomer;lastEnvElev=-999;}
 function setWeather(type,lock=false,instant=false){const t=WX_TYPES[type]||WX_TYPES.helder;WX.type=type;WX.lock=lock;WX.next=SIM.t+rnd(90,240);
   if(instant){Object.assign(WX.cur,{cloud:t.cloud,rain:t.rain||0,snow:t.snow||0,thunder:t.thunder||0,fog:t.fog||0,dT:t.dT||0});WX.cover=t.snow?0.8:0;}lastEnvElev=-999;}
 function pickWeather(){const w=SEASON.wx;let tot=0;for(const k in w)tot+=w[k];let r=Math.random()*tot;for(const k in w){r-=w[k];if(r<=0)return k;}return 'helder';}
