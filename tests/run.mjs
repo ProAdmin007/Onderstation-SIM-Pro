@@ -26,6 +26,8 @@ const PAGE_HELPERS = `
     sleep: ms => new Promise(r=>setTimeout(r,ms)),
     quiet(){ const S=window.OS.SIM; S.nextEvent=1e9; S.nextTaskAt=1e9; },
     toast: () => document.querySelector('#toast').textContent,
+    async op(id,to){ const O=window.OS,d=O.D[id]; if(d.state===to) return true; if(d.springAt>performance.now()) await T.sleep(d.springAt-performance.now()+50); for(let i=0;d.busy&&i<60;i++) await T.sleep(100);
+      O.operate(id,to); const r=document.querySelector('#radio'); if(!r.classList.contains('hidden')){ r.querySelector('[data-rd="meld"]').click(); await T.sleep(1700); } return d.state===to; },
   };`;
 
 async function openPage(browser, query) {
@@ -153,6 +155,60 @@ const TESTS = [
       assert(r.wx === 'hitte' && r.amb > 30, `geen hittegolf: ${r.wx} ${r.amb}`);
       assert(r.fan === true, 'ventilatorstoring T1 trad niet op');
   } },
+  { name: 'rail C gesplitst: koppeling W-K, railfout en voeding via T3', query: '?autostart&t=11', async run(p) {
+      const r = await p.evaluate(async () => { T.quiet(); const O = OS, EN = () => O.EN(); O.SIM.paused = false; T.step(0.2);
+        const basis = EN().has('RC') && EN().has('RD');
+        await T.op('W-K', 0); T.step(0.2); const gesplitst = EN().has('RC') && !EN().has('RD');
+        await T.op('W-K', 1); T.step(0.2); const weer = EN().has('RD');
+        O.busFault('RC', 30); T.step(0.2); const fout = !EN().has('RC') && !EN().has('RD') && O.D['W-K'].state === 0;
+        await T.op('T3-Q0', 0); O.setRatio('20'); await T.sleep(3300); await T.op('T3-Q0', 1); await T.op('W-T3', 1); T.step(0.2);
+        const c2 = EN().has('RD') && !EN().has('RC');
+        O.D['W-K'].springAt = 0; O.operate('W-K', 1); T.step(0.2); const beveiligd = O.D['W-K'].state === 0 && EN().has('RD') && O.GAME.stats.recloseFault > 0;
+        return { basis, gesplitst, weer, fout, c2, beveiligd }; });
+      for (const [k, v] of Object.entries(r)) assert(v, `${k} klopt niet: ${JSON.stringify(r)}`);
+  } },
+  { name: 'beveiligingsinstellingen bepalen afschakeling en schade', query: '?autostart&t=11', async run(p) {
+      const r = await p.evaluate(() => { T.quiet(); const O = OS, f = O.FEEDERS.find(x => x.id === 'F6'); O.SIM.paused = false; T.step(0.2);
+        const run = (pick, tms, min) => { O.setProt('f', 'F6', 'pick', pick); O.setProt('f', 'F6', 'tms', tms); Object.assign(f, { oc: 0, heat: 0, fault: null }); O.D['V-F6'].state = 1; O.computeFlows();
+          f.rate = f.P / 1.6; T.step(min); return { uit: O.D['V-F6'].state === 0, schade: !!f.fault }; };
+        const standaard = run(1.3, 1, 9), ruim = run(1.5, 2, 12);
+        O.setProt('tr', 'T1', 'trip', 95); O.D.T1.oil = 96; T.step(0.25);
+        return { standaard, ruim, trafo: O.D.T1.blocked && O.D.T1.blockKind === 'temp' }; });
+      assert(r.standaard.uit && !r.standaard.schade, `standaardinstelling: ${JSON.stringify(r.standaard)}`);
+      assert(r.ruim.schade, `te ruime instelling gaf geen kabelschade: ${JSON.stringify(r.ruim)}`);
+      assert(r.trafo, 'trafo schakelde niet af op de lagere thermische instelling');
+  } },
+  { name: 'werk staken: herstel in omgekeerde volgorde', query: '?autostart&t=11', async run(p) {
+      const r = await p.evaluate(async () => { T.quiet(); const O = OS, D = O.D; O.SIM.paused = false; O.startTask('railTask'); T.step(7);
+        for (const [id, to] of [['W-G3', 0], ['W-G4', 0], ['W-K', 0], ['RD-Q8', 1]]) await T.op(id, to);
+        T.step(1); const bijWerk = O.task().steps[O.task().i].wait != null;
+        O.abortTask(); const herstel = O.task().steps.map(s => s.act.join(':'));
+        const log = []; for (let k = 0; k < 8 && O.task(); k++) { const s = O.task().steps[O.task().i]; const ok = await T.op(...s.act); log.push(s.act.join(':') + (ok ? '' : ' ✗ ' + T.toast())); T.step(0.3); }
+        T.step(5); const g3 = O.FEEDERS.find(x => x.id === 'G3');
+        return { log, bijWerk, herstel, klaar: !O.task(), normaal: D['W-K'].state === 1 && D['RD-Q8'].state === 0 && O.EN().has('G3') && !g3.backfed }; });
+      assert(r.bijWerk, 'werk niet gestart');
+      assert(r.herstel.join() === 'RD-Q8:0,W-K:1,W-G4:1,W-G3:1', `verkeerde herstelvolgorde: ${r.herstel}`);
+      assert(r.klaar && r.normaal, `niet terug in normale toestand: ${JSON.stringify(r)}`);
+  } },
+  { name: 'onderhoud MS-station en thermografie-ronde', query: '?autostart&t=11', async run(p) {
+      const r = await p.evaluate(async () => { T.quiet(); const O = OS; O.SIM.paused = false; O.startTask('stationTask'); let maxOff = 0;
+        for (let k = 0; k < 200 && O.task(); k++) { const s = O.task().steps[O.task().i]; if (s.act) await T.op(...s.act); T.step(0.5); maxOff = Math.max(maxOff, O.SIM.off); }
+        const station = { klaar: !O.task(), maxOff, done: O.SIM.tasksDone };
+        O.startTask('thermoTask'); const t = O.task(), n0 = t.steps.length;
+        for (const s of t.steps.slice(0, n0)) { const c = O.VIEWS[s.visit].center; O.camera.position.set(c.x + 5, c.y + 3, c.z + 5); T.step(0.25); }
+        return { station, thermo: { gevonden: !!t.found, extra: t.steps.length - n0, titel: t.title } }; });
+      assert(r.station.klaar && r.station.done >= 1, `MS-station-onderhoud niet afgerond: ${JSON.stringify(r.station)}`);
+      assert(r.station.maxOff === 0, `klanten zonder stroom tijdens onderhoud MS-station: ${r.station.maxOff}`);
+      assert(r.thermo.gevonden && r.thermo.extra >= 4, `thermografie: ${JSON.stringify(r.thermo)}`);
+  } },
+  ...['les1', 'les2', 'les3', 'les4', 'les5'].map(les => ({ name: `leerscenario ${les} is uit te spelen`, query: `?play=${les}`, async run(p) {
+      const r = await p.evaluate(async () => { const O = OS, G = O.GAME;
+        for (let k = 0; k < 150 && !G.ended; k++) { const L = G.lesson, s = L.steps[L.i];
+          if (s && !L.done) { if (s.next) O.lessonGo(); else if (s.acts) { for (const a of s.acts) await T.op(...a); } else if (s.act) await T.op(...s.act); else if (s.auto) s.auto(); }
+          T.step(0.5); await T.sleep(s && s.auto ? 900 : 40); }
+        return { ended: G.ended, done: G.lesson.done, i: G.lesson.i, obj: G.obj.map(o => o.state), report: !document.querySelector('#report').classList.contains('hidden') }; });
+      assert(r.done && r.ended && r.report && r.obj.every(o => o === 'done'), `les niet afgerond: ${JSON.stringify(r)}`);
+  } })),
   { name: 'Esc opent pauzemenu en pauzeert', query: '?autostart', async run(p) {
       await p.keyboard.press('Escape'); await sleep(800);
       const r = await p.evaluate(() => ({ menu: !document.querySelector('#pauseMenu').classList.contains('hidden'), paused: OS.SIM.paused }));

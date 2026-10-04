@@ -41,8 +41,8 @@ function posterTex(){const c=cnv(512,700),g=c.getContext('2d');g.fillStyle='#fbf
 const PANELS=[{title:'Reserve'},{id:'V-T1',kind:'inc',node:'T1l'},{id:'V-F1',kind:'feed',node:'F1'},{id:'V-F2',kind:'feed',node:'F2'},{id:'V-F3',kind:'feed',node:'F3'},
   {title:'Meetveld A',kind:'meas'},{id:'V-K',kind:'coup',node:'RB'},{title:'Meetveld B',kind:'meas'},
   {id:'V-F4',kind:'feed',node:'F4'},{id:'V-F5',kind:'feed',node:'F5'},{id:'V-F6',kind:'feed',node:'F6'},{title:'Reserve'},{id:'V-T3',kind:'inc',node:'T3l'}];
-const PANELS20=[{title:'Reserve'},{id:'W-T2',kind:'inc',node:'T2l'},{id:'W-G1',kind:'feed',node:'G1'},{id:'W-G2',kind:'feed',node:'G2'},{title:'Meetveld C',kind:'meas'},
-  {id:'W-G3',kind:'feed',node:'G3'},{id:'W-G4',kind:'feed',node:'G4'},{id:'W-T3',kind:'inc',node:'T3l'}];
+const PANELS20=[{title:'Reserve'},{id:'W-T2',kind:'inc',node:'T2l'},{id:'W-G1',kind:'feed',node:'G1'},{id:'W-G2',kind:'feed',node:'G2'},{id:'RC-Q8',kind:'meas',node:'RC'},
+  {id:'W-K',kind:'coup',node:'RD'},{id:'RD-Q8',kind:'meas',node:'RD'},{id:'W-G3',kind:'feed',node:'G3'},{id:'W-G4',kind:'feed',node:'G4'},{id:'W-T3',kind:'inc',node:'T3l'}];
 const SCREENS=[];
 function buildPanel(i,p,row){
   const x=row.cx+(row.n-1)/2*0.8-i*0.8,Y=row.room.y0,F=-0.66,root=grp(x,54.85,Y);
@@ -69,7 +69,8 @@ function buildPanel(i,p,row){
   const lamp=mat({color:0x3a3320,emissive:0xffd23a,emissiveIntensity:0});
   for(let k=0;k<3;k++){const l=cyl(0.013,0.013,0.02,lamp,root,0.15+k*0.06,1.76,F-0.015,10);l.rotation.x=Math.PI/2;l.userData.dyn=true;}
   const eMat=mat({color:0x222222,emissive:0xffc400,emissiveIntensity:0});if(esId){const em=box(0.09,0.05,0.02,eMat,root,-0.2,0.62,F-0.02);em.userData.dyn=true;}
-  regView(p.id,root,()=>{const d=D[p.id];ind.emissive.setHex(d.state?0xff2020:0x20ff50);lamp.emissiveIntensity=EN.has(p.node)?3:0;if(esId)eMat.emissiveIntensity=D[esId].state?2.5:0;},
+  regView(p.id,root,()=>{const d=D[p.id];if(d.busy){d._bt??=performance.now();if(performance.now()-d._bt>2200){d.busy=false;d._bt=null;}}   // motoraandrijving (railaarding) klaar na 2,2 s
+    ind.emissive.setHex(d.state?0xff2020:0x20ff50);lamp.emissiveIntensity=EN.has(p.node)?3:0;if(esId)eMat.emissiveIntensity=D[esId].state?2.5:0;},
     {inside:row.room.idx,labelPos:V3(x,Y+2.75,54.2),arcPos:V3(x,Y+1.0,54.1),flyPos:V3(x-0.7,Y+1.7,51.6),flyTarget:V3(x,Y+1.35,54.2)});
 }
 function buildRoomShell(r){
@@ -125,13 +126,13 @@ function buildInterior(){
 }
 function drawPanelScreens(){
   SCREENS.forEach(s=>{const d=D[s.id],g=s.g;g.fillStyle='#08160f';g.fillRect(0,0,256,128);g.fillStyle='#7dffa8';g.font='bold 26px monospace';g.fillText(s.id,14,32);
-    const fault=d.feeder&&d.feeder.fault;const st=d.state?'IN':fault?'TRIP':'UIT';
+    const fault=d.feeder&&d.feeder.fault;const st=d.type==='es'?(d.state?'AARD':'OPEN'):d.state?'IN':fault?'TRIP':'UIT';
     g.font='22px monospace';g.fillText(`I ${String(Math.round(d.I)).padStart(4)} A`,14,66);g.fillText(`U ${EN.has(s.node)?nodeU(s.node).toFixed(2).replace('.',','):' 0,00'} kV`,14,96);
     g.fillStyle=st==='IN'?'#ff7a7a':st==='TRIP'?'#ffcc33':'#7dffa8';g.font='bold 22px monospace';g.fillText(st,190,32);if(!springOk(d)){g.fillStyle='#ffcc33';g.font='16px monospace';g.fillText('VEER',190,96);}if(s.es&&D[s.es].state){g.fillStyle='#ffd23a';g.font='bold 16px monospace';g.fillText('GEAARD',176,66);}s.t.needsUpdate=true;});
   if(!deskScreens)return;
   const [a,b]=deskScreens;let g=a.g;g.fillStyle='#0d1117';g.fillRect(0,0,512,320);g.fillStyle='#e7ecf1';g.font='bold 22px Arial';g.fillText('OS ZUIDWOLDE · MS',18,34);
-  g.font='16px monospace';g.fillStyle='#9fd0ff';g.font='14px monospace';g.fillText(`A ${FLOW.U.RA.toFixed(2)}  B ${FLOW.U.RB.toFixed(2)}  C ${FLOW.U.RC.toFixed(2)} kV`,18,60);
-  FEEDERS.forEach((f,i)=>{const on=EN.has(f.node),y=88+i*23;g.fillStyle=on?(f.bus==='RC'?'#c07cff':'#4aa3ff'):'#56616b';g.fillRect(18,y-12,10,15);g.fillStyle='#e7ecf1';g.fillText(`${f.id} ${f.short.padEnd(10)} ${on?f.P.toFixed(1).padStart(5)+' MW':'   UIT  '}`,40,y);
+  g.font='16px monospace';g.fillStyle='#9fd0ff';g.font='14px monospace';g.fillText(`A ${FLOW.U.RA.toFixed(2)}  B ${FLOW.U.RB.toFixed(2)}  C1 ${FLOW.U.RC.toFixed(2)}  C2 ${FLOW.U.RD.toFixed(2)} kV`,18,60);
+  FEEDERS.forEach((f,i)=>{const on=EN.has(f.node),y=88+i*23;g.fillStyle=on?(is20(f.bus)?'#c07cff':'#4aa3ff'):'#56616b';g.fillRect(18,y-12,10,15);g.fillStyle='#e7ecf1';g.fillText(`${f.id} ${f.short.padEnd(10)} ${on?f.P.toFixed(1).padStart(5)+' MW':'   UIT  '}`,40,y);
     g.fillStyle=D[f.cb].state?'#e5484d':'#3fcf72';g.fillRect(470,y-12,15,15);});
   a.t.needsUpdate=true;
   g=b.g;g.fillStyle='#0d1117';g.fillRect(0,0,512,320);g.fillStyle='#e7ecf1';g.font='bold 22px Arial';g.fillText('MELDINGEN',18,34);g.font='14px monospace';

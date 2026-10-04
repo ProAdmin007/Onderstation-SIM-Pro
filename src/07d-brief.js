@@ -10,7 +10,7 @@ function briefInit(t){const acts=taskActs(t);if(!acts.length)return;t.brief=[];t
   const keys=acts.map(s=>actKey(s.act)),devs=new Set(acts.map(s=>s.act[0]));t.devs=devs;
   // afleiders: verkeerde handelingen die er plausibel uitzien
   const cand=[...new Set(acts.map(s=>s.act[0]+':'+(1-s.act[1])))].filter(k=>!keys.includes(k))
-    .concat(['V-K:0','T3-Q0:0','L1-Q0:0','MS4-T:0','V-F5:0','L2-Q8:1'].filter(k=>!keys.includes(k)&&!devs.has(k.split(':')[0])));
+    .concat(['V-K:0','W-K:0','T3-Q0:0','L1-Q0:0','MS4-T:0','V-F5:0','L2-Q8:1'].filter(k=>!keys.includes(k)&&!devs.has(k.split(':')[0])));
   const extra=cand.sort(()=>Math.random()-0.5).slice(0,3);
   t.pool=[...new Set(keys)].concat(extra).sort(()=>Math.random()-0.5);}
 // controle: volgorde moet kloppen; stappen binnen dezelfde groep mogen in willekeurige volgorde

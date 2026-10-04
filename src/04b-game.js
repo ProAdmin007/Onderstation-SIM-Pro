@@ -109,6 +109,7 @@ function gameTick(dm,dtReal){
   TR.forEach(T=>GAME.stats.maxOil=Math.max(GAME.stats.maxOil,D[T].oil));
   const canRestore=SIM.lines.L1.avail||SIM.lines.L2.avail;
   FEEDERS.concat(RING.stations).forEach(f=>{if(f.unplanned&&!EN.has(f.node)&&canRestore&&!(f.fault&&f.fault.stage==='search'))f.wait=(f.wait||0)+dtReal;});
+  lessonTick();
   GAME.obj.forEach(o=>{if(o.state||!o.check)return;const r=o.check();if(!r)return;o.state=r;
     if(r==='done'){award(100,'Doel behaald');pushAlarm(`Doel behaald: ${o.t}`,'ok');}else{award(-150,'Doel gemist');pushAlarm(`Doel gemist: ${o.t}`,'warn');}});
   if(GAME.countdown&&GAME.obj.every(o=>o.state))GAME.countdown=null;
@@ -152,12 +153,13 @@ $('#report').addEventListener('click',e=>{const b=e.target.closest('[data-r]');i
 function renderMenu(){
   const card=id=>{const m=MODES[id],b=getBest(id,GAME.diff);return `<button class="mode" data-mode="${id}"><span class="mt">${m.tag}</span><b>${m.name}</b><span class="md">${m.desc}</span>${b?`<span class="mb">Beste: ${b.toLocaleString('nl-NL')} (${grade(b)[0]})</span>`:''}</button>`;};
   $('#menu').innerHTML=`<div class="mh">Dienst draaien</div><div class="mgrid">${['free','day','eve'].map(card).join('')}</div>
+    <div class="mh">Leren · begeleide lessen</div><div class="mgrid">${Object.keys(LESSONS).map(card).join('')}</div>
     <div class="mh">Scenario's</div><div class="mgrid">${['zkh','storm','piek','hitte','winter','blackout','dubbel'].map(card).join('')}</div>`;
   document.querySelectorAll('#diff button').forEach(b=>b.classList.toggle('on',b.dataset.d===GAME.diff));
   document.querySelectorAll('#season button').forEach(b=>b.classList.toggle('on',b.dataset.s===GAME.season));
 }
 const fmtDur=min=>min>=60?`${Math.floor(min/60)}:${String(Math.floor(min%60)).padStart(2,'0')} u`:`${Math.max(0,Math.ceil(min))} min`;
-function gameHeader(){if(GAME.mode==='free')return '';const m=MODES[GAME.mode];
+function gameHeader(){if(GAME.mode==='free'||GAME.lesson)return '';const m=MODES[GAME.mode];
   let h=`<div class="gh"><div class="gt"><span>${m.scen?'Scenario':'Dienst'} · ${m.name}</span>${GAME.endT?`<span class="tag">nog ${fmtDur(GAME.endT-SIM.t)}</span>`:''}</div>`;
   if(GAME.countdown&&SIM.t<GAME.countdown.until){const left=GAME.countdown.until-SIM.t;h+=`<div class="gcd ${left<5?'hot':''}">${GAME.countdown.label}<b>${fmtDur(left)}</b></div>`;}
   h+=GAME.obj.map(o=>`<div class="step ${o.state==='done'?'done':o.state==='fail'?'fail':''}"><span class="b">${o.state==='done'?'✓':o.state==='fail'?'✕':''}</span><span>${o.t}</span></div>`).join('');

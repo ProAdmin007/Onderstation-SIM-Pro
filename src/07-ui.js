@@ -31,8 +31,10 @@ function buildSLD(){
   T(20,412,'10 kV RAIL A','start','dl');M('RA',98,412,'start');T(452,412,'RAIL B','end','dl');M('RB',412,412,'end');
   [['F1',35],['F2',82],['F3',128],['F4',285],['F5',395],['F6',440]].forEach(([id,x])=>feeder(F(id),x));
   // tabblad 20 kV
-  o=out[20];top();bay('T2',200,-1,'W-T2','RC');bay('T3',300,1,'W-T3','RC');
-  W(20,420,452,420,'RC','w bus');T(20,412,'20 kV RAIL C','start','dl');M('RC',98,412,'start');
+  o=out[20];top();bay('T2',160,-1,'W-T2','RC');bay('T3',330,1,'W-T3','RD');
+  W(20,420,222,420,'RC','w bus');W(238,420,452,420,'RD','w bus');CB('W-K',230,420,null);T(230,442,'W-K','middle','dl');
+  T(20,412,'20 kV RAIL C1','start','dl');M('RC',104,412,'start');T(452,412,'RAIL C2','end','dl');M('RD',405,412,'end');
+  W(200,420,200,428,'RC');ES('RC-Q8',200,440,'');W(262,420,262,428,'RD');ES('RD-Q8',262,440,'');
   [['G1',45],['G2',110],['G3',370],['G4',430]].forEach(([id,x])=>feeder(F(id),x));
   // tabblad Ring: alle 10 kV-ringen onder elkaar
   out.R=[];o=out.R;const HS=(id,x,y)=>{o.push(`<g class="dev ds" data-id="${id}" transform="translate(${x} ${y}) rotate(-90)"><title>${id} · ${D[id].label}</title>${hit(26,26)}<line class="tick" x1="-6" y1="-11" x2="6" y2="-11"/><line class="blade" x1="0" y1="11" x2="0" y2="-11" style="transform-origin:0px 11px"/><circle class="piv" cx="0" cy="11" r="2.4"/></g>`);};
@@ -80,7 +82,7 @@ function updateSLD(){
   TR.forEach(Tn=>{const t=D[Tn];setM('tr'+Tn,`${fx(t.S)} MVA ${Math.round(t.S/(t.fans?t.rAF:t.rON)*100)}%`);
     setM('to'+Tn,t.blocked?'86 BLOKKADE':`${Math.round(t.oil)}°C · t${t.tap}${t.avr==='auto'?'A':'H'}`,t.blocked||t.oil>90?'bad':'m');});
   setM('rt'+RES,`stand ${D[RES].ratio} kV${D[RES].ratioBusy?'…':''}`);
-  ['RA','RB','RC'].forEach(b=>setM(b,`${fx(FLOW.U[b],2)} kV`));
+  ['RA','RB','RC','RD'].forEach(b=>setM(b,`${fx(FLOW.U[b],2)} kV`));
   RING.stations.forEach(s=>{const on=EN.has(s.node),u=nodeU(s.node);setM('fi'+s.id,s.flag?'⚑':'');setM('stc'+s.id,`${s.cust>=1000?fx(s.cust/1000)+'k':s.cust} kl`);setM('stp'+s.id,on?`${fx(s.P,2)} MW`:'UIT',on?'m':'bad');setM('stu'+s.id,on?`${fx(u,2)} kV`:'',u<9.9?'bad':'');});
   RING.secs.forEach(s=>(SLD.byNode[s.node]||[]).forEach(el=>{el.classList.toggle('ovl',s.load>0.85&&s.load<=1);el.classList.toggle('ovl2',s.load>1);}));
   FEEDERS.filter(f=>f.ring).forEach(f=>setM('fa'+f.id,`V-${f.id} · rail ${f.bus.slice(1)} · ${Math.round(D[f.cb].I)} A`));
@@ -103,19 +105,22 @@ function pushAlarm(text,level='info'){
 let toastT=0;
 function deny(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2800);AudioSys.deny();}
 function renderTasks(){
-  const body=$('#taskBody'),gh=gameHeader();$('#taskTitle').textContent=GAME.mode==='free'?'Werkopdracht':MODES[GAME.mode].scen?'Scenario':'Dienst & werkopdracht';
+  const body=$('#taskBody'),gh=gameHeader();$('#taskTitle').textContent=GAME.lesson?'Les':GAME.mode==='free'?'Werkopdracht':MODES[GAME.mode].scen?'Scenario':'Dienst & werkopdracht';
+  if(GAME.lesson){$('#taskCode').textContent='';const h=lessonPanel();if(body._les!==h){body._les=h;body.innerHTML=h;}return;}
   if(!TASK&&!GAME.tasks){$('#taskCode').textContent='';body.innerHTML=gh||'<div class="idle">Geen werkopdrachten in dit scenario.</div>';return;}
   if(!TASK){$('#taskCode').textContent='';body.innerHTML=gh+`<div class="idle">Geen actieve werkopdracht. Houd de installatie in de gaten en reageer op meldingen.<br><br><b style="color:var(--text)">Volgende opdracht</b> rond ${fmtClock(SIM.nextTaskAt)}.</div>`;return;}
   $('#taskCode').textContent=TASK.code;
   if(TASK.pool&&TASK.briefMode&&!TASK.approved){body.innerHTML=gh+`<h3>${TASK.title}</h3><p>${TASK.desc}</p><div class="bf-status">📝 Schakelbrief in de maak${TASK.tries?` · ${TASK.tries}× afgekeurd`:''} – stappen verborgen tot goedkeuring</div><button class="primary bf-open" data-brief>Schakelbrief verder opstellen</button>`;return;}
   const bf=!TASK.pool?'':TASK.approved?'<div class="bf-status ok">✓ Eigen schakelbrief goedgekeurd</div>':(TASK.i===0?'<button class="bf-opt" data-brief>📝 Zelf een schakelbrief opstellen (optioneel, +40)</button>':'');
-  body.innerHTML=gh+`<h3>${TASK.title}</h3><p>${TASK.desc}</p>${bf}`+TASK.steps.map((s,i)=>`<div class="step ${i<TASK.i?'done':i===TASK.i?'cur':''}"><span class="b">${i<TASK.i?'✓':''}</span><span>${s.t}${i===TASK.i&&s.wait!=null&&s.until!=null?` <span class="tag">tot ${fmtClock(s.until)}</span>`:''}</span></div>`).join('');
+  const ab=TASK.aborted?'':`<button class="bf-opt ab" data-abort>${TASK.abortAsk&&performance.now()-TASK.abortAsk<4000?'⏹ Zeker? Klik nogmaals om het werk te staken':'⏹ Werk staken (bij een storing)'}</button>`;
+  body.innerHTML=gh+`<h3>${TASK.title}</h3><p>${TASK.desc}</p>${bf}`+TASK.steps.map((s,i)=>`<div class="step ${i<TASK.i?'done':i===TASK.i?'cur':''}"><span class="b">${i<TASK.i?'✓':''}</span><span>${s.t}${i===TASK.i&&s.wait!=null&&s.until!=null?` <span class="tag">tot ${fmtClock(s.until)}</span>`:''}${i===TASK.i&&s.visit?` <span class="tag">${nearDev(s.visit)?'in beeld':Math.round(camera.position.distanceTo(VIEWS[s.visit].center))+' m'}</span>`:''}</span></div>`).join('')+ab;
 }
+$('#taskBody').addEventListener('click',e=>{if(e.target.closest('[data-lnext]')&&GAME.lesson&&!GAME.lesson.done)return lessonGo();if(!e.target.closest('[data-abort]')||!TASK)return;if(TASK.abortAsk&&performance.now()-TASK.abortAsk<4000)abortTask();else{TASK.abortAsk=performance.now();renderTasks();}});
 
 // ============================================================ apparaatpaneel
 let SEL=null,panelRows=[];
 const fmtKV=v=>v>0?`${v.toFixed(v<20?2:1).replace('.',',')} kV`:'0 kV';
-function bayName(d){const b=d.bay;if(!b)return 'OS Zuidwolde';const rs=RING.stations.find(s=>s.id===b);if(rs)return `10 kV-ring · ${rs.id} ${rs.name}`;if(b[0]==='L')return `Lijnveld ${b} · ${SIM.lines[b].name}`;if(/^T\d$/.test(b))return `Transformatorveld ${b}${b===RES?' · reserve':''}`;if(b==='K')return '10 kV-installatie';const f=FEEDERS.find(f=>f.id===b);return `${f.bus==='RC'?20:10} kV-veld ${b} · ${f.name}`;}
+function bayName(d){const b=d.bay;if(!b)return 'OS Zuidwolde';const rs=RING.stations.find(s=>s.id===b);if(rs)return `10 kV-ring · ${rs.id} ${rs.name}`;if(b[0]==='L')return `Lijnveld ${b} · ${SIM.lines[b].name}`;if(/^T\d$/.test(b))return `Transformatorveld ${b}${b===RES?' · reserve':''}`;if(b==='K')return '10 kV-installatie';if(b==='WK')return '20 kV-installatie · rail C1/C2';const f=FEEDERS.find(f=>f.id===b);return `${is20(f.bus)?20:10} kV-veld ${b} · ${f.name} · rail ${BUS_BAND[f.bus][2]}`;}
 function statusOf(d){
   if(d.type==='cb')return d.state?['INGESCHAKELD','on']:['UITGESCHAKELD','off'];
   if(d.type==='ds')return d.state?['GESLOTEN','on']:['OPEN','off'];
@@ -141,8 +146,11 @@ function rowsFor(d){const r=[],A=(k,f)=>r.push([k,f]);
   if(['ct','sa','bb','line','kiosk'].includes(d.type))A('Spanning',()=>fmtKV(nodeU(d.node)));
   if(['cb','ds','ct','lbs'].includes(d.type))A('Stroom',()=>`${Math.round(D[d.ref||d.id].I)} A`);
   if(d.type==='cb'){A('Inschakelveer',()=>springOk(d)?'geladen':'<span class="warnc">laden…</span>');A('Schakelingen',()=>d.ops);}
-  if(d.line)A('Herinschakeling (AR)',()=>SIM.lines[d.line].ar?'IN bedrijf':'<span class="warnc">UIT bedrijf</span>');
-  if(d.id==='V-K')A('Spanningsverschil',()=>EN.has('RA')&&EN.has('RB')?`<span class="${Math.abs(FLOW.U.RA-FLOW.U.RB)>0.25?'bad':''}">${Math.abs(FLOW.U.RA-FLOW.U.RB).toFixed(2).replace('.',',')} kV</span>`:'—');
+  if(d.line)A('Herinschakeling (AR)',()=>(SIM.lines[d.line].ar?'IN bedrijf':'<span class="warnc">UIT bedrijf</span>')+` · dode tijd ${protTxt('dt',PROT.ln[d.line].dt)}`);
+  if(d.feeder&&!d.feeder.gen)A('Beveiliging I>',()=>`${protTxt('pick',PROT.f[d.feeder.id].pick)} · t ${protTxt('tms',PROT.f[d.feeder.id].tms)}`);
+  if(d.type==='tr')A('Thermische trip',()=>protTxt('trip',PROT.tr[d.id].trip)+(d.gas>0.5?' · <span class="bad">gasvorming!</span>':''));
+  if(COUPLERS[d.id]){const [a,b,lim]=COUPLERS[d.id];A('Spanningsverschil',()=>EN.has(a)&&EN.has(b)?`<span class="${Math.abs(FLOW.U[a]-FLOW.U[b])>lim?'bad':''}">${Math.abs(FLOW.U[a]-FLOW.U[b]).toFixed(2).replace('.',',')} kV</span>`:'—');}
+  if(d.type==='es'&&BUS_BAND[d.a])A('Rail',()=>BUSF[d.a]?'<span class="bad">RAILFOUT</span>':'in orde');
   if(d.type==='tr'){A('Belasting',()=>`${d.S.toFixed(1)} MVA · ${Math.round(d.S/(d.fans?d.rAF:d.rON)*100)}% van ${d.fans?d.rAF:d.rON} MVA`);
     if(d.id===RES)A('Wikkeling (omschakelaar)',()=>`<b style="color:var(--accent)">${d.ratio} kV</b>${d.ratioBusy?' · schakelt…':''}`);
     A('Spanning MS',()=>{const u=trafoUn(d.id);return d.Ulv>0?`<span class="${Math.abs(d.Ulv-u)>u*0.012?'warnc':''}">${fmtU(d.Ulv)}</span> (doel ${u.toFixed(2).replace('.',',')})`:'0 kV';});
@@ -153,8 +161,8 @@ function rowsFor(d){const r=[],A=(k,f)=>r.push([k,f]);
     A('Blokkeerrelais 86',()=>d.blocked?`<span class="bad">${d.blockText}</span>${d.resettable?' · reset mogelijk':''}`:'normaal');}
   if(d.type==='line'){A('Vermogen',()=>`${FLOW.lineP[d.line].toFixed(1)} MW`);A('Opmerking',()=>SIM.lines[d.line].reason||'—');}
   if(d.type==='bb')A('Doorvoer',()=>`${FLOW.P110.toFixed(1)} MW`);
-  if(d.id==='MS'){A('Rail A',()=>fmtKV(FLOW.U.RA));A('Rail B',()=>fmtKV(FLOW.U.RB));A('Totale belasting',()=>`${FLOW.load.toFixed(1)} MW`);A('Koppeling V-K',()=>D['V-K'].state?'gesloten':'open');A('Reserve V-T3',()=>D['V-T3'].state?'IN':'uit');}
-  if(d.id==='MS20'){A('Rail C',()=>fmtKV(FLOW.U.RC));A('Netto belasting',()=>`${FLOW.load20.toFixed(1)} MW${FLOW.load20<0?' (teruglevering)':''}`);A('Voeding',()=>['W-T2','W-T3'].filter(id=>D[id].state).join(' + ')||'geen');}
+  if(d.id==='MS'){A('Rail A',()=>fmtKV(FLOW.U.RA)+(BUSF.RA?' <span class="bad">RAILFOUT</span>':''));A('Rail B',()=>fmtKV(FLOW.U.RB)+(BUSF.RB?' <span class="bad">RAILFOUT</span>':''));A('Totale belasting',()=>`${FLOW.load.toFixed(1)} MW`);A('Koppeling V-K',()=>D['V-K'].state?'gesloten':'open');A('Reserve V-T3',()=>D['V-T3'].state?'IN':'uit');}
+  if(d.id==='MS20'){A('Rail C1',()=>fmtKV(FLOW.U.RC)+(BUSF.RC?' <span class="bad">RAILFOUT</span>':''));A('Rail C2',()=>fmtKV(FLOW.U.RD)+(BUSF.RD?' <span class="bad">RAILFOUT</span>':''));A('Koppeling W-K',()=>D['W-K'].state?'gesloten':'open');A('Netto belasting',()=>`${FLOW.load20.toFixed(1)} MW${FLOW.load20<0?' (teruglevering)':''}`);A('Voeding',()=>['W-T2','W-T3'].filter(id=>D[id].state).join(' + ')||'geen');}
   if(d.feeder){const f=d.feeder;A('Belasting',()=>`${f.P.toFixed(2)} MW${f.clp>1.03?` <span class="warnc">(+${Math.round((f.clp-1)*100)}% KLO)</span>`:''}`);A('Klanten',()=>f.ring?RING.stations.filter(s=>FLOW.TAG[s.node]?.cb===f.cb).reduce((a,s)=>a+s.cust,0).toLocaleString('nl-NL')+' (ring)':f.cust.toLocaleString('nl-NL'));
     A('Kabel',()=>feederState(f));A('Terugvoeding',()=>f.backfed?'<span class="warnc">actief (via net)</span>':'—');}
   if(d.type==='sa')A('Ontladingsteller',()=>d.count);
@@ -172,10 +180,12 @@ function renderDevPanel(){
   else if(d.type==='tr')ctl=`<div class="dp-ctl"><button data-act="avr"></button><button data-act="tap-1" title="Trap lager">▼ trap</button><button data-act="tap1" title="Trap hoger">▲ trap</button></div>`;
   const sub=[];if(VIEWS[SEL])sub.push(`<button data-act="fly">Bekijk in 3D</button>`);if(d.type==='bld')sub.push(`<button data-act="inside">Ga naar binnen</button>`);if(d.type==='bld'||VIEWS[SEL]?.inside)sub.push(`<button data-act="scada">Toon in SCADA</button>`);
   if(d.type==='tr')sub.push(`<button data-act="reset">Reset blokkeerrelais 86</button>`);
+  if(d.type==='tr'||d.line||(d.feeder&&!d.feeder.gen))sub.push(`<button data-act="prot">Beveiligingsinstellingen</button>`);
   if(d.type==='kiosk')sub.push(`<button data-act="kin">Naar binnen (rondlopen)</button>`);
   if(d.id===RES)sub.push(`<button data-act="ratio10">Omschakelen → 10 kV</button>`,`<button data-act="ratio20">Omschakelen → 20 kV</button>`);
   const ln=d.line||(d.type==='line'&&d.line);if(d.line)sub.push(`<button data-act="ar"></button>`);
   if(d.feeder)sub.push(`<button data-act="sel:${d.feeder.id}-Q8">Aardschakelaar ${d.feeder.id}-Q8</button>`);
+  if(d.type==='es'&&BUS_BAND[d.a])sub.push(`<button data-act="sel:${d.a==='RC'?'W-T2':'W-T3'}">Inkomend veld</button>`,`<button data-act="sel:W-K">Koppeling W-K</button>`);
   if(d.type==='es'&&d.cb)sub.push(`<button data-act="sel:${d.cb}">Naar ${d.cb}</button>`);
   p.innerHTML=`<div class="dp-head"><div><div class="dp-id">${d.id}</div><div class="dp-type">${d.label}</div></div><button class="x" data-act="x" title="Sluiten (Esc)">✕</button></div>
     <div class="dp-bay">${bayName(d)}</div><div class="dp-rows">${panelRows.map((r,i)=>`<div class="row"><span>${r[0]}</span><b data-r="${i}"></b></div>`).join('')}</div>${ctl}${sub.length?`<div class="dp-sub" style="flex-wrap:wrap">${sub.join('')}</div>`:''}`;
@@ -193,7 +203,7 @@ $('#devpanel').addEventListener('click',e=>{const op=e.target.closest('[data-op]
   if(a==='1'||a==='0')operate(SEL,+a);else if(a==='x')selectDevice(null);else if(a==='fly')flyToDevice(SEL);else if(a==='inside'){const v=VIEWPOS[SEL==='MS20'?6:5];flyTo(v[0].clone(),v[1].clone(),2);}
   else if(a.startsWith('ratio'))setRatio(a.slice(5));else if(a==='kin')enterKiosk(SEL);
   else if(a==='avr')setAVR(SEL,D[SEL].avr==='auto'?'hand':'auto');else if(a.startsWith('tap'))tapStep(SEL,+a.slice(3));
-  else if(a==='reset')resetLockout(SEL);else if(a==='ar')toggleAR(D[SEL].line);else if(a.startsWith('sel:'))selectDevice(a.slice(4));
+  else if(a==='reset')resetLockout(SEL);else if(a==='prot')openProt();else if(a==='ar')toggleAR(D[SEL].line);else if(a.startsWith('sel:'))selectDevice(a.slice(4));
   else if(a==='scada'){$('#scada').classList.remove('min');$('#scada').animate([{boxShadow:'0 0 0 3px #f0a43a'},{boxShadow:'0 0 0 0 transparent'}],{duration:900});}});
 function selectDevice(id){SEL=id&&D[id]?id:null;const tabs=SEL&&SLD.devTab[SEL];if(tabs&&!tabs.has(SLD.tab))setTab([...tabs][0]);renderDevPanel();updateSLD();
   const v=SEL&&VIEWS[SEL];selBox.visible=!!v;if(v)selBox.box.copy(v.box).expandByScalar(0.25);}
@@ -236,3 +246,10 @@ const VIEWPOS=[[V3(100,52,118),V3(22,3,8)],[V3(-4,13,-2),V3(-30,5,-22)],[V3(88,1
 let fly=null;
 function flyTo(pos,target,dur=1.5){if(FP.on)exitFP();fly={t:0,dur,p0:camera.position.clone(),t0:controls.target.clone(),p1:pos,t1:target};controls.autoRotate=false;}
 function fmtClock(t){const m=((t%1440)+1440)%1440;return `${String(Math.floor(m/60)).padStart(2,'0')}:${String(Math.floor(m%60)).padStart(2,'0')}`;}
+
+// ============================================================ thermografie: hotspot zichtbaar met de warmtebeeldcamera
+const HOTSPR=(()=>{const c=document.createElement('canvas');c.width=c.height=128;const g=c.getContext('2d'),gr=g.createRadialGradient(64,64,4,64,64,62);
+  gr.addColorStop(0,'rgba(255,255,220,1)');gr.addColorStop(0.25,'rgba(255,180,40,0.9)');gr.addColorStop(0.6,'rgba(255,60,0,0.45)');gr.addColorStop(1,'rgba(120,0,80,0)');g.fillStyle=gr;g.fillRect(0,0,128,128);
+  const s=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),transparent:true,depthTest:false,blending:THREE.AdditiveBlending}));s.visible=false;s.renderOrder=999;scene.add(s);return s;})();
+function updateHotspot(){const id=TASK&&TASK.hot,on=!!id&&(TASK.found||nearDev(id));HOTSPR.visible=on;if(!on)return;
+  const v=VIEWS[id];HOTSPR.position.copy(v.center).setY(v.box.max.y-0.6);const k=1.6+0.35*Math.sin(performance.now()/180);HOTSPR.scale.set(k,k,1);}

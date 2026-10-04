@@ -40,6 +40,7 @@ async function bot(process_full) {
     if (t.pool && !t.approved && !t.tried) { t.tried = true; t.brief = O.taskActs(t).map(s => O.actKey(s.act)); if (O.briefSubmit()) note(`schakelbrief ${t.code} goedgekeurd`); }
     const st = t.steps[t.i]; if (!st || st.wait != null) return;
     if (st.act) return op(...st.act);
+    if (st.visit) { const c = O.VIEWS[st.visit].center; O.camera.position.set(c.x + 5, c.y + 3, c.z + 5); return; }   // thermografie: erheen vliegen
     if (/omschakelaar/.test(st.t)) { const r = st.t.includes('20 kV') ? '20' : '10'; if (T3().ratio !== r && !T3().ratioBusy) { await op('T3-Q0', 0); O.setRatio(r); await wait(3300); } }
     else if (/T3 onder spanning/.test(st.t)) { await op('T3-Q1', 1); await op('T3-Q0', 1); }
   }
@@ -66,15 +67,17 @@ async function bot(process_full) {
       const t = D[T], lv = T === 'T1' ? 'V-T1' : 'W-T2';
       if (t.blocked && t.resettable) { O.resetLockout(T); note(`${T} gereset`); }
       if (!t.blocked && D[T + '-Q0'].state === 0) { await op(T + '-Q1', 1); await op(T + '-Q0', 1); }
-      if (!t.blocked && EN().has(T + 'h') && D[lv].state === 0) await op(lv, 1);
+      const busOf = { 'V-T1': 'RA', 'W-T2': 'RC', 'V-T3': 'RB', 'W-T3': 'RD' };
+      if (!t.blocked && EN().has(T + 'h') && D[lv].state === 0 && !O.BUSF[busOf[lv]]) await op(lv, 1);
       const need = T === 'T1' ? '10' : '20', res = T === 'T1' ? 'V-T3' : 'W-T3', down = t.blocked || D[lv].state === 0 || (T === 'T1' && t.fanFail);
-      if (down && !T3().blocked && D[res].state === 0) {
+      if (down && !T3().blocked && D[res].state === 0 && !O.BUSF[busOf[res]]) {
         if (T3().ratio !== need && !D['V-T3'].state && !D['W-T3'].state) { await op('T3-Q0', 0); O.setRatio(need); await wait(3300); await op('T3-Q0', 1); }
         if (T3().ratio === need) { await op(res, 1); note(`reserve T3 op ${need} kV ingezet`); }
       }
     }
     if (D['T3-Q0'].state === 0 && !mine('T3-Q0') && !T3().blocked && !T3().ratioBusy) await op('T3-Q0', 1);
-    if (D['V-K'].state === 0 && !O.task()) await op('V-K', 1);
+    if (D['V-K'].state === 0 && !O.task() && !O.BUSF.RA && !O.BUSF.RB) await op('V-K', 1);
+    if (D['W-K'].state === 0 && !mine('W-K') && !O.BUSF.RC && !O.BUSF.RD) await op('W-K', 1);
     // 4. thermiek: kassen afschakelen bij hete transformator, later terug
     const hot = ['T1', 'T2', 'T3'].some(T => D[T].oil > 92);
     if (hot && D['V-F6'].state) { await op('V-F6', 0); shed.add('V-F6'); note('kassen afgeschakeld (hete trafo)'); }

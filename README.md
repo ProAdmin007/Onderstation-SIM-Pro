@@ -30,10 +30,13 @@ Een 3D-onderstationsimulator die in de browser draait (Three.js, geen installati
 ## Installatie
 - **110 kV:** twee lijnvelden (L1 Hoogeveen, L2 Meppel), een railsysteem en drie transformatorvelden.
 - **T1** (110/10,5 kV, 31,5/40 MVA) voedt de 10 kV-installatie: rail A en B, normaal gekoppeld via V-K, met de velden F1–F6.
-- **T2** (110/21 kV, 20/25 MVA) voedt de 20 kV-installatie in het tweede gebouw: rail C met G1 Zonnepark (productie en teruglevering), G2 Industrieterrein Noord, G3 Buitengebied Oost en G4 Waterzuivering.
+- **T2** (110/21 kV, 20/25 MVA) voedt de 20 kV-installatie in het tweede gebouw. Die heeft twee railhelften:
+  - **rail C1** met W-T2, G1 Zonnepark (productie en teruglevering) en G2 Industrieterrein Noord;
+  - **rail C2** met W-T3, G3 Buitengebied Oost en G4 Waterzuivering;
+  - de **railkoppeling W-K** (normaal gesloten, met synchrocheck tot 0,5 kV verschil) en per railhelft een **railaardschakelaar** (RC-Q8, RD-Q8) in het meetveld.
 - **T3** is de omschakelbare reservetransformator (110/10,5-21 kV, 20/25 MVA).
   - Hij staat als warme reserve op 10 kV.
-  - Via **V-T3** voedt hij 10 kV-rail B, via **W-T3** 20 kV-rail C.
+  - Via **V-T3** voedt hij 10 kV-rail B, via **W-T3** 20 kV-rail C2 (en via W-K ook C1).
   - Omschakelen kan alleen spanningsloos (T3-Q0, V-T3 en W-T3 UIT).
   - Inschakelen op de verkeerde spanning blokkeert de vergrendeling. Met de vergrendelingen uit leidt het tot een incident en wikkelingsschade.
   - Let op: T3 is kleiner dan T1. Neemt hij tijdens de avondpiek de hele 10 kV over, dan raakt hij overbelast.
@@ -59,6 +62,13 @@ Een 3D-onderstationsimulator die in de browser draait (Three.js, geen installati
   - **zonder melden schakelen**: −50 en een boze monteur;
   - **annuleren**.
 - **Monteurs:** collega's in een veiligheidsvest lopen het station of de wijk in bij inspecties, werkopdrachten en kabelfouten, en vertrekken weer als het werk klaar is.
+- **Werk staken:** onder elke werkopdracht staat *Werk staken*. Dat gebruik je bij een storing waarvoor je de installatie nodig hebt, bijvoorbeeld T3 die bij onderhoud aan T2 meedraait terwijl T1 uitvalt.
+  - Alles wat al geschakeld is, wordt een herstelprogramma in omgekeerde volgorde (eerst de aarding eraf, als laatste de reserve terug).
+  - Na het herstel krijg je +30. Staken zonder storing kost −20; staken vanwege een storing kost niets.
+- **Beveiligingsinstellingen** (toets `B` of de knop *Beveiliging*):
+  - **I> per uitgaand veld** (110–150 %) en een **tijdfactor** (×0,5–×2). Te scherp: koude-lastopname leidt tot afschakeling. Te ruim: een langdurig overbelaste kabel raakt beschadigd.
+  - **AR dode tijd per lijn** (0,3 / 1 / 3 s). Kort: de herinschakeling mislukt soms omdat de boog nog niet gedoofd is. 3 s: altijd raak, maar draait het station op één lijn, dan vallen processen bij klanten uit.
+  - **Thermische trip per trafo** (95 / 100 / 110 °C). Hoog geeft meer reserve, maar boven 105 °C ontstaat gasvorming en dreigt een Buchholz-trip met een lange inspectie.
 - **SCADA** heeft tabbladen voor 10 kV, 20 kV en de ring. Zoomen kan met de knoppen **−/+**, met `Ctrl` + scrollwiel of met de toetsen `+` en `−` (75–250 %). Het paneel wordt dan mee breder.
 
 ## Geluid
@@ -87,6 +97,12 @@ Alle geluid wordt in de browser gemaakt (Web Audio) en hangt af van waar je bent
 ## Spelmodi en score
 - **Vrije dienst:** eindeloos spelen.
 - **Dagdienst** (07–15 u) en **Avonddienst** (15–23 u): een dienst van 8 uur met een dienstrapport, een cijfer (A+ t/m E), sterren, badges en een highscore.
+- **Leerscenario's** met uitleg, stap voor stap. De schakelaar die je moet bedienen knippert groen en de les gaat vanzelf verder als je het goed doet:
+  1. *Bediening en SCADA*: selecteren, een veld uit- en inschakelen, klantminuten.
+  2. *Vrijschakelen en aarden*: de vijf veiligheidsregels op de kabel van F6.
+  3. *Kabelfout in de ring*: verklikkers lezen, isoleren en terugvoeden via het normaal-open punt.
+  4. *Reservetransformator T3*: T2 valt uit; T3 omschakelen naar 20 kV en beide railhelften voeden.
+  5. *Spanningsregeling*: de trappenschakelaar met de hand bedienen en de AVR het laten overnemen.
 - **Scenario's:**
   - *Kabelstoring ziekenhuis*: T1 valt uit en het ziekenhuis draait op noodstroom.
   - *Storm boven Drenthe*: regen, onweer, blikseminslagen en een defect AR-relais.
@@ -102,19 +118,25 @@ Alle geluid wordt in de browser gemaakt (Web Audio) en hangt af van waar je bent
 - Tijdens een pauze kun je niet schakelen.
 
 ## 10 kV-gebouw
-Binnen staat een rij van 13 metaalomsloten schakelvelden (V-T1, F1–F3, meetveld, koppeling V-K, F4–F6, V-T2). Elk veld heeft een live display, mimic-schema met standmelder en spanningslampjes. Klik op een veld om het te bedienen. Verder: beveiligingskasten, bedieningsbureau met live SCADA- en meldingenscherm, accubatterij en eigenbedrijfstransformator.
+Binnen staat een rij van 13 metaalomsloten schakelvelden (V-T1, F1–F3, meetveld, koppeling V-K, F4–F6, V-T3). In het 20 kV-gebouw staan W-T2, G1, G2, meetveld C1 met RC-Q8, koppeling W-K, meetveld C2 met RD-Q8, G3, G4 en W-T3. Elk veld heeft een live display, mimic-schema met standmelder en spanningslampjes. Klik op een veld om het te bedienen. Verder: beveiligingskasten, bedieningsbureau met live SCADA- en meldingenscherm, accubatterij en eigenbedrijfstransformator.
 
 ## Spelregels (bewust simpel)
 - Een scheider (Q1/Q9) schakel je alleen als de vermogenschakelaar (Q0) van hetzelfde veld UIT staat. Doe je dat met de vergrendelingen uit, dan ontstaat er een vlamboog.
 - Sluit een aardschakelaar (Q8) alleen op een spanningsloze lijn.
-- Willekeurige storingen: blikseminslag op een lijn, kabelfouten in 10 kV-velden en transformatortrips.
-- Werkopdrachten: velden of transformatoren vrijschakelen voor onderhoud en daarna weer in bedrijf nemen.
+- Willekeurige storingen: blikseminslag op een lijn, kabelfouten, transformatortrips (hooguit één keer per trafo per dienst) en af en toe een **railfout**. Bij een railfout schakelt de railbeveiliging alle velden van één railhelft af; die helft blijft spanningsloos tot de monteur klaar is. Inschakelen op de rail geeft een nieuwe trip.
+- Werkopdrachten (alleen als de uitgangssituatie normaal is):
+  - lijnveld vrijschakelen en aarden;
+  - kabelwerk aan een veld of een ringkabel;
+  - onderhoud T1 of T2 met de reservetransformator;
+  - **onderhoud railhelft C2**: G3/G4 omschakelen, W-K open en de rail aarden;
+  - **onderhoud MS-station**: de klanten op een noodaggregaat, de ring sluiten en het station eruit halen;
+  - **thermografie-ronde**: loop (`V`) of vlieg langs drie onderdelen. Dichtbij zie je met de warmtebeeldcamera een gloeiende hotspot, en daarna volgt direct de herstelopdracht.
 - Een transformator is 20 MVA (ONAN) of 25 MVA met ventilatoren (ONAF). Draait één transformator alles tijdens de avondpiek, dan wordt hij te warm en schakelt hij af bij een olietemperatuur van 100 °C.
 
 ## Realistische bedrijfsvoering
 - **Spanningsregeling:** de 110 kV-netspanning varieert over de dag. De trappenschakelaar (17 standen, 1,25 % per trap) houdt de 10 kV-rail op 10,50 kV ±1,2 %. AUTO of HAND kies je in het transformatorpaneel. Bij gekoppelde rails regelen de transformatoren als master-follower. Ongelijke trappen geven circulatiestroom en extra belasting.
-- **Synchrocheck:** V-K schakelt alleen in bij minder dan 0,25 kV spanningsverschil tussen rail A en rail B.
-- **Automatische herinschakeling (AR)** op de 110 kV-lijnen: een tijdelijke fout wordt na 1 s dode tijd hersteld, een blijvende fout leidt tot lockout. AR zet je per lijn aan of uit.
+- **Synchrocheck:** V-K schakelt alleen in bij minder dan 0,25 kV spanningsverschil tussen rail A en rail B, W-K bij minder dan 0,5 kV tussen C1 en C2.
+- **Automatische herinschakeling (AR)** op de 110 kV-lijnen: een tijdelijke fout wordt na de dode tijd (standaard 1 s) hersteld, een blijvende fout leidt tot lockout. AR en dode tijd stel je per lijn in.
 - **Inschakelveer:** na het inschakelen laadt de veer ongeveer 7 s; zolang dat duurt kan de schakelaar niet opnieuw inschakelen.
 - **Blokkeerrelais 86:** na een transformatortrip handmatig resetten, en pas na de inspectie of na afkoelen tot onder 75 °C.
 - **Kabelstoringen:** eerst zoekt de storingsdienst de fout (inschakelen geeft dan direct weer een trip), daarna wordt de fout geïsoleerd en kun je het veld inschakelen. Een deel van de klanten wacht nog op de reparatie.
@@ -122,7 +144,7 @@ Binnen staat een rij van 13 metaalomsloten schakelvelden (V-T1, F1–F3, meetvel
 - **Aardschakelaars kabelzijde** (F1-Q8 … F6-Q8) met een opdracht voor kabelwerk, waarbij de klanten eerst via het net worden omgeschakeld.
 
 ## Tests
-Automatische tests sturen de simulator aan in headless Chrome: vergrendelingen, vlamboog, reservetransformator, ringfout met terugvoeding, spanningsregelaar, het ziekenhuisscenario en het pauzemenu.
+Automatische tests sturen de simulator aan in headless Chrome. Ze dekken onder meer vergrendelingen, vlamboog, reservetransformator, ringfout met terugvoeding, spanningsregelaar, schakelbrief, portofoon, de railsplitsing met railfout, beveiligingsinstellingen, werk staken, de nieuwe onderhoudstypes, alle vijf de lessen en het pauzemenu.
 
 ```powershell
 npm install
@@ -142,4 +164,4 @@ De broncode staat in `src/` (HTML/CSS plus JS-modules in volgorde). Bouw `index.
 ./build.ps1
 ```
 
-URL-parameters om te testen: `?autostart`, `?t=18.5` (starttijd), `?view=0..6`, `?night`, `?play=zkh|storm|piek|blackout|day|eve|free&diff=rustig|normaal|zwaar`.
+URL-parameters om te testen: `?autostart`, `?t=18.5` (starttijd), `?view=0..6`, `?night`, `?play=zkh|storm|piek|blackout|hitte|winter|dubbel|les1…les5|day|eve|free&diff=rustig|normaal|zwaar`.

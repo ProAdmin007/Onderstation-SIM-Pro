@@ -124,7 +124,8 @@ button:disabled{opacity:.35;cursor:not-allowed}
 .dp-sub{display:flex;gap:8px;padding:0 14px 12px}
 .dp-sub button{flex:1;font-size:12px}
 .x{border:none;background:none;color:var(--muted);font-size:16px;padding:2px 6px}
-#views{left:434px;bottom:12px;display:flex;gap:4px;padding:6px}
+#views{left:434px;bottom:12px;display:flex;flex-wrap:wrap;gap:4px;padding:6px;max-width:calc(100vw - 446px)}
+@media (max-width:1700px){#views kbd{display:none}#views button{padding:6px 7px}}
 #views button{font-size:11.5px;padding:6px 8px}
 #views kbd{font-family:var(--mono);color:var(--dim);font-size:10px;margin-right:5px}
 #labels{position:fixed;inset:0;pointer-events:none;overflow:hidden}
@@ -241,8 +242,19 @@ body.menu #fpPause{display:none!important}
 .bf-list li span{flex:1}.bf-msg{margin-top:12px;padding:9px 12px;border-radius:8px;background:rgba(240,164,58,.1);border:1px solid rgba(240,164,58,.35);font-size:12.5px;color:#ffe2b5}
 .bf-status{font-size:12px;color:var(--accent);margin:4px 0 8px}.bf-status.ok{color:var(--green)}
 .bf-opt{width:100%;font-size:12px;margin:0 0 8px;border-style:dashed;color:var(--accent)}
+.bf-opt.ab{margin:10px 0 0;color:var(--red);border-color:rgba(229,72,77,.45)}
+.les-n{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}.les-bar{height:4px;background:rgba(255,255,255,.08);border-radius:3px;margin:6px 0 10px;overflow:hidden}
+.les-bar i{display:block;height:100%;background:var(--accent);transition:width .4s}.les h3{margin:0 0 6px}.les-txt{font-size:13px;line-height:1.55;color:#d6dde4}
+.les-next{width:100%;margin-top:12px;padding:9px}.les-wait{margin-top:12px;padding:8px 10px;border-radius:8px;background:rgba(63,207,114,.1);border:1px solid rgba(63,207,114,.35);color:var(--green);font-size:12.5px}
 .bf-open{background:var(--accent);color:#1a1206;border:none;font-weight:700;width:100%;padding:9px}
 @media (max-width:760px){.bf-cols{grid-template-columns:1fr}}
+#prot{position:fixed;inset:0;display:grid;place-items:center;background:rgba(6,9,12,.66);z-index:12;overflow:auto;padding:20px 0}
+.card.pr{width:min(760px,95vw);padding:22px 26px;background:rgba(13,17,22,.96);border:1px solid var(--line);border-radius:16px}
+.pr h2{margin:6px 0}.pr table{width:100%;border-collapse:collapse;font-size:12.5px;margin-bottom:6px}
+.pr th{text-align:left;color:var(--muted);font-weight:600;padding:4px 6px;border-bottom:1px solid var(--line);cursor:help}.pr th i{font-style:normal;opacity:.6}
+.pr td{padding:4px 6px;border-bottom:1px solid rgba(255,255,255,.05)}.pr td span{display:block;color:var(--muted);font-size:11px}
+.pr select{background:#0b0f14;color:var(--text);border:1px solid var(--line);border-radius:6px;padding:3px 6px;font:inherit}
+.pr .pv{font-variant-numeric:tabular-nums}.pr .pv.bad{color:var(--red)}
 #loading{position:fixed;inset:0;display:grid;place-items:center;color:var(--muted);font-family:var(--mono);z-index:20;background:var(--bg)}
 @media (max-width:1250px){#tasks{width:290px}#devpanel{left:314px}#scada{width:min(calc(400px * var(--sldz,1)),64vw)}.kpi{min-width:90px;padding:3px 9px}}
 @media (max-width:1050px){.kpis .kpi:nth-child(n+3){display:none}#views{left:12px;bottom:calc(var(--alarmH) + 24px)}}
@@ -295,6 +307,7 @@ body.menu #fpPause{display:none!important}
   <button data-v="6"><kbd>7</kbd>Binnen 20 kV</button>
   <button data-v="7"><kbd>8</kbd>Woonwijk</button>
   <button data-v="8"><kbd>9</kbd>Centrum &amp; Vaart</button>
+  <button id="protBtn" class="walk" title="Beveiligingsinstellingen"><kbd>B</kbd>Beveiliging</button>
   <button id="fpBtn" class="walk"><kbd>V</kbd>Rondlopen</button>
 </nav>
 <div id="tooltip"></div>
@@ -305,6 +318,7 @@ body.menu #fpPause{display:none!important}
 <div id="notice"></div>
 <div id="radio" class="hidden"></div>
 <div id="brief" class="hidden"></div>
+<div id="prot" class="hidden"></div>
 <div id="pauseMenu" class="hidden"><div class="card pm">
   <div class="eyebrow">Gepauzeerd</div><div class="pm-mode" id="pmMode"></div>
   <div class="pm-score"><span id="pmScore">0</span><small>punten</small><em id="pmBest"></em></div>
@@ -327,7 +341,7 @@ body.menu #fpPause{display:none!important}
       <div class="seg" id="season"><button data-s="lente">Lente</button><button data-s="zomer">Zomer</button><button data-s="herfst" class="on">Herfst</button><button data-s="winter">Winter</button></div>
       <div class="mh">Moeilijkheid</div>
       <div class="seg" id="diff"><button data-d="rustig">Rustig</button><button data-d="normaal" class="on">Normaal</button><button data-d="zwaar">Zwaar</button></div>
-      <div class="keys">slepen: draaien · rechts: schuiven · scroll: zoom<br>1–9 camera · V rondlopen · spatie/P pauze · Esc menu · L labels · M geluid</div>
+      <div class="keys">slepen: draaien · rechts: schuiven · scroll: zoom<br>1–9 camera · V rondlopen · spatie/P pauze · Esc menu · B beveiliging · L labels · M geluid</div>
     </div>
     <div id="menu"></div>
   </div>
