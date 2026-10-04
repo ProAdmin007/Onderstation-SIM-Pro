@@ -25,6 +25,15 @@ function blockedAt(x,z){const r=0.3;if(x<-200||x>250||z<-110||z>440)return true;
   for(const q of FP.rects)if(x>q[0]-r&&x<q[2]+r&&z>q[1]-r&&z<q[3]+r)return true;return false;}
 function floorAt(x,z){const r=ROOMS.find(r=>x>r.x0-0.05&&x<r.x1+0.05&&z>r.z0-0.05&&z<r.z1+0.05);return r?r.y0:0.02;}
 const canvasEl=renderer.domElement;
+// ---- zaklamp (Z): spotlicht dat met je blik meebeweegt; staat altijd in de scène (intensiteit 0 = uit) zodat er geen shaderhercompilatie is
+const TORCH={on:false,light:new THREE.SpotLight(0xfff0d8,0,38,0.36,0.5,1.4)};
+scene.add(TORCH.light,TORCH.light.target);
+function setTorch(on){TORCH.on=on&&FP.on;TORCH.light.intensity=TORCH.on?55:0;$('#torch').classList.toggle('on',TORCH.on);updateTorch();
+  AudioSys.burst({type:'highpass',f:2600,q:1,gain:0.12,dur:0.03});}
+const _td=new THREE.Vector3();
+function updateTorch(){if(!TORCH.on)return;camera.getWorldDirection(_td);
+  TORCH.light.position.copy(camera.position).add(V3(Math.cos(FP.yaw)*0.25,-0.3,-Math.sin(FP.yaw)*0.25));   // in je rechterhand
+  TORCH.light.target.position.copy(camera.position).addScaledVector(_td,10);TORCH.light.target.updateMatrixWorld();}
 function enterFP(){
   if(FP.on)return;FP.on=true;fly=null;controls.enabled=false;controls.autoRotate=false;
   const ins=camInside();
@@ -35,14 +44,14 @@ function enterFP(){
   FP.y=null;
   camera.rotation.order='YXZ';camera.fov=70;camera.updateProjectionMatrix();
   document.body.classList.add('fp');hovBox.visible=false;$('#tooltip').style.display='none';
-  canvasEl.requestPointerLock?.();if(!FP.hinted){FP.hinted=true;pushAlarm('Rondlopen: WASD lopen, Shift rennen, muis kijken, F schakelen, E paneel, V stoppen, Esc menu','info');}
+  canvasEl.requestPointerLock?.();if(!FP.hinted){FP.hinted=true;pushAlarm('Rondlopen: WASD lopen, Shift rennen, muis kijken, F schakelen, E paneel, Z zaklamp, V stoppen, Esc menu','info');}
 }
 function exitFP(){
   if(!FP.on)return;FP.on=false;FP.keys={};FP.last={x:FP.pos.x,z:FP.pos.z,yaw:FP.yaw,pitch:FP.pitch};unlockPointer();
   const dir=new THREE.Vector3();camera.getWorldDirection(dir);
   camera.rotation.order='XYZ';camera.fov=42;camera.updateProjectionMatrix();
   controls.target.copy(camera.position).addScaledVector(dir,8);controls.enabled=true;controls.update();
-  document.body.classList.remove('fp');FP.look=null;hovBox.visible=false;
+  document.body.classList.remove('fp');FP.look=null;hovBox.visible=false;if(TORCH.on)setTorch(false);
 }
 function toggleFP(){FP.on?exitFP():enterFP();}
 function pickCenter(){camera.updateMatrixWorld();ray.setFromCamera(new THREE.Vector2(0,0),camera);ray.far=REACH;const ins=camInside();
@@ -66,7 +75,7 @@ function updateFP(dt){
   // springen: eenvoudige zwaartekracht, landen met een plof
   if(FP.jh>0||FP.vy>0){FP.jh=(FP.jh||0)+FP.vy*dt;FP.vy-=13*dt;if(FP.jh<=0){FP.jh=0;FP.vy=0;AudioSys.burst({type:'lowpass',f:camInside()?400:900,q:0.7,gain:0.18,dur:0.12});}}
   camera.position.set(FP.pos.x,FP.y+1.68+(FP.jh||0)+(moving&&!FP.jh?Math.sin(FP.bob)*0.035:0),FP.pos.z);
-  camera.rotation.set(FP.pitch,FP.yaw,0);
+  camera.rotation.set(FP.pitch,FP.yaw,0);camera.updateMatrixWorld();updateTorch();
   // waar kijk je naar?
   const id=pickCenter();
   if(id!==FP.look){FP.look=id;const v=id&&VIEWS[id];hovBox.visible=!!v&&id!==SEL;if(v)hovBox.box.copy(v.box).expandByScalar(0.1);}
@@ -90,6 +99,7 @@ addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;
     return;}
   if(!FP.on)return;FP.keys[e.code]=true;
   if(e.code==='Space'){e.preventDefault();if(!FP.jh&&document.pointerLockElement===canvasEl){FP.vy=4.6;FP.jh=0.001;}return;}
+  if(e.code==='KeyZ'){setTorch(!TORCH.on);return;}
   if(e.code==='KeyF'&&FP.look){const d=D[FP.look];if(actionLabel(d))operate(FP.look,d.state?0:1);}
 });
 addEventListener('keyup',e=>{FP.keys[e.code]=false;});

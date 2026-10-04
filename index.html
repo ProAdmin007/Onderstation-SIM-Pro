@@ -267,6 +267,8 @@ svg.tl{width:100%;height:auto;display:block;margin:4px 0 2px}.tl-ax{font:10px va
 .tl-leg{font-weight:400;font-size:10.5px;color:var(--muted);text-transform:none;letter-spacing:0;margin-left:8px}.tl-leg i{display:inline-block;width:9px;height:9px;border-radius:2px;margin:0 3px 0 8px;vertical-align:-1px}
 .tl-ins{display:flex;flex-direction:column;gap:5px;margin-bottom:6px}.tl-i{font-size:12.5px;line-height:1.45;padding:6px 10px;border-left:3px solid var(--muted);background:rgba(255,255,255,.03);border-radius:0 6px 6px 0}
 .tl-i[data-tt]{cursor:pointer}.tl-i.out{border-color:var(--red)}.tl-i.neg{border-color:var(--accent)}.tl-i.pos{border-color:var(--green)}.tl-i i{color:#9fd0ff}
+#torch{display:none;position:fixed;left:50%;bottom:118px;transform:translateX(-50%);font-size:12px;color:#ffe9c2;background:rgba(13,17,22,.7);border:1px solid rgba(255,220,150,.35);border-radius:20px;padding:4px 12px;pointer-events:none}
+body.fp #torch.on{display:block}
 .bf-open{background:var(--accent);color:#1a1206;border:none;font-weight:700;width:100%;padding:9px}
 @media (max-width:760px){.bf-cols{grid-template-columns:1fr}}
 #prot{position:fixed;inset:0;display:grid;place-items:center;background:rgba(6,9,12,.66);z-index:12;overflow:auto;padding:20px 0}
@@ -334,6 +336,7 @@ svg.tl{width:100%;height:auto;display:block;margin:4px 0 2px}.tl-ax{font:10px va
 <div id="tooltip"></div>
 <div id="fpCross"></div>
 <div id="fpHint"></div>
+<div id="torch">🔦 Zaklamp aan <kbd>Z</kbd></div>
 <div id="fpPause"><b>Cursor vrij</b><span>Schakel in het paneel of het SCADA-schema · <kbd>E</kbd> of klik in beeld om verder te lopen</span></div>
 <div id="toast"></div>
 <div id="notice"></div>
@@ -2649,6 +2652,15 @@ function blockedAt(x,z){const r=0.3;if(x<-200||x>250||z<-110||z>440)return true;
   for(const q of FP.rects)if(x>q[0]-r&&x<q[2]+r&&z>q[1]-r&&z<q[3]+r)return true;return false;}
 function floorAt(x,z){const r=ROOMS.find(r=>x>r.x0-0.05&&x<r.x1+0.05&&z>r.z0-0.05&&z<r.z1+0.05);return r?r.y0:0.02;}
 const canvasEl=renderer.domElement;
+// ---- zaklamp (Z): spotlicht dat met je blik meebeweegt; staat altijd in de scène (intensiteit 0 = uit) zodat er geen shaderhercompilatie is
+const TORCH={on:false,light:new THREE.SpotLight(0xfff0d8,0,38,0.36,0.5,1.4)};
+scene.add(TORCH.light,TORCH.light.target);
+function setTorch(on){TORCH.on=on&&FP.on;TORCH.light.intensity=TORCH.on?55:0;$('#torch').classList.toggle('on',TORCH.on);updateTorch();
+  AudioSys.burst({type:'highpass',f:2600,q:1,gain:0.12,dur:0.03});}
+const _td=new THREE.Vector3();
+function updateTorch(){if(!TORCH.on)return;camera.getWorldDirection(_td);
+  TORCH.light.position.copy(camera.position).add(V3(Math.cos(FP.yaw)*0.25,-0.3,-Math.sin(FP.yaw)*0.25));   // in je rechterhand
+  TORCH.light.target.position.copy(camera.position).addScaledVector(_td,10);TORCH.light.target.updateMatrixWorld();}
 function enterFP(){
   if(FP.on)return;FP.on=true;fly=null;controls.enabled=false;controls.autoRotate=false;
   const ins=camInside();
@@ -2659,14 +2671,14 @@ function enterFP(){
   FP.y=null;
   camera.rotation.order='YXZ';camera.fov=70;camera.updateProjectionMatrix();
   document.body.classList.add('fp');hovBox.visible=false;$('#tooltip').style.display='none';
-  canvasEl.requestPointerLock?.();if(!FP.hinted){FP.hinted=true;pushAlarm('Rondlopen: WASD lopen, Shift rennen, muis kijken, F schakelen, E paneel, V stoppen, Esc menu','info');}
+  canvasEl.requestPointerLock?.();if(!FP.hinted){FP.hinted=true;pushAlarm('Rondlopen: WASD lopen, Shift rennen, muis kijken, F schakelen, E paneel, Z zaklamp, V stoppen, Esc menu','info');}
 }
 function exitFP(){
   if(!FP.on)return;FP.on=false;FP.keys={};FP.last={x:FP.pos.x,z:FP.pos.z,yaw:FP.yaw,pitch:FP.pitch};unlockPointer();
   const dir=new THREE.Vector3();camera.getWorldDirection(dir);
   camera.rotation.order='XYZ';camera.fov=42;camera.updateProjectionMatrix();
   controls.target.copy(camera.position).addScaledVector(dir,8);controls.enabled=true;controls.update();
-  document.body.classList.remove('fp');FP.look=null;hovBox.visible=false;
+  document.body.classList.remove('fp');FP.look=null;hovBox.visible=false;if(TORCH.on)setTorch(false);
 }
 function toggleFP(){FP.on?exitFP():enterFP();}
 function pickCenter(){camera.updateMatrixWorld();ray.setFromCamera(new THREE.Vector2(0,0),camera);ray.far=REACH;const ins=camInside();
@@ -2690,7 +2702,7 @@ function updateFP(dt){
   // springen: eenvoudige zwaartekracht, landen met een plof
   if(FP.jh>0||FP.vy>0){FP.jh=(FP.jh||0)+FP.vy*dt;FP.vy-=13*dt;if(FP.jh<=0){FP.jh=0;FP.vy=0;AudioSys.burst({type:'lowpass',f:camInside()?400:900,q:0.7,gain:0.18,dur:0.12});}}
   camera.position.set(FP.pos.x,FP.y+1.68+(FP.jh||0)+(moving&&!FP.jh?Math.sin(FP.bob)*0.035:0),FP.pos.z);
-  camera.rotation.set(FP.pitch,FP.yaw,0);
+  camera.rotation.set(FP.pitch,FP.yaw,0);camera.updateMatrixWorld();updateTorch();
   // waar kijk je naar?
   const id=pickCenter();
   if(id!==FP.look){FP.look=id;const v=id&&VIEWS[id];hovBox.visible=!!v&&id!==SEL;if(v)hovBox.box.copy(v.box).expandByScalar(0.1);}
@@ -2714,6 +2726,7 @@ addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;
     return;}
   if(!FP.on)return;FP.keys[e.code]=true;
   if(e.code==='Space'){e.preventDefault();if(!FP.jh&&document.pointerLockElement===canvasEl){FP.vy=4.6;FP.jh=0.001;}return;}
+  if(e.code==='KeyZ'){setTorch(!TORCH.on);return;}
   if(e.code==='KeyF'&&FP.look){const d=D[FP.look];if(actionLabel(d))operate(FP.look,d.state?0:1);}
 });
 addEventListener('keyup',e=>{FP.keys[e.code]=false;});
@@ -3159,7 +3172,7 @@ else{renderMenu();$('#intro').classList.remove('hidden');controls.autoRotate=tru
 if(params.has('night'))updateSky(22);
 if(params.has('view')){const v=VIEWPOS[+params.get('view')];camera.position.copy(v[0]);controls.target.copy(v[1]);controls.autoRotate=false;controls.update();}
 
-window.OS={HO_POOL,handoverTick,REC,RP,startReplay,stopReplay,analyse,stationDamage,closeHandover,deviations,PHONE,lvFault,callFrom,phoneAnswer,dispatchLV,LVG,forecast,progAdvice,PROG,startTask:(k,...a)=>{TASK={railTask,railBTask,stationTask,thermoTask,ringTask,feederTask,lineTask,reserveTask}[k](...a);TASK.i=0;TASK.code='WV-TEST';briefInit(TASK);renderTasks();},SIM,D,LESSONS,lessonGo,selectDevice,abortTask,railTask,stationTask,thermoTask,nearDev,VIEWS,PROT,setProt,openProt,closeProt,busFault,BUSF,RINGS,task:()=>TASK,briefSubmit,briefCheck,briefWatch,actKey,taskActs,crewNear,boxOf:id=>VIEWS[id]&&VIEWS[id].box,AudioSys,updateAudio,WX,setWeather,setSeason,SEASONS,ambient,enterKiosk,ROOMS,blockedAt,RING,NPCS,crewDispatch,ringFault,FP,enterFP,exitFP,pickCenter,camera,camInside,setRatio,setTab,GAME,MODES,applyMode,endGame,EN:()=>EN,FLOW,operate,tapStep,setAVR,resetLockout,toggleAR,regulate,computeFlows,randomEvent,lineFault,feederFault,trafoFault,offerTask,simStep,FEEDERS};
+window.OS={TORCH,setTorch,HO_POOL,handoverTick,REC,RP,startReplay,stopReplay,analyse,stationDamage,closeHandover,deviations,PHONE,lvFault,callFrom,phoneAnswer,dispatchLV,LVG,forecast,progAdvice,PROG,startTask:(k,...a)=>{TASK={railTask,railBTask,stationTask,thermoTask,ringTask,feederTask,lineTask,reserveTask}[k](...a);TASK.i=0;TASK.code='WV-TEST';briefInit(TASK);renderTasks();},SIM,D,LESSONS,lessonGo,selectDevice,abortTask,railTask,stationTask,thermoTask,nearDev,VIEWS,PROT,setProt,openProt,closeProt,busFault,BUSF,RINGS,task:()=>TASK,briefSubmit,briefCheck,briefWatch,actKey,taskActs,crewNear,boxOf:id=>VIEWS[id]&&VIEWS[id].box,AudioSys,updateAudio,WX,setWeather,setSeason,SEASONS,ambient,enterKiosk,ROOMS,blockedAt,RING,NPCS,crewDispatch,ringFault,FP,enterFP,exitFP,pickCenter,camera,camInside,setRatio,setTab,GAME,MODES,applyMode,endGame,EN:()=>EN,FLOW,operate,tapStep,setAVR,resetLockout,toggleAR,regulate,computeFlows,randomEvent,lineFault,feederFault,trafoFault,offerTask,simStep,FEEDERS};
 const clock=new THREE.Clock();let hudT=0,skyT=0,progT=0;
 renderer.setAnimationLoop(()=>{
   const dt=Math.min(0.1,clock.getDelta());

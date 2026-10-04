@@ -267,6 +267,8 @@ svg.tl{width:100%;height:auto;display:block;margin:4px 0 2px}.tl-ax{font:10px va
 .tl-leg{font-weight:400;font-size:10.5px;color:var(--muted);text-transform:none;letter-spacing:0;margin-left:8px}.tl-leg i{display:inline-block;width:9px;height:9px;border-radius:2px;margin:0 3px 0 8px;vertical-align:-1px}
 .tl-ins{display:flex;flex-direction:column;gap:5px;margin-bottom:6px}.tl-i{font-size:12.5px;line-height:1.45;padding:6px 10px;border-left:3px solid var(--muted);background:rgba(255,255,255,.03);border-radius:0 6px 6px 0}
 .tl-i[data-tt]{cursor:pointer}.tl-i.out{border-color:var(--red)}.tl-i.neg{border-color:var(--accent)}.tl-i.pos{border-color:var(--green)}.tl-i i{color:#9fd0ff}
+#torch{display:none;position:fixed;left:50%;bottom:118px;transform:translateX(-50%);font-size:12px;color:#ffe9c2;background:rgba(13,17,22,.7);border:1px solid rgba(255,220,150,.35);border-radius:20px;padding:4px 12px;pointer-events:none}
+body.fp #torch.on{display:block}
 .bf-open{background:var(--accent);color:#1a1206;border:none;font-weight:700;width:100%;padding:9px}
 @media (max-width:760px){.bf-cols{grid-template-columns:1fr}}
 #prot{position:fixed;inset:0;display:grid;place-items:center;background:rgba(6,9,12,.66);z-index:12;overflow:auto;padding:20px 0}
@@ -334,6 +336,7 @@ svg.tl{width:100%;height:auto;display:block;margin:4px 0 2px}.tl-ax{font:10px va
 <div id="tooltip"></div>
 <div id="fpCross"></div>
 <div id="fpHint"></div>
+<div id="torch">🔦 Zaklamp aan <kbd>Z</kbd></div>
 <div id="fpPause"><b>Cursor vrij</b><span>Schakel in het paneel of het SCADA-schema · <kbd>E</kbd> of klik in beeld om verder te lopen</span></div>
 <div id="toast"></div>
 <div id="notice"></div>

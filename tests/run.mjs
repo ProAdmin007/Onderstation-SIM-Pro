@@ -268,6 +268,12 @@ const TESTS = [
       assert(r.n >= 15 && r.tl && r.ins >= 1, `tijdlijn ontbreekt: ${JSON.stringify(r)}`);
       assert(r.rp && r.terug === 1 && r.hersteld, `herhaling klopt niet: ${JSON.stringify(r)}`);
   } },
+  { name: 'zaklamp aan en uit tijdens rondlopen', query: '?autostart&night', async run(p) {
+      await p.evaluate(() => OS.enterFP()); await sleep(800); await p.keyboard.press('KeyZ'); await sleep(800);
+      const r = await p.evaluate(() => { const a = { aan: OS.TORCH.on, I: OS.TORCH.light.intensity, x: Math.round(OS.TORCH.light.position.distanceTo(OS.camera.position) * 10) / 10 }; OS.exitFP(); return { ...a, naUit: OS.TORCH.on, I2: OS.TORCH.light.intensity }; });
+      assert(r.aan && r.I > 0 && r.x < 1, `zaklamp ging niet aan: ${JSON.stringify(r)}`);
+      assert(!r.naUit && r.I2 === 0, `zaklamp blijft aan na stoppen met rondlopen: ${JSON.stringify(r)}`);
+  } },
   { name: 'Esc opent pauzemenu en pauzeert', query: '?autostart', async run(p) {
       await p.keyboard.press('Escape'); await sleep(800);
       const r = await p.evaluate(() => ({ menu: !document.querySelector('#pauseMenu').classList.contains('hidden'), paused: OS.SIM.paused }));
