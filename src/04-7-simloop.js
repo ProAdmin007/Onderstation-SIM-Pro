@@ -2,6 +2,7 @@
 // Simulatiestap: tijd, timers, stromen, beveiliging, meldingen en score per tik
 function initTaps(){for(let i=0;i<3;i++){computeFlows();TR.forEach(T=>{const t=D[T];if(t.Ulv>0){const u=trafoUn(T);t.tap=clamp(t.tap+Math.round((u-t.Ulv)/(u*TAP_STEP)),1,17);}});}computeFlows();}
 const custOff=f=>f.backfed?0:!EN.has(f.node)?f.cust:Math.round(f.cust*f.outFrac);
+// (vrije dienst: storingen komen vaker, factor 0,6 op de wachttijd)
 function simStep(dtReal){
   if(SIM.paused)return;
   const dm=dtReal*SIM.speed/60;SIM.t+=dm;
@@ -17,7 +18,7 @@ function simStep(dtReal){
   RING.stations.forEach(s=>{const on=EN.has(s.node);if(on===s.wasOn)return;s.wasOn=on;restoreTrack(s,on);
     if(on)pushAlarm(`${s.id} ${s.name}: spanning hersteld`,'ok');else if(s.genset)pushAlarm(`${s.id} ${s.name}: MS-zijde spanningsloos – klanten op het noodaggregaat`,'info');else pushAlarm(`${s.id} ${s.name}: spanningsloos – ${s.cust.toLocaleString('nl-NL')} klanten zonder stroom`,'warn');});
   SIM.off=off;SIM.cml+=CONS.reduce((s,c)=>s+custOff(c)*(c.interruptible?0.1:1),0)*dm;SIM.manualFlag=false;
-  if(GAME.events&&SIM.t>=SIM.nextEvent){randomEvent();SIM.nextEvent=SIM.t+rnd(35,75)*DIFFS[GAME.diff].ev;}
+  if(GAME.events&&SIM.t>=SIM.nextEvent){randomEvent();SIM.nextEvent=SIM.t+rnd(35,75)*DIFFS[GAME.diff].ev*(GAME.mode==='free'?0.6:1);}
   if(GAME.tasks&&!TASK&&SIM.t>=SIM.nextTaskAt)offerTask();
   taskTick();gameTick(dm,dtReal);recTick();
 }

@@ -9,7 +9,7 @@ const setCB=(id,s)=>{D[id].state=s;};
 const noIncidents={t:'Geen veiligheidsincidenten',check:()=>SIM.incidents?'fail':null,final:()=>!SIM.incidents};
 
 const MODES={
-  free:{name:'Vrije dienst',tag:'Eindeloos',start:9,desc:'Speel zo lang je wilt. Storingen en werkopdrachten komen vanzelf.'},
+  free:{name:'Vrije dienst',tag:'Eindeloos',start:9,desc:'Speel zo lang je wilt. Storingen, werkopdrachten en af en toe een groot incident uit de scenario\'s komen vanzelf.'},
   day:{name:'Dagdienst',tag:'Dienst · 8 uur',start:7,dur:480,desc:'07:00–15:00. Ochtendpiek, werkopdrachten en storingen. Afsluiten met een dienstrapport.'},
   eve:{name:'Avonddienst',tag:'Dienst · 8 uur',start:15,dur:480,desc:'15:00–23:00. De zware avondpiek en kassen die ’s avonds gaan belichten.'},
   zkh:{scen:true,name:'Kabelstoring ziekenhuis',tag:'Scenario · makkelijk',start:10,dur:50,season:'herfst',weather:'bewolkt',
@@ -110,7 +110,7 @@ function gameTick(dm,dtReal){
   TR.forEach(T=>GAME.stats.maxOil=Math.max(GAME.stats.maxOil,D[T].oil));
   const canRestore=SIM.lines.L1.avail||SIM.lines.L2.avail;
   FEEDERS.concat(RING.stations).forEach(f=>{if(f.unplanned&&!EN.has(f.node)&&canRestore&&!(f.fault&&f.fault.stage==='search'))f.wait=(f.wait||0)+dtReal;});
-  lessonTick();handoverTick();MODES[GAME.mode]?.tick?.(dm);
+  lessonTick();handoverTick();incidentTick(dm);MODES[GAME.mode]?.tick?.(dm);
   GAME.obj.forEach(o=>{if(o.state||!o.check)return;const r=o.check();if(!r)return;o.state=r;
     if(r==='done'){award(100,'Doel behaald');pushAlarm(`Doel behaald: ${o.t}`,'ok');}else{award(-150,'Doel gemist');pushAlarm(`Doel gemist: ${o.t}`,'warn');}});
   if(GAME.countdown&&GAME.obj.every(o=>o.state))GAME.countdown=null;
@@ -162,7 +162,7 @@ function renderMenu(){
   document.querySelectorAll('#season button').forEach(b=>b.classList.toggle('on',b.dataset.s===GAME.season));
 }
 const fmtDur=min=>min>=60?`${Math.floor(min/60)}:${String(Math.floor(min%60)).padStart(2,'0')} u`:`${Math.max(0,Math.ceil(min))} min`;
-function gameHeader(){if(GAME.mode==='free'||GAME.lesson)return '';const m=MODES[GAME.mode];
+function gameHeader(){if(GAME.lesson)return '';if(GAME.mode==='free')return incidentHeader();const m=MODES[GAME.mode];
   let h=`<div class="gh"><div class="gt"><span>${m.scen?'Scenario':'Dienst'} · ${m.name}</span>${GAME.endT?`<span class="tag">nog ${fmtDur(GAME.endT-SIM.t)}</span>`:''}</div>`;
   if(GAME.countdown&&SIM.t<GAME.countdown.until){const left=GAME.countdown.until-SIM.t;h+=`<div class="gcd ${left<5?'hot':''}">${GAME.countdown.label}<b>${fmtDur(left)}</b></div>`;}
   h+=GAME.obj.map(o=>`<div class="step ${o.state==='done'?'done':o.state==='fail'?'fail':''}"><span class="b">${o.state==='done'?'✓':o.state==='fail'?'✕':''}</span><span>${o.t}</span></div>`).join('');

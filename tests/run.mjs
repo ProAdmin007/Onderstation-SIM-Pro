@@ -329,6 +329,21 @@ const TESTS = [
       for (const [k, v] of Object.entries(r)) if (k !== 'rijen') assert(v, `${k} klopt niet: ${JSON.stringify(r)}`);
       assert(r.rijen === 26, `tabblad Kabels toont ${r.rijen} rijen in plaats van 26`);
   } },
+  { name: 'vrije dienst: incidenten starten vanzelf', query: '?autostart&t=10', async run(p) {
+      const r = await p.evaluate(() => { const O = OS; O.SIM.nextEvent = 1e9; O.SIM.nextTaskAt = 1e9; O.SIM.paused = false; T.step(0.5); O.INC.next = O.SIM.t;
+        T.step(0.5); return { actief: O.INC.active?.def.id || null, kop: !!document.querySelector('#taskBody .gh.inc') || (O.renderTasks?.(), !!document.querySelector('#taskBody .gh.inc')) }; });
+      assert(r.actief, 'er startte geen incident');
+  } },
+  ...['zkh', 'storm', 'dubbel', 'hitte', 'aanrijding', 'cyber', 'water', 'zon', 'kraan', 'brand', 'concert', 'laden', 'blackout'].map(id => ({ name: `incident ${id}: start en ruimt zichzelf op`, query: '?autostart&t=17.5', async run(p) {
+    const r = await p.evaluate(id => { const O = OS, D = O.D; O.SIM.nextEvent = 1e9; O.SIM.nextTaskAt = 1e9; O.SIM.paused = false; T.step(0.3);
+      const base = O.LVG.map(g => g.base).join(), g1 = O.FEEDERS.find(f => f.id === 'G1').base;
+      const ok = O.startIncident(id, true); const actief = !!O.INC.active; T.step(0.5);
+      for (let k = 0; k < 60 && O.INC.active; k++) T.step(5);
+      return { ok, actief, klaar: !O.INC.active, scada: !O.GAME.flags.scadaDown, brand: !O.FIRE.on, grens: !O.GAME.flags.lineLimit, dicht: !(O.GAME.flags.mustOpen || []).length,
+        belast: O.LVG.map(g => g.base).join() === base && O.FEEDERS.find(f => f.id === 'G1').base === g1, stations: O.RING.stations.every(s => !s.damaged && !s.evac),
+        lijnen: O.SIM.lines.L1.avail && O.SIM.lines.L2.avail, koeling: !D.T1.fanFail, flex: !O.FLEX.some(f => f.id === 'MS6-G2') }; }, id);
+    for (const [k, v] of Object.entries(r)) assert(v, `${k} klopt niet: ${JSON.stringify(r)}`);
+  } })),
   { name: 'Esc opent pauzemenu en pauzeert', query: '?autostart', async run(p) {
       await p.keyboard.press('Escape'); await sleep(800);
       const r = await p.evaluate(() => ({ menu: !document.querySelector('#pauseMenu').classList.contains('hidden'), paused: OS.SIM.paused }));

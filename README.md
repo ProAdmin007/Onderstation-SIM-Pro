@@ -134,7 +134,23 @@ Alle geluid wordt in de browser gemaakt (Web Audio) en hangt af van waar je bent
 Alle afnemers liggen 25% hoger dan in eerdere versies. De velden en distributietrafo's zijn gedimensioneerd op de winterpiek met 20–25% marge. In de normale schakeltoestand blijft alles onder 90%; bij terugvoeding, uitval of een extra piek wordt het snel krap. Daar zijn het tabblad *Kabels* en de flexmarkt voor.
 
 ## Spelmodi en score
-- **Vrije dienst:** eindeloos spelen.
+- **Vrije dienst:** eindeloos spelen. Storingen komen hier vaker dan in een dienst, en af en toe slaat er een **groot incident** uit de scenario's toe.
+  - De eerste komt na 1–2 uur, daarna één per paar uur. Welke het wordt is willekeurig, maar het moet passen bij het moment:
+    - kabelstoring ziekenhuis met trip T1;
+    - onweersbuien;
+    - twee kabelfouten in de woonwijk;
+    - kapotte ventilatoren van T1 (zomermiddag);
+    - aanrijding van een MS-station;
+    - cyberaanval op SCADA;
+    - wateroverlast bij MS9 (bij regen);
+    - recordopbrengst van het zonnepark (heldere lente- of zomerochtend);
+    - kraan raakt een 110 kV-lijn;
+    - brand in het 10 kV-gebouw;
+    - concert op het Marktplein (lente- of zomeravond);
+    - laadpiek in de woonwijk (herfst- of winteravond);
+    - landelijke black-out.
+  - Linksboven zie je welk incident er loopt en hoe lang nog. Elk incident ruimt zichzelf op: reparaties, blussen, SCADA weer terug.
+  - Heeft na afloop iedereen weer stroom, dan krijg je +100.
 - **Dagdienst** (07–15 u) en **Avonddienst** (15–23 u): een dienst van 8 uur met een dienstrapport, een cijfer (A+ t/m E), sterren, badges en een highscore.
 - **Leerscenario's** met uitleg, stap voor stap. De schakelaar die je moet bedienen knippert groen en de les gaat vanzelf verder als je het goed doet:
   1. *Bediening en SCADA*: selecteren, een veld uit- en inschakelen, klantminuten.
