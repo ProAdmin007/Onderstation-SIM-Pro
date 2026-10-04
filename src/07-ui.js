@@ -10,6 +10,8 @@ function buildSLD(){
   const CB=(id,x,y,lbl,side=-1)=>{o.push(`<g class="dev cb" data-id="${id}" transform="translate(${x} ${y})"><title>${id} · ${D[id].label}</title>${hit(28,28)}<rect class="body" x="-8" y="-8" width="16" height="16" rx="2"/></g>`);if(lbl)T(x+side*14,y+3.5,lbl,side<0?'end':'start','dl');};
   const DS=(id,x,y,lbl,side=-1)=>{o.push(`<g class="dev ds" data-id="${id}" transform="translate(${x} ${y})"><title>${id} · ${D[id].label}</title>${hit(28,28)}<line class="tick" x1="-6" y1="-11" x2="6" y2="-11"/><line class="blade" x1="0" y1="11" x2="0" y2="-11" style="transform-origin:0px 11px"/><circle class="piv" cx="0" cy="11" r="2.6"/></g>`);if(lbl)T(x+side*14,y+3.5,lbl,side<0?'end':'start','dl');};
   const ES=(id,x,y,lbl='')=>{o.push(`<g class="dev es" data-id="${id}" transform="translate(${x} ${y})"><title>${id} · ${D[id].label}</title>${hit(24,38,-16)}<line class="tick" x1="-5" y1="-12" x2="5" y2="-12"/><line class="blade" x1="0" y1="8" x2="0" y2="-12" style="transform-origin:0px 8px"/><circle class="piv" cx="0" cy="8" r="2.4"/><line class="gnd" x1="-8" y1="13" x2="8" y2="13"/><line class="gnd" x1="-5" y1="16.5" x2="5" y2="16.5"/><line class="gnd" x1="-2" y1="20" x2="2" y2="20"/></g>`);if(lbl)T(x+12,y+3,lbl,'start','dl');};
+  const SDS=(id,x,y)=>o.push(`<g class="dev ds sds" data-id="${id}" transform="translate(${x} ${y})"><title>${id} · ${D[id].label}</title>${hit(14,16)}<line class="tick" x1="-4" y1="-6" x2="4" y2="-6"/><line class="blade" x1="0" y1="6" x2="0" y2="-6" style="transform-origin:0px 6px"/><circle class="piv" cx="0" cy="6" r="1.8"/></g>`);
+  const RA_Y=404,RB_Y=420;
   const line=(L,x)=>{o.push(`<g class="dev ln" data-id="${L}-LIJN"><rect class="hit" x="${x-48}" y="2" width="96" height="30" rx="5"/></g>`);
     T(x,14,`${L} · ${SIM.lines[L].name.toUpperCase()}`,'middle','h');M('ln'+L,x,27,'middle','mh');
     W(x,34,x,67,L+'x');W(x,52,x+26,52,L+'x');ES(L+'-Q8',x+26,64,'Q8');
@@ -20,15 +22,18 @@ function buildSLD(){
   const bay=(Tn,x,side,lv,bus)=>{W(x,200,x,224,'BB');DS(Tn+'-Q1',x,235,'Q1',side);W(x,246,x,271,Tn+'b');CB(Tn+'-Q0',x,279,'Q0',side);W(x,287,x,306,Tn+'h');
     o.push(`<g class="dev tr" data-id="${Tn}"><title>${Tn} · ${D[Tn].label}</title><rect class="hit" x="${x-16}" y="304" width="32" height="44" rx="5"/><circle class="w" data-n="${Tn}h" data-c="w" cx="${x}" cy="318" r="12"/><circle class="w" data-n="${Tn}l" data-c="w" cx="${x}" cy="334" r="12"/></g>`);
     const tx=x+side*18,an=side<0?'end':'start';T(tx,316,Tn+(Tn===RES?' reserve':''),an,'h');M('tr'+Tn,tx,330,an);M('to'+Tn,tx,343,an);if(Tn===RES)M('rt'+RES,tx,356,an,'mh');
-    W(x,346,x,374,Tn+'l');CB(lv,x,382,lv,side);W(x,390,x,420,bus);};
-  const feeder=(f,x)=>{W(x,420,x,447,f.bus);CB(f.cb,x,455,null);W(x,463,x,494,f.node);W(x,474,x+15,474,f.node);ES(f.id+'-Q8',x+15,486,'');
+    if(bus!=='RAB'){W(x,346,x,374,Tn+'l');CB(lv,x,382,lv,side);W(x,390,x,420,bus);return;}
+    const sn=Tn+'s';W(x,346,x,354,Tn+'l');CB(lv,x,362,lv,-side);W(x,370,x,378,sn);W(x-8,378,x+8,378,sn);
+    SDS(Tn+'-QA',x-8,386);W(x-8,392,x-8,RA_Y,'RA');SDS(Tn+'-QB',x+8,386);W(x+8,392,x+8,RB_Y,'RB');};
+  const feeder=(f,x)=>{if(is20(f.bus))W(x,420,x,447,f.bus);else{const sn=f.sel;W(x-8,RA_Y,x-8,426,'RA');SDS(f.id+'-QA',x-8,432);W(x+8,RB_Y,x+8,426,'RB');SDS(f.id+'-QB',x+8,432);W(x-8,438,x+8,438,sn);W(x,438,x,447,sn);}CB(f.cb,x,455,null);W(x,463,x,494,f.node);W(x,474,x+15,474,f.node);ES(f.id+'-Q8',x+15,486,'');
     o.push(`<polygon class="w arrow" data-n="${f.node}" data-c="w arrow" points="${f.gen?`${x-6},506 ${x+6},506 ${x},494`:`${x-6},494 ${x+6},494 ${x},506`}"/>`);
     T(x,522,f.short,'middle','dl fs');M('f'+f.id,x,535);M('fc'+f.id,x,548,'middle','');T(x,561,f.id,'middle','');};
   const F=id=>FEEDERS.find(f=>f.id===id);
   // tabblad 10 kV
-  o=out[10];top();bay('T1',160,-1,'V-T1','RA');bay('T3',330,1,'V-T3','RB');
-  W(20,420,222,420,'RA','w bus');W(238,420,452,420,'RB','w bus');CB('V-K',230,420,null);T(230,442,'V-K','middle','dl');
-  T(20,412,'10 kV RAIL A','start','dl');M('RA',98,412,'start');T(452,412,'RAIL B','end','dl');M('RB',412,412,'end');
+  o=out[10];top();bay('T1',160,-1,'V-T1','RAB');bay('T3',330,1,'V-T3','RAB');
+  W(20,RA_Y,452,RA_Y,'RA','w bus');W(20,RB_Y,452,RB_Y,'RB','w bus');CB('V-K',230,412,null);T(240,400,'V-K','start','dl');
+  T(14,RA_Y+3,'A','end','dl');T(14,RB_Y+3,'B','end','dl');T(20,398,'10 kV RAIL A','start','dl');M('RA',98,398,'start');T(452,398,'RAIL B','end','dl');M('RB',412,398,'end');
+  W(196,RA_Y,196,426,'RA');ES('RA-Q8',196,438,'');W(264,RB_Y,264,426,'RB');ES('RB-Q8',264,438,'');
   [['F1',35],['F2',82],['F3',128],['F4',285],['F5',395],['F6',440]].forEach(([id,x])=>feeder(F(id),x));
   // tabblad 20 kV
   o=out[20];top();bay('T2',160,-1,'W-T2','RC');bay('T3',330,1,'W-T3','RD');
@@ -38,7 +43,7 @@ function buildSLD(){
   [['G1',45],['G2',110],['G3',370],['G4',430]].forEach(([id,x])=>feeder(F(id),x));
   // tabblad Ring: alle 10 kV-ringen onder elkaar
   out.R=[];o=out.R;const HS=(id,x,y)=>{o.push(`<g class="dev ds" data-id="${id}" transform="translate(${x} ${y}) rotate(-90)"><title>${id} · ${D[id].label}</title>${hit(26,26)}<line class="tick" x1="-6" y1="-11" x2="6" y2="-11"/><line class="blade" x1="0" y1="11" x2="0" y2="-11" style="transform-origin:0px 11px"/><circle class="piv" cx="0" cy="11" r="2.4"/></g>`);};
-  const drawRing=(rg,oy)=>{const st=rg.stations,n=st.length,RY=oy+92,x0=(470-(n-1)*84)/2,XS=st.map((s,i)=>x0+i*84),fb=F(rg.from).bus,tb=F(rg.to).bus;
+  const drawRing=(rg,oy)=>{const st=rg.stations,n=st.length,RY=oy+92,x0=(470-(n-1)*84)/2,XS=st.map((s,i)=>x0+i*84),fb=F(rg.from).sel,tb=F(rg.to).sel;
     T(235,oy+16,`${rg.name.toUpperCase()} · normaal-open punt ${rg.nop}`,'middle','h');
     M('fa'+rg.from,24,oy+33,'start','fs');M('fa'+rg.to,446,oy+33,'end','fs');
     W(14,oy+24,14,oy+36,fb);CB('V-'+rg.from,14,oy+44);W(14,oy+52,14,RY,rg.from);
@@ -85,7 +90,7 @@ function updateSLD(){
   ['RA','RB','RC','RD'].forEach(b=>setM(b,`${fx(FLOW.U[b],2)} kV`));
   RING.stations.forEach(s=>{const on=EN.has(s.node),u=nodeU(s.node);setM('fi'+s.id,s.flag?'⚑':'');setM('stc'+s.id,`${s.cust>=1000?fx(s.cust/1000)+'k':s.cust} kl`);setM('stp'+s.id,on?`${fx(s.P,2)} MW`:'UIT',on?'m':'bad');setM('stu'+s.id,on?`${fx(u,2)} kV`:'',u<9.9?'bad':'');});
   RING.secs.forEach(s=>(SLD.byNode[s.node]||[]).forEach(el=>{el.classList.toggle('ovl',s.load>0.85&&s.load<=1);el.classList.toggle('ovl2',s.load>1);}));
-  FEEDERS.filter(f=>f.ring).forEach(f=>setM('fa'+f.id,`V-${f.id} · rail ${f.bus.slice(1)} · ${Math.round(D[f.cb].I)} A`));
+  FEEDERS.filter(f=>f.ring).forEach(f=>setM('fa'+f.id,`V-${f.id} · rail ${BUS_BAND[railOf(f.sel)]?.[2]||'–'} · ${Math.round(D[f.cb].I)} A`));
   RING.secs.forEach(s=>setM('flt'+s.id,s.fault?'⚡':''));
   FEEDERS.forEach(f=>{const on=EN.has(f.node);setM('f'+f.id,on?`${fx(f.P)} MW`:'UIT',on?(f.gen?'mh':'m'):'bad');setM('fc'+f.id,f.ring?'ring':f.gen?'productie':f.cust>=1000?`${fx(f.cust/1000)}k kl`:`${f.cust} kl`);});
 }
@@ -120,7 +125,7 @@ $('#taskBody').addEventListener('click',e=>{if(e.target.closest('[data-lnext]')&
 // ============================================================ apparaatpaneel
 let SEL=null,panelRows=[];
 const fmtKV=v=>v>0?`${v.toFixed(v<20?2:1).replace('.',',')} kV`:'0 kV';
-function bayName(d){const b=d.bay;if(!b)return 'OS Zuidwolde';const rs=RING.stations.find(s=>s.id===b);if(rs)return `10 kV-ring · ${rs.id} ${rs.name}`;if(b[0]==='L')return `Lijnveld ${b} · ${SIM.lines[b].name}`;if(/^T\d$/.test(b))return `Transformatorveld ${b}${b===RES?' · reserve':''}`;if(b==='K')return '10 kV-installatie';if(b==='WK')return '20 kV-installatie · rail C1/C2';const f=FEEDERS.find(f=>f.id===b);return `${is20(f.bus)?20:10} kV-veld ${b} · ${f.name} · rail ${BUS_BAND[f.bus][2]}`;}
+function bayName(d){const b=d.bay;if(!b)return 'OS Zuidwolde';const rs=RING.stations.find(s=>s.id===b);if(rs)return `10 kV-ring · ${rs.id} ${rs.name}`;if(b[0]==='L')return `Lijnveld ${b} · ${SIM.lines[b].name}`;if(/^T\d$/.test(b))return `Transformatorveld ${b}${b===RES?' · reserve':''}`;if(b==='K')return '10 kV-installatie';if(b==='WK')return '20 kV-installatie · rail C1/C2';const f=FEEDERS.find(f=>f.id===b);return `${is20(f.bus)?20:10} kV-veld ${b} · ${f.name} · rail ${BUS_BAND[railOf(f.sel)]?.[2]||'–'}`;}
 function statusOf(d){
   if(d.type==='cb')return d.state?['INGESCHAKELD','on']:['UITGESCHAKELD','off'];
   if(d.type==='ds')return d.state?['GESLOTEN','on']:['OPEN','off'];
@@ -138,7 +143,7 @@ function rowsFor(d){const r=[],A=(k,f)=>r.push([k,f]);
   if(d.type==='lvs')A(d.lvg.kind==='ovl'?'Lantaarns':'Klanten',()=>d.lvg.kind==='ovl'?`${d.lvg.st.lamps||0} (schemerschakeling)`:d.lvg.cust.toLocaleString('nl-NL'));
   if(d.type==='lvs')A('Belasting',()=>`${(d.lvg.Pc*1000).toFixed(0)} kW`);
   if(d.type==='kiosk'){const s=d.st;A('Klanten',()=>s.cust.toLocaleString('nl-NL'));A('Straatverlichting',()=>`${s.lamps||0} lantaarns · ${EN.has(s.ovl)?(profile('ovl',hourOf())?'<span class="warnc">brandt</span>':'uit (dag)'):'<span class="bad">geen spanning</span>'}`);A('Belasting',()=>`${s.P.toFixed(2)} MW`);
-    A('Gevoed via',()=>{const t=FLOW.TAG[s.node];return t&&t.cb?`${t.cb} (rail ${t.bus.slice(1)})`:'<span class="bad">geen voeding</span>';});
+    A('Gevoed via',()=>{const t=FLOW.TAG[s.node];return t&&t.cb?`${t.cb} (rail ${BUS_BAND[t.bus][2]})`:'<span class="bad">geen voeding</span>';});
     const kab=sec=>()=>sec?(EN.has(sec.node)?`<span class="${sec.load>1?'bad':sec.load>0.85?'warnc':''}">${Math.round(sec.I)} A · ${Math.round(sec.load*100)}%</span>`:'spanningsloos'):'—';
     A('Kabel links',kab(RING.secs.find(x=>x.b===s.id)));A('Kabel rechts',kab(RING.secs.find(x=>x.a===s.id)));
     A('Kortsluitverklikker',()=>s.flag?'<span class="warnc">⚑ AANGESPROKEN</span>':'normaal');}
@@ -163,6 +168,7 @@ function rowsFor(d){const r=[],A=(k,f)=>r.push([k,f]);
   if(d.type==='bb')A('Doorvoer',()=>`${FLOW.P110.toFixed(1)} MW`);
   if(d.id==='MS'){A('Rail A',()=>fmtKV(FLOW.U.RA)+(BUSF.RA?' <span class="bad">RAILFOUT</span>':''));A('Rail B',()=>fmtKV(FLOW.U.RB)+(BUSF.RB?' <span class="bad">RAILFOUT</span>':''));A('Totale belasting',()=>`${FLOW.load.toFixed(1)} MW`);A('Koppeling V-K',()=>D['V-K'].state?'gesloten':'open');A('Reserve V-T3',()=>D['V-T3'].state?'IN':'uit');}
   if(d.id==='MS20'){A('Rail C1',()=>fmtKV(FLOW.U.RC)+(BUSF.RC?' <span class="bad">RAILFOUT</span>':''));A('Rail C2',()=>fmtKV(FLOW.U.RD)+(BUSF.RD?' <span class="bad">RAILFOUT</span>':''));A('Koppeling W-K',()=>D['W-K'].state?'gesloten':'open');A('Netto belasting',()=>`${FLOW.load20.toFixed(1)} MW${FLOW.load20<0?' (teruglevering)':''}`);A('Voeding',()=>['W-T2','W-T3'].filter(id=>D[id].state).join(' + ')||'geen');}
+  if(d.sel||(d.feeder&&!is20(d.feeder.bus))||d.id==='V-T1'||d.id==='V-T3'){const bay=d.sel?d.bay:d.feeder?d.feeder.id:d.tr;A('Railkeuze',()=>{const a=D[bay+'-QA'].state,b=D[bay+'-QB'].state;return a&&b?'<span class="warnc">rail A + B (omzetten)</span>':a?'rail A':b?'rail B':'<span class="bad">geen rail</span>';});}
   if(d.feeder){const f=d.feeder;A('Belasting',()=>`${f.P.toFixed(2)} MW${f.clp>1.03?` <span class="warnc">(+${Math.round((f.clp-1)*100)}% KLO)</span>`:''}`);A('Klanten',()=>f.ring?RING.stations.filter(s=>FLOW.TAG[s.node]?.cb===f.cb).reduce((a,s)=>a+s.cust,0).toLocaleString('nl-NL')+' (ring)':f.cust.toLocaleString('nl-NL'));
     A('Kabel',()=>feederState(f));A('Terugvoeding',()=>f.backfed?'<span class="warnc">actief (via net)</span>':'—');}
   if(d.type==='sa')A('Ontladingsteller',()=>d.count);
@@ -185,6 +191,9 @@ function renderDevPanel(){
   if(d.id===RES)sub.push(`<button data-act="ratio10">Omschakelen → 10 kV</button>`,`<button data-act="ratio20">Omschakelen → 20 kV</button>`);
   const ln=d.line||(d.type==='line'&&d.line);if(d.line)sub.push(`<button data-act="ar"></button>`);
   if(d.feeder)sub.push(`<button data-act="sel:${d.feeder.id}-Q8">Aardschakelaar ${d.feeder.id}-Q8</button>`);
+  const selBay=d.feeder&&!is20(d.feeder.bus)?d.feeder.id:d.id==='V-T1'?'T1':d.id==='V-T3'?'T3':d.sel?d.bay:null;
+  if(selBay)sub.push(...['QA','QB'].filter(q=>d.id!==selBay+'-'+q).map(q=>`<button data-act="sel:${selBay}-${q}">Railkeuze ${q.slice(1)} (${selBay}-${q})</button>`));
+  if(d.sel)sub.push(`<button data-act="sel:${d.cb}">Naar ${d.cb}</button>`);
   if(d.type==='es'&&BUS_BAND[d.a])sub.push(`<button data-act="sel:${d.a==='RC'?'W-T2':'W-T3'}">Inkomend veld</button>`,`<button data-act="sel:W-K">Koppeling W-K</button>`);
   if(d.type==='es'&&d.cb)sub.push(`<button data-act="sel:${d.cb}">Naar ${d.cb}</button>`);
   p.innerHTML=`<div class="dp-head"><div><div class="dp-id">${d.id}</div><div class="dp-type">${d.label}</div></div><button class="x" data-act="x" title="Sluiten (Esc)">✕</button></div>

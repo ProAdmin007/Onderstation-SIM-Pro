@@ -39,7 +39,7 @@ function posterTex(){const c=cnv(512,700),g=c.getContext('2d');g.fillStyle='#fbf
   const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t;}
 
 const PANELS=[{title:'Reserve'},{id:'V-T1',kind:'inc',node:'T1l'},{id:'V-F1',kind:'feed',node:'F1'},{id:'V-F2',kind:'feed',node:'F2'},{id:'V-F3',kind:'feed',node:'F3'},
-  {title:'Meetveld A',kind:'meas'},{id:'V-K',kind:'coup',node:'RB'},{title:'Meetveld B',kind:'meas'},
+  {id:'RA-Q8',kind:'meas',node:'RA'},{id:'V-K',kind:'coup',node:'RB'},{id:'RB-Q8',kind:'meas',node:'RB'},
   {id:'V-F4',kind:'feed',node:'F4'},{id:'V-F5',kind:'feed',node:'F5'},{id:'V-F6',kind:'feed',node:'F6'},{title:'Reserve'},{id:'V-T3',kind:'inc',node:'T3l'}];
 const PANELS20=[{title:'Reserve'},{id:'W-T2',kind:'inc',node:'T2l'},{id:'W-G1',kind:'feed',node:'G1'},{id:'W-G2',kind:'feed',node:'G2'},{id:'RC-Q8',kind:'meas',node:'RC'},
   {id:'W-K',kind:'coup',node:'RD'},{id:'RD-Q8',kind:'meas',node:'RD'},{id:'W-G3',kind:'feed',node:'G3'},{id:'W-G4',kind:'feed',node:'G4'},{id:'W-T3',kind:'inc',node:'T3l'}];

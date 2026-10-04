@@ -209,6 +209,24 @@ const TESTS = [
         return { ended: G.ended, done: G.lesson.done, i: G.lesson.i, obj: G.obj.map(o => o.state), report: !document.querySelector('#report').classList.contains('hidden') }; });
       assert(r.done && r.ended && r.report && r.obj.every(o => o === 'done'), `les niet afgerond: ${JSON.stringify(r)}`);
   } })),
+  { name: 'dubbelrail 10 kV: omzetten onder last, vergrendeling en onderhoud rail B', query: '?autostart&t=11', async run(p) {
+      const r = await p.evaluate(async () => { T.quiet(); const O = OS, D = O.D, EN = () => O.EN(); O.SIM.paused = false; T.step(0.2);
+        const rail = id => O.FLOW.TAG[id]?.bus;
+        // F5 onder last van rail B naar rail A
+        const a1 = await T.op('F5-QA', 1), a2 = await T.op('F5-QB', 0); T.step(0.2);
+        const omgezet = a1 && a2 && rail('F5') === 'RA' && EN().has('F5') && O.SIM.incidents === 0;
+        // zonder koppeling mag een veld niet op beide rails, en niet onder last omgezet worden
+        await T.op('V-K', 0); T.step(0.2); const bDood = !EN().has('RB');
+        O.operate('F5-QB', 1); const geweigerd1 = D['F5-QB'].state === 0;
+        O.operate('F5-QA', 0); const geweigerd2 = D['F5-QA'].state === 1;
+        await T.op('V-K', 1); await T.op('F5-QB', 1); await T.op('F5-QA', 0); T.step(0.2);
+        // werkopdracht onderhoud rail B: niemand zonder stroom
+        O.startTask('railBTask'); let maxOff = 0;
+        for (let k = 0; k < 120 && O.task(); k++) { const s = O.task().steps[O.task().i]; if (s.act) await T.op(...s.act); T.step(0.5); maxOff = Math.max(maxOff, O.SIM.off); }
+        return { omgezet, bDood, geweigerd1, geweigerd2, klaar: !O.task(), maxOff, normaal: rail('F5') === 'RB' && D['V-K'].state === 1 }; });
+      for (const [k, v] of Object.entries(r)) if (k !== 'maxOff') assert(v, `${k} klopt niet: ${JSON.stringify(r)}`);
+      assert(r.maxOff === 0, `klanten zonder stroom tijdens onderhoud rail B: ${r.maxOff}`);
+  } },
   { name: 'Esc opent pauzemenu en pauzeert', query: '?autostart', async run(p) {
       await p.keyboard.press('Escape'); await sleep(800);
       const r = await p.evaluate(() => ({ menu: !document.querySelector('#pauseMenu').classList.contains('hidden'), paused: OS.SIM.paused }));

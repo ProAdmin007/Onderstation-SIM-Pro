@@ -40,15 +40,19 @@ for(const T of TR){
   dev(T,{type:'tr',bay:T,label:TR_INFO[T].label,un:TR_INFO[T].un,rON:TR_INFO[T].rON,rAF:TR_INFO[T].rAF,a:T+'h',b:T+'l',state:1,oil:T===RES?30:47,fans:false,
     blocked:false,blockText:'',blockKind:'',resettable:false,S:0,Sc:0,P:0,tap:9,avr:'auto',avrT:0,tapBusy:false,tapOps:0,U0:0,Ulv:0,rev:false});}
 D[RES].ratio='10';D[RES].reserve=true;
-dev('V-T1',{type:'cb',bay:'T1',label:'Inkomend veld 10 kV',a:'T1l',b:'RA',state:1,tr:'T1'});
+// 10 kV dubbelrailsysteem: elk veld heeft een railkeuzescheider naar rail A (QA) en naar rail B (QB)
+function selPair(bay,node,cb,home){for(const [b,nm,o] of [['RA','A','B'],['RB','B','A']])dev(bay+'-Q'+nm,{type:'ds',bay,label:'Railkeuzescheider rail '+nm,a:b,b:node,state:b===home?1:0,cb,sel:true,other:bay+'-Q'+o});}
+const selPar=d=>!!d.sel&&D[d.other].state===1&&D['V-K'].state===1;   // veld staat ook op de andere rail en de rails zijn gekoppeld: omzetten onder last mag
+dev('V-T1',{type:'cb',bay:'T1',label:'Inkomend veld 10 kV',a:'T1l',b:'T1s',state:1,tr:'T1'});selPair('T1','T1s','V-T1','RA');
 dev('W-T2',{type:'cb',bay:'T2',label:'Inkomend veld 20 kV (rail C1)',a:'T2l',b:'RC',state:1,tr:'T2'});
-dev('V-T3',{type:'cb',bay:'T3',label:'Reserve-inkomend veld 10 kV (rail B)',a:'T3l',b:'RB',state:0,tr:'T3',need:'10'});
+dev('V-T3',{type:'cb',bay:'T3',label:'Reserve-inkomend veld 10 kV',a:'T3l',b:'T3s',state:0,tr:'T3',need:'10'});selPair('T3','T3s','V-T3','RB');
 dev('W-T3',{type:'cb',bay:'T3',label:'Reserve-inkomend veld 20 kV (rail C2)',a:'T3l',b:'RD',state:0,tr:'T3',need:'20'});
 dev('V-K',{type:'cb',bay:'K',label:'Railkoppeling 10 kV (synchrocheck)',a:'RA',b:'RB',state:1});
+for(const [b,nm] of [['RA','A'],['RB','B']])dev(b+'-Q8',{type:'es',bay:'K',label:'Railaardschakelaar rail '+nm,a:b});
 dev('W-K',{type:'cb',bay:'WK',label:'Railkoppeling 20 kV C1–C2 (synchrocheck)',a:'RC',b:'RD',state:1});
 for(const [b,nm] of [['RC','C1'],['RD','C2']])dev(b+'-Q8',{type:'es',bay:'WK',label:'Railaardschakelaar rail '+nm,a:b});
-FEEDERS.forEach(f=>{Object.assign(f,{node:f.id,cb:(is20(f.bus)?'W-':'V-')+f.id,rate:f.ring?9:f.base*1.15,fault:null,outFrac:0,clp:1,offSince:null,oc:0,backfed:false,noise:0,wasOn:true,P:0,demand:0});
-  dev(f.cb,{type:'cb',bay:f.id,label:(f.gen?'Productieveld · ':'Uitgaand veld · ')+f.name,a:f.bus,b:f.id,state:1,feeder:f});
+FEEDERS.forEach(f=>{const dbl=!is20(f.bus);f.sel=dbl?f.id+'s':f.bus;Object.assign(f,{node:f.id,cb:(is20(f.bus)?'W-':'V-')+f.id,rate:f.ring?9:f.base*1.15,fault:null,outFrac:0,clp:1,offSince:null,oc:0,backfed:false,noise:0,wasOn:true,P:0,demand:0});
+  dev(f.cb,{type:'cb',bay:f.id,label:(f.gen?'Productieveld · ':'Uitgaand veld · ')+f.name,a:f.sel,b:f.id,state:1,feeder:f});if(dbl)selPair(f.id,f.sel,f.cb,f.bus);
   dev(f.id+'-Q8',{type:'es',bay:f.id,label:'Aardschakelaar kabelzijde',a:f.id,cb:f.cb});});
 // ---------- 10 kV-ringen achter het station: elke ring loopt tussen twee uitgaande velden en heeft een normaal-open punt
 const RINGS=[
@@ -83,7 +87,7 @@ const CONS=FEEDERS.filter(f=>!f.ring).concat(LVG);   // alle afnemers (MS-velden
 dev('RAIL',{type:'bb',label:'110 kV-railsysteem',node:'BB'});
 dev('MS',{type:'bld',label:'10 kV-schakelinstallatie (binnen)',node:'RA'});
 dev('MS20',{type:'bld',label:'20 kV-schakelinstallatie (binnen)',node:'RC'});
-const LV10=new Set(['T1l','RA','RB','F1','F2','F3','F4','F5','F6']),LV20=new Set(['T2l','RC','RD','G1','G2','G3','G4']);
+const LV10=new Set(['T1l','RA','RB','F1','F2','F3','F4','F5','F6','T1s','T3s','F1s','F2s','F3s','F4s','F5s','F6s']),LV20=new Set(['T2l','RC','RD','G1','G2','G3','G4']);
 function lvl(n){if(RING_LV.has(n))return 0.4;if(RING_MV.has(n))return 10;if(n===RES+'l')return +D[RES].ratio;return LV10.has(n)?10:LV20.has(n)?20:110;}
 const trafoUn=T=>T===RES?(D[RES].ratio==='10'?10.5:21):D[T].un;
 const kA=b=>is20(b)?28.9:57.9;   // A per MW bij cos φ 0,95
@@ -121,7 +125,7 @@ function computeFlows(){
   const U110=110.5+1.6*Math.sin((h-4)/24*2*Math.PI)+0.25*Math.sin(SIM.t*0.05)-0.012*FLOW.P110;FLOW.U110=U110;
   const feeds={RA:[],RB:[],RC:[],RD:[]};
   TR.forEach(T=>{const t=D[T];t.S=0;t.Sc=0;t.rev=false;t.U0=EN.has(T+'h')?U110/110*trafoUn(T)*(1+(t.tap-9)*TAP_STEP):0;
-    TR_LV[T].forEach(id=>{const c=D[id];c.I=0;if(c.state===1&&EN.has(T+'l'))feeds[c.b].push(T);});});
+    TR_LV[T].forEach(id=>{const c=D[id];c.I=0;const b=railOf(c.b);if(c.state===1&&EN.has(T+'l')&&b)feeds[b].push(T);});});
   const coupled=D['V-K'].state===1,coupled20=D['W-K'].state===1;
   FLOW.U={RA:0,RB:0,RC:0,RD:0};FLOW.groups=[];
   (coupled?[['RA','RB']]:[['RA'],['RB']]).concat(coupled20?[['RC','RD']]:[['RC'],['RD']]).forEach(g=>{const load=g.reduce((s,b)=>s+busLoad[b],0);const tf=[...new Set(g.flatMap(b=>feeds[b]))];if(!tf.length)return;
@@ -141,17 +145,20 @@ function computeFlows(){
   const feeding=['L1','L2'].filter(L=>SIM.lines[L].avail&&D[L+'-Q9'].state&&D[L+'-Q0'].state&&D[L+'-Q1'].state);
   ['L1','L2'].forEach(L=>{const p=feeding.includes(L)?P110/feeding.length:0;FLOW.lineP[L]=p;const I=Math.abs(p)/0.95*5.25;[L+'-Q9',L+'-Q0',L+'-Q1'].forEach(id=>D[id].I=I);});
 }
+const railOf=n=>BUS_BAND[n]?n:(FLOW.TAG?.[n]?.bus||null);   // op welke rail staat dit knooppunt nu
 function nodeU(n){if(!EN.has(n))return 0;const L=lvl(n);if(L===110)return FLOW.U110;if(FLOW.U[n]!=null)return FLOW.U[n];
   if(RING_LV.has(n)||RING_MV.has(n)){const s=RING.stations.find(s=>n===s.node+'v'||n.startsWith(s.id+'-'));const t=FLOW.TAG[s?s.node:n]||FLOW.TAG[n];if(!t)return 0;const sn=s?s.node:n;return L===0.4?(FLOW.UN?.[sn]??FLOW.U[t.bus])*0.039:(FLOW.UN?.[n]??FLOW.U[t.bus]);}
-  const f=FEEDERS.find(f=>f.node===n);if(f)return FLOW.U[f.bus];return D[n.slice(0,2)].Ulv;}
+  const f=FEEDERS.find(f=>f.node===n||f.sel===n);if(f)return FLOW.U[railOf(f.sel)]||0;return D[n.slice(0,2)].Ulv;}
 
 // ---------------------------------------------------------- bediening
 function addTimer(min,fn){SIM.timers.push({at:SIM.t+min,fn});}
 const springOk=d=>performance.now()>=d.springAt;
 function actionText(d,to){return d.type==='cb'||d.type==='lvs'?(to?'IN':'UIT'):(to?'GESLOTEN':'GEOPEND');}
 function interlockCheck(d,to){
-  if(d.type==='ds'){const cb=D[d.cb];if(cb.state===1)return `Vergrendeling: ${cb.id} moet eerst UIT`;if(to===1&&d.es&&D[d.es].state===1)return `Vergrendeling: aardschakelaar ${d.es} is gesloten`;}
+  if(d.type==='ds'){const cb=D[d.cb];if(d.sel&&to===1&&D[d.other].state===1&&D['V-K'].state!==1)return 'Vergrendeling: een veld mag alleen op beide rails als koppeling V-K gesloten is';
+    if(cb.state===1&&!selPar(d))return d.sel?`Vergrendeling: ${cb.id} moet eerst UIT (of: V-K dicht en het veld eerst ook op de andere rail)`:`Vergrendeling: ${cb.id} moet eerst UIT`;if(to===1&&d.es&&D[d.es].state===1)return `Vergrendeling: aardschakelaar ${d.es} is gesloten`;}
   if(d.type==='es'&&to===1){if(d.ds&&D[d.ds].state===1)return `Vergrendeling: ${d.ds} moet eerst open`;if(d.cb&&D[d.cb].state===1)return `Vergrendeling: ${d.cb} moet eerst UIT`;if(EN.has(d.a))return 'Vergrendeling: spanning aanwezig (spanningsdetectie)';}
+  if(d.id==='V-K'&&to===0){const both=Object.values(D).find(x=>x.sel&&x.id.endsWith('QA')&&x.state===1&&D[x.other].state===1);if(both)return `Vergrendeling: veld ${both.bay} staat op beide rails – open eerst één railkeuzescheider`;}
   if(d.type==='cb'&&to===1&&d.need&&D[d.tr].ratio!==d.need)return `Vergrendeling: ${d.tr} staat op ${D[d.tr].ratio} kV – eerst omschakelen naar ${d.need} kV`;
   if(d.type==='cb'&&to===1){d.state=1;const sc=shortNode();d.state=0;if(sc)return 'Vergrendeling: inschakelen op een geaard deel';}
   return null;}
@@ -170,7 +177,7 @@ function operate(id,to,opts={}){
   if(SIM.interlock){const r=interlockCheck(d,to);if(r)return deny(r);}
   if(!opts.radio){const n=crewNear(id);if(n)return openRadio(n,id,to);}   // pas melden als de schakeling ook echt mag
   let arc=null;
-  if(d.type==='ds'){const cb=D[d.cb];if(cb.state===1&&(EN.has(d.a)||EN.has(d.b)))arc=d.a;}
+  if(d.type==='ds'){const cb=D[d.cb];if(cb.state===1&&!selPar(d)&&(EN.has(d.a)||EN.has(d.b)))arc=d.a;}
   const trDead=d.tr&&id.endsWith('-Q0')&&!EN.has(d.tr+'h');
   briefWatch(id,to);
   d.state=to;d.ops++;SIM.manualFlag=true;if(d.type==='cb'&&to===1)d.springAt=performance.now()+7000;
@@ -349,6 +356,21 @@ function reserveTask(main){const r=main==='T1'?'10':'20',lvM=TR_LV[main][0],lvR=
   {t:`Schakel ${main}-Q0 IN`,act:[main+'-Q0',1],why:'Dan de transformator aan de 110 kV-kant onder spanning brengen.',ok:()=>D[main+'-Q0'].state===1},
   {t:`Schakel ${lvM} IN`,act:[lvM,1],why:'Het MS-veld pas inschakelen als de transformator onder spanning staat.',ok:()=>D[lvM].state===1},
   {t:`Schakel ${lvR} UIT – T3 terug naar warme reserve`,act:[lvR,0],why:'Als laatste de reserve weer afschakelen.',ok:()=>D[lvR].state===0}]};}
+// onderhoud rail B (10 kV): alle velden onder last naar rail A omzetten, rail B vrij en geaard
+const RB_BAYS=['F4','F5','F6','T3'];
+const canRailB=()=>D['V-K'].state===1&&EN.has('RB')&&!BUSF.RB&&!BUSF.RA&&RB_BAYS.every(b=>D[b+'-QB'].state===1&&D[b+'-QA'].state===0)&&['F1','F2','F3','T1'].every(b=>D[b+'-QA'].state===1&&D[b+'-QB'].state===0);
+function railBTask(){const sw=(q,to,grp,why)=>RB_BAYS.map(b=>({t:`${to?'Sluit':'Open'} railkeuzescheider ${b}-${q}`,act:[b+'-'+q,to],grp,why,ok:()=>D[b+'-'+q].state===to}));
+  return{bus:'RB',title:'Onderhoud rail B (10 kV)',crew:()=>({box:VIEWS.MS.box,say:'Onderhoud rail B',rel:['V-K','RB-Q8',...RB_BAYS.flatMap(b=>[b+'-QA',b+'-QB'])]}),
+    desc:'Rail B krijgt een inspectie. Dankzij het dubbelrailsysteem merkt niemand er iets van: zet alle velden van rail B onder last over naar rail A (koppeling V-K blijft dicht), open dan V-K en aard rail B.',steps:[
+  ...sw('QA',1,'qa','Met V-K gesloten mag een veld onder last ook op de andere rail: eerst de railkeuzescheider naar rail A sluiten.'),
+  ...sw('QB',0,'qb','Daarna de railkeuzescheider naar rail B openen – de stroom loopt al via rail A.'),
+  {t:'Schakel railkoppeling V-K UIT – rail B spanningsloos',act:['V-K',0],why:'Pas als alle velden van rail B af zijn de koppeling openen.',ok:()=>D['V-K'].state===0},
+  {t:'Sluit railaardschakelaar RB-Q8',act:['RB-Q8',1],why:'Pas aarden als de rail aan alle kanten vrij en spanningsloos is.',ok:()=>D['RB-Q8'].state===1,done:()=>pushAlarm('Werkvergunning afgegeven – onderhoud rail B gestart','info')},
+  {t:'Onderhoud rail B in uitvoering…',wait:40},
+  {t:'Werk gereed – open RB-Q8',act:['RB-Q8',0],why:'Eerst de aarding opheffen.',ok:()=>D['RB-Q8'].state===0},
+  {t:'Schakel V-K IN – rail B weer onder spanning',act:['V-K',1],why:'De koppeling sluiten: rail B komt onder spanning en de rails zijn weer gekoppeld.',ok:()=>D['V-K'].state===1},
+  ...sw('QB',1,'qb2','Velden weer terug naar rail B: eerst de railkeuzescheider naar rail B sluiten.'),
+  ...sw('QA',0,'qa2','Dan de railkeuzescheider naar rail A openen – normale situatie.')]};}
 // onderhoud railhelft C2: klanten van G3/G4 omschakelen, rail vrijmaken en aarden
 function railTask(){const g3=FEEDERS.find(x=>x.id==='G3'),g4=FEEDERS.find(x=>x.id==='G4'),bf=v=>{g3.backfed=g4.backfed=v;};
   return{bus:'RD',title:'Onderhoud railhelft C2 (20 kV)',crew:()=>({box:VIEWS.MS20.box,say:'Onderhoud rail C2',rel:['W-K','W-G3','W-G4','RD-Q8','W-T3']}),
@@ -402,7 +424,7 @@ const canFeeder=F=>{const f=FEEDERS.find(x=>x.id===F);return D[f.cb].state===1&&
 const canRing=()=>!RING.secs.some(s=>s.fault)&&RING.stations.every(s=>EN.has(s.node))&&RINGS.every(rg=>D[rg.nop].state===0);
 const canRail=()=>!D['W-T3'].state&&D['W-K'].state===1&&D['W-T2'].state===1&&EN.has('RD')&&!BUSF.RD&&canFeeder('G3')&&canFeeder('G4');
 function offerTask(){const defs=[[()=>reserveTask('T2'),()=>canRes('T2')],[()=>ringTask(),canRing],[()=>lineTask('L2'),canLine],[()=>thermoTask(),canThermo],[()=>reserveTask('T1'),()=>canRes('T1')],
-    [()=>railTask(),canRail],[()=>feederTask('G3'),()=>canFeeder('G3')],[()=>stationTask(),canRing],[()=>feederTask('F5'),()=>canFeeder('F5')],[()=>lineTask('L1'),canLine]];
+    [()=>railTask(),canRail],[()=>railBTask(),canRailB],[()=>feederTask('G3'),()=>canFeeder('G3')],[()=>stationTask(),canRing],[()=>feederTask('F5'),()=>canFeeder('F5')],[()=>lineTask('L1'),canLine]];
   computeFlows();let def=null;for(let k=0;k<defs.length&&!def;k++){const d=defs[taskCycle++%defs.length];if(d[1]())def=d[0];}
   if(!def){SIM.nextTaskAt=SIM.t+10;return;}   // nu niets veilig uit te voeren: later opnieuw
   TASK=def();TASK.i=0;TASK.code='WV-2026-'+(taskSeq++);briefInit(TASK);
