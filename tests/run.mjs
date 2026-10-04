@@ -5,6 +5,7 @@ import puppeteer from 'puppeteer-core';
 import { existsSync } from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
+import os from 'node:os';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const pageUrl = pathToFileURL(path.join(root, 'index.html')).href;
@@ -35,7 +36,7 @@ async function openPage(browser, query) {
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
   page.on('console', m => { if (m.type() === 'error' && !/AudioContext/.test(m.text())) errors.push(m.text()); });
-  await page.goto(pageUrl + query, { waitUntil: 'load', timeout: 120000 });
+  await page.goto(pageUrl + query + (query.includes('?') ? '&' : '?') + 'lite', { waitUntil: 'load', timeout: 180000 });
   for (let i = 0; i < 120 && !(await page.evaluate(() => !!window.OS)); i++) await sleep(500);
   await page.evaluate(PAGE_HELPERS);
   await page.evaluate(() => window.OS.closeHandover && window.OS.closeHandover());
@@ -281,23 +282,31 @@ const TESTS = [
   } },
 ];
 
-const browser = await puppeteer.launch({ executablePath: chrome, headless: 'new',
-  args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--no-sandbox', '--window-size=1280,800'],
+// parallel: elke werker heeft een eigen browser (achtergrondtabbladen in één browser krijgen afgeremde timers)
+const todo = TESTS.filter(t => !only || t.name.includes(only));
+const jobs = Math.max(1, Math.min(todo.length, +process.env.TEST_JOBS || Math.min(4, Math.floor(os.cpus().length / 2))));
+const launch = () => puppeteer.launch({ executablePath: chrome, headless: 'new',
+  args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--no-sandbox', '--window-size=1280,800',
+    '--disable-background-timer-throttling', '--disable-renderer-backgrounding', '--disable-backgrounding-occluded-windows'],
   defaultViewport: { width: 1280, height: 800 } });
-let failed = 0;
-for (const t of TESTS) {
-  if (only && !t.name.includes(only)) continue;
-  const t0 = Date.now();
-  let page, errors = [];
-  try {
-    ({ page, errors } = await openPage(browser, t.query));
-    await t.run(page);
-    assert(errors.length === 0, 'paginafouten: ' + errors.join(' | '));
-    console.log(`✓ ${t.name} (${((Date.now() - t0) / 1000).toFixed(0)} s)`);
-  } catch (e) {
-    failed++; console.log(`✗ ${t.name}\n    ${e.message}`);
-  } finally { if (page) await page.close(); }
-}
-await browser.close();
-console.log(failed ? `\n${failed} test(s) mislukt` : '\nAlle tests geslaagd');
+let failed = 0, next = 0;
+const tStart = Date.now();
+console.log(`${todo.length} test(s) met ${jobs} parallelle werker(s)\n`);
+await Promise.all(Array.from({ length: jobs }, async () => {
+  const browser = await launch();
+  while (next < todo.length) {
+    const t = todo[next++], t0 = Date.now();
+    let page, errors = [];
+    try {
+      ({ page, errors } = await openPage(browser, t.query));
+      await t.run(page);
+      assert(errors.length === 0, 'paginafouten: ' + errors.join(' | '));
+      console.log(`✓ ${t.name} (${((Date.now() - t0) / 1000).toFixed(0)} s)`);
+    } catch (e) {
+      failed++; console.log(`✗ ${t.name}\n    ${e.message}`);
+    } finally { if (page) await page.close().catch(() => {}); }
+  }
+  await browser.close();
+}));
+console.log(`\n${failed ? `${failed} test(s) mislukt` : 'Alle tests geslaagd'} in ${((Date.now() - tStart) / 1000).toFixed(0)} s`);
 process.exit(failed ? 1 : 0);

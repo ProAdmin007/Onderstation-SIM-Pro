@@ -6,6 +6,7 @@ import puppeteer from 'puppeteer-core';
 import { existsSync } from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
+import os from 'node:os';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const pageUrl = pathToFileURL(path.join(root, 'index.html')).href;
@@ -113,33 +114,43 @@ const RUNS = [
   { name: 'dubbel', query: '?play=dubbel' }, { name: 'aanrijding', query: '?play=aanrijding' }, { name: 'cyber', query: '?play=cyber' },
   { name: 'overstroming', query: '?play=overstroming' }, { name: 'zonnepiek', query: '?play=zonnepiek' }, { name: 'dagdienst', query: '?play=day' }, { name: 'avonddienst', query: '?play=eve&diff=zwaar' },
 ];
-const browser = await puppeteer.launch({ executablePath: chrome, headless: 'new', protocolTimeout: 30 * 60 * 1000,
-  args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--no-sandbox', '--window-size=1100,700'], defaultViewport: { width: 1100, height: 700 } });
-let failed = 0;
-for (const r of RUNS) {
-  if (only && !r.name.includes(only)) continue;
-  const page = await browser.newPage(), errors = [], t0 = Date.now();
+// parallel: elke werker een eigen browser; de lange diensten eerst, zodat ze niet als laatste overblijven
+const todo = RUNS.filter(r => !only || r.name.includes(only)).sort((a, b) => /dienst/.test(b.name) - /dienst/.test(a.name));
+const jobs = Math.max(1, Math.min(todo.length, +process.env.TEST_JOBS || Math.min(4, Math.floor(os.cpus().length / 2))));
+const launch = () => puppeteer.launch({ executablePath: chrome, headless: 'new', protocolTimeout: 30 * 60 * 1000,
+  args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--no-sandbox', '--window-size=1100,700',
+    '--disable-background-timer-throttling', '--disable-renderer-backgrounding', '--disable-backgrounding-occluded-windows'], defaultViewport: { width: 1100, height: 700 } });
+let failed = 0, next = 0;
+const tStart = Date.now();
+console.log(`${todo.length} run(s) met ${jobs} parallelle werker(s)\n`);
+async function play(browser, r) {
+  const page = await browser.newPage(), errors = [], t0 = Date.now(), out = [], say = l => out.push(l);
   // vaste seed voor Math.random, zodat een uitschieter opnieuw te spelen is: SEED=123 npm run test:scenarios
   const seed = +process.env.SEED || Math.floor(Math.random() * 1e6);
   await page.evaluateOnNewDocument(sd => { let a = sd >>> 0; Math.random = () => { a = (a + 0x6D2B79F5) >>> 0; let t = Math.imul(a ^ (a >>> 15), a | 1);
     t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }, seed);
   page.on('pageerror', e => errors.push(e.message));
-  page.on('console', m => { if (process.env.FULLLOG && m.text().startsWith('[bot]')) console.log('  ' + m.text()); if (m.type() === 'error' && !/AudioContext/.test(m.text())) errors.push(m.text()); });
-  await page.goto(pageUrl + r.query, { waitUntil: 'load', timeout: 120000 });
-  for (let i = 0; i < 120 && !(await page.evaluate(() => !!window.OS)); i++) await sleep(500);
+  page.on('console', m => { if (process.env.FULLLOG && m.text().startsWith('[bot]')) say('  ' + m.text()); if (m.type() === 'error' && !/AudioContext/.test(m.text())) errors.push(m.text()); });
   try {
+    await page.goto(pageUrl + r.query + '&lite', { waitUntil: 'load', timeout: 180000 });
+    for (let i = 0; i < 120 && !(await page.evaluate(() => !!window.OS)); i++) await sleep(500);
     const res = await page.evaluate(bot, !!process.env.FULLLOG);
     const missed = res.obj.filter(o => o.startsWith('✗'));
     const ok = res.report && !errors.length;
     if (!ok) failed++;
-    console.log(`${ok ? '✓' : '✗'} ${r.name} (seed ${seed}) – score ${res.score}, CML ${res.cml}, incidenten ${res.incidents}, taken ${res.tasks} (${((Date.now() - t0) / 1000).toFixed(0)} s)`);
-    res.obj.forEach(o => console.log('    ' + o));
-    if (res.off) console.log('    langste uitval: ' + res.off);
-    if (missed.length || !ok || res.score < 1000 || process.env.FULLLOG) res.log.forEach(l => console.log('      · ' + l));
-    if (errors.length) console.log('    fouten: ' + errors.join(' | '));
-  } catch (e) { failed++; console.log(`✗ ${r.name}: ${e.message}`); }
-  await page.close();
+    say(`${ok ? '✓' : '✗'} ${r.name} (seed ${seed}) – score ${res.score}, CML ${res.cml}, incidenten ${res.incidents}, taken ${res.tasks} (${((Date.now() - t0) / 1000).toFixed(0)} s)`);
+    res.obj.forEach(o => say('    ' + o));
+    if (res.off) say('    langste uitval: ' + res.off);
+    if (missed.length || !ok || res.score < 1000 || process.env.FULLLOG) res.log.forEach(l => say('      · ' + l));
+    if (errors.length) say('    fouten: ' + errors.join(' | '));
+  } catch (e) { failed++; say(`✗ ${r.name}: ${e.message}`); }
+  await page.close().catch(() => {});
+  console.log(out.join('\n'));   // per run in één blok, zodat parallelle uitvoer niet door elkaar loopt
 }
-await browser.close();
-console.log(failed ? `\n${failed} scenario('s) mislukt` : '\nAlle scenario\'s uitgespeeld');
+await Promise.all(Array.from({ length: jobs }, async () => {
+  const browser = await launch();
+  while (next < todo.length) await play(browser, todo[next++]);
+  await browser.close();
+}));
+console.log(failed ? `\n${failed} scenario('s) mislukt` : `\nAlle scenario's uitgespeeld`, `in ${Math.round((Date.now() - tStart) / 1000)} s`);
 process.exit(failed ? 1 : 0);

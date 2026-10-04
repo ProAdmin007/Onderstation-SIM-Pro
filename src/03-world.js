@@ -135,7 +135,7 @@ const envScene=new THREE.Scene();const envSky=new Sky();envSky.material=sky.mate
 const envGroundMat=new THREE.MeshBasicMaterial({color:0x4f5446});const eg=new THREE.Mesh(new THREE.CircleGeometry(40,24),envGroundMat);eg.rotation.x=-Math.PI/2;eg.position.y=-2;envScene.add(eg);
 const pmrem=new THREE.PMREMGenerator(renderer);let envRT=null,lastEnvElev=-999;
 function updateEnv(){const rt=pmrem.fromScene(envScene,0.02,0.1,200);if(envRT)envRT.dispose();envRT=rt;scene.environment=rt.texture;}
-const sun=new THREE.DirectionalLight(0xffffff,3);sun.castShadow=true;sun.shadow.mapSize.set(4096,4096);
+const sun=new THREE.DirectionalLight(0xffffff,3);sun.castShadow=true;sun.shadow.mapSize.set(LITE?512:4096,LITE?512:4096);
 Object.assign(sun.shadow.camera,{left:-100,right:100,top:95,bottom:-95,near:10,far:540});sun.shadow.bias=-0.0003;sun.shadow.normalBias=0.03;
 sun.target.position.set(22,0,10);scene.add(sun,sun.target);
 const hemi=new THREE.HemisphereLight(0xbfd4ff,0x4a4436,0.3);scene.add(hemi);

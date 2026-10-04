@@ -5,6 +5,7 @@ import { mergeGeometries, mergeVertices } from 'three/addons/utils/BufferGeometr
 
 // ============================================================ basis
 const params = new URLSearchParams(location.search);
+const LITE = params.has('lite');   // lichte grafiek (tests): lage resolutie, geen schaduwen
 const $ = s => document.querySelector(s);
 function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
 const R = mulberry32(20261003);            // vaste seed voor het landschap
@@ -17,10 +18,10 @@ const smooth = (a,b,x) => { const t=clamp((x-a)/(b-a),0,1); return t*t*(3-2*t); 
 const V3 = (x,y,z) => new THREE.Vector3(x,y,z);
 
 // ============================================================ renderer / scene
-const renderer = new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
-renderer.setPixelRatio(Math.min(devicePixelRatio,1.75));
+const renderer = new THREE.WebGLRenderer({antialias:!LITE,powerPreference:'high-performance'});
+renderer.setPixelRatio(LITE?0.4:Math.min(devicePixelRatio,1.75));
 renderer.setSize(innerWidth,innerHeight);
-renderer.shadowMap.enabled = true;
+renderer.shadowMap.enabled = !LITE;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 0.6;

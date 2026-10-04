@@ -387,6 +387,7 @@ import { mergeGeometries, mergeVertices } from 'three/addons/utils/BufferGeometr
 
 // ============================================================ basis
 const params = new URLSearchParams(location.search);
+const LITE = params.has('lite');   // lichte grafiek (tests): lage resolutie, geen schaduwen
 const $ = s => document.querySelector(s);
 function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
 const R = mulberry32(20261003);            // vaste seed voor het landschap
@@ -399,10 +400,10 @@ const smooth = (a,b,x) => { const t=clamp((x-a)/(b-a),0,1); return t*t*(3-2*t); 
 const V3 = (x,y,z) => new THREE.Vector3(x,y,z);
 
 // ============================================================ renderer / scene
-const renderer = new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
-renderer.setPixelRatio(Math.min(devicePixelRatio,1.75));
+const renderer = new THREE.WebGLRenderer({antialias:!LITE,powerPreference:'high-performance'});
+renderer.setPixelRatio(LITE?0.4:Math.min(devicePixelRatio,1.75));
 renderer.setSize(innerWidth,innerHeight);
-renderer.shadowMap.enabled = true;
+renderer.shadowMap.enabled = !LITE;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 0.6;
@@ -928,7 +929,7 @@ const envScene=new THREE.Scene();const envSky=new Sky();envSky.material=sky.mate
 const envGroundMat=new THREE.MeshBasicMaterial({color:0x4f5446});const eg=new THREE.Mesh(new THREE.CircleGeometry(40,24),envGroundMat);eg.rotation.x=-Math.PI/2;eg.position.y=-2;envScene.add(eg);
 const pmrem=new THREE.PMREMGenerator(renderer);let envRT=null,lastEnvElev=-999;
 function updateEnv(){const rt=pmrem.fromScene(envScene,0.02,0.1,200);if(envRT)envRT.dispose();envRT=rt;scene.environment=rt.texture;}
-const sun=new THREE.DirectionalLight(0xffffff,3);sun.castShadow=true;sun.shadow.mapSize.set(4096,4096);
+const sun=new THREE.DirectionalLight(0xffffff,3);sun.castShadow=true;sun.shadow.mapSize.set(LITE?512:4096,LITE?512:4096);
 Object.assign(sun.shadow.camera,{left:-100,right:100,top:95,bottom:-95,near:10,far:540});sun.shadow.bias=-0.0003;sun.shadow.normalBias=0.03;
 sun.target.position.set(22,0,10);scene.add(sun,sun.target);
 const hemi=new THREE.HemisphereLight(0xbfd4ff,0x4a4436,0.3);scene.add(hemi);
@@ -1188,6 +1189,7 @@ function applySnowCover(){if(Math.abs(WX.cover-lastCover)<0.02)return;lastCover=
 function wxLabel(){const t=WX_TYPES[WX.type];return `${t.icon} ${t.name} · ${Math.round(ambient())} °C`;}
 
 
+// Net: toestand, velden en apparaten, 10 kV-ringen, netgraaf (spanning/aarding) en belastingstromen
 // ============================================================ simulatie
 const SIM={t:9*60,speed:60,paused:true,interlock:true,cml:0,incidents:0,tasksDone:0,off:0,
   nextEvent:9*60+16,nextTaskAt:9*60+3,timers:[],
@@ -1339,6 +1341,8 @@ function nodeU(n){if(!EN.has(n))return 0;const L=lvl(n);if(L===110)return FLOW.U
   if(RING_LV.has(n)||RING_MV.has(n)){const s=RING.stations.find(s=>n===s.node+'v'||n.startsWith(s.id+'-'));const t=FLOW.TAG[s?s.node:n]||FLOW.TAG[n];if(!t)return 0;const sn=s?s.node:n;return L===0.4?(FLOW.UN?.[sn]??FLOW.U[t.bus])*0.039:(FLOW.UN?.[n]??FLOW.U[t.bus]);}
   const f=FEEDERS.find(f=>f.node===n||f.sel===n);if(f)return FLOW.U[railOf(f.sel)]||0;return D[n.slice(0,2)].Ulv;}
 
+
+// Bediening: vergrendelingen, schakelen, beveiligingstrips via de netgraaf, 110 kV-lijnen
 // ---------------------------------------------------------- bediening
 function addTimer(min,fn){SIM.timers.push({at:SIM.t+min,fn});}
 const springOk=d=>performance.now()>=d.springAt;
@@ -1403,6 +1407,8 @@ function lineLockout(L){const ln=SIM.lines[L];ln.avail=false;ln.reason='blijvend
   pushAlarm(`TenneT: blijvende fout op lijn ${L} – herstel verwacht over ±${Math.round(m)} min`,'warn');addTimer(m,()=>lineRestore(L));}
 function toggleAR(L){const ln=SIM.lines[L];if(ln.arBroken)return deny(`AR-relais ${L} is defect`);ln.ar=!ln.ar;pushAlarm(`Automatische herinschakeling ${L} ${ln.ar?'IN':'UIT'}bedrijf gesteld`,'op');refreshAll();}
 
+
+// Transformatoren: blokkeerrelais 86, omschakelaar T3, spanningsregeling en thermiek
 // ---------------------------------------------------------- transformator: blokkering 86, trappenschakelaar
 function tripTrafo(T,reason,inspectMin,kind){const t=D[T];tripBreaker(T+'-Q0');TR_LV[T].forEach(tripBreaker);
   t.blocked=true;t.resettable=false;t.blockText=reason;t.blockKind=kind;if(kind==='temp'){GAME.stats.thermal++;award(-100,`${T} thermisch afgeschakeld`);}
@@ -1454,6 +1460,8 @@ function thermal(dm){const h=hourOf(),amb=ambient(h);
     if(t.oil>=tp&&(D[T+'-Q0'].state||TR_LV[T].some(id=>D[id].state)))tripTrafo(T,`thermische beveiliging (olie ≥ ${tp} °C)`,0,'temp');
     if(t.blocked&&t.blockKind==='temp'&&!t.resettable&&t.oil<75){t.resettable=true;readyNotice(`${T}: afgekoeld tot ${t.oil.toFixed(0)} °C – blokkeerrelais 86 mag worden gereset`,T,()=>t.blocked);}});}
 
+
+// Beveiliging van de uitgaande velden: railfout-herinschakeling, overstroom I>, koude-lastopname
 // ---------------------------------------------------------- 10 kV-velden: koude-lastopname en overstroom
 function feederTick(dm){
   for(const b in BUSF)if(EN.has(b)){tripFrom(b);GAME.stats.recloseFault++;award(-40,'Ingeschakeld op railfout');pushAlarm(`Rail ${BUS_BAND[b][2]} met kortsluiting onder spanning gebracht – railbeveiliging schakelt af`,'warn');}
@@ -1472,6 +1480,28 @@ function feederTick(dm){
     c.clp=1+(c.clp-1)*Math.exp(-dm/18);});
   ringProtection(dm);}
 
+// ---------- relais-instellingen (aan te passen in het beveiligingsvenster) en hun effect
+const PROT={f:{},ln:{L1:{dt:1},L2:{dt:1}},tr:{T1:{trip:100},T2:{trip:100},T3:{trip:100}}};
+FEEDERS.forEach(f=>{PROT.f[f.id]={pick:1.3,tms:1};});
+const PROT_OPT={
+  pick:{label:'I> aanspreekwaarde',vals:[1.1,1.2,1.3,1.5],fmt:v=>Math.round(v*100)+' %',tip:'Laag: ook koude-lastopname leidt tot afschakeling. Hoog: een overbelaste kabel blijft te lang in bedrijf en kan beschadigen.'},
+  tms:{label:'Tijdfactor',vals:[0.5,1,2],fmt:v=>'× '+String(v).replace('.',','),tip:'Snel: kortere overbelasting wordt al afgeschakeld. Traag: meer ruimte voor koude-lastopname, maar de kabel warmt langer op.'},
+  dt:{label:'AR dode tijd',vals:[0.3,1,3],fmt:v=>String(v).replace('.',',')+' s',tip:'Kort: de vlamboog is soms nog niet gedoofd, dan mislukt de herinschakeling (±30%). 3 s: herinschakeling slaagt altijd, maar draait het station op één lijn, dan vallen processen bij klanten uit.'},
+  trip:{label:'Thermische trip',vals:[95,100,110],fmt:v=>'olie ≥ '+v+' °C',tip:'95 °C: veilig, maar de trafo schakelt eerder af bij een piek. 110 °C: meer reserve, maar boven 105 °C ontstaat gasvorming en dreigt een Buchholz-trip met lange inspectie.'}};
+const protTxt=(k,v)=>PROT_OPT[k].fmt(v);
+function setProt(kind,id,key,val){const o=PROT[kind][id];if(!o||o[key]===val)return;o[key]=val;
+  const nm=kind==='f'?FEEDERS.find(f=>f.id===id).cb:id;
+  pushAlarm(`Beveiliging ${nm}: ${PROT_OPT[key].label.toLowerCase()} → ${protTxt(key,val)}`,'op');if(protOpen())renderProt();refreshDevPanel();}
+// effecten (aangeroepen vanuit de simulatie)
+function arFails(L){const dt=PROT.ln[L].dt;return dt<=0.3?Math.random()<0.3:dt>=3?false:Math.random()<0.04;}
+function overloadHeat(f,r,dm){   // kabel van een uitgaand veld warmt op bij langdurige overbelasting
+  if(f.gen||!D[f.cb].state)return;const q=r*r-1.9;f.heat=Math.max(0,(f.heat||0)+(q>0?q:q*0.3)*dm);
+  if(f.heat>=6&&!f.fault){f.heat=0;GAME.stats.burn=(GAME.stats.burn||0)+1;pushAlarm(`${f.cb} ${f.name}: kabel door langdurige overbelasting beschadigd – de beveiliging stond te ruim ingesteld`,'crit');feederFault(f.id);}}
+function trafoOverheat(T,t,dm){if(t.oil>105&&EN.has(T+'h')){t.gas=(t.gas||0)+dm;if(t.gas>12){t.gas=0;GAME.stats.thermal++;award(-100,`${T} gasvorming door oververhitting`);
+    tripTrafo(T,'Buchholz-beveiliging (gasvorming door oververhitting)',rnd(90,120),'prot');}}else t.gas=Math.max(0,(t.gas||0)-dm*0.5);}
+
+
+// Storingen: lijnen, velden, LS, rails en transformatoren
 // ---------------------------------------------------------- storingen
 function randomEvent(){const r=Math.random();if(r<(WX.cur.thunder>0.5?0.65:0.3))return lineFault();if(r<0.62)return feederFault();if(r<0.72)return lvFault();
   if(r<0.8&&!GAME.flags.busf){GAME.flags.busf=true;return busFault(pick(['RC','RD','RB']));}return trafoFault();}
@@ -1513,6 +1543,8 @@ function trafoFault(forceT){const c=TR.filter(T=>(forceT||!GAME.flags['trf'+T])&
   const v=VIEWS[T];if(v)spawnArc(v.arcPos,0.6);
   tripTrafo(T,pick(['Buchholz-beveiliging (gasontwikkeling)','differentiaalbeveiliging','drukontlastklep aangesproken']),rnd(40,80),'prot');refreshAll();}
 
+
+// Werkopdrachten: definities, haalbaarheid, aanbieden, uitvoeren en staken
 // ---------------------------------------------------------- werkopdrachten
 let TASK=null,taskSeq=411;
 function lineTask(L){const ln=SIM.lines[L];return{line:L,onAbort:()=>{if(ln.maint){ln.maint=false;addTimer(3,()=>lineRestore(L));}},crew:()=>({box:VIEWS[L+'-Q9'].box,say:`Onderhoud scheider ${L}-Q9`,rel:[L+'-Q9',L+'-Q8',L+'-Q1',L+'-Q0']}),title:`Onderhoud lijnveld ${L} (${ln.name})`,desc:`Monteurs gaan scheider ${L}-Q9 smeren en inspecteren. Schakel het veld vrij en aard de lijn.`,steps:[
@@ -1642,6 +1674,9 @@ function abortTask(){const t=TASK;if(!t||t.aborted)return;
     desc:'De ploeg is van het werk gehaald. Zet de installatie terug in de normale toestand, in omgekeerde volgorde van het vrijschakelen.',
     steps:ids.map(id=>({t:'Herstel: '+actLabel(actKey([id,orig[id]])),act:[id,orig[id]],why:'Terug naar de normale situatie, in omgekeerde volgorde.',ok:()=>D[id].state===orig[id]}))};
   renderTasks();}
+
+
+// Simulatiestap: tijd, timers, stromen, beveiliging, meldingen en score per tik
 function initTaps(){for(let i=0;i<3;i++){computeFlows();TR.forEach(T=>{const t=D[T];if(t.Ulv>0){const u=trafoUn(T);t.tap=clamp(t.tap+Math.round((u-t.Ulv)/(u*TAP_STEP)),1,17);}});}computeFlows();}
 const custOff=f=>f.backfed?0:!EN.has(f.node)?f.cust:Math.round(f.cust*f.outFrac);
 function simStep(dtReal){
@@ -2887,26 +2922,7 @@ function briefWatch(id,to){const t=TASK;if(!t||!t.devs||!t.devs.has(id))return;c
 $('#taskBody').addEventListener('click',e=>{if(e.target.closest('[data-brief]'))briefOpen();});
 
 
-// ============================================================ beveiligingsinstellingen: overstroom per veld, AR per lijn, thermisch per trafo
-const PROT={f:{},ln:{L1:{dt:1},L2:{dt:1}},tr:{T1:{trip:100},T2:{trip:100},T3:{trip:100}}};
-FEEDERS.forEach(f=>{PROT.f[f.id]={pick:1.3,tms:1};});
-const PROT_OPT={
-  pick:{label:'I> aanspreekwaarde',vals:[1.1,1.2,1.3,1.5],fmt:v=>Math.round(v*100)+' %',tip:'Laag: ook koude-lastopname leidt tot afschakeling. Hoog: een overbelaste kabel blijft te lang in bedrijf en kan beschadigen.'},
-  tms:{label:'Tijdfactor',vals:[0.5,1,2],fmt:v=>'× '+String(v).replace('.',','),tip:'Snel: kortere overbelasting wordt al afgeschakeld. Traag: meer ruimte voor koude-lastopname, maar de kabel warmt langer op.'},
-  dt:{label:'AR dode tijd',vals:[0.3,1,3],fmt:v=>String(v).replace('.',',')+' s',tip:'Kort: de vlamboog is soms nog niet gedoofd, dan mislukt de herinschakeling (±30%). 3 s: herinschakeling slaagt altijd, maar draait het station op één lijn, dan vallen processen bij klanten uit.'},
-  trip:{label:'Thermische trip',vals:[95,100,110],fmt:v=>'olie ≥ '+v+' °C',tip:'95 °C: veilig, maar de trafo schakelt eerder af bij een piek. 110 °C: meer reserve, maar boven 105 °C ontstaat gasvorming en dreigt een Buchholz-trip met lange inspectie.'}};
-const protTxt=(k,v)=>PROT_OPT[k].fmt(v);
-function setProt(kind,id,key,val){const o=PROT[kind][id];if(!o||o[key]===val)return;o[key]=val;
-  const nm=kind==='f'?FEEDERS.find(f=>f.id===id).cb:id;
-  pushAlarm(`Beveiliging ${nm}: ${PROT_OPT[key].label.toLowerCase()} → ${protTxt(key,val)}`,'op');if(protOpen())renderProt();refreshDevPanel();}
-// effecten (aangeroepen vanuit de simulatie)
-function arFails(L){const dt=PROT.ln[L].dt;return dt<=0.3?Math.random()<0.3:dt>=3?false:Math.random()<0.04;}
-function overloadHeat(f,r,dm){   // kabel van een uitgaand veld warmt op bij langdurige overbelasting
-  if(f.gen||!D[f.cb].state)return;const q=r*r-1.9;f.heat=Math.max(0,(f.heat||0)+(q>0?q:q*0.3)*dm);
-  if(f.heat>=6&&!f.fault){f.heat=0;GAME.stats.burn=(GAME.stats.burn||0)+1;pushAlarm(`${f.cb} ${f.name}: kabel door langdurige overbelasting beschadigd – de beveiliging stond te ruim ingesteld`,'crit');feederFault(f.id);}}
-function trafoOverheat(T,t,dm){if(t.oil>105&&EN.has(T+'h')){t.gas=(t.gas||0)+dm;if(t.gas>12){t.gas=0;GAME.stats.thermal++;award(-100,`${T} gasvorming door oververhitting`);
-    tripTrafo(T,'Buchholz-beveiliging (gasvorming door oververhitting)',rnd(90,120),'prot');}}else t.gas=Math.max(0,(t.gas||0)-dm*0.5);}
-
+// ============================================================ beveiligingsinstellingen: venster (de instellingen en hun effect staan in 04-4-beveiliging.js)
 // ---------- venster
 let protPrev=false;
 const protOpen=()=>!$('#prot').classList.contains('hidden');
