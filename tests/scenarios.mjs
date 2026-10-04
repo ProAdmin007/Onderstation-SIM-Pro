@@ -37,6 +37,10 @@ async function bot(process_full) {
   // werkopdracht: optionele schakelbrief indienen en daarna de stappen uitvoeren
   async function doTask() {
     const t = O.task(); if (!t) return;
+    // storing waarvoor het vrijgeschakelde deel nodig is: werk staken en terugzetten
+    const lineNeeded = t.line && ['L1', 'L2'].filter(L => L !== t.line).every(L => !S.lines[L].avail);
+    const trNeeded = t.tr && ['T1', 'T2'].some(T => T !== t.tr && D[T].blocked);
+    if (!t.aborted && (lineNeeded || trNeeded)) { O.abortTask(); note(`werk ${t.code} gestaakt (${lineNeeded ? 'lijn' : 'T3'} nodig)`); return; }
     if (t.pool && !t.approved && !t.tried) { t.tried = true; t.brief = O.taskActs(t).map(s => O.actKey(s.act)); if (O.briefSubmit()) note(`schakelbrief ${t.code} goedgekeurd`); }
     const st = t.steps[t.i]; if (!st || st.wait != null) return;
     if (st.act) return op(...st.act);
