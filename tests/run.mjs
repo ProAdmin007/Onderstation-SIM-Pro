@@ -312,11 +312,23 @@ const TESTS = [
         return { aan, uit: s1.winMats.every(m => m.opacity === 0), anderAan: O.RING.stations.filter(s => s.ring !== s1.ring).some(s => [...(s.winMats || []), ...(s.winApt || [])].some(m => m.opacity > 0.3)), autos, buren: (s1.crowd || []).length }; });
       for (const [k, v] of Object.entries(r)) assert(v, `${k} klopt niet: ${JSON.stringify(r)}`);
   } },
-  ...[['kraan', 'importgrens L2', () => { T.step(95); return OS.FLOW.P110 > 26 || (OS.GAME.flags.overMin || 0) > 5; }],
+  ...[['kraan', 'importgrens L2', () => { T.step(95); return OS.FLOW.P110 > OS.GAME.flags.lineLimit || (OS.GAME.flags.overMin || 0) > 5; }],
     ['evenement', 'MS6 overbelast', () => { T.step(80); const s = OS.RING.stations.find(x => x.id === 'MS6'); return OS.GAME.stats.fuses > 0 || s.trLoad > 1.2; }],
     ['laadpiek', 'congestie in de woonwijk', () => { T.step(110); return OS.GAME.stats.fuses > 0 || OS.RING.stations.some(s => s.trLoad > 1.2) || OS.RING.secs.some(s => s.load > 1); }]]
     .map(([id, wat, f]) => ({ name: `scenario ${id}: zonder ingrijpen ontstaat ${wat}`, query: `?play=${id}`, async run(p) {
       const r = await p.evaluate(`(${f.toString()})()`); assert(r === true, `geen uitdaging: ${wat} treedt niet op`); } })),
+  { name: 'instellingen: prestaties, weer, geluid en tabblad Kabels', query: '?autostart&t=18', async run(p) {
+      const r = await p.evaluate(() => { const O = OS, $ = q => document.querySelector(q); O.openSettings();
+        O.setGfx('preset', 'laag'); const laag = O.GFX.fps === 30 && O.GFX.shadows === 'uit' && !O.GFX.life && JSON.parse(localStorage.getItem('osz-gfx')).preset === 'laag';
+        $('#settings [data-wx="sneeuw"]').click(); const weer = O.WX.type === 'sneeuw' && O.WX.lock;
+        $('#settings [data-wx="auto"]').click(); const auto = !O.WX.lock;
+        const sl = $('#settings [data-av="alarm"]'); sl.value = '0.3'; sl.dispatchEvent(new Event('input', { bubbles: true }));
+        const geluid = O.AudioSys.busVol.alarm === 0.3 && JSON.parse(localStorage.getItem('osz-audio')).alarm === 0.3;
+        O.closeSettings(); O.setGfx('preset', 'hoog'); O.setTab('K'); O.renderCables();
+        return { laag, weer, auto, geluid, rijen: document.querySelectorAll('#cabG .cab').length, dicht: $('#settings').classList.contains('hidden') }; });
+      for (const [k, v] of Object.entries(r)) if (k !== 'rijen') assert(v, `${k} klopt niet: ${JSON.stringify(r)}`);
+      assert(r.rijen === 26, `tabblad Kabels toont ${r.rijen} rijen in plaats van 26`);
+  } },
   { name: 'Esc opent pauzemenu en pauzeert', query: '?autostart', async run(p) {
       await p.keyboard.press('Escape'); await sleep(800);
       const r = await p.evaluate(() => ({ menu: !document.querySelector('#pauseMenu').classList.contains('hidden'), paused: OS.SIM.paused }));

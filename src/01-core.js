@@ -5,7 +5,13 @@ import { mergeGeometries, mergeVertices } from 'three/addons/utils/BufferGeometr
 
 // ============================================================ basis
 const params = new URLSearchParams(location.search);
-const LITE = params.has('lite');if(LITE)document.body.classList.add('lite');   // testmodus: geen 3D-beeld tekenen, lage resolutie, geen schaduwen, lus 15× per seconde
+const LITE = params.has('lite');if(LITE)document.body.classList.add('lite');
+// prestatie-instellingen (bewaard in de browser): resolutie, schaduwen, max. beelden per seconde, omgevingslicht, verkeer/buren, regen/sneeuw
+const GFX_PRESETS={laag:{scale:0.6,shadows:'uit',fps:30,env:false,life:false,particles:false},midden:{scale:0.85,shadows:'laag',fps:60,env:true,life:true,particles:true},
+  hoog:{scale:1,shadows:'hoog',fps:0,env:true,life:true,particles:true}};
+var GFX={preset:'hoog',...GFX_PRESETS.hoog,meter:false};
+try{Object.assign(GFX,JSON.parse(localStorage.getItem('osz-gfx')||'{}'));}catch(e){}
+const shadowSize=()=>LITE?512:GFX.shadows==='laag'?1024:4096;   // testmodus: geen 3D-beeld tekenen, lage resolutie, geen schaduwen, lus 15× per seconde
 const $ = s => document.querySelector(s);
 function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
 const R = mulberry32(20261003);            // vaste seed voor het landschap
@@ -19,9 +25,9 @@ const V3 = (x,y,z) => new THREE.Vector3(x,y,z);
 
 // ============================================================ renderer / scene
 const renderer = new THREE.WebGLRenderer({antialias:!LITE,powerPreference:'high-performance'});
-renderer.setPixelRatio(LITE?0.4:Math.min(devicePixelRatio,1.75));
+renderer.setPixelRatio(LITE?0.4:Math.min(devicePixelRatio,1.75)*GFX.scale);
 renderer.setSize(innerWidth,innerHeight);
-renderer.shadowMap.enabled = !LITE;
+renderer.shadowMap.enabled = !LITE&&GFX.shadows!=='uit';
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 0.6;

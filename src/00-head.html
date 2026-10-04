@@ -76,6 +76,7 @@ button:disabled{opacity:.35;cursor:not-allowed}
 .mini{padding:1px 8px;font-size:13px;line-height:1.2}
 #sld .w{stroke-width:3;stroke-linecap:round;fill:none}
 #sld .bus{stroke-width:6}
+#sldTabs button{white-space:nowrap;padding:4px 7px}#sld .cab{cursor:pointer}#sld .cab:hover rect:first-of-type{fill:rgba(255,255,255,.05)}
 body.lite #labels,body.lite #tooltip{display:none}body.lite *{animation:none!important;transition:none!important;backdrop-filter:none!important}
 #sld .sds .tick{stroke-width:1.6}#sld .sds .blade{stroke-width:2.2}
 #sld .lv{stroke:#9be15d} #sld .arrow.lv{fill:#9be15d} #sld .bus2{stroke-width:4} #sld text.flag{fill:#ff9d2e;font-size:13px}
@@ -272,6 +273,10 @@ svg.tl{width:100%;height:auto;display:block;margin:4px 0 2px}.tl-ax{font:10px va
 body.fp #torch.on{display:block}
 .bf-open{background:var(--accent);color:#1a1206;border:none;font-weight:700;width:100%;padding:9px}
 @media (max-width:760px){.bf-cols{grid-template-columns:1fr}}
+#settings{position:fixed;inset:0;display:grid;place-items:center;background:rgba(6,9,12,.66);z-index:14;overflow:auto;padding:20px 0}#settings.hidden{display:none}
+.st .st-row{display:flex;align-items:center;gap:12px;margin:6px 0;font-size:13px;flex-wrap:wrap}.st .st-row>span{min-width:170px;color:var(--muted)}.st .st-row input[type=range]{flex:1;min-width:160px;accent-color:var(--accent)}.st .st-row em{font-style:normal;min-width:44px;text-align:right;font-family:var(--mono)}
+.st .seg{flex-wrap:wrap}.st-tgs{display:flex;flex-wrap:wrap;gap:6px 18px;margin:8px 0}.st-tog{display:flex;gap:6px;align-items:center;font-size:12.5px;cursor:pointer}.st-tog input{accent-color:var(--accent)}
+#fps{display:none;position:fixed;right:14px;bottom:14px;z-index:8;font:600 12px var(--mono);color:#9fe39a;background:rgba(13,17,22,.7);padding:3px 8px;border-radius:6px;pointer-events:none}#fps.on{display:block}
 #assets{position:fixed;inset:0;display:grid;place-items:center;background:rgba(6,9,12,.66);z-index:12;overflow:auto;padding:20px 0}#assets.hidden{display:none}
 #flex{position:fixed;inset:0;display:grid;place-items:center;background:rgba(6,9,12,.66);z-index:12;overflow:auto;padding:20px 0}#flex.hidden{display:none}
 .fx{padding:3px 6px;margin-right:2px;font-size:11px}.fx.on{background:var(--accent);color:#1a1206;border-color:var(--accent)}
@@ -317,7 +322,7 @@ body.fp #torch.on{display:block}
 <aside id="tasks" class="panel"><div class="ph"><span id="taskTitle">Werkopdracht</span><span id="taskCode" class="tag"></span></div><div id="taskBody"><div class="idle">Geen actieve opdracht.</div></div></aside>
 <aside id="alarms" class="panel"><div class="ph"><span>Meldingen &amp; gebeurtenissen</span><span class="cnt" id="alarmCnt">0</span></div><div id="alarmList"></div></aside>
 <aside id="scada" class="panel">
-  <div class="ph"><span>SCADA</span><div class="zoom" title="Zoomen: Ctrl + scrollwiel of + / −"><button id="zOut" class="mini">−</button><span id="zVal">100%</span><button id="zIn" class="mini">+</button></div><div class="tabs" id="sldTabs"><button data-t="10" class="on">10 kV</button><button data-t="20">20 kV</button><button data-t="R">Ring</button><button data-t="P" title="Belastingprognose komende 8 uur">Prognose</button></div><button id="scadaToggle" class="mini" title="In-/uitklappen">–</button></div>
+  <div class="ph"><span>SCADA</span><div class="zoom" title="Zoomen: Ctrl + scrollwiel of + / −"><button id="zOut" class="mini">−</button><span id="zVal">100%</span><button id="zIn" class="mini">+</button></div><div class="tabs" id="sldTabs"><button data-t="10" class="on">10 kV</button><button data-t="20">20 kV</button><button data-t="R">Ring</button><button data-t="K" title="Belasting per kabel en per distributietrafo">Kabels</button><button data-t="P" title="Belastingprognose komende 8 uur">Prognose</button></div><button id="scadaToggle" class="mini" title="In-/uitklappen">–</button></div>
   <svg id="sld" viewBox="0 0 470 575"></svg>
   <div class="legend">
     <span><i style="background:var(--hv)"></i>110 kV</span><span><i style="background:var(--mv)"></i>10 kV</span><span><i style="background:var(--mv20)"></i>20 kV</span><span><i style="background:var(--dead)"></i>spanningsloos</span><span><i style="background:var(--earth)"></i>geaard</span>
@@ -335,6 +340,7 @@ body.fp #torch.on{display:block}
   <button data-v="6"><kbd>7</kbd>Binnen 20 kV</button>
   <button data-v="7"><kbd>8</kbd>Woonwijk</button>
   <button data-v="8"><kbd>9</kbd>Centrum &amp; Vaart</button>
+  <button id="settingsBtn" class="tool" title="Prestaties, weer en geluid"><kbd>I</kbd>Instellingen</button>
   <button id="assetsBtn" class="tool" title="Conditie en onderhoud van de schakelaars"><kbd>O</kbd>Onderhoud</button>
   <button id="flexBtn" class="tool" title="Netcongestie en flexibel vermogen"><kbd>C</kbd>Flex</button>
   <button id="protBtn" class="tool" title="Beveiligingsinstellingen"><kbd>B</kbd>Beveiliging</button>
@@ -352,6 +358,8 @@ body.fp #torch.on{display:block}
 <div id="prot" class="hidden"></div>
 <div id="flex" class="hidden"></div>
 <div id="assets" class="hidden"></div>
+<div id="settings" class="hidden"></div>
+<div id="fps"></div>
 <div id="phone" class="hidden"></div>
 <div id="handover" class="hidden"></div>
 <div id="replay" class="hidden"><button data-rp="back" title="10 min terug">⏮</button><button id="rpPlay" class="primary" data-rp="play">▶</button><button data-rp="fwd" title="10 min verder">⏭</button>
@@ -361,6 +369,7 @@ body.fp #torch.on{display:block}
   <div class="eyebrow">Gepauzeerd</div><div class="pm-mode" id="pmMode"></div>
   <div class="pm-score"><span id="pmScore">0</span><small>punten</small><em id="pmBest"></em></div>
   <button class="primary" data-pm="resume">Hervatten <kbd>Esc</kbd></button>
+  <button data-pm="settings">Instellingen (prestaties, weer, geluid)</button>
   <button data-pm="end">Dienst beëindigen · rapport en score opslaan</button>
   <button data-pm="menu">Score opslaan en naar hoofdmenu</button>
 </div></div>
@@ -379,7 +388,7 @@ body.fp #torch.on{display:block}
       <div class="seg" id="season"><button data-s="lente">Lente</button><button data-s="zomer">Zomer</button><button data-s="herfst" class="on">Herfst</button><button data-s="winter">Winter</button></div>
       <div class="mh">Moeilijkheid</div>
       <div class="seg" id="diff"><button data-d="rustig">Rustig</button><button data-d="normaal" class="on">Normaal</button><button data-d="zwaar">Zwaar</button></div>
-      <div class="keys">slepen: draaien · rechts: schuiven · scroll: zoom<br>1–9 camera · V rondlopen · spatie/P pauze · Esc menu · B beveiliging · C flex · O onderhoud · L labels · M geluid</div>
+      <div class="keys">slepen: draaien · rechts: schuiven · scroll: zoom<br>1–9 camera · V rondlopen · spatie/P pauze · Esc menu · I instellingen · B beveiliging · C flex · O onderhoud · L labels · M geluid</div>
     </div>
     <div id="menu"></div>
   </div>

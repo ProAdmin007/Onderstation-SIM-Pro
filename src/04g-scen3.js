@@ -14,11 +14,11 @@ Object.assign(MODES,{
     desc:'Een mobiele kraan raakt lijn L1 Hoogeveen. De mast is beschadigd: L1 blijft urenlang uit en TenneT kan via L2 maar beperkt leveren. Kom de avondpiek door zonder klanten af te schakelen.',
     setup(){pushAlarm('Bouwverkeer langs de A28 – een mobiele kraan werkt vlak bij lijn L1','info');
       at(3,()=>{lineFault('L1',true);setTimeout(()=>{const ln=SIM.lines.L1;ln.reason='mast beschadigd door kraan';SIM.timers=SIM.timers.filter(t=>!/lineRestore/.test(String(t.fn)));addTimer(75,()=>lineRestore('L1'));},2500);
-        GAME.flags.lineLimit=26;GAME.flags.limitAt=SIM.t;
-        pushAlarm('TenneT: mast van L1 beschadigd door een kraan – herstel duurt uren. L2 draait in noodbedrijf: neem maximaal 26 MW af!','crit');
+        GAME.flags.lineLimit=33;GAME.flags.limitAt=SIM.t;
+        pushAlarm('TenneT: mast van L1 beschadigd door een kraan – herstel duurt uren. L2 draait in noodbedrijf: neem maximaal 33 MW af!','crit');
         pushAlarm('Tip: kijk op het tabblad Prognose naar de avondpiek en zet op tijd flexibel vermogen in (C) – de kassen, het transportbedrijf, het koelhuis en de batterij van het distributiecentrum.','info');});},
     tick(dm){if(p110Over())GAME.flags.overMin=(GAME.flags.overMin||0)+dm;},
-    obj:()=>[{t:'Via L2 nooit langer dan 5 min boven 26 MW',check:()=>(GAME.flags.overMin||0)>5?'fail':null,final:()=>true},
+    obj:()=>[{t:'Via L2 nooit langer dan 5 min boven 33 MW',check:()=>(GAME.flags.overMin||0)>5?'fail':null,final:()=>true},
       {t:'Ziekenhuis (F5) blijft onder spanning',check:()=>GAME.flags.hospRun>1?'fail':null,final:()=>true},
       {t:'Minder dan 3.000 klantminuten',check:()=>SIM.cml>3000?'fail':null,final:()=>SIM.cml<=3000},noIncidents]},
   brand:{scen:true,name:'Brand in het 10 kV-gebouw',tag:'Scenario · moeilijk',start:14,dur:90,season:'herfst',weather:'bewolkt',

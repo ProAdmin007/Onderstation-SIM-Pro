@@ -21,7 +21,7 @@ function phoneTick(dtReal){if(SIM.paused||GAME.ended||GAME.lesson)return;
   PHONE.queue.forEach(c=>{if(c!==PHONE.cur)c.wait+=dtReal;});
   const gone=PHONE.queue.filter(c=>c!==PHONE.cur&&c.wait>45);gone.forEach(c=>{PHONE.stats.missed++;award(-5,'Klant hing op');pushAlarm(`☎ ${c.who} (${c.addr}) hing op – niemand nam op`,'warn');});
   if(gone.length){PHONE.queue=PHONE.queue.filter(c=>!gone.includes(c));renderPhone();}
-  if(PHONE.queue.some(c=>c!==PHONE.cur)&&performance.now()-PHONE.lastRing>3200){PHONE.lastRing=performance.now();AudioSys.tone({f:440,gain:0.045,dur:0.35});setTimeout(()=>AudioSys.tone({f:480,gain:0.045,dur:0.35}),420);}}
+  if(PHONE.queue.some(c=>c!==PHONE.cur)&&performance.now()-PHONE.lastRing>3200){PHONE.lastRing=performance.now();AudioSys.ring();}}
 function stationOptions(){return RING.stations.map(s=>`<option value="${s.id}">${s.id} ${s.name}</option>`).join('');}
 function renderPhone(){const el=$('#phone');const c=PHONE.cur,w=PHONE.queue.filter(x=>x!==c);
   if(!c&&!w.length){el.className='hidden';el.innerHTML='';return;}

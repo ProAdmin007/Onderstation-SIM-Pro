@@ -26,7 +26,7 @@ function makeCar(i){const g=new THREE.Group(),body=mat({color:CAR_COL[i%CAR_COL.
 const CARS=Array.from({length:12},(_,i)=>{const loop=LOOPS[i%2],dir=i%4<2?1:-1,lane=laneOf(loop,dir),segs=lane.map((p,k)=>{const q=lane[(k+1)%4];return {p,q,len:Math.hypot(q[0]-p[0],q[1]-p[1])};});
   const total=segs.reduce((a,s)=>a+s.len,0);return {g:makeCar(i),segs,total,d:(i*0.37%1)*total,v:rnd(7,11),k:i/12};});
 function trafficLevel(h){return clamp(0.12+0.8*Math.max(gs(h,8,1.2),gs(h,17.5,1.6))+0.35*(h>7&&h<22?1:0),0,1);}
-function updateCars(dt){const lvl=trafficLevel(hourOf()),night=NIGHT;CMAT.head.emissiveIntensity=night>0.2?4:0.3;CMAT.tail.emissiveIntensity=night>0.2?3:0.4;beamMat.opacity=night*0.45;
+function updateCars(dt){if(!GFX.life){CARS.forEach(c=>c.g.visible=false);return;}const lvl=trafficLevel(hourOf()),night=NIGHT;CMAT.head.emissiveIntensity=night>0.2?4:0.3;CMAT.tail.emissiveIntensity=night>0.2?3:0.4;beamMat.opacity=night*0.45;
   const run=!SIM.paused&&!GAME.ended;
   CARS.forEach(c=>{const on=c.k<lvl;c.g.visible=on;if(!on)return;if(run)c.d=(c.d+c.v*dt)%c.total;let d=c.d;
     for(const s of c.segs){if(d<=s.len){const f=d/s.len,x=s.p[0]+(s.q[0]-s.p[0])*f,z=s.p[1]+(s.q[1]-s.p[1])*f;c.g.position.set(x,0,z);c.g.rotation.y=Math.atan2(s.q[0]-s.p[0],s.q[1]-s.p[1]);break;}d-=s.len;}});}
@@ -45,7 +45,7 @@ function makeCivilian(v){const g=new THREE.Group(),sh=CIV.shirt[v%CIV.shirt.leng
 const CROWD_SPOTS=[[6,-8],[9,-10],[-6,-9],[3,-12],[11,-6]];
 function updateNeighbours(dt){phoneMat.opacity=NIGHT>0.3?0.9:0;
   RING.stations.forEach(s=>{const live=stationLive(s),off=s.groups.find(g=>g.cust>0&&g.offSince!=null)?.offSince;
-    const want=!live&&off!=null&&SIM.t-off>3&&s.cust>50;
+    const want=GFX.life&&!live&&off!=null&&SIM.t-off>3&&s.cust>50;
     if(want&&!s.crowd){s.crowd=[];CROWD_SPOTS.slice(0,3+(s.cust>1000?2:0)).forEach(([dx,dz],i)=>{let x=s.pos[0]+dx,z=s.pos[1]+dz;if(blockedAt(x,z))return;
         const p=makeCivilian(i+s.id.charCodeAt(2));p.g.position.set(x,0,z);p.g.rotation.y=Math.atan2(s.pos[0]-x,s.pos[1]-z)+rnd(-0.5,0.5);p.ph=rnd(0,6);s.crowd.push(p);});
       if(s.crowd.length&&camera.position.distanceTo(V3(s.pos[0],0,s.pos[1]))<60)pushAlarm(`Buren rond ${s.id} ${s.name} staan op straat – “Weet u wat er aan de hand is?”`,'info');}

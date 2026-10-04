@@ -34,28 +34,33 @@ function lightningAt(target,thunderDelay=1300){
 }
 
 // ============================================================ geluid (Web Audio, volledig synthetisch)
-const AudioSys={ctx:null,muted:false,
+const AUDIO_BUSES=['omgeving','schakel','alarm','telefoon'];
+const AudioSys={ctx:null,muted:false,vol:0.9,busVol:{},route:null,
+  out(){return this.route||this.bus?.schakel||this.master;},   // eenmalige geluiden gaan naar het kanaal van wie ze afspeelt (standaard: schakelen)
+  setVol(k,v){if(k==='master'){this.vol=v;if(this.master&&!this.muted)this.master.gain.value=v;}else{this.busVol[k]=v;if(this.bus?.[k])this.bus[k].gain.value=v;}},
   init(){if(this.ctx){this.ctx.resume();return;}const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;const c=this.ctx=new AC();
-    this.master=c.createGain();this.master.gain.value=0.9;this.master.connect(c.destination);
+    this.master=c.createGain();this.master.gain.value=this.vol;this.master.connect(c.destination);
+    // geluidskanalen, elk met een eigen volume (instellingen): omgeving, schakelen, alarmen, telefoon
+    this.bus={};for(const k of AUDIO_BUSES){const g=c.createGain();g.gain.value=this.busVol[k]??1;g.connect(this.master);this.bus[k]=g;}
     const len=c.sampleRate*2,b=c.createBuffer(1,len,c.sampleRate),d=b.getChannelData(0);for(let i=0;i<len;i++)d[i]=Math.random()*2-1;this.nbuf=b;
-    this.hum=c.createGain();this.hum.gain.value=0;const lp=c.createBiquadFilter();lp.type='lowpass';lp.frequency.value=700;this.hum.connect(lp);lp.connect(this.master);
+    this.hum=c.createGain();this.hum.gain.value=0;const lp=c.createBiquadFilter();lp.type='lowpass';lp.frequency.value=700;this.hum.connect(lp);lp.connect(this.bus.omgeving);
     [[100,1],[200,0.5],[300,0.22],[400,0.12],[500,0.05]].forEach(([f,a])=>{const o=c.createOscillator();o.frequency.value=f+(Math.random()-0.5)*0.4;const g=c.createGain();g.gain.value=a;o.connect(g);g.connect(this.hum);o.start();});
     this.fan=this.loopNoise('bandpass',380,0.8,0);this.wind=this.loopNoise('lowpass',320,0.5,0.03);this.rain=this.loopNoise('highpass',1100,0.4,0);
     // plek-geluiden: brom binnen (installatie/trafo), verkeer in de wijk, corona op het hoogspanningsterrein
-    this.room=c.createGain();this.room.gain.value=0;const rl=c.createBiquadFilter();rl.type='lowpass';rl.frequency.value=900;this.room.connect(rl);rl.connect(this.master);
+    this.room=c.createGain();this.room.gain.value=0;const rl=c.createBiquadFilter();rl.type='lowpass';rl.frequency.value=900;this.room.connect(rl);rl.connect(this.bus.omgeving);
     [[100,1],[200,0.35],[300,0.18],[50,0.25]].forEach(([f,a])=>{const o=c.createOscillator();o.frequency.value=f+(Math.random()-0.5)*0.3;const g=c.createGain();g.gain.value=a;o.connect(g);g.connect(this.room);o.start();});
     this.vent=this.loopNoise('bandpass',700,0.5,0);this.traffic=this.loopNoise('lowpass',170,0.7,0);this.corona=this.loopNoise('highpass',5200,0.6,0);},
-  loopNoise(type,f,q,gain){const c=this.ctx,s=c.createBufferSource();s.buffer=this.nbuf;s.loop=true;const fl=c.createBiquadFilter();fl.type=type;fl.frequency.value=f;fl.Q.value=q;const g=c.createGain();g.gain.value=gain;s.connect(fl);fl.connect(g);g.connect(this.master);s.start();return g;},
+  loopNoise(type,f,q,gain){const c=this.ctx,s=c.createBufferSource();s.buffer=this.nbuf;s.loop=true;const fl=c.createBiquadFilter();fl.type=type;fl.frequency.value=f;fl.Q.value=q;const g=c.createGain();g.gain.value=gain;s.connect(fl);fl.connect(g);g.connect(this.bus.omgeving);s.start();return g;},
   set(g,v){if(this.ctx)g.gain.setTargetAtTime(v,this.ctx.currentTime,0.3);},
   burst({type='bandpass',f=1000,q=1,gain=0.5,dur=0.3,attack=0.003,delay=0}={}){if(!this.ctx||gain<=0.001)return;const c=this.ctx,t=c.currentTime+delay;const s=c.createBufferSource();s.buffer=this.nbuf;
     const fl=c.createBiquadFilter();fl.type=type;fl.frequency.value=f;fl.Q.value=q;const g=c.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(gain,t+attack);g.gain.exponentialRampToValueAtTime(0.0005,t+dur);
-    s.connect(fl);fl.connect(g);g.connect(this.master);s.start(t,Math.random()*1.5);s.stop(t+dur+0.05);},
+    s.connect(fl);fl.connect(g);g.connect(this.out());s.start(t,Math.random()*1.5);s.stop(t+dur+0.05);},
   tone({f=440,f2=null,type='sine',gain=0.2,dur=0.2,delay=0}={}){if(!this.ctx||gain<=0.001)return;const c=this.ctx,t=c.currentTime+delay;const o=c.createOscillator();o.type=type;o.frequency.setValueAtTime(f,t);if(f2)o.frequency.exponentialRampToValueAtTime(f2,t+dur);
-    const g=c.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(gain,t+0.005);g.gain.exponentialRampToValueAtTime(0.0005,t+dur);o.connect(g);g.connect(this.master);o.start(t);o.stop(t+dur+0.05);},
+    const g=c.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(gain,t+0.005);g.gain.exponentialRampToValueAtTime(0.0005,t+dur);o.connect(g);g.connect(this.out());o.start(t);o.stop(t+dur+0.05);},
   breaker(v=1){this.tone({f:95,f2:38,gain:0.9*v,dur:0.35});this.burst({type:'highpass',f:2500,gain:0.35*v,dur:0.09});this.burst({f:700,q:0.8,gain:0.45*v,dur:0.25,delay:0.01});this.burst({f:3200,q:3,gain:0.12*v,dur:0.5,delay:0.05});},
   motor(dur=2.8,v=0.5){const c=this.ctx;if(!c)return;const t=c.currentTime;const o=c.createOscillator();o.type='sawtooth';o.frequency.setValueAtTime(60,t);o.frequency.linearRampToValueAtTime(92,t+0.4);
     const fl=c.createBiquadFilter();fl.type='lowpass';fl.frequency.value=480;const g=c.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(0.07*v,t+0.2);g.gain.setValueAtTime(0.07*v,t+dur-0.3);g.gain.linearRampToValueAtTime(0,t+dur);
-    o.connect(fl);fl.connect(g);g.connect(this.master);o.start(t);o.stop(t+dur+0.1);this.burst({f:1500,gain:0.25*v,dur:0.15,delay:dur-0.1});this.tone({f:120,f2:60,gain:0.3*v,dur:0.2,delay:dur-0.1});},
+    o.connect(fl);fl.connect(g);g.connect(this.out());o.start(t);o.stop(t+dur+0.1);this.burst({f:1500,gain:0.25*v,dur:0.15,delay:dur-0.1});this.tone({f:120,f2:60,gain:0.3*v,dur:0.2,delay:dur-0.1});},
   arc(k=1){for(let i=0;i<16;i++)this.burst({f:1500+Math.random()*3500,q:0.6,gain:0.55*k*Math.random(),dur:0.05+Math.random()*0.1,delay:i*0.035});
     this.burst({type:'lowpass',f:500,gain:1.1*k,dur:1.3});this.tone({f:130,f2:30,gain:0.8*k,dur:0.7});this.burst({type:'highpass',f:4000,gain:0.3*k,dur:0.7});},
   thunder(){this.burst({type:'lowpass',f:170,gain:1.3,dur:4.8,attack:0.1});this.burst({type:'lowpass',f:700,gain:0.5,dur:1.6,attack:0.02});this.burst({type:'lowpass',f:260,gain:0.7,dur:3,attack:0.4,delay:0.7});},
@@ -66,7 +71,11 @@ const AudioSys={ctx:null,muted:false,
   cricket(v=1){for(let i=0;i<4;i++)this.tone({f:4300+Math.random()*200,gain:0.007*v,dur:0.035,delay:i*0.065});},
   chime(){this.tone({f:660,gain:0.08,dur:0.3});this.tone({f:990,gain:0.07,dur:0.4,delay:0.12});},
   deny(){this.tone({f:200,type:'square',gain:0.045,dur:0.2});},
-  toggleMute(){this.muted=!this.muted;if(this.master)this.master.gain.value=this.muted?0:0.9;return this.muted;}};
+  ring(){this.tone({f:440,gain:0.045,dur:0.35});this.tone({f:480,gain:0.045,dur:0.35,delay:0.42});},
+  toggleMute(){this.muted=!this.muted;if(this.master)this.master.gain.value=this.muted?0:this.vol;return this.muted;}};
+// welke geluiden bij welk kanaal horen
+for(const [bus,names] of [['alarm',['alarm','ready','chime','deny']],['omgeving',['chirp','carPass','cricket','thunder']],['telefoon',['ring']]])
+  names.forEach(n=>{const f=AudioSys[n];AudioSys[n]=function(...a){const prev=this.route;this.route=this.bus?.[bus]||null;try{return f.apply(this,a);}finally{this.route=prev;}};});
 function distGain(p){const d=camera.position.distanceTo(p);return clamp(1.2/(1+(d/35)**2)+0.12,0.12,1);}
 // ---- geluid per plek (elke 0,25 s)
 function updatePlaceAudio(){const A=AudioSys,ins=camInside(),r=ins&&ROOMS[ins-1],kiosk=!!(r&&r.kiosk),p=camera.position,F=FENCE;

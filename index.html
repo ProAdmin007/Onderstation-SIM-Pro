@@ -76,6 +76,7 @@ button:disabled{opacity:.35;cursor:not-allowed}
 .mini{padding:1px 8px;font-size:13px;line-height:1.2}
 #sld .w{stroke-width:3;stroke-linecap:round;fill:none}
 #sld .bus{stroke-width:6}
+#sldTabs button{white-space:nowrap;padding:4px 7px}#sld .cab{cursor:pointer}#sld .cab:hover rect:first-of-type{fill:rgba(255,255,255,.05)}
 body.lite #labels,body.lite #tooltip{display:none}body.lite *{animation:none!important;transition:none!important;backdrop-filter:none!important}
 #sld .sds .tick{stroke-width:1.6}#sld .sds .blade{stroke-width:2.2}
 #sld .lv{stroke:#9be15d} #sld .arrow.lv{fill:#9be15d} #sld .bus2{stroke-width:4} #sld text.flag{fill:#ff9d2e;font-size:13px}
@@ -272,6 +273,10 @@ svg.tl{width:100%;height:auto;display:block;margin:4px 0 2px}.tl-ax{font:10px va
 body.fp #torch.on{display:block}
 .bf-open{background:var(--accent);color:#1a1206;border:none;font-weight:700;width:100%;padding:9px}
 @media (max-width:760px){.bf-cols{grid-template-columns:1fr}}
+#settings{position:fixed;inset:0;display:grid;place-items:center;background:rgba(6,9,12,.66);z-index:14;overflow:auto;padding:20px 0}#settings.hidden{display:none}
+.st .st-row{display:flex;align-items:center;gap:12px;margin:6px 0;font-size:13px;flex-wrap:wrap}.st .st-row>span{min-width:170px;color:var(--muted)}.st .st-row input[type=range]{flex:1;min-width:160px;accent-color:var(--accent)}.st .st-row em{font-style:normal;min-width:44px;text-align:right;font-family:var(--mono)}
+.st .seg{flex-wrap:wrap}.st-tgs{display:flex;flex-wrap:wrap;gap:6px 18px;margin:8px 0}.st-tog{display:flex;gap:6px;align-items:center;font-size:12.5px;cursor:pointer}.st-tog input{accent-color:var(--accent)}
+#fps{display:none;position:fixed;right:14px;bottom:14px;z-index:8;font:600 12px var(--mono);color:#9fe39a;background:rgba(13,17,22,.7);padding:3px 8px;border-radius:6px;pointer-events:none}#fps.on{display:block}
 #assets{position:fixed;inset:0;display:grid;place-items:center;background:rgba(6,9,12,.66);z-index:12;overflow:auto;padding:20px 0}#assets.hidden{display:none}
 #flex{position:fixed;inset:0;display:grid;place-items:center;background:rgba(6,9,12,.66);z-index:12;overflow:auto;padding:20px 0}#flex.hidden{display:none}
 .fx{padding:3px 6px;margin-right:2px;font-size:11px}.fx.on{background:var(--accent);color:#1a1206;border-color:var(--accent)}
@@ -317,7 +322,7 @@ body.fp #torch.on{display:block}
 <aside id="tasks" class="panel"><div class="ph"><span id="taskTitle">Werkopdracht</span><span id="taskCode" class="tag"></span></div><div id="taskBody"><div class="idle">Geen actieve opdracht.</div></div></aside>
 <aside id="alarms" class="panel"><div class="ph"><span>Meldingen &amp; gebeurtenissen</span><span class="cnt" id="alarmCnt">0</span></div><div id="alarmList"></div></aside>
 <aside id="scada" class="panel">
-  <div class="ph"><span>SCADA</span><div class="zoom" title="Zoomen: Ctrl + scrollwiel of + / −"><button id="zOut" class="mini">−</button><span id="zVal">100%</span><button id="zIn" class="mini">+</button></div><div class="tabs" id="sldTabs"><button data-t="10" class="on">10 kV</button><button data-t="20">20 kV</button><button data-t="R">Ring</button><button data-t="P" title="Belastingprognose komende 8 uur">Prognose</button></div><button id="scadaToggle" class="mini" title="In-/uitklappen">–</button></div>
+  <div class="ph"><span>SCADA</span><div class="zoom" title="Zoomen: Ctrl + scrollwiel of + / −"><button id="zOut" class="mini">−</button><span id="zVal">100%</span><button id="zIn" class="mini">+</button></div><div class="tabs" id="sldTabs"><button data-t="10" class="on">10 kV</button><button data-t="20">20 kV</button><button data-t="R">Ring</button><button data-t="K" title="Belasting per kabel en per distributietrafo">Kabels</button><button data-t="P" title="Belastingprognose komende 8 uur">Prognose</button></div><button id="scadaToggle" class="mini" title="In-/uitklappen">–</button></div>
   <svg id="sld" viewBox="0 0 470 575"></svg>
   <div class="legend">
     <span><i style="background:var(--hv)"></i>110 kV</span><span><i style="background:var(--mv)"></i>10 kV</span><span><i style="background:var(--mv20)"></i>20 kV</span><span><i style="background:var(--dead)"></i>spanningsloos</span><span><i style="background:var(--earth)"></i>geaard</span>
@@ -335,6 +340,7 @@ body.fp #torch.on{display:block}
   <button data-v="6"><kbd>7</kbd>Binnen 20 kV</button>
   <button data-v="7"><kbd>8</kbd>Woonwijk</button>
   <button data-v="8"><kbd>9</kbd>Centrum &amp; Vaart</button>
+  <button id="settingsBtn" class="tool" title="Prestaties, weer en geluid"><kbd>I</kbd>Instellingen</button>
   <button id="assetsBtn" class="tool" title="Conditie en onderhoud van de schakelaars"><kbd>O</kbd>Onderhoud</button>
   <button id="flexBtn" class="tool" title="Netcongestie en flexibel vermogen"><kbd>C</kbd>Flex</button>
   <button id="protBtn" class="tool" title="Beveiligingsinstellingen"><kbd>B</kbd>Beveiliging</button>
@@ -352,6 +358,8 @@ body.fp #torch.on{display:block}
 <div id="prot" class="hidden"></div>
 <div id="flex" class="hidden"></div>
 <div id="assets" class="hidden"></div>
+<div id="settings" class="hidden"></div>
+<div id="fps"></div>
 <div id="phone" class="hidden"></div>
 <div id="handover" class="hidden"></div>
 <div id="replay" class="hidden"><button data-rp="back" title="10 min terug">⏮</button><button id="rpPlay" class="primary" data-rp="play">▶</button><button data-rp="fwd" title="10 min verder">⏭</button>
@@ -361,6 +369,7 @@ body.fp #torch.on{display:block}
   <div class="eyebrow">Gepauzeerd</div><div class="pm-mode" id="pmMode"></div>
   <div class="pm-score"><span id="pmScore">0</span><small>punten</small><em id="pmBest"></em></div>
   <button class="primary" data-pm="resume">Hervatten <kbd>Esc</kbd></button>
+  <button data-pm="settings">Instellingen (prestaties, weer, geluid)</button>
   <button data-pm="end">Dienst beëindigen · rapport en score opslaan</button>
   <button data-pm="menu">Score opslaan en naar hoofdmenu</button>
 </div></div>
@@ -379,7 +388,7 @@ body.fp #torch.on{display:block}
       <div class="seg" id="season"><button data-s="lente">Lente</button><button data-s="zomer">Zomer</button><button data-s="herfst" class="on">Herfst</button><button data-s="winter">Winter</button></div>
       <div class="mh">Moeilijkheid</div>
       <div class="seg" id="diff"><button data-d="rustig">Rustig</button><button data-d="normaal" class="on">Normaal</button><button data-d="zwaar">Zwaar</button></div>
-      <div class="keys">slepen: draaien · rechts: schuiven · scroll: zoom<br>1–9 camera · V rondlopen · spatie/P pauze · Esc menu · B beveiliging · C flex · O onderhoud · L labels · M geluid</div>
+      <div class="keys">slepen: draaien · rechts: schuiven · scroll: zoom<br>1–9 camera · V rondlopen · spatie/P pauze · Esc menu · I instellingen · B beveiliging · C flex · O onderhoud · L labels · M geluid</div>
     </div>
     <div id="menu"></div>
   </div>
@@ -396,7 +405,13 @@ import { mergeGeometries, mergeVertices } from 'three/addons/utils/BufferGeometr
 
 // ============================================================ basis
 const params = new URLSearchParams(location.search);
-const LITE = params.has('lite');if(LITE)document.body.classList.add('lite');   // testmodus: geen 3D-beeld tekenen, lage resolutie, geen schaduwen, lus 15× per seconde
+const LITE = params.has('lite');if(LITE)document.body.classList.add('lite');
+// prestatie-instellingen (bewaard in de browser): resolutie, schaduwen, max. beelden per seconde, omgevingslicht, verkeer/buren, regen/sneeuw
+const GFX_PRESETS={laag:{scale:0.6,shadows:'uit',fps:30,env:false,life:false,particles:false},midden:{scale:0.85,shadows:'laag',fps:60,env:true,life:true,particles:true},
+  hoog:{scale:1,shadows:'hoog',fps:0,env:true,life:true,particles:true}};
+var GFX={preset:'hoog',...GFX_PRESETS.hoog,meter:false};
+try{Object.assign(GFX,JSON.parse(localStorage.getItem('osz-gfx')||'{}'));}catch(e){}
+const shadowSize=()=>LITE?512:GFX.shadows==='laag'?1024:4096;   // testmodus: geen 3D-beeld tekenen, lage resolutie, geen schaduwen, lus 15× per seconde
 const $ = s => document.querySelector(s);
 function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
 const R = mulberry32(20261003);            // vaste seed voor het landschap
@@ -410,9 +425,9 @@ const V3 = (x,y,z) => new THREE.Vector3(x,y,z);
 
 // ============================================================ renderer / scene
 const renderer = new THREE.WebGLRenderer({antialias:!LITE,powerPreference:'high-performance'});
-renderer.setPixelRatio(LITE?0.4:Math.min(devicePixelRatio,1.75));
+renderer.setPixelRatio(LITE?0.4:Math.min(devicePixelRatio,1.75)*GFX.scale);
 renderer.setSize(innerWidth,innerHeight);
-renderer.shadowMap.enabled = !LITE;
+renderer.shadowMap.enabled = !LITE&&GFX.shadows!=='uit';
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 0.6;
@@ -938,7 +953,7 @@ const envScene=new THREE.Scene();const envSky=new Sky();envSky.material=sky.mate
 const envGroundMat=new THREE.MeshBasicMaterial({color:0x4f5446});const eg=new THREE.Mesh(new THREE.CircleGeometry(40,24),envGroundMat);eg.rotation.x=-Math.PI/2;eg.position.y=-2;envScene.add(eg);
 const pmrem=new THREE.PMREMGenerator(renderer);let envRT=null,lastEnvElev=-999;
 function updateEnv(){const rt=pmrem.fromScene(envScene,0.02,0.1,200);if(envRT)envRT.dispose();envRT=rt;scene.environment=rt.texture;}
-const sun=new THREE.DirectionalLight(0xffffff,3);sun.castShadow=true;sun.shadow.mapSize.set(LITE?512:4096,LITE?512:4096);
+const sun=new THREE.DirectionalLight(0xffffff,3);sun.castShadow=true;sun.shadow.mapSize.set(shadowSize(),shadowSize());
 Object.assign(sun.shadow.camera,{left:-100,right:100,top:95,bottom:-95,near:10,far:540});sun.shadow.bias=-0.0003;sun.shadow.normalBias=0.03;
 sun.target.position.set(22,0,10);scene.add(sun,sun.target);
 const hemi=new THREE.HemisphereLight(0xbfd4ff,0x4a4436,0.3);scene.add(hemi);
@@ -972,7 +987,7 @@ function updateSky(h){
   su.turbidity.value=5.5+14.5*cl;su.rayleigh.value=1.5-0.9*cl;su.mieCoefficient.value=0.004+0.026*cl;
   applySnowCover();
   // omgevingslicht opnieuw berekenen (PMREM-render) – niet in de testmodus: zonder grafische kaart is dat erg zwaar
-  if(!LITE&&(Math.abs(el-lastEnvElev)>0.6||Math.abs(cl-lastEnvCloud)>0.08)){lastEnvElev=el;lastEnvCloud=cl;updateEnv();}
+  if(!LITE&&GFX.env&&(Math.abs(el-lastEnvElev)>0.6||Math.abs(cl-lastEnvCloud)>0.08)){lastEnvElev=el;lastEnvCloud=cl;updateEnv();}
 }
 
 
@@ -1306,6 +1321,8 @@ RINGS.forEach(rg=>{const st=rg.stations,n=st.length,cable=[rg.from];
       dev(id,{type:'lvs',bay:s.id,label:'Laagspanningsveld · '+name,a:M+'v',b:id,state:1,lvg:g});if(kind==='ovl')s.ovl=id;return g;});});
   for(let i=0;i<=n;i++)RING.secs.push({id:cable[i],node:cable[i],ring:rg,a:i?st[i-1].id:null,b:i<n?st[i].id:null,fault:false,located:false});});
 const CONS=FEEDERS.filter(f=>!f.ring).concat(LVG);   // alle afnemers (MS-velden en LS-groepen in de ring)
+// algemeen belastingsniveau: alle afnemers (niet de opwekking) iets zwaarder; de ratings van de velden schalen mee
+const LOAD_SCALE=1.25;CONS.forEach(c=>{if(c.gen)return;c.base*=LOAD_SCALE;if(c.rate)c.rate=c.base*1.15;});
 dev('RAIL',{type:'bb',label:'110 kV-railsysteem',node:'BB'});
 dev('MS',{type:'bld',label:'10 kV-schakelinstallatie (binnen)',node:'RA'});
 dev('MS20',{type:'bld',label:'20 kV-schakelinstallatie (binnen)',node:'RC'});
@@ -1758,7 +1775,9 @@ const FLEX_DELAY=2;   // minuten reactietijd van de aggregator
 const KVA_SIZES=[1000,1600,2000,2500,3150,4000];
 RING.stations.forEach(s=>{let pk=0;for(let h=0;h<24;h+=0.25)pk=Math.max(pk,s.groups.reduce((a,g)=>a+g.base*profile(g.kind,h)*(SEASONS.winter.load[g.kind]??1),0));
   s.peakMW=pk;s.kva=KVA_SIZES.find(k=>k*0.95/1000>=pk*1.25)||4000;D[s.id].label=`MS-station ${s.name} · 10/0,4 kV ${s.kva} kVA`;D[s.id+'-TR'].label=`Distributietransformator 10/0,4 kV · ${s.kva} kVA`;});
-const trMW=s=>s.kva*0.95/1000;   // vermogen (MW) bij cos φ 0,95
+const trMW=s=>s.kva*0.95/1000;
+// veldkabels (niet-ring) op dezelfde manier: rating = winterpiek + 20% marge
+FEEDERS.filter(f=>!f.ring&&!f.gen).forEach(f=>{let pk=0;for(let h=0;h<24;h+=0.25)pk=Math.max(pk,f.base*profile(f.kind,h)*(SEASONS.winter.load[f.kind]??1));f.rate=pk*1.2;});   // vermogen (MW) bij cos φ 0,95
 // verzoek om vermogen terug te regelen (fractie van het maximum: 0 … 1)
 function setFlex(id,frac){const f=FLEX.find(x=>x.id===id);if(!f)return;frac=clamp(frac,0,1);if(f.req===frac)return;f.req=frac;f.at=SIM.t+FLEX_DELAY;
   pushAlarm(frac?`Flex-verzoek: ${f.name} ${Math.round(frac*f.max*100)}% terugregelen (${f.how}) – actief over ±${FLEX_DELAY} min`:`Flex: ${f.name} vrijgegeven – weer normaal vermogen`,'op');renderFlex?.();}
@@ -2235,11 +2254,11 @@ Object.assign(MODES,{
     desc:'Een mobiele kraan raakt lijn L1 Hoogeveen. De mast is beschadigd: L1 blijft urenlang uit en TenneT kan via L2 maar beperkt leveren. Kom de avondpiek door zonder klanten af te schakelen.',
     setup(){pushAlarm('Bouwverkeer langs de A28 – een mobiele kraan werkt vlak bij lijn L1','info');
       at(3,()=>{lineFault('L1',true);setTimeout(()=>{const ln=SIM.lines.L1;ln.reason='mast beschadigd door kraan';SIM.timers=SIM.timers.filter(t=>!/lineRestore/.test(String(t.fn)));addTimer(75,()=>lineRestore('L1'));},2500);
-        GAME.flags.lineLimit=26;GAME.flags.limitAt=SIM.t;
-        pushAlarm('TenneT: mast van L1 beschadigd door een kraan – herstel duurt uren. L2 draait in noodbedrijf: neem maximaal 26 MW af!','crit');
+        GAME.flags.lineLimit=33;GAME.flags.limitAt=SIM.t;
+        pushAlarm('TenneT: mast van L1 beschadigd door een kraan – herstel duurt uren. L2 draait in noodbedrijf: neem maximaal 33 MW af!','crit');
         pushAlarm('Tip: kijk op het tabblad Prognose naar de avondpiek en zet op tijd flexibel vermogen in (C) – de kassen, het transportbedrijf, het koelhuis en de batterij van het distributiecentrum.','info');});},
     tick(dm){if(p110Over())GAME.flags.overMin=(GAME.flags.overMin||0)+dm;},
-    obj:()=>[{t:'Via L2 nooit langer dan 5 min boven 26 MW',check:()=>(GAME.flags.overMin||0)>5?'fail':null,final:()=>true},
+    obj:()=>[{t:'Via L2 nooit langer dan 5 min boven 33 MW',check:()=>(GAME.flags.overMin||0)>5?'fail':null,final:()=>true},
       {t:'Ziekenhuis (F5) blijft onder spanning',check:()=>GAME.flags.hospRun>1?'fail':null,final:()=>true},
       {t:'Minder dan 3.000 klantminuten',check:()=>SIM.cml>3000?'fail':null,final:()=>SIM.cml<=3000},noIncidents]},
   brand:{scen:true,name:'Brand in het 10 kV-gebouw',tag:'Scenario · moeilijk',start:14,dur:90,season:'herfst',weather:'bewolkt',
@@ -2315,28 +2334,33 @@ function lightningAt(target,thunderDelay=1300){
 }
 
 // ============================================================ geluid (Web Audio, volledig synthetisch)
-const AudioSys={ctx:null,muted:false,
+const AUDIO_BUSES=['omgeving','schakel','alarm','telefoon'];
+const AudioSys={ctx:null,muted:false,vol:0.9,busVol:{},route:null,
+  out(){return this.route||this.bus?.schakel||this.master;},   // eenmalige geluiden gaan naar het kanaal van wie ze afspeelt (standaard: schakelen)
+  setVol(k,v){if(k==='master'){this.vol=v;if(this.master&&!this.muted)this.master.gain.value=v;}else{this.busVol[k]=v;if(this.bus?.[k])this.bus[k].gain.value=v;}},
   init(){if(this.ctx){this.ctx.resume();return;}const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;const c=this.ctx=new AC();
-    this.master=c.createGain();this.master.gain.value=0.9;this.master.connect(c.destination);
+    this.master=c.createGain();this.master.gain.value=this.vol;this.master.connect(c.destination);
+    // geluidskanalen, elk met een eigen volume (instellingen): omgeving, schakelen, alarmen, telefoon
+    this.bus={};for(const k of AUDIO_BUSES){const g=c.createGain();g.gain.value=this.busVol[k]??1;g.connect(this.master);this.bus[k]=g;}
     const len=c.sampleRate*2,b=c.createBuffer(1,len,c.sampleRate),d=b.getChannelData(0);for(let i=0;i<len;i++)d[i]=Math.random()*2-1;this.nbuf=b;
-    this.hum=c.createGain();this.hum.gain.value=0;const lp=c.createBiquadFilter();lp.type='lowpass';lp.frequency.value=700;this.hum.connect(lp);lp.connect(this.master);
+    this.hum=c.createGain();this.hum.gain.value=0;const lp=c.createBiquadFilter();lp.type='lowpass';lp.frequency.value=700;this.hum.connect(lp);lp.connect(this.bus.omgeving);
     [[100,1],[200,0.5],[300,0.22],[400,0.12],[500,0.05]].forEach(([f,a])=>{const o=c.createOscillator();o.frequency.value=f+(Math.random()-0.5)*0.4;const g=c.createGain();g.gain.value=a;o.connect(g);g.connect(this.hum);o.start();});
     this.fan=this.loopNoise('bandpass',380,0.8,0);this.wind=this.loopNoise('lowpass',320,0.5,0.03);this.rain=this.loopNoise('highpass',1100,0.4,0);
     // plek-geluiden: brom binnen (installatie/trafo), verkeer in de wijk, corona op het hoogspanningsterrein
-    this.room=c.createGain();this.room.gain.value=0;const rl=c.createBiquadFilter();rl.type='lowpass';rl.frequency.value=900;this.room.connect(rl);rl.connect(this.master);
+    this.room=c.createGain();this.room.gain.value=0;const rl=c.createBiquadFilter();rl.type='lowpass';rl.frequency.value=900;this.room.connect(rl);rl.connect(this.bus.omgeving);
     [[100,1],[200,0.35],[300,0.18],[50,0.25]].forEach(([f,a])=>{const o=c.createOscillator();o.frequency.value=f+(Math.random()-0.5)*0.3;const g=c.createGain();g.gain.value=a;o.connect(g);g.connect(this.room);o.start();});
     this.vent=this.loopNoise('bandpass',700,0.5,0);this.traffic=this.loopNoise('lowpass',170,0.7,0);this.corona=this.loopNoise('highpass',5200,0.6,0);},
-  loopNoise(type,f,q,gain){const c=this.ctx,s=c.createBufferSource();s.buffer=this.nbuf;s.loop=true;const fl=c.createBiquadFilter();fl.type=type;fl.frequency.value=f;fl.Q.value=q;const g=c.createGain();g.gain.value=gain;s.connect(fl);fl.connect(g);g.connect(this.master);s.start();return g;},
+  loopNoise(type,f,q,gain){const c=this.ctx,s=c.createBufferSource();s.buffer=this.nbuf;s.loop=true;const fl=c.createBiquadFilter();fl.type=type;fl.frequency.value=f;fl.Q.value=q;const g=c.createGain();g.gain.value=gain;s.connect(fl);fl.connect(g);g.connect(this.bus.omgeving);s.start();return g;},
   set(g,v){if(this.ctx)g.gain.setTargetAtTime(v,this.ctx.currentTime,0.3);},
   burst({type='bandpass',f=1000,q=1,gain=0.5,dur=0.3,attack=0.003,delay=0}={}){if(!this.ctx||gain<=0.001)return;const c=this.ctx,t=c.currentTime+delay;const s=c.createBufferSource();s.buffer=this.nbuf;
     const fl=c.createBiquadFilter();fl.type=type;fl.frequency.value=f;fl.Q.value=q;const g=c.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(gain,t+attack);g.gain.exponentialRampToValueAtTime(0.0005,t+dur);
-    s.connect(fl);fl.connect(g);g.connect(this.master);s.start(t,Math.random()*1.5);s.stop(t+dur+0.05);},
+    s.connect(fl);fl.connect(g);g.connect(this.out());s.start(t,Math.random()*1.5);s.stop(t+dur+0.05);},
   tone({f=440,f2=null,type='sine',gain=0.2,dur=0.2,delay=0}={}){if(!this.ctx||gain<=0.001)return;const c=this.ctx,t=c.currentTime+delay;const o=c.createOscillator();o.type=type;o.frequency.setValueAtTime(f,t);if(f2)o.frequency.exponentialRampToValueAtTime(f2,t+dur);
-    const g=c.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(gain,t+0.005);g.gain.exponentialRampToValueAtTime(0.0005,t+dur);o.connect(g);g.connect(this.master);o.start(t);o.stop(t+dur+0.05);},
+    const g=c.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(gain,t+0.005);g.gain.exponentialRampToValueAtTime(0.0005,t+dur);o.connect(g);g.connect(this.out());o.start(t);o.stop(t+dur+0.05);},
   breaker(v=1){this.tone({f:95,f2:38,gain:0.9*v,dur:0.35});this.burst({type:'highpass',f:2500,gain:0.35*v,dur:0.09});this.burst({f:700,q:0.8,gain:0.45*v,dur:0.25,delay:0.01});this.burst({f:3200,q:3,gain:0.12*v,dur:0.5,delay:0.05});},
   motor(dur=2.8,v=0.5){const c=this.ctx;if(!c)return;const t=c.currentTime;const o=c.createOscillator();o.type='sawtooth';o.frequency.setValueAtTime(60,t);o.frequency.linearRampToValueAtTime(92,t+0.4);
     const fl=c.createBiquadFilter();fl.type='lowpass';fl.frequency.value=480;const g=c.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(0.07*v,t+0.2);g.gain.setValueAtTime(0.07*v,t+dur-0.3);g.gain.linearRampToValueAtTime(0,t+dur);
-    o.connect(fl);fl.connect(g);g.connect(this.master);o.start(t);o.stop(t+dur+0.1);this.burst({f:1500,gain:0.25*v,dur:0.15,delay:dur-0.1});this.tone({f:120,f2:60,gain:0.3*v,dur:0.2,delay:dur-0.1});},
+    o.connect(fl);fl.connect(g);g.connect(this.out());o.start(t);o.stop(t+dur+0.1);this.burst({f:1500,gain:0.25*v,dur:0.15,delay:dur-0.1});this.tone({f:120,f2:60,gain:0.3*v,dur:0.2,delay:dur-0.1});},
   arc(k=1){for(let i=0;i<16;i++)this.burst({f:1500+Math.random()*3500,q:0.6,gain:0.55*k*Math.random(),dur:0.05+Math.random()*0.1,delay:i*0.035});
     this.burst({type:'lowpass',f:500,gain:1.1*k,dur:1.3});this.tone({f:130,f2:30,gain:0.8*k,dur:0.7});this.burst({type:'highpass',f:4000,gain:0.3*k,dur:0.7});},
   thunder(){this.burst({type:'lowpass',f:170,gain:1.3,dur:4.8,attack:0.1});this.burst({type:'lowpass',f:700,gain:0.5,dur:1.6,attack:0.02});this.burst({type:'lowpass',f:260,gain:0.7,dur:3,attack:0.4,delay:0.7});},
@@ -2347,7 +2371,11 @@ const AudioSys={ctx:null,muted:false,
   cricket(v=1){for(let i=0;i<4;i++)this.tone({f:4300+Math.random()*200,gain:0.007*v,dur:0.035,delay:i*0.065});},
   chime(){this.tone({f:660,gain:0.08,dur:0.3});this.tone({f:990,gain:0.07,dur:0.4,delay:0.12});},
   deny(){this.tone({f:200,type:'square',gain:0.045,dur:0.2});},
-  toggleMute(){this.muted=!this.muted;if(this.master)this.master.gain.value=this.muted?0:0.9;return this.muted;}};
+  ring(){this.tone({f:440,gain:0.045,dur:0.35});this.tone({f:480,gain:0.045,dur:0.35,delay:0.42});},
+  toggleMute(){this.muted=!this.muted;if(this.master)this.master.gain.value=this.muted?0:this.vol;return this.muted;}};
+// welke geluiden bij welk kanaal horen
+for(const [bus,names] of [['alarm',['alarm','ready','chime','deny']],['omgeving',['chirp','carPass','cricket','thunder']],['telefoon',['ring']]])
+  names.forEach(n=>{const f=AudioSys[n];AudioSys[n]=function(...a){const prev=this.route;this.route=this.bus?.[bus]||null;try{return f.apply(this,a);}finally{this.route=prev;}};});
 function distGain(p){const d=camera.position.distanceTo(p);return clamp(1.2/(1+(d/35)**2)+0.12,0.12,1);}
 // ---- geluid per plek (elke 0,25 s)
 function updatePlaceAudio(){const A=AudioSys,ins=camInside(),r=ins&&ROOMS[ins-1],kiosk=!!(r&&r.kiosk),p=camera.position,F=FENCE;
@@ -2645,14 +2673,14 @@ function buildSLD(){
     RING.secs.filter(c=>c.ring===rg).forEach((sec,i)=>{const x1=i?XS[i-1]+35:14,x2=i<n?XS[i]-35:456;W(x1,RY,x2,RY,sec.node);M('flt'+sec.id,(x1+x2)/2,RY-8,'middle','bad');});};
   RINGS.forEach((rg,k)=>drawRing(rg,k*262));
   T(235,540,'⚑ verklikker aangesproken · ⚡ kabelfout','middle','fs');T(235,553,'klik op een station voor alle schakelaars','middle','fs');
-  const svg=$('#sld');svg.innerHTML=`<g data-tab="10">${out[10].join('')}</g><g data-tab="20" style="display:none">${out[20].join('')}</g><g data-tab="R" style="display:none">${out.R.join('')}</g><g data-tab="P" style="display:none"><g id="progG"></g></g>`;
+  const svg=$('#sld');svg.innerHTML=`<g data-tab="10">${out[10].join('')}</g><g data-tab="20" style="display:none">${out[20].join('')}</g><g data-tab="R" style="display:none">${out.R.join('')}</g><g data-tab="P" style="display:none"><g id="progG"></g></g><g data-tab="K" style="display:none"><g id="cabG"></g></g>`;
   SLD.nodes=[...svg.querySelectorAll('[data-n]')];SLD.byNode={};SLD.nodes.forEach(el=>(SLD.byNode[el.dataset.n]??=[]).push(el));
   svg.querySelectorAll('.dev').forEach(el=>{const id=el.dataset.id,tab=el.closest('[data-tab]').dataset.tab;(SLD.devs[id]??=[]).push(el);(SLD.devTab[id]??=new Set()).add(tab);
     el.addEventListener('click',()=>selectDevice(id));});
   svg.querySelectorAll('[data-m]').forEach(el=>(SLD.meas[el.dataset.m]??=[]).push(el));
   $('#sldTabs').addEventListener('click',e=>{const b=e.target.closest('[data-t]');if(b)setTab(b.dataset.t);});
 }
-function setTab(t){SLD.tab=t;if(t==='P')setTimeout(renderProg);document.querySelectorAll('#sld [data-tab]').forEach(g=>g.style.display=g.dataset.tab===t?'':'none');
+function setTab(t){SLD.tab=t;if(t==='P')setTimeout(renderProg);if(t==='K')setTimeout(renderCables);document.querySelectorAll('#sld [data-tab]').forEach(g=>g.style.display=g.dataset.tab===t?'':'none');
   document.querySelectorAll('#sldTabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));}
 function nodeClass(n){if(ER.has(n))return 'earth';if(!EN.has(n))return 'dead';const v=lvl(n);return v===110?'hv':v===20?'mv20':v<1?'lv':'mv';}
 function setM(k,txt,cls){(SLD.meas[k]||[]).forEach(el=>{el.textContent=txt;if(cls)el.setAttribute('class',cls);});}
@@ -3205,7 +3233,7 @@ function phoneTick(dtReal){if(SIM.paused||GAME.ended||GAME.lesson)return;
   PHONE.queue.forEach(c=>{if(c!==PHONE.cur)c.wait+=dtReal;});
   const gone=PHONE.queue.filter(c=>c!==PHONE.cur&&c.wait>45);gone.forEach(c=>{PHONE.stats.missed++;award(-5,'Klant hing op');pushAlarm(`☎ ${c.who} (${c.addr}) hing op – niemand nam op`,'warn');});
   if(gone.length){PHONE.queue=PHONE.queue.filter(c=>!gone.includes(c));renderPhone();}
-  if(PHONE.queue.some(c=>c!==PHONE.cur)&&performance.now()-PHONE.lastRing>3200){PHONE.lastRing=performance.now();AudioSys.tone({f:440,gain:0.045,dur:0.35});setTimeout(()=>AudioSys.tone({f:480,gain:0.045,dur:0.35}),420);}}
+  if(PHONE.queue.some(c=>c!==PHONE.cur)&&performance.now()-PHONE.lastRing>3200){PHONE.lastRing=performance.now();AudioSys.ring();}}
 function stationOptions(){return RING.stations.map(s=>`<option value="${s.id}">${s.id} ${s.name}</option>`).join('');}
 function renderPhone(){const el=$('#phone');const c=PHONE.cur,w=PHONE.queue.filter(x=>x!==c);
   if(!c&&!w.length){el.className='hidden';el.innerHTML='';return;}
@@ -3400,7 +3428,7 @@ function makeCar(i){const g=new THREE.Group(),body=mat({color:CAR_COL[i%CAR_COL.
 const CARS=Array.from({length:12},(_,i)=>{const loop=LOOPS[i%2],dir=i%4<2?1:-1,lane=laneOf(loop,dir),segs=lane.map((p,k)=>{const q=lane[(k+1)%4];return {p,q,len:Math.hypot(q[0]-p[0],q[1]-p[1])};});
   const total=segs.reduce((a,s)=>a+s.len,0);return {g:makeCar(i),segs,total,d:(i*0.37%1)*total,v:rnd(7,11),k:i/12};});
 function trafficLevel(h){return clamp(0.12+0.8*Math.max(gs(h,8,1.2),gs(h,17.5,1.6))+0.35*(h>7&&h<22?1:0),0,1);}
-function updateCars(dt){const lvl=trafficLevel(hourOf()),night=NIGHT;CMAT.head.emissiveIntensity=night>0.2?4:0.3;CMAT.tail.emissiveIntensity=night>0.2?3:0.4;beamMat.opacity=night*0.45;
+function updateCars(dt){if(!GFX.life){CARS.forEach(c=>c.g.visible=false);return;}const lvl=trafficLevel(hourOf()),night=NIGHT;CMAT.head.emissiveIntensity=night>0.2?4:0.3;CMAT.tail.emissiveIntensity=night>0.2?3:0.4;beamMat.opacity=night*0.45;
   const run=!SIM.paused&&!GAME.ended;
   CARS.forEach(c=>{const on=c.k<lvl;c.g.visible=on;if(!on)return;if(run)c.d=(c.d+c.v*dt)%c.total;let d=c.d;
     for(const s of c.segs){if(d<=s.len){const f=d/s.len,x=s.p[0]+(s.q[0]-s.p[0])*f,z=s.p[1]+(s.q[1]-s.p[1])*f;c.g.position.set(x,0,z);c.g.rotation.y=Math.atan2(s.q[0]-s.p[0],s.q[1]-s.p[1]);break;}d-=s.len;}});}
@@ -3419,13 +3447,91 @@ function makeCivilian(v){const g=new THREE.Group(),sh=CIV.shirt[v%CIV.shirt.leng
 const CROWD_SPOTS=[[6,-8],[9,-10],[-6,-9],[3,-12],[11,-6]];
 function updateNeighbours(dt){phoneMat.opacity=NIGHT>0.3?0.9:0;
   RING.stations.forEach(s=>{const live=stationLive(s),off=s.groups.find(g=>g.cust>0&&g.offSince!=null)?.offSince;
-    const want=!live&&off!=null&&SIM.t-off>3&&s.cust>50;
+    const want=GFX.life&&!live&&off!=null&&SIM.t-off>3&&s.cust>50;
     if(want&&!s.crowd){s.crowd=[];CROWD_SPOTS.slice(0,3+(s.cust>1000?2:0)).forEach(([dx,dz],i)=>{let x=s.pos[0]+dx,z=s.pos[1]+dz;if(blockedAt(x,z))return;
         const p=makeCivilian(i+s.id.charCodeAt(2));p.g.position.set(x,0,z);p.g.rotation.y=Math.atan2(s.pos[0]-x,s.pos[1]-z)+rnd(-0.5,0.5);p.ph=rnd(0,6);s.crowd.push(p);});
       if(s.crowd.length&&camera.position.distanceTo(V3(s.pos[0],0,s.pos[1]))<60)pushAlarm(`Buren rond ${s.id} ${s.name} staan op straat – “Weet u wat er aan de hand is?”`,'info');}
     if(s.crowd){if(!want){s.crowdLeft=(s.crowdLeft||0)+dt;if(s.crowdLeft>4){s.crowd.forEach(p=>scene.remove(p.g));s.crowd=null;s.crowdLeft=0;}}
       else{s.crowdLeft=0;s.crowd.forEach(p=>{p.ph+=dt;p.head.rotation.y=Math.sin(p.ph*0.6)*0.5;});}}});}
 function updateLife(dt){updateCars(dt);updateNeighbours(dt);}
+
+
+// ============================================================ instellingen (toets I): prestaties, weer en seizoen, geluid
+const AUDIO_LABELS={master:'Hoofdvolume',omgeving:'Omgeving (brom, verkeer, vogels, regen)',schakel:'Schakelen (vermogenschakelaars, motoren, vlambogen)',alarm:'Meldingen en alarmen',telefoon:'Telefoon'};
+// geluidsvolumes uit de browser terugzetten (werkt ook vóór het eerste geluid)
+try{const v=JSON.parse(localStorage.getItem('osz-audio')||'{}');if(v.master!=null)AudioSys.vol=v.master;AUDIO_BUSES.forEach(k=>{if(v[k]!=null)AudioSys.busVol[k]=v[k];});}catch(e){}
+const saveGfx=()=>{try{localStorage.setItem('osz-gfx',JSON.stringify(GFX));}catch(e){}};
+const saveAudio=()=>{try{localStorage.setItem('osz-audio',JSON.stringify({master:AudioSys.vol,...AudioSys.busVol}));}catch(e){}};
+// grafische instellingen direct toepassen
+function applyGfx(){saveGfx();if(LITE)return;
+  renderer.setPixelRatio(Math.min(devicePixelRatio,1.75)*GFX.scale);renderer.setSize(innerWidth,innerHeight);
+  const sh=GFX.shadows!=='uit',size=shadowSize();
+  if(renderer.shadowMap.enabled!==sh){renderer.shadowMap.enabled=sh;scene.traverse(o=>{if(o.material)[].concat(o.material).forEach(m=>m.needsUpdate=true);});}
+  if(sun.shadow.mapSize.x!==size){sun.shadow.mapSize.set(size,size);if(sun.shadow.map){sun.shadow.map.dispose();sun.shadow.map=null;}}
+  if(GFX.env)lastEnvElev=-999;$('#fps').classList.toggle('on',!!GFX.meter);}
+function setGfx(k,v){if(k==='preset'){Object.assign(GFX,GFX_PRESETS[v]);GFX.preset=v;}else{GFX[k]=v;GFX.preset='eigen';}applyGfx();renderSettings();}
+// beeldfrequentie-meter
+let fpsN=0,fpsT=0;function fpsTick(dt){fpsN++;fpsT+=dt;if(fpsT>=0.5){if(GFX.meter)$('#fps').textContent=`${Math.round(fpsN/fpsT)} fps`;fpsN=0;fpsT=0;}}
+// ---- venster
+let setPrev=false;
+const setOpen=()=>!$('#settings').classList.contains('hidden');
+function openSettings(){if(setOpen())return;setPrev=SIM.paused;SIM.paused=true;syncSpeed();if(FP.on)unlockPointer();$('#settings').classList.remove('hidden');renderSettings();}
+function closeSettings(){$('#settings').classList.add('hidden');SIM.paused=setPrev;syncSpeed();}
+function renderSettings(){if(!setOpen())return;
+  const seg=(k,opts)=>`<div class="seg">${opts.map(([v,l])=>`<button data-g="${k}:${v}" class="${String(GFX[k])===String(v)?'on':''}">${l}</button>`).join('')}</div>`;
+  const tog=(k,l,tip)=>`<label class="st-tog" title="${tip||''}"><input type="checkbox" data-gt="${k}" ${GFX[k]?'checked':''}><span>${l}</span></label>`;
+  const vol=k=>{const v=k==='master'?AudioSys.vol:(AudioSys.busVol[k]??1);return `<div class="st-row"><span>${AUDIO_LABELS[k]}</span><input type="range" min="0" max="${k==='master'?1:1.5}" step="0.05" value="${v}" data-av="${k}"><em>${Math.round(v*100)}%</em></div>`;};
+  $('#settings').innerHTML=`<div class="card pr st"><div class="eyebrow">Instellingen</div><h2>Instellingen</h2>
+    <div class="mh">Prestaties</div>
+    <div class="st-row"><span>Voorinstelling</span>${seg('preset',[['laag','Laag'],['midden','Midden'],['hoog','Hoog']])}${GFX.preset==='eigen'?'<em class="warnc">eigen</em>':''}</div>
+    <div class="st-row"><span>Resolutie</span><input type="range" min="0.4" max="1" step="0.05" value="${GFX.scale}" data-gs="scale"><em>${Math.round(GFX.scale*100)}%</em></div>
+    <div class="st-row"><span>Schaduwen</span>${seg('shadows',[['uit','Uit'],['laag','Laag'],['hoog','Hoog']])}</div>
+    <div class="st-row"><span>Max. beelden per seconde</span>${seg('fps',[[30,'30'],[60,'60'],[0,'onbeperkt']])}</div>
+    <div class="st-tgs">${tog('env','Omgevingslicht volgt de zon','Herberekent de lichtreflecties als de zon beweegt (zwaar op trage computers)')}${tog('life','Verkeer en buren in de wijk')}${tog('particles','Regen en sneeuw')}${tog('meter','Toon beelden per seconde')}</div>
+    <div class="mh">Weer en seizoen</div>
+    <div class="st-row"><span>Weer</span><div class="seg">${Object.entries(WX_TYPES).map(([k,t])=>`<button data-wx="${k}" class="${WX.lock&&WX.type===k?'on':''}" title="${t.name}">${t.icon} ${t.name}</button>`).join('')}<button data-wx="auto" class="${WX.lock?'':'on'}">🔄 Automatisch</button></div></div>
+    <div class="st-row"><span>Seizoen</span><div class="seg">${Object.entries(SEASONS).map(([k,s])=>`<button data-season="${k}" class="${SEASON===s?'on':''}">${s.name}</button>`).join('')}</div></div>
+    <p class="bf-desc">Het weer verandert geleidelijk (direct: dubbelklik). Automatisch laat het weer vanzelf wisselen. Een ander seizoen verandert ook de datum, de zon, de temperatuur en de belasting.${MODES[GAME.mode]?.scen?' <b class="warnc">Let op: in een scenario kan dit de opgave makkelijker of moeilijker maken.</b>':''}</p>
+    <div class="mh">Geluid</div>${['master',...AUDIO_BUSES].map(vol).join('')}
+    <div class="st-tgs"><label class="st-tog"><input type="checkbox" data-mute ${AudioSys.muted?'checked':''}><span>Geluid uit (M)</span></label></div>
+    <div class="rep-btns"><button class="primary" data-sclose>Sluiten <kbd>I</kbd></button><button data-sreset>Standaardwaarden</button></div></div>`;}
+$('#settings').addEventListener('click',e=>{if(e.target.closest('[data-sclose]')||e.target.id==='settings')return closeSettings();
+  const g=e.target.closest('[data-g]');if(g){const [k,v]=g.dataset.g.split(':');return setGfx(k,k==='fps'?+v:v);}
+  const w=e.target.closest('[data-wx]');if(w){const k=w.dataset.wx;if(k==='auto'){WX.lock=false;WX.next=SIM.t;pushAlarm('Weer: weer automatisch wisselen','op');}else{setWeather(k,true,e.detail>1);pushAlarm(`Weer ingesteld: ${WX_TYPES[k].icon} ${WX_TYPES[k].name}`,'op');}updateSky(hourOf());renderSettings();return;}
+  const s=e.target.closest('[data-season]');if(s){setSeason(s.dataset.season);GAME.season=s.dataset.season;applySnowCover?.();updateSky(hourOf());refreshAll();updateHUD();pushAlarm(`Seizoen: ${SEASON.name}`,'op');renderSettings();return;}
+  if(e.target.closest('[data-sreset]')){Object.assign(GFX,GFX_PRESETS.hoog,{preset:'hoog',meter:false});applyGfx();AudioSys.setVol('master',0.9);AUDIO_BUSES.forEach(k=>AudioSys.setVol(k,1));saveAudio();renderSettings();}});
+$('#settings').addEventListener('input',e=>{const t=e.target;
+  if(t.dataset.av){AudioSys.setVol(t.dataset.av,+t.value);t.nextElementSibling.textContent=Math.round(t.value*100)+'%';saveAudio();}
+  if(t.dataset.gs){GFX[t.dataset.gs]=+t.value;GFX.preset='eigen';t.nextElementSibling.textContent=Math.round(t.value*100)+'%';applyGfx();}});
+$('#settings').addEventListener('change',e=>{const t=e.target;if(t.dataset.gt){GFX[t.dataset.gt]=t.checked;GFX.preset='eigen';applyGfx();renderSettings();}if(t.hasAttribute('data-mute'))$('#mute').click();});
+$('#settingsBtn').addEventListener('click',()=>setOpen()?closeSettings():openSettings());
+addEventListener('keydown',e=>{if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT')return;if((e.key==='i'||e.key==='I')&&$('#intro').classList.contains('hidden'))setOpen()?closeSettings():openSettings();});
+applyGfx();
+
+
+// ============================================================ SCADA-tabblad Kabels: belasting per kabel, per veldkabel en per distributietrafo
+function renderCables(){const g=$('#cabG');if(!g||SLD.tab!=='K')return;const o=[],X0=16,XB=262,XW=150,XP=456;let y=22;
+  const fx2=v=>v.toFixed(2).replace('.',','),col=k=>k>1?'var(--red)':k>0.85?'var(--accent)':'var(--green)';
+  const row=(name,sub,info,k,extra='',tip='')=>{const w=Math.max(0,Math.min(1.25,k))/1.25*XW;
+    o.push(`<g class="cab" ${extra}>${tip?`<title>${tip}</title>`:''}<rect x="${X0-4}" y="${y-11}" width="452" height="15" rx="3" fill="transparent"/>`,
+      `<text x="${X0}" y="${y}" class="fs" style="fill:#d6dde4">${name}</text>`,sub?`<text x="${X0+122}" y="${y}" class="fs dl">${sub}</text>`:'',
+      `<text x="${XB-6}" y="${y}" text-anchor="end" class="fs">${info}</text>`,
+      `<rect x="${XB}" y="${y-8}" width="${XW}" height="8" rx="2" fill="rgba(255,255,255,.07)"/><line x1="${XB+XW/1.25}" x2="${XB+XW/1.25}" y1="${y-10}" y2="${y+2}" stroke="rgba(255,255,255,.35)"/>`,
+      k>0?`<rect x="${XB}" y="${y-8}" width="${w.toFixed(1)}" height="8" rx="2" style="fill:${col(k)}"/>`:'',
+      `<text x="${XP}" y="${y}" text-anchor="end" class="fs" style="fill:${k>0?col(k):'var(--muted)'}">${k>0?Math.round(k*100)+'%':'—'}</text></g>`);y+=16;};
+  const head=t=>{y+=6;o.push(`<text x="${X0-4}" y="${y}" class="h">${t}</text>`);y+=14;};
+  o.push(`<text x="235" y="${y-6}" text-anchor="middle" class="h">BELASTING PER KABEL</text>`,`<text x="235" y="${y+7}" text-anchor="middle" class="fs dl">stroom / rating · streep = 100% · klik op een ringkabel voor het station erachter</text>`);y+=14;
+  RINGS.forEach(rg=>{head(`${rg.name.toUpperCase()} · normaal-open ${rg.nop}`);
+    RING.secs.filter(s=>s.ring===rg).forEach(s=>{const on=EN.has(s.node),u=FLOW.UN?.[s.node],st=s.b||s.a;
+      const info=s.fault?'<tspan style="fill:var(--red)">⚡ kabelfout</tspan>':on?`${Math.round(s.I)} / ${s.rate} A · ${u?fx2(u)+' kV':''}`:'<tspan style="fill:var(--muted)">spanningsloos</tspan>';
+      row(`${s.a||'OS'} – ${s.b||'OS'}${s.a&&s.b?'':' (kop)'}`,'',info,on&&!s.fault?s.load:0,`data-cab="${st}"`,`Kabel ${secName(s)}: ${Math.round(s.I)} A van ${s.rate} A`);});});
+  head('UITGAANDE VELDKABELS');
+  FEEDERS.filter(f=>!f.ring).forEach(f=>{const on=EN.has(f.node),I=D[f.cb].I,rA=f.rate*kA(f.bus),k=on?I/rA:0;
+    row(`${f.cb} ${f.short}`,'',on?`${Math.round(I)} / ${Math.round(rA)} A${f.gen&&f.P<0?' (terug)':''}`:'<tspan style="fill:var(--muted)">uit</tspan>',k,`data-dev="${f.cb}"`);});
+  head('DISTRIBUTIETRAFO\'S IN DE MS-STATIONS');
+  RING.stations.forEach(s=>{const on=EN.has(s.node+'v');row(`${s.id} ${s.short}`,'',on?`${Math.round(s.P*1000)} kW / ${s.kva} kVA`:'<tspan style="fill:var(--muted)">spanningsloos</tspan>',on?s.trLoad||0:0,`data-cab="${s.id}"`);});
+  g.innerHTML=o.join('');}
+$('#sld').addEventListener('click',e=>{const c=e.target.closest('[data-cab]');if(c)return selectDevice(c.dataset.cab);const d=e.target.closest('.cab[data-dev]');if(d)selectDevice(d.dataset.dev);});
 
 
 // ============================================================ HUD + bediening
@@ -3451,7 +3557,7 @@ addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;
   else if(e.code==='KeyP'){if($('#intro').classList.contains('hidden'))setSpeed(0);}
   else if(e.key==='l'||e.key==='L')document.body.classList.toggle('nolabels');
   else if(e.key==='m'||e.key==='M')$('#mute').click();
-  else if(e.key==='Escape'){if(GAME.handover?.open)closeHandover();else if(flexOpen())closeFlex();else if(assOpen())closeAssets();else if(protOpen())closeProt();else if(menuOpen()){if(performance.now()-menuAt>350)closeMenu();}else if(SEL&&!document.pointerLockElement)selectDevice(null);else openMenu();}});
+  else if(e.key==='Escape'){if(GAME.handover?.open)closeHandover();else if(setOpen())closeSettings();else if(flexOpen())closeFlex();else if(assOpen())closeAssets();else if(protOpen())closeProt();else if(menuOpen()){if(performance.now()-menuAt>350)closeMenu();}else if(SEL&&!document.pointerLockElement)selectDevice(null);else openMenu();}});
 // ---------- SCADA-zoom
 let SLDZ=1;try{SLDZ=+localStorage.getItem('osz-sldz')||1;}catch(e){}
 function setZoom(z){SLDZ=clamp(Math.round(z*4)/4,0.75,2.5);document.documentElement.style.setProperty('--sldz',SLDZ);$('#zVal').textContent=Math.round(SLDZ*100)+'%';try{localStorage.setItem('osz-sldz',SLDZ);}catch(e){}}
@@ -3469,6 +3575,7 @@ function openMenu(){if(GAME.ended||menuOpen()||!$('#intro').classList.contains('
 function closeMenu(){$('#pauseMenu').classList.add('hidden');document.body.classList.remove('menu');SIM.paused=menuPrev;syncSpeed();if(FP.on)canvasEl.requestPointerLock?.();}
 $('#pauseMenu').addEventListener('click',e=>{const b=e.target.closest('[data-pm]');if(!b)return;const a=b.dataset.pm;
   if(a==='resume')closeMenu();
+  else if(a==='settings'){closeMenu();openSettings();}
   else if(a==='end'){$('#pauseMenu').classList.add('hidden');document.body.classList.remove('menu');if(FP.on)exitFP();endGame();}
   else if(a==='menu'){finalizeGame();saveBest();location.search='';}});
 addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
@@ -3492,13 +3599,14 @@ else{renderMenu();$('#intro').classList.remove('hidden');controls.autoRotate=tru
 if(params.has('night'))updateSky(22);
 if(params.has('view')){const v=VIEWPOS[+params.get('view')];camera.position.copy(v[0]);controls.target.copy(v[1]);controls.autoRotate=false;controls.update();}
 
-window.OS={renderer,scene,FIRE,CARS,updateWindows,updateLife,stationLive,cbMaintTask,worstCb,cond,breakerFails,CB_IDS,FLEX,setFlex,flexTick,congestion,openFlex,closeFlex,checkModel,homeBus,BUSES,SEL_BAYS,TORCH,setTorch,HO_POOL,handoverTick,REC,RP,startReplay,stopReplay,analyse,stationDamage,closeHandover,deviations,PHONE,lvFault,callFrom,phoneAnswer,dispatchLV,LVG,forecast,progAdvice,PROG,startTask:(k,...a)=>{TASK={cbMaintTask,railTask,railBTask,stationTask,thermoTask,ringTask,feederTask,lineTask,reserveTask}[k](...a);TASK.i=0;TASK.code='WV-TEST';briefInit(TASK);renderTasks();},SIM,D,LESSONS,lessonGo,selectDevice,abortTask,railTask,stationTask,thermoTask,nearDev,VIEWS,PROT,setProt,openProt,closeProt,busFault,BUSF,RINGS,task:()=>TASK,briefSubmit,briefCheck,briefWatch,actKey,taskActs,crewNear,boxOf:id=>VIEWS[id]&&VIEWS[id].box,AudioSys,updateAudio,WX,setWeather,setSeason,SEASONS,ambient,enterKiosk,ROOMS,blockedAt,RING,NPCS,crewDispatch,ringFault,FP,enterFP,exitFP,pickCenter,camera,camInside,setRatio,setTab,GAME,MODES,applyMode,endGame,EN:()=>EN,FLOW,operate,tapStep,setAVR,resetLockout,toggleAR,regulate,computeFlows,randomEvent,lineFault,feederFault,trafoFault,offerTask,simStep,FEEDERS};
+window.OS={setTab,renderCables,GFX,setGfx,applyGfx,openSettings,closeSettings,WX_TYPES,renderer,scene,FIRE,CARS,updateWindows,updateLife,stationLive,cbMaintTask,worstCb,cond,breakerFails,CB_IDS,FLEX,setFlex,flexTick,congestion,openFlex,closeFlex,checkModel,homeBus,BUSES,SEL_BAYS,TORCH,setTorch,HO_POOL,handoverTick,REC,RP,startReplay,stopReplay,analyse,stationDamage,closeHandover,deviations,PHONE,lvFault,callFrom,phoneAnswer,dispatchLV,LVG,forecast,progAdvice,PROG,startTask:(k,...a)=>{TASK={cbMaintTask,railTask,railBTask,stationTask,thermoTask,ringTask,feederTask,lineTask,reserveTask}[k](...a);TASK.i=0;TASK.code='WV-TEST';briefInit(TASK);renderTasks();},SIM,D,LESSONS,lessonGo,selectDevice,abortTask,railTask,stationTask,thermoTask,nearDev,VIEWS,PROT,setProt,openProt,closeProt,busFault,BUSF,RINGS,task:()=>TASK,briefSubmit,briefCheck,briefWatch,actKey,taskActs,crewNear,boxOf:id=>VIEWS[id]&&VIEWS[id].box,AudioSys,updateAudio,WX,setWeather,setSeason,SEASONS,ambient,enterKiosk,ROOMS,blockedAt,RING,NPCS,crewDispatch,ringFault,FP,enterFP,exitFP,pickCenter,camera,camInside,setRatio,setTab,GAME,MODES,applyMode,endGame,EN:()=>EN,FLOW,operate,tapStep,setAVR,resetLockout,toggleAR,regulate,computeFlows,randomEvent,lineFault,feederFault,trafoFault,offerTask,simStep,FEEDERS};
 const clock=new THREE.Clock();let hudT=0,skyT=0,progT=0;
 let liteAcc=0;
 renderer.setAnimationLoop(()=>{
   // testmodus (?lite): de hele lus 15× per seconde in plaats van 60× – elke wijziging aan de pagina kost een compositie in software-grafiek
-  const raw=clock.getDelta();if(LITE&&(liteAcc+=raw)<1/15)return;
-  const dt=Math.min(0.1,LITE?liteAcc:raw);liteAcc=0;
+  // (en in het spel bij een ingestelde maximale beeldfrequentie)
+  const raw=clock.getDelta(),cap=LITE?1/15:GFX.fps?1/GFX.fps:0;liteAcc+=raw;if(cap&&liteAcc<cap*0.9)return;
+  const dt=Math.min(0.1,liteAcc);liteAcc=0;fpsTick(dt);
   simStep(dt);
   for(const v of Object.values(VIEWS))if(v.update)v.update(dt);
   for(let i=FX.length-1;i>=0;i--)if(!FX[i].update(dt))FX.splice(i,1);
@@ -3508,8 +3616,8 @@ renderer.setAnimationLoop(()=>{
   else{if(fly){fly.t+=dt;const k=easeIO(clamp(fly.t/fly.dur,0,1));camera.position.lerpVectors(fly.p0,fly.p1,k);controls.target.lerpVectors(fly.t0,fly.t1,k);if(fly.t>=fly.dur)fly=null;}
   controls.minDistance=camInside()?1.2:4;controls.update();}
   if((skyT+=dt)>0.25){skyT=0;if(!params.has('night'))updateSky(hourOf());}
-  if((hudT+=dt)>0.25){hudT=0;if(!RP.on)updateHUD();updateSLD();refreshDevPanel();updateAudio();if(!LITE)drawPanelScreens();renderTasks();updateStreetLights();updateWindows();progTick();if((progT+=1)%4===0)renderProg();}
-  if(!LITE){updateHover();updateLabels();}updateRain(dt);updateNPCs(dt);updateKioskLight();updateHotspot();phoneTick(dt);replayTick(dt);updateLife(dt);fireTick(dt);
+  if((hudT+=dt)>0.25){hudT=0;if(!RP.on)updateHUD();updateSLD();refreshDevPanel();updateAudio();if(!LITE)drawPanelScreens();renderTasks();updateStreetLights();updateWindows();progTick();if((progT+=1)%4===0)renderProg();if(progT%2===0)renderCables();}
+  if(!LITE){updateHover();updateLabels();}if(GFX.particles)updateRain(dt);else RAIN.ls.visible=SNOW.p.visible=false;updateNPCs(dt);updateKioskLight();updateHotspot();phoneTick(dt);replayTick(dt);updateLife(dt);fireTick(dt);
   let off=null;if(shake>0.01){off=V3((Math.random()-0.5)*shake,(Math.random()-0.5)*shake,(Math.random()-0.5)*shake);camera.position.add(off);shake*=Math.pow(0.02,dt);}
   // en het 3D-beeld helemaal niet tekenen: zonder grafische kaart kost één beeld ±2 kernseconden software-grafiek,
   // terwijl de tests alleen de simulatie en de panelen controleren (aanwijzen gaat met raycasting, niet met pixels)

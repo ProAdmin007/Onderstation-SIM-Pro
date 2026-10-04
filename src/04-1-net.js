@@ -92,6 +92,8 @@ RINGS.forEach(rg=>{const st=rg.stations,n=st.length,cable=[rg.from];
       dev(id,{type:'lvs',bay:s.id,label:'Laagspanningsveld · '+name,a:M+'v',b:id,state:1,lvg:g});if(kind==='ovl')s.ovl=id;return g;});});
   for(let i=0;i<=n;i++)RING.secs.push({id:cable[i],node:cable[i],ring:rg,a:i?st[i-1].id:null,b:i<n?st[i].id:null,fault:false,located:false});});
 const CONS=FEEDERS.filter(f=>!f.ring).concat(LVG);   // alle afnemers (MS-velden en LS-groepen in de ring)
+// algemeen belastingsniveau: alle afnemers (niet de opwekking) iets zwaarder; de ratings van de velden schalen mee
+const LOAD_SCALE=1.25;CONS.forEach(c=>{if(c.gen)return;c.base*=LOAD_SCALE;if(c.rate)c.rate=c.base*1.15;});
 dev('RAIL',{type:'bb',label:'110 kV-railsysteem',node:'BB'});
 dev('MS',{type:'bld',label:'10 kV-schakelinstallatie (binnen)',node:'RA'});
 dev('MS20',{type:'bld',label:'20 kV-schakelinstallatie (binnen)',node:'RC'});
