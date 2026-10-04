@@ -12,7 +12,8 @@ function interlockCheck(d,to){
   if(d.type==='cb'&&to===1&&d.need&&D[d.tr].ratio!==d.need)return `Vergrendeling: ${d.tr} staat op ${D[d.tr].ratio} kV – eerst omschakelen naar ${d.need} kV`;
   if(d.type==='cb'&&to===1){d.state=1;const sc=shortNode();d.state=0;if(sc)return 'Vergrendeling: inschakelen op een geaard deel';}
   return null;}
-const COUPLERS={'V-K':['RA','RB',0.25],'W-K':['RC','RD',0.5]};
+// railkoppelingen afgeleid uit BUSES: [rail, rail, max. spanningsverschil synchrocheck]
+const COUPLERS={};BUS_IDS.forEach(b=>(COUPLERS[BUSES[b].coupler]??=[]).push(b));Object.values(COUPLERS).forEach(v=>v.push(BUSES[v[0]].kv===20?0.5:0.25));
 function syncCheck(d){const c=COUPLERS[d.id];if(!c||!EN.has(c[0])||!EN.has(c[1]))return null;const dU=Math.abs(FLOW.U[c[0]]-FLOW.U[c[1]]);
   return dU>c[2]?`Synchrocheck: spanningsverschil ${dU.toFixed(2).replace('.',',')} kV te groot (max ${String(c[2]).replace('.',',')}) – breng de trappen gelijk`:null;}
 function operate(id,to,opts={}){

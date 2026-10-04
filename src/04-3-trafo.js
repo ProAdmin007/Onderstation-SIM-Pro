@@ -23,7 +23,7 @@ function moveTap(T,dir,manual){const t=D[T];const n=clamp(t.tap+dir,1,17);if(n==
   setTimeout(()=>{t.tap=n;t.tapOps++;t.tapBusy=false;refreshAll();},manual?1500:300);return true;}
 function tapStep(T,dir){const t=D[T];if(t.avr==='auto')return deny(`${T}: regelaar staat op AUTO – zet eerst op HAND`);if(t.tapBusy)return deny('Trappenschakelaar draait nog…');
   if(!moveTap(T,dir,true))return deny(`${T}: eindstand trappenschakelaar bereikt`);pushAlarm(`${T}: trap ${dir>0?'hoger':'lager'} → ${t.tap+dir}`,'op');}
-const BUS_BAND={RA:[10,11,'A'],RB:[10,11,'B'],RC:[20,22,'C1'],RD:[20,22,'C2']};
+const BUS_BAND=Object.fromEntries(BUS_IDS.map(b=>[b,[...BUSES[b].band,BUSES[b].nm]]));
 function regulate(dm){
   // parallelbedrijf: per gevoede railgroep regelt één transformator (master), de rest volgt
   const followers=new Set();

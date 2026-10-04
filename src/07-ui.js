@@ -82,12 +82,12 @@ function updateSLD(){
       const bl=el.querySelector('.blade');if(bl)bl.style.transform=d.state?'':'rotate(-35deg)';}
     el.classList.toggle('sel',id===SEL);});}
   const fx=(v,n=1)=>v.toFixed(n).replace('.',',');
-  for(const L of['L1','L2']){const ln=SIM.lines[L];setM('ln'+L,ln.avail?`${fx(FLOW.lineP[L])} MW`:'GEEN SPANNING',ln.avail?'mh':'bad');}
+  for(const L of LINES){const ln=SIM.lines[L];setM('ln'+L,ln.avail?`${fx(FLOW.lineP[L])} MW`:'GEEN SPANNING',ln.avail?'mh':'bad');}
   setM('bb',EN.has('BB')?`${fx(FLOW.U110)} kV`:'0 kV');
   TR.forEach(Tn=>{const t=D[Tn];setM('tr'+Tn,`${fx(t.S)} MVA ${Math.round(t.S/(t.fans?t.rAF:t.rON)*100)}%`);
     setM('to'+Tn,t.blocked?'86 BLOKKADE':`${Math.round(t.oil)}°C · t${t.tap}${t.avr==='auto'?'A':'H'}`,t.blocked||t.oil>90?'bad':'m');});
   setM('rt'+RES,`stand ${D[RES].ratio} kV${D[RES].ratioBusy?'…':''}`);
-  ['RA','RB','RC','RD'].forEach(b=>setM(b,`${fx(FLOW.U[b],2)} kV`));
+  BUS_IDS.forEach(b=>setM(b,`${fx(FLOW.U[b],2)} kV`));
   RING.stations.forEach(s=>{const on=EN.has(s.node),u=nodeU(s.node);setM('fi'+s.id,s.flag?'⚑':'');setM('stc'+s.id,`${s.cust>=1000?fx(s.cust/1000)+'k':s.cust} kl`);setM('stp'+s.id,on?`${fx(s.P,2)} MW`:'UIT',on?'m':'bad');setM('stu'+s.id,on?`${fx(u,2)} kV`:'',u<9.9?'bad':'');});
   RING.secs.forEach(s=>(SLD.byNode[s.node]||[]).forEach(el=>{el.classList.toggle('ovl',s.load>0.85&&s.load<=1);el.classList.toggle('ovl2',s.load>1);}));
   FEEDERS.filter(f=>f.ring).forEach(f=>setM('fa'+f.id,`V-${f.id} · rail ${BUS_BAND[railOf(f.sel)]?.[2]||'–'} · ${Math.round(D[f.cb].I)} A`));
@@ -192,7 +192,7 @@ function renderDevPanel(){
   if(d.id===RES)sub.push(`<button data-act="ratio10">Omschakelen → 10 kV</button>`,`<button data-act="ratio20">Omschakelen → 20 kV</button>`);
   const ln=d.line||(d.type==='line'&&d.line);if(d.line)sub.push(`<button data-act="ar"></button>`);
   if(d.feeder)sub.push(`<button data-act="sel:${d.feeder.id}-Q8">Aardschakelaar ${d.feeder.id}-Q8</button>`);
-  const selBay=d.feeder&&!is20(d.feeder.bus)?d.feeder.id:d.id==='V-T1'?'T1':d.id==='V-T3'?'T3':d.sel?d.bay:null;
+  const selBay=d.sel?d.bay:Object.keys(SEL_BAYS).find(b=>SEL_BAYS[b].cb===d.id)||null;
   if(selBay)sub.push(...['QA','QB'].filter(q=>d.id!==selBay+'-'+q).map(q=>`<button data-act="sel:${selBay}-${q}">Railkeuze ${q.slice(1)} (${selBay}-${q})</button>`));
   if(d.sel)sub.push(`<button data-act="sel:${d.cb}">Naar ${d.cb}</button>`);
   if(d.type==='es'&&BUS_BAND[d.a])sub.push(`<button data-act="sel:${d.a==='RC'?'W-T2':'W-T3'}">Inkomend veld</button>`,`<button data-act="sel:W-K">Koppeling W-K</button>`);

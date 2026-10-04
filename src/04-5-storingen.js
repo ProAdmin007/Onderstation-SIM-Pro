@@ -3,12 +3,12 @@
 // ---------------------------------------------------------- storingen
 function randomEvent(){const r=Math.random();if(r<(WX.cur.thunder>0.5?0.65:0.3))return lineFault();if(r<0.62)return feederFault();if(r<0.72)return lvFault();
   if(r<0.8&&!GAME.flags.busf){GAME.flags.busf=true;return busFault(pick(['RC','RD','RB']));}return trafoFault();}
-function lineFault(forceL,forcePerm){const c=['L1','L2'].filter(L=>SIM.lines[L].avail&&!SIM.lines[L].maint&&D[L+'-Q0'].state===1&&(!forceL||L===forceL));if(!c.length)return forceL?null:feederFault();const L=pick(c),ln=SIM.lines[L];
+function lineFault(forceL,forcePerm){const c=LINES.filter(L=>SIM.lines[L].avail&&!SIM.lines[L].maint&&D[L+'-Q0'].state===1&&(!forceL||L===forceL));if(!c.length)return forceL?null:feederFault();const L=pick(c),ln=SIM.lines[L];
   lightning(L);const perm=forcePerm??(Math.random()<DIFFS[GAME.diff].perm);
   setTimeout(()=>{tripBreaker(L+'-Q0');pushAlarm(`${L} ${ln.name}: blikseminslag – distantiebeveiliging zone 1, ${L}-Q0 UIT`,'crit');
     const dt=PROT.ln[L].dt,fail=!perm&&arFails(L);
     if(ln.ar){pushAlarm(`${L}: automatische herinschakeling gestart (dode tijd ${String(dt).replace('.',',')} s)`,'info');
-      if(dt>=3&&!['L1','L2'].some(x=>x!==L&&SIM.lines[x].avail&&D[x+'-Q0'].state)){award(-15,'Lange dode tijd');pushAlarm('Klanten melden processtoringen: het station was 3 s zonder spanning (lange dode tijd op de enige voedende lijn)','warn');}
+      if(dt>=3&&!LINES.some(x=>x!==L&&SIM.lines[x].avail&&D[x+'-Q0'].state)){award(-15,'Lange dode tijd');pushAlarm('Klanten melden processtoringen: het station was 3 s zonder spanning (lange dode tijd op de enige voedende lijn)','warn');}
       setTimeout(()=>{const d=D[L+'-Q0'];if(d.state!==0||!ln.avail)return;
         if(!springOk(d)){pushAlarm(`${L}: herinschakeling geblokkeerd – inschakelveer niet geladen`,'warn');if(perm)lineLockout(L);return;}
         d.state=1;d.ops++;d.springAt=performance.now()+7000;const v=VIEWS[d.id];AudioSys.breaker(v?distGain(v.center):0.5);

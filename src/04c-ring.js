@@ -1,6 +1,6 @@
 
 // ============================================================ 10 kV-ring: voeding, kabelfouten, verklikkers, werkopdracht
-const RBUSES=new Set(['RA','RB','RC','RD']);
+const RBUSES=new Set(BUS_IDS);
 // welke MS-rail en welk uitgaand veld voedt elk knooppunt (breedte-eerst vanaf de rails)
 function supplyTags(){const tag={},q=[];
   for(const b of RBUSES)if(EN.has(b)){tag[b]={bus:b,cb:null};q.push(b);}

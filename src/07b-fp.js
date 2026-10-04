@@ -8,7 +8,7 @@ function buildColliders(){
   // apparatuur: de selectieboxen van alle velden en panelen
   Object.values(VIEWS).forEach(v=>{const d=D[v.id];if(!d||['bld','line','bb','es','kiosk','mstr'].includes(d.type))return;addRect(v.box.min.x,v.box.min.z,v.box.max.x,v.box.max.z);});
   // portaalkolommen en railsteunen
-  for(const L of['L1','L2'])for(const sx of[-6,6]){const x=BAYS[L].x+sx;addRect(x-0.6,-36.6,x+0.6,-35.4);}
+  for(const L of LINES)for(const sx of[-6,6]){const x=BAYS[L].x+sx;addRect(x-0.6,-36.6,x+0.6,-35.4);}
   for(const x of[-38,-20,0,18,44,70])for(const z of[-3.7,3.7])addRect(x-0.45,z-0.45,x+0.45,z+0.45);
   // gebouwmuren met deuropeningen aan de noordzijde
   BUILDINGS.forEach(b=>{const t=0.3;addRect(b.x0,b.z1-t,b.x1,b.z1);addRect(b.x0,b.z0,b.x0+t,b.z1);addRect(b.x1-t,b.z0,b.x1,b.z1);

@@ -9,7 +9,7 @@ function renderProt(){
   const sel=(kind,id,key)=>`<select data-p="${kind}:${id}:${key}">${PROT_OPT[key].vals.map(v=>`<option value="${v}"${PROT[kind][id][key]===v?' selected':''}>${protTxt(key,v)}</option>`).join('')}</select>`;
   const th=keys=>keys.map(k=>`<th title="${PROT_OPT[k].tip}">${PROT_OPT[k].label} <i>?</i></th>`).join('');
   const fRows=FEEDERS.filter(f=>!f.gen).map(f=>{const r=f.P/f.rate;return `<tr><td><b>${f.cb}</b><span>${f.name}</span></td><td class="pv ${r>1?'bad':''}">${Math.round(Math.max(0,r)*100)} %</td><td>${sel('f',f.id,'pick')}</td><td>${sel('f',f.id,'tms')}</td></tr>`;}).join('');
-  const lRows=['L1','L2'].map(L=>`<tr><td><b>${L}-Q0</b><span>${SIM.lines[L].name}</span></td><td><button data-ar="${L}" ${SIM.lines[L].arBroken?'disabled':''}>${SIM.lines[L].arBroken?'AR defect':SIM.lines[L].ar?'AR IN':'AR UIT'}</button></td><td>${sel('ln',L,'dt')}</td></tr>`).join('');
+  const lRows=LINES.map(L=>`<tr><td><b>${L}-Q0</b><span>${SIM.lines[L].name}</span></td><td><button data-ar="${L}" ${SIM.lines[L].arBroken?'disabled':''}>${SIM.lines[L].arBroken?'AR defect':SIM.lines[L].ar?'AR IN':'AR UIT'}</button></td><td>${sel('ln',L,'dt')}</td></tr>`).join('');
   const tRows=TR.map(T=>`<tr><td><b>${T}</b><span>${D[T].label.split('·')[0]}</span></td><td class="pv ${D[T].oil>90?'bad':''}">${Math.round(D[T].oil)} °C</td><td>${sel('tr',T,'trip')}</td></tr>`).join('');
   $('#prot').innerHTML=`<div class="card pr"><div class="eyebrow">Beveiligingsinstellingen · OS Zuidwolde</div><h2>Relais-instellingen</h2>
     <p class="bf-desc">Elke instelling is een afweging: te scherp geeft onnodige afschakelingen, te ruim laat schade toe. Wijzigingen gaan direct in. Beweeg over een kolomkop voor uitleg.</p>
@@ -20,6 +20,6 @@ function renderProt(){
 $('#prot').addEventListener('change',e=>{const s=e.target.closest('[data-p]');if(!s)return;const [kind,id,key]=s.dataset.p.split(':');setProt(kind,id,key,+s.value);});
 $('#prot').addEventListener('click',e=>{if(e.target.closest('[data-pclose]')||e.target.id==='prot')return closeProt();
   const ar=e.target.closest('[data-ar]');if(ar){toggleAR(ar.dataset.ar);renderProt();}
-  if(e.target.closest('[data-pdef]')){FEEDERS.forEach(f=>{setProt('f',f.id,'pick',1.3);setProt('f',f.id,'tms',1);});['L1','L2'].forEach(L=>setProt('ln',L,'dt',1));TR.forEach(T=>setProt('tr',T,'trip',100));}});
+  if(e.target.closest('[data-pdef]')){FEEDERS.forEach(f=>{setProt('f',f.id,'pick',1.3);setProt('f',f.id,'tms',1);});LINES.forEach(L=>setProt('ln',L,'dt',1));TR.forEach(T=>setProt('tr',T,'trip',100));}});
 $('#protBtn').addEventListener('click',()=>protOpen()?closeProt():openProt());
 addEventListener('keydown',e=>{if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT')return;if((e.key==='b'||e.key==='B')&&$('#intro').classList.contains('hidden'))protOpen()?closeProt():openProt();});

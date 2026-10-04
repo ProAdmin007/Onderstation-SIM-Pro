@@ -51,6 +51,12 @@ const TESTS = [
       assert(r.off === 0, `klanten zonder stroom bij start: ${r.off}`);
       assert(r.ring >= 9, `te weinig MS-stations: ${r.ring}`);
   } },
+  { name: 'modelcontrole: model klopt en verkeerde namen worden gevonden', query: '?autostart', async run(p) {
+      const r = await p.evaluate(() => { const goed = OS.checkModel(true).length; OS.LESSONS.les1.steps[1].hl.push('BESTAAT-NIET'); OS.D['V-F1'].cb = 'OOK-NIET';
+        const fout = OS.checkModel(true); return { goed, fout }; });
+      assert(r.goed === 0, `model niet in orde: ${r.goed}`);
+      assert(r.fout.length === 2 && r.fout.some(e => /BESTAAT-NIET/.test(e)), `modelcontrole mist fouten: ${JSON.stringify(r.fout)}`);
+  } },
   { name: 'vergrendeling: scheider niet open met vermogenschakelaar in', query: '?autostart', async run(p) {
       const r = await p.evaluate(() => { T.quiet(); OS.SIM.paused = false; OS.operate('L1-Q1', 0); return { st: OS.D['L1-Q1'].state, toast: T.toast() }; });
       assert(r.st === 1, 'L1-Q1 is toch geopend');

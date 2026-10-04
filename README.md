@@ -173,16 +173,38 @@ Automatische tests sturen de simulator aan in headless Chrome. Ze dekken onder m
 ```powershell
 npm install
 npm test            # of: npm test -- ring   (alleen tests met 'ring' in de naam)
-npm run test:scenarios          # speelt alle scenario's en beide diensten volledig uit (±30 min)
+npm run test:scenarios          # speelt alle scenario's en beide diensten volledig uit (±12 min)
 npm run test:scenarios -- storm # alleen één scenario
 ```
 
 Bij `test:scenarios` speelt een automatische operator het spel uit zoals een goede speler dat doet. Hij isoleert kabelfouten, zet T3 in als reserve, voert werkopdrachten uit (met schakelbrief) en meldt zich bij monteurs. Per run zie je de score, de klantminuten, de doelen en de langste uitval. Een afwijkend resultaat speel je opnieuw met dezelfde seed: `SEED=123456`. Met `FULLLOG=1` krijg je het volledige verloop.
 
+Beide draaien parallel met meerdere browsers tegelijk: standaard de helft van de processorkernen, maximaal 4. Met `TEST_JOBS=2` kies je zelf. De tests openen het spel met `?lite`: lage resolutie en geen schaduwen, zodat er meer tegelijk kan.
+
 Gebruik `CHROME_PATH` als Chrome niet op een standaardplek staat.
 
 ## Ontwikkelen
-De broncode staat in `src/` (HTML/CSS plus JS-modules in volgorde). Bouw `index.html` opnieuw met:
+De broncode staat in `src/`. `build.ps1` plakt de bestanden in strikte naamvolgorde aan elkaar tot één `index.html`.
+
+| Bestanden | Inhoud |
+|---|---|
+| `00-head.html` | opmaak (CSS) en de HTML van alle panelen |
+| `01`–`03c` | Three.js-basis, apparatuur, terrein, wijk, weer en seizoenen |
+| `04-1-net.js` | **centrale definities** (`BUSES`, `LINES`), velden, apparaten, ringen, netgraaf en belastingstromen |
+| `04-2-bediening.js` | vergrendelingen, schakelen, synchrocheck, trips, 110 kV-lijnen |
+| `04-3-trafo.js` | blokkeerrelais, omschakelaar T3, spanningsregeling, thermiek |
+| `04-4-beveiliging.js` | veldbeveiliging, koude-lastopname, relais-instellingen en hun effect |
+| `04-5-storingen.js` | lijn-, veld-, LS-, rail- en trafostoringen |
+| `04-6-taken.js` | werkopdrachten, haalbaarheid, werk staken |
+| `04-7-simloop.js` | de simulatiestap |
+| `04b`–`04f` | spelmodi en score, ring, lessen, dienstoverdracht, extra scenario's |
+| `05`–`06` | effecten, geluid, interieur, opbouw van de scène |
+| `07`–`07i` | SCADA en panelen, rondlopen, monteurs, schakelbrief, beveiligingsvenster, prognose, telefoon, tijdlijn/herhaling, modelcontrole |
+| `08-main.js` | HUD, menu's, start en hoofdlus |
+
+**Rails, lijnen en railkeuzevelden** staan op één plek (`BUSES`, `LINES` en het register `SEL_BAYS` in `04-1-net.js`); de koppelingen, spanningsbanden, SCADA-metingen en werkopdrachten worden daarvan afgeleid. Bij het opstarten controleert `checkModel()` of alle verwijzingen naar apparaten kloppen, of elke schakelaar ergens te bedienen is en of alles in de normale toestand spanning heeft. Een fout verschijnt als consolefout, en de tests vallen er dan direct over.
+
+Bouw `index.html` opnieuw met:
 
 ```powershell
 ./build.ps1

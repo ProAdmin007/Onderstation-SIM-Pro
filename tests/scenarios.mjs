@@ -81,10 +81,10 @@ async function bot(process_full) {
       const t = D[T], lv = T === 'T1' ? 'V-T1' : 'W-T2';
       if (t.blocked && t.resettable) { O.resetLockout(T); note(`${T} gereset`); }
       if (!t.blocked && D[T + '-Q0'].state === 0) { await op(T + '-Q1', 1); await op(T + '-Q0', 1); }
-      const busOf = { 'V-T1': 'RA', 'W-T2': 'RC', 'V-T3': 'RB', 'W-T3': 'RD' };
-      if (!t.blocked && EN().has(T + 'h') && D[lv].state === 0 && !O.BUSF[busOf[lv]]) await op(lv, 1);
+      const busOf = id => O.homeBus(id);   // normale rail van een incomer, uit het model
+      if (!t.blocked && EN().has(T + 'h') && D[lv].state === 0 && !O.BUSF[busOf(lv)]) await op(lv, 1);
       const need = T === 'T1' ? '10' : '20', res = T === 'T1' ? 'V-T3' : 'W-T3', down = t.blocked || D[lv].state === 0 || (T === 'T1' && t.fanFail) || t.oil > 85;
-      if (down && !T3().blocked && D[res].state === 0 && !O.BUSF[busOf[res]]) {
+      if (down && !T3().blocked && D[res].state === 0 && !O.BUSF[busOf(res)]) {
         if (T3().ratio !== need && !D['V-T3'].state && !D['W-T3'].state) { await op('T3-Q0', 0); O.setRatio(need); await wait(3300); await op('T3-Q0', 1); }
         if (T3().ratio === need) { await op(res, 1); note(`reserve T3 op ${need} kV ingezet`); }
       }

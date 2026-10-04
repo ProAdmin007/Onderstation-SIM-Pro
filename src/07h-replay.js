@@ -1,13 +1,13 @@
 
 // ============================================================ tijdlijn en herhaling: elke spelminuut de toestand vastleggen, na afloop analyseren en terugkijken
 var REC={samples:[],events:[],lastM:null,ids:null},RP={on:false,i:0,play:false,live:null,liveT:0,acc:0};
-const snapState=()=>({sw:REC.ids.map(id=>D[id].state).join(''),la:['L1','L2'].map(L=>SIM.lines[L].avail?1:0).join(''),bf:Object.keys(BUSF).join(','),
+const snapState=()=>({sw:REC.ids.map(id=>D[id].state).join(''),la:LINES.map(L=>SIM.lines[L].avail?1:0).join(''),bf:Object.keys(BUSF).join(','),
   rf:RING.secs.map(s=>s.fault?1:0).join(''),tb:TR.map(T=>D[T].blocked?1:0).join(''),r:D.T3.ratio,dm:RING.stations.filter(s=>s.damaged).map(s=>s.id+'|'+s.damaged).join(',')});
 function recTick(){if(GAME.ended||!$('#intro').classList.contains('hidden')||RP.on)return;const m=Math.floor(SIM.t);if(m===REC.lastM)return;REC.lastM=m;
   REC.ids??=Object.values(D).filter(d=>['cb','ds','es','lbs','lvs'].includes(d.type)).map(d=>d.id);
   REC.samples.push({t:SIM.t,off:SIM.off,cml:Math.round(SIM.cml),score:Math.round(GAME.score),l10:FLOW.load,l20:FLOW.load20,...snapState()});}
 function recEvent(t,level,text,pts){if(!REC||!RP||RP.on||!$('#intro').classList.contains('hidden'))return;REC.events.push({t,level,text,pts});if(REC.events.length>3000)REC.events.shift();}
-function applyState(s){[...s.sw].forEach((c,i)=>{D[REC.ids[i]].state=+c;});['L1','L2'].forEach((L,i)=>{SIM.lines[L].avail=s.la[i]==='1';});
+function applyState(s){[...s.sw].forEach((c,i)=>{D[REC.ids[i]].state=+c;});LINES.forEach((L,i)=>{SIM.lines[L].avail=s.la[i]==='1';});
   for(const k in BUSF)delete BUSF[k];s.bf.split(',').filter(Boolean).forEach(b=>BUSF[b]=true);
   RING.secs.forEach((x,i)=>{x.fault=s.rf[i]==='1';});TR.forEach((T,i)=>{D[T].blocked=s.tb[i]==='1';});D.T3.ratio=s.r;
   RING.stations.forEach(x=>{x.damaged=false;});s.dm.split(',').filter(Boolean).forEach(v=>{const [id,why]=v.split('|');RING.stations.find(x=>x.id===id).damaged=why;});

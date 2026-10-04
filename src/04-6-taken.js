@@ -36,8 +36,8 @@ function reserveTask(main){const r=main==='T1'?'10':'20',lvM=TR_LV[main][0],lvR=
   {t:`Schakel ${lvM} IN`,act:[lvM,1],why:'Het MS-veld pas inschakelen als de transformator onder spanning staat.',ok:()=>D[lvM].state===1},
   {t:`Schakel ${lvR} UIT – T3 terug naar warme reserve`,act:[lvR,0],why:'Als laatste de reserve weer afschakelen.',ok:()=>D[lvR].state===0}]};}
 // onderhoud rail B (10 kV): alle velden onder last naar rail A omzetten, rail B vrij en geaard
-const RB_BAYS=['F4','F5','F6','T3'];
-const canRailB=()=>D['V-K'].state===1&&EN.has('RB')&&!BUSF.RB&&!BUSF.RA&&RB_BAYS.every(b=>D[b+'-QB'].state===1&&D[b+'-QA'].state===0)&&['F1','F2','F3','T1'].every(b=>D[b+'-QA'].state===1&&D[b+'-QB'].state===0);
+const baysOn=bus=>Object.keys(SEL_BAYS).filter(b=>SEL_BAYS[b].home===bus),RB_BAYS=baysOn('RB');
+const canRailB=()=>D['V-K'].state===1&&EN.has('RB')&&!BUSF.RB&&!BUSF.RA&&RB_BAYS.every(b=>D[b+'-QB'].state===1&&D[b+'-QA'].state===0)&&baysOn('RA').every(b=>D[b+'-QA'].state===1&&D[b+'-QB'].state===0);
 function railBTask(){const sw=(q,to,grp,why)=>RB_BAYS.map(b=>({t:`${to?'Sluit':'Open'} railkeuzescheider ${b}-${q}`,act:[b+'-'+q,to],grp,why,ok:()=>D[b+'-'+q].state===to}));
   return{bus:'RB',title:'Onderhoud rail B (10 kV)',crew:()=>({box:VIEWS.MS.box,say:'Onderhoud rail B',rel:['V-K','RB-Q8',...RB_BAYS.flatMap(b=>[b+'-QA',b+'-QB'])]}),
     desc:'Rail B krijgt een inspectie. Dankzij het dubbelrailsysteem merkt niemand er iets van: zet alle velden van rail B onder last over naar rail A (koppeling V-K blijft dicht), open dan V-K en aard rail B.',steps:[
@@ -98,7 +98,7 @@ function thermoTask(){const hot=pick(THERMO_C.filter(c=>c.ok())),others=['T1','T
 let taskCycle=0;
 // werkopdracht alleen aanbieden als de uitgangssituatie normaal is (geen storing of blokkering op de betrokken delen)
 const canRes=T=>!D[T].blocked&&!D.T3.blocked&&D[T+'-Q0'].state===1&&EN.has(T+'h')&&TR_LV[T].every(id=>D[id].state===1)&&!D['V-T3'].state&&!D['W-T3'].state;
-const canLine=()=>['L1','L2'].every(L=>SIM.lines[L].avail&&D[L+'-Q0'].state===1);
+const canLine=()=>LINES.every(L=>SIM.lines[L].avail&&D[L+'-Q0'].state===1);
 const canFeeder=F=>{const f=FEEDERS.find(x=>x.id===F);return D[f.cb].state===1&&!f.fault&&EN.has(f.node);};
 const canRing=()=>!RING.secs.some(s=>s.fault)&&RING.stations.every(s=>EN.has(s.node))&&RINGS.every(rg=>D[rg.nop].state===0);
 const canRail=()=>!D['W-T3'].state&&D['W-K'].state===1&&D['W-T2'].state===1&&EN.has('RD')&&!BUSF.RD&&canFeeder('G3')&&canFeeder('G4');
@@ -121,7 +121,7 @@ function abortTask(){const t=TASK;if(!t||t.aborted)return;
   const orig={},last={};t.steps.slice(0,t.i).filter(s=>s.act).forEach((s,k)=>{const [id,to]=s.act;if(!(id in orig))orig[id]=1-to;last[id]=k;});
   const ids=Object.keys(orig).filter(id=>D[id].state!==orig[id]).sort((a,b)=>last[b]-last[a]);
   t.onAbort&&t.onAbort();
-  const emergency=SIM.off>0||TR.some(T=>D[T].blocked)||['L1','L2'].some(L=>!SIM.lines[L].avail&&!SIM.lines[L].maint)||Object.keys(BUSF).length>0;
+  const emergency=SIM.off>0||TR.some(T=>D[T].blocked)||LINES.some(L=>!SIM.lines[L].avail&&!SIM.lines[L].maint)||Object.keys(BUSF).length>0;
   if(!emergency)award(-20,'Werk gestaakt');
   pushAlarm(`Werkopdracht ${t.code} gestaakt${emergency?' vanwege de storing':''} – ${ids.length?'zet de installatie terug in de normale toestand':'er was nog niets geschakeld'}`,'warn');
   if(!ids.length){t.afterAbort&&t.afterAbort();TASK=null;SIM.nextTaskAt=SIM.t+rnd(40,70);renderTasks();return;}

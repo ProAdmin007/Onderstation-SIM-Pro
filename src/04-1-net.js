@@ -4,6 +4,11 @@
 const SIM={t:9*60,speed:60,paused:true,interlock:true,cml:0,incidents:0,tasksDone:0,off:0,
   nextEvent:9*60+16,nextTaskAt:9*60+3,timers:[],
   lines:{L1:{name:'Hoogeveen',avail:true,reason:'',maint:false,ar:true},L2:{name:'Meppel',avail:true,reason:'',maint:false,ar:true}}};
+// ---------- centrale definities: rails en lijnen staan op één plek, de rest wordt hiervan afgeleid
+const BUSES={RA:{nm:'A',kv:10,band:[10,11],coupler:'V-K'},RB:{nm:'B',kv:10,band:[10,11],coupler:'V-K'},
+  RC:{nm:'C1',kv:20,band:[20,22],coupler:'W-K'},RD:{nm:'C2',kv:20,band:[20,22],coupler:'W-K'}};
+const BUS_IDS=Object.keys(BUSES),perBus=v=>Object.fromEntries(BUS_IDS.map(b=>[b,typeof v==='function'?v():v]));
+const LINES=Object.keys(SIM.lines);
 if(params.get('t')){SIM.t=parseFloat(params.get('t'))*60;SIM.nextEvent=SIM.t+16;SIM.nextTaskAt=SIM.t+3;}
 const FEEDERS=[
   {id:'F1',name:'Ring Centrum (MS6–MS7)',short:'Centrum',kind:'city',base:0,cust:0,bus:'RA',ring:true},
@@ -16,10 +21,11 @@ const FEEDERS=[
   {id:'G2',name:'Industrieterrein Noord',short:'Ind. Noord',kind:'ind',base:8.5,cust:60,bus:'RC'},
   {id:'G3',name:'Buitengebied Oost',short:'Buitengeb.',kind:'res',base:6.5,cust:5200,bus:'RD'},
   {id:'G4',name:'Waterzuivering',short:'RWZI',kind:'hosp',base:2.4,cust:1,bus:'RD'}];
-const is20=b=>b==='RC'||b==='RD';   // 20 kV: rail C1 (RC) en rail C2 (RD)
+const is20=b=>BUSES[b]?.kv===20;
+const FD=id=>FEEDERS.find(f=>f.id===id);   // 20 kV: rail C1 (RC) en rail C2 (RD)
 const D={};
 function dev(id,o){D[id]=Object.assign({id,state:0,ops:0,I:0,busy:false,springAt:0},o);return D[id];}
-for(const L of['L1','L2']){const nm=SIM.lines[L].name;
+for(const L of LINES){const nm=SIM.lines[L].name;
   dev(L+'-Q9',{type:'ds',bay:L,label:'Lijnscheider',a:L+'x',b:L+'a',state:1,cb:L+'-Q0',es:L+'-Q8'});
   dev(L+'-Q8',{type:'es',bay:L,label:'Aardschakelaar (lijnzijde)',a:L+'x',ds:L+'-Q9'});
   dev(L+'-Q0',{type:'cb',bay:L,label:'Vermogenschakelaar 110 kV',a:L+'a',b:L+'b',state:1,line:L});
@@ -42,7 +48,8 @@ for(const T of TR){
     blocked:false,blockText:'',blockKind:'',resettable:false,S:0,Sc:0,P:0,tap:9,avr:'auto',avrT:0,tapBusy:false,tapOps:0,U0:0,Ulv:0,rev:false});}
 D[RES].ratio='10';D[RES].reserve=true;
 // 10 kV dubbelrailsysteem: elk veld heeft een railkeuzescheider naar rail A (QA) en naar rail B (QB)
-function selPair(bay,node,cb,home){for(const [b,nm,o] of [['RA','A','B'],['RB','B','A']])dev(bay+'-Q'+nm,{type:'ds',bay,label:'Railkeuzescheider rail '+nm,a:b,b:node,state:b===home?1:0,cb,sel:true,other:bay+'-Q'+o});}
+const SEL_BAYS={};   // register van alle velden met railkeuzescheiders: knooppunt, vermogenschakelaar en normale rail
+function selPair(bay,node,cb,home){SEL_BAYS[bay]={node,cb,home};for(const [b,nm,o] of [['RA','A','B'],['RB','B','A']])dev(bay+'-Q'+nm,{type:'ds',bay,label:'Railkeuzescheider rail '+nm,a:b,b:node,state:b===home?1:0,cb,sel:true,other:bay+'-Q'+o});}
 const selPar=d=>!!d.sel&&D[d.other].state===1&&D['V-K'].state===1;   // veld staat ook op de andere rail en de rails zijn gekoppeld: omzetten onder last mag
 dev('V-T1',{type:'cb',bay:'T1',label:'Inkomend veld 10 kV',a:'T1l',b:'T1s',state:1,tr:'T1'});selPair('T1','T1s','V-T1','RA');
 dev('W-T2',{type:'cb',bay:'T2',label:'Inkomend veld 20 kV (rail C1)',a:'T2l',b:'RC',state:1,tr:'T2'});
@@ -88,7 +95,8 @@ const CONS=FEEDERS.filter(f=>!f.ring).concat(LVG);   // alle afnemers (MS-velden
 dev('RAIL',{type:'bb',label:'110 kV-railsysteem',node:'BB'});
 dev('MS',{type:'bld',label:'10 kV-schakelinstallatie (binnen)',node:'RA'});
 dev('MS20',{type:'bld',label:'20 kV-schakelinstallatie (binnen)',node:'RC'});
-const LV10=new Set(['T1l','RA','RB','F1','F2','F3','F4','F5','F6','T1s','T3s','F1s','F2s','F3s','F4s','F5s','F6s']),LV20=new Set(['T2l','RC','RD','G1','G2','G3','G4']);
+const lvNodes=kv=>[...BUS_IDS.filter(b=>BUSES[b].kv===kv),...FEEDERS.filter(f=>(is20(f.bus)?20:10)===kv).flatMap(f=>[f.id,f.sel]),...Object.values(SEL_BAYS).filter(v=>BUSES[v.home].kv===kv).map(v=>v.node)];
+const LV10=new Set(['T1l',...lvNodes(10)]),LV20=new Set(['T2l',...lvNodes(20)]);
 function lvl(n){if(RING_LV.has(n))return 0.4;if(RING_MV.has(n))return 10;if(n===RES+'l')return +D[RES].ratio;return LV10.has(n)?10:LV20.has(n)?20:110;}
 const trafoUn=T=>T===RES?(D[RES].ratio==='10'?10.5:21):D[T].un;
 const kA=b=>is20(b)?28.9:57.9;   // A per MW bij cos φ 0,95
@@ -96,7 +104,7 @@ const ADJ={};
 Object.values(D).forEach(d=>{if(['cb','ds','tr','lbs','lvs','mstr'].includes(d.type)){(ADJ[d.a]??=[]).push(d);(ADJ[d.b]??=[]).push(d);}if(d.type==='es')(ADJ[d.a]??=[]).push(d);});
 
 const conducts=d=>d.type==='tr'||d.type==='mstr'||(['cb','ds','lbs','lvs'].includes(d.type)&&d.state===1);
-function energized(){const en=new Set(),q=[];for(const L of['L1','L2'])if(SIM.lines[L].avail){en.add(L+'x');q.push(L+'x');}
+function energized(){const en=new Set(),q=[];for(const L of LINES)if(SIM.lines[L].avail){en.add(L+'x');q.push(L+'x');}
   while(q.length){const n=q.pop();for(const d of ADJ[n]||[]){if(!conducts(d))continue;const m=d.a===n?d.b:d.a;if(!en.has(m)){en.add(m);q.push(m);}}}return en;}
 function earthed(){const er=new Set(),q=[];Object.values(D).forEach(d=>{if(d.type==='es'&&d.state===1&&!er.has(d.a)){er.add(d.a);q.push(d.a);}});
   while(q.length){const n=q.pop();for(const d of ADJ[n]||[]){if(d.type==='tr'||d.type==='mstr'||!conducts(d))continue;const m=d.a===n?d.b:d.a;if(!er.has(m)){er.add(m);q.push(m);}}}return er;}
@@ -112,10 +120,10 @@ function profile(k,h){const g=(m,s)=>Math.exp(-(((h-m)/s)**2));
     case 'ovl':return isDark(h,0.25)||WX.cur.fog>0.6?1:0;   // schemerschakeling straatverlichting
     case 'pv':{const r=SEASON.rise+0.5,s=SEASON.set-0.5;return -Math.max(0,Math.sin(Math.PI*(h-r)/(s-r)))*SEASON.pv*(1-0.8*WX.cur.cloud)*(1-0.85*WX.cover)*(0.88+0.12*Math.sin(SIM.t*0.011));}}return 1;}
 let EN=new Set(),ER=new Set();
-const FLOW={P110:0,U110:110,U:{RA:0,RB:0,RC:0,RD:0},lineP:{L1:0,L2:0},load:0,load20:0,groups:[]};
+const FLOW={P110:0,U110:110,U:perBus(0),lineP:{L1:0,L2:0},load:0,load20:0,groups:[]};
 const TAP_STEP=0.0125,Z_DROP=0.05;
 function computeFlows(){
-  EN=energized();ER=earthed();const h=hourOf();const busLoad={RA:0,RB:0,RC:0,RD:0};
+  EN=energized();ER=earthed();const h=hourOf();const busLoad=perBus(0);
   FLOW.TAG=supplyTags();const feederP={};
   CONS.forEach(c=>{c.demand=c.base*profile(c.kind,h)*(c.gen?1:seasonMul(c.kind))*(1+c.noise)*(c.gen?1:c.clp);c.Pc=EN.has(c.node)?c.demand*(1-c.outFrac):0;
     const t=FLOW.TAG[c.node];if(t&&c.Pc){busLoad[t.bus]+=c.Pc;if(t.cb)feederP[t.cb]=(feederP[t.cb]||0)+c.Pc;}});
@@ -124,12 +132,13 @@ function computeFlows(){
   FLOW.load=busLoad.RA+busLoad.RB;FLOW.load20=busLoad.RC+busLoad.RD;
   // 110 kV-netspanning (TenneT) varieert over de dag
   const U110=110.5+1.6*Math.sin((h-4)/24*2*Math.PI)+0.25*Math.sin(SIM.t*0.05)-0.012*FLOW.P110;FLOW.U110=U110;
-  const feeds={RA:[],RB:[],RC:[],RD:[]};
+  const feeds=perBus(()=>[]);
   TR.forEach(T=>{const t=D[T];t.S=0;t.Sc=0;t.rev=false;t.U0=EN.has(T+'h')?U110/110*trafoUn(T)*(1+(t.tap-9)*TAP_STEP):0;
     TR_LV[T].forEach(id=>{const c=D[id];c.I=0;const b=railOf(c.b);if(c.state===1&&EN.has(T+'l')&&b)feeds[b].push(T);});});
   const coupled=D['V-K'].state===1,coupled20=D['W-K'].state===1;
-  FLOW.U={RA:0,RB:0,RC:0,RD:0};FLOW.groups=[];
-  (coupled?[['RA','RB']]:[['RA'],['RB']]).concat(coupled20?[['RC','RD']]:[['RC'],['RD']]).forEach(g=>{const load=g.reduce((s,b)=>s+busLoad[b],0);const tf=[...new Set(g.flatMap(b=>feeds[b]))];if(!tf.length)return;
+  FLOW.U=perBus(0);FLOW.groups=[];
+  // railgroepen: twee railhelften vormen één groep als hun koppeling dicht is
+  Object.entries(COUPLERS).flatMap(([cb,[a,b]])=>D[cb].state===1?[[a,b]]:[[a],[b]]).forEach(g=>{const load=g.reduce((s,b)=>s+busLoad[b],0);const tf=[...new Set(g.flatMap(b=>feeds[b]))];if(!tf.length)return;
     FLOW.groups.push({buses:g,tf});
     tf.forEach(T=>{D[T].S+=Math.abs(load)/tf.length/0.95;D[T].rev=load<0;});
     if(tf.length>=2){const taps=tf.map(T=>D[T].tap),sc=25*0.052*(Math.max(...taps)-Math.min(...taps));tf.forEach(T=>D[T].Sc=sc);}
@@ -143,9 +152,11 @@ function computeFlows(){
   TR.forEach(T=>{const t=D[T];t.P=t.S*0.95*(t.rev?-1:1);if(EN.has(T+'h'))P110+=t.P*1.006+0.02;const I=t.S*5.25;D[T+'-Q0'].I=I;D[T+'-Q1'].I=I;});
   FLOW.P110=P110;
   ringFlows();
-  const feeding=['L1','L2'].filter(L=>SIM.lines[L].avail&&D[L+'-Q9'].state&&D[L+'-Q0'].state&&D[L+'-Q1'].state);
-  ['L1','L2'].forEach(L=>{const p=feeding.includes(L)?P110/feeding.length:0;FLOW.lineP[L]=p;const I=Math.abs(p)/0.95*5.25;[L+'-Q9',L+'-Q0',L+'-Q1'].forEach(id=>D[id].I=I);});
+  const feeding=LINES.filter(L=>SIM.lines[L].avail&&D[L+'-Q9'].state&&D[L+'-Q0'].state&&D[L+'-Q1'].state);
+  LINES.forEach(L=>{const p=feeding.includes(L)?P110/feeding.length:0;FLOW.lineP[L]=p;const I=Math.abs(p)/0.95*5.25;[L+'-Q9',L+'-Q0',L+'-Q1'].forEach(id=>D[id].I=I);});
 }
+// op welke rail staat een vermogenschakelaar normaal (voor incomers met railkeuzescheiders: de normale rail van het veld)
+function homeBus(id){const n=D[id]?.b;return BUSES[n]?n:Object.values(SEL_BAYS).find(v=>v.node===n)?.home||null;}
 const railOf=n=>BUS_BAND[n]?n:(FLOW.TAG?.[n]?.bus||null);   // op welke rail staat dit knooppunt nu
 function nodeU(n){if(!EN.has(n))return 0;const L=lvl(n);if(L===110)return FLOW.U110;if(FLOW.U[n]!=null)return FLOW.U[n];
   if(RING_LV.has(n)||RING_MV.has(n)){const s=RING.stations.find(s=>n===s.node+'v'||n.startsWith(s.id+'-'));const t=FLOW.TAG[s?s.node:n]||FLOW.TAG[n];if(!t)return 0;const sn=s?s.node:n;return L===0.4?(FLOW.UN?.[sn]??FLOW.U[t.bus])*0.039:(FLOW.UN?.[n]??FLOW.U[t.bus]);}

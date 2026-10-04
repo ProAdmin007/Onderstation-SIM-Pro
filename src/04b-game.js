@@ -34,7 +34,7 @@ const MODES={
   piek:{scen:true,name:'Avondpiek op één poot',tag:'Scenario · gemiddeld',start:16.5,dur:150,season:'herfst',weather:'helder',
     desc:'T1 staat in onderhoud en reservetrafo T3 (25 MVA) draagt de hele 10 kV. De avondpiek komt eraan: houd T3 heel, de kassen hebben een afschakelbaar contract.',
     setup(){setCB('T1-Q0',0);setCB('V-T1',0);setCB('T1-Q1',0);setCB('V-T3',1);setCB('V-K',1);
-      Object.assign(D.T1,{blocked:true,resettable:false,blockText:'onderhoud trappenschakelaar',blockKind:'maint'});D.T3.oil=62;FEEDERS[5].interruptible=true;
+      Object.assign(D.T1,{blocked:true,resettable:false,blockText:'onderhoud trappenschakelaar',blockKind:'maint'});D.T3.oil=62;FD('F6').interruptible=true;
       pushAlarm('T1 staat uit bedrijf voor onderhoud – gereed verwacht rond 17:50. Reservetransformator T3 voedt de 10 kV.','info');
       pushAlarm('Glastuinbouw Oost (F6) heeft een afschakelbaar contract: afschakelen kost maar 10% klantminuten','info');
       at(80,()=>{D.T1.resettable=true;readyNotice('Onderhoud T1 gereed – reset blokkeerrelais 86, sluit T1-Q1 en neem T1 weer in bedrijf','T1',()=>D.T1.blocked);});},
@@ -44,7 +44,7 @@ const MODES={
       {t:'Minder dan 15.000 klantminuten',check:()=>SIM.cml>15000?'fail':null,final:()=>SIM.cml<=15000}]},
   blackout:{scen:true,name:'Black-out',tag:'Scenario · moeilijk',start:6.33,dur:45,season:'herfst',weather:'mist',
     desc:'Landelijke storing: het station is volledig zwart. Bouw alles weer op, veld voor veld.',
-    setup(){for(const L of['L1','L2'])Object.assign(SIM.lines[L],{avail:false,reason:'landelijke storing (black-out)'});
+    setup(){for(const L of LINES)Object.assign(SIM.lines[L],{avail:false,reason:'landelijke storing (black-out)'});
       Object.values(D).forEach(d=>{if(d.type==='cb')d.state=0;});D.T1.oil=D.T2.oil=24;
       CONS.forEach(c=>{c.offSince=SIM.t-120;});FEEDERS.concat(RING.stations).forEach(f=>{f.unplanned=true;});
       GAME.countdown={label:'Deadline volledig herstel',until:SIM.t+30};
@@ -105,7 +105,7 @@ function applyMode(id){
 function gameTick(dm,dtReal){
   if(GAME.ended)return;
   GAME.score-=CONS.reduce((s,c)=>s+custOff(c)*(c.interruptible?0.1:1),0)*dm/500;
-  const hosp=FEEDERS[4];
+  const hosp=FD('F5');
   if(!EN.has(hosp.node)&&!hosp.backfed){GAME.score-=5*dm;GAME.flags.hospRun=(GAME.flags.hospRun||0)+dm;GAME.stats.hospMin+=dm;}else GAME.flags.hospRun=0;
   TR.forEach(T=>GAME.stats.maxOil=Math.max(GAME.stats.maxOil,D[T].oil));
   const canRestore=SIM.lines.L1.avail||SIM.lines.L2.avail;
