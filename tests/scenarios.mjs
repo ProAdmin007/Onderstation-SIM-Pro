@@ -20,15 +20,16 @@ async function bot(process_full) {
   const log = [], note = m => log.push(`${String(Math.floor(S.t / 60) % 24).padStart(2, '0')}:${String(Math.floor(S.t % 60)).padStart(2, '0')} ${m}`);
   S.speed = 1;   // eigen animatielus laat de tijd dan nauwelijks lopen; de bot stapt zelf
   const step = min => { const p = S.paused; S.paused = false; for (let i = 0; i < min * 4; i++) O.simStep(0.25 * 60 / S.speed); S.paused = p; };
-  const isOpen = () => !document.querySelector('#radio').classList.contains('hidden');
+  const failAt = {}, isOpen = () => !document.querySelector('#radio').classList.contains('hidden');
   async function op(id, to) {
-    const d = D[id]; if (!d || d.state === to) return true;
+    const d = D[id], k = id + ':' + to; if (!d || d.state === to) return true;
+    if (failAt[k] && S.t - failAt[k] < 5) return false;   // net mislukt: niet elke tick opnieuw proberen
     if (d.springAt && performance.now() < d.springAt) await wait(d.springAt - performance.now() + 50);
     for (let i = 0; d.busy && i < 100; i++) await wait(100);   // motoraandrijving draait nog
     O.operate(id, to);
     if (isOpen()) { document.querySelector('[data-rd="meld"]').click(); await wait(1700); }   // netjes melden aan de monteur
     const why = `kon ${id} niet ${to ? 'inschakelen' : 'uitschakelen'}: ${document.querySelector('#toast').textContent}`;
-    if (d.state !== to && !log.some(l => l.endsWith(why))) note(why);
+    if (d.state !== to) { failAt[k] = S.t; if (!log.some(l => l.endsWith(why))) note(why); }
     return d.state === to;
   }
   const EN = () => O.EN(), shed = new Set(), mine = id => { const t = O.task(); return !!t && O.taskActs(t).some(s => s.act[0] === id); };
@@ -53,12 +54,13 @@ async function bot(process_full) {
     // 2. ringen: fout isoleren, terugvoeden via normaal-open punt, na reparatie normaliseren
     for (const s of O.RING.secs) {
       const iso = [s.a && s.a + '-R', s.b && s.b + '-L'].filter(Boolean);
-      if (s.fault && !s.handled) { for (const id of iso) await op(id, 0); await op(s.ring.nop, 1); s.handled = true; note(`ringfout ${s.id} geïsoleerd`); }
+      if (s.fault && !s.handled) { for (const id of iso) await op(id, 0); if (!iso.includes(s.ring.nop)) await op(s.ring.nop, 1); s.handled = true; note(`ringfout ${s.id} geïsoleerd`); }   // fout naast het NOP: niet terugvoeden
       if (!s.fault && s.handled) { if (!s.a) await op(cbOf(s.ring.from), 1); if (!s.b) await op(cbOf(s.ring.to), 1); for (const id of iso) await op(id, 1); s.handled = false; note(`kabel ${s.id} weer in bedrijf`);
         if (!O.RING.secs.some(x => x.ring === s.ring && x.handled)) await op(s.ring.nop, 0); }
     }
     // 3. transformatoren: geblokkeerd → reserve inzetten; na reset weer terug
     await doTask();
+    if (T3().blocked && T3().resettable) { O.resetLockout('T3'); note('T3 gereset'); }
     for (const T of ['T1', 'T2']) {
       if (O.task() && O.task().tr === T) continue;   // staat in onderhoud via de werkopdracht
       const t = D[T], lv = T === 'T1' ? 'V-T1' : 'W-T2';

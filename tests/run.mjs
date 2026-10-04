@@ -132,6 +132,13 @@ const TESTS = [
       assert(!r.fout && r.goed && r.approved, `controle klopt niet: fout ${r.fout} goed ${r.goed}`);
       assert(r.straf >= 25, `geen straf voor afwijking: ${r.straf}`);
   } },
+  { name: 'werkopdrachten alleen als ze uitvoerbaar zijn', query: '?autostart&t=10', async run(p) {
+      const r = await p.evaluate(() => { T.quiet(); OS.SIM.paused = false; OS.D.T3.blocked = true; OS.D.T3.resettable = false;
+        const titels = []; for (let i = 0; i < 7; i++) { OS.offerTask(); const t = OS.task(); if (t) titels.push(t.title); }
+        return titels; });
+      assert(r.length, 'geen enkele werkopdracht aangeboden');
+      assert(!r.some(t => /reservetransformator/.test(t)), `trafo-onderhoud aangeboden met geblokkeerde T3: ${r.join(' | ')}`);
+  } },
   { name: 'scenario dubbele kabelfout: eiland en gedeeltelijk herstel', query: '?play=dubbel', async run(p) {
       const r = await p.evaluate(() => { T.step(1.5); const uit = OS.SIM.off;
         ['MS1-R', 'MS2-L', 'MS4-R', 'MS5-L'].forEach(id => OS.operate(id, 0)); OS.operate('MS3-R', 1); OS.operate('V-F3', 1); OS.operate('V-F4', 1); T.step(0.5);

@@ -330,8 +330,16 @@ function reserveTask(main){const r=main==='T1'?'10':'20',lvM=TR_LV[main][0],lvR=
   {t:`Schakel ${lvM} IN`,act:[lvM,1],why:'Het MS-veld pas inschakelen als de transformator onder spanning staat.',ok:()=>D[lvM].state===1},
   {t:`Schakel ${lvR} UIT – T3 terug naar warme reserve`,act:[lvR,0],why:'Als laatste de reserve weer afschakelen.',ok:()=>D[lvR].state===0}]};}
 let taskCycle=0;
-function offerTask(){const defs=[()=>reserveTask('T2'),()=>ringTask(),()=>lineTask('L2'),()=>reserveTask('T1'),()=>feederTask('G3'),()=>feederTask('F5'),()=>lineTask('L1')];
-  TASK=defs[taskCycle++%defs.length]();TASK.i=0;TASK.code='WV-2026-'+(taskSeq++);briefInit(TASK);
+// werkopdracht alleen aanbieden als de uitgangssituatie normaal is (geen storing of blokkering op de betrokken delen)
+const canRes=T=>!D[T].blocked&&!D.T3.blocked&&D[T+'-Q0'].state===1&&EN.has(T+'h')&&TR_LV[T].every(id=>D[id].state===1)&&!D['V-T3'].state&&!D['W-T3'].state;
+const canLine=()=>['L1','L2'].every(L=>SIM.lines[L].avail&&D[L+'-Q0'].state===1);
+const canFeeder=F=>{const f=FEEDERS.find(x=>x.id===F);return D[f.cb].state===1&&!f.fault&&EN.has(f.node);};
+const canRing=()=>!RING.secs.some(s=>s.fault)&&RING.stations.every(s=>EN.has(s.node))&&RINGS.every(rg=>D[rg.nop].state===0);
+function offerTask(){const defs=[[()=>reserveTask('T2'),()=>canRes('T2')],[()=>ringTask(),canRing],[()=>lineTask('L2'),canLine],[()=>reserveTask('T1'),()=>canRes('T1')],
+    [()=>feederTask('G3'),()=>canFeeder('G3')],[()=>feederTask('F5'),()=>canFeeder('F5')],[()=>lineTask('L1'),canLine]];
+  computeFlows();let def=null;for(let k=0;k<defs.length&&!def;k++){const d=defs[taskCycle++%defs.length];if(d[1]())def=d[0];}
+  if(!def){SIM.nextTaskAt=SIM.t+10;return;}   // nu niets veilig uit te voeren: later opnieuw
+  TASK=def();TASK.i=0;TASK.code='WV-2026-'+(taskSeq++);briefInit(TASK);
   pushAlarm(`Nieuwe werkopdracht ${TASK.code}: ${TASK.title}`,'info');AudioSys.chime();renderTasks();}
 function taskTick(){if(!TASK)return;let guard=0;
   while(TASK&&guard++<20){const st=TASK.steps[TASK.i];
