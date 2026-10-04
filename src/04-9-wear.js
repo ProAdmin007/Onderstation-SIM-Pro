@@ -10,7 +10,8 @@ const cond=d=>Math.max(0,1-(d.wear||0));
 function wearOp(d,fault){d.wear=Math.min(1,(d.wear||0)+(fault?0.025:0.003));d.ops++;
   if(d.wear>0.75&&!d.wearWarn){d.wearWarn=true;pushAlarm(`${d.id}: conditie ${Math.round(cond(d)*100)}% – schakelaar is aan revisie toe (overzicht Onderhoud, O)`,'warn');}}
 // kans dat een schakelaar weigert bij een beveiligingstrip
-const failP=d=>d.feeder?Math.max(0,d.wear-0.72)*1.6:0;
+// alleen in diensten en vrij spelen: scenario's verlopen zoals bedoeld, en in de testmodus alleen als een test het vraagt
+const failP=d=>d.feeder&&!MODES[GAME.mode]?.scen&&(!LITE||SIM.failTest)?Math.max(0,d.wear-0.72)*1.6:0;
 function breakerFails(d){if(d.stuck)return true;if(Math.random()>=failP(d))return false;
   d.stuck=true;GAME.stats.bf=(GAME.stats.bf||0)+1;
   const sel=SEL_BAYS[d.bay],rail=sel?BUSES[railOf(sel.node)||sel.home].nm:BUSES[d.a]?.nm||'?';

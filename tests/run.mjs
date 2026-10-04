@@ -6,6 +6,9 @@ import { existsSync } from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
 import os from 'node:os';
+// tests draaien met lagere prioriteit, zodat de rest van de server voorgaat (TEST_PRIORITY=normal om uit te zetten);
+// de browsers die hierna starten erven die prioriteit
+if (process.env.TEST_PRIORITY !== 'normal') try { os.setPriority(0, os.constants.priority.PRIORITY_BELOW_NORMAL); } catch (e) {}
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const pageUrl = pathToFileURL(path.join(root, 'index.html')).href;
@@ -323,15 +326,16 @@ const TESTS = [
 
 // parallel: elke werker heeft een eigen browser (achtergrondtabbladen in één browser krijgen afgeremde timers)
 const todo = TESTS.filter(t => !only || t.name.includes(only));
-const jobs = Math.max(1, Math.min(todo.length, +process.env.TEST_JOBS || Math.min(4, Math.floor(os.cpus().length / 2))));
+const jobs = Math.max(1, Math.min(todo.length, +process.env.TEST_JOBS || (process.env.CI ? 2 : Math.min(3, Math.max(1, Math.floor(os.cpus().length / 4))))));
 const launch = () => puppeteer.launch({ executablePath: chrome, headless: 'new',
   args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--no-sandbox', '--window-size=1280,800',
-    '--disable-background-timer-throttling', '--disable-renderer-backgrounding', '--disable-backgrounding-occluded-windows'],
+    '--disable-background-timer-throttling', '--disable-renderer-backgrounding', '--disable-backgrounding-occluded-windows', '--num-raster-threads=1', '--renderer-process-limit=2', '--disable-gpu-compositing', '--disable-gpu-rasterization', '--disable-accelerated-2d-canvas', '--mute-audio', '--disable-extensions'],
   defaultViewport: { width: 1280, height: 800 } });
 let failed = 0, next = 0;
 const tStart = Date.now();
 console.log(`${todo.length} test(s) met ${jobs} parallelle werker(s)\n`);
-await Promise.all(Array.from({ length: jobs }, async () => {
+await Promise.all(Array.from({ length: jobs }, async (_, w) => {
+  await sleep(w * 4000);   // werkers na elkaar laten starten: het opbouwen van de 3D-wereld is het zwaarste moment
   const browser = await launch();
   while (next < todo.length) {
     const t = todo[next++], t0 = Date.now();

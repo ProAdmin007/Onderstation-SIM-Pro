@@ -168,5 +168,6 @@ function updateSky(h){
   scene.fog.density=0.0008+0.0016*cl*(0.3+W.rain+W.snow)+0.006*W.fog;scene.fog.color.multiplyScalar(1-0.35*cl*(1-W.fog));
   su.turbidity.value=5.5+14.5*cl;su.rayleigh.value=1.5-0.9*cl;su.mieCoefficient.value=0.004+0.026*cl;
   applySnowCover();
-  if(Math.abs(el-lastEnvElev)>0.6||Math.abs(cl-lastEnvCloud)>0.08){lastEnvElev=el;lastEnvCloud=cl;updateEnv();}
+  // omgevingslicht opnieuw berekenen (PMREM-render) – niet in de testmodus: zonder grafische kaart is dat erg zwaar
+  if(!LITE&&(Math.abs(el-lastEnvElev)>0.6||Math.abs(cl-lastEnvCloud)>0.08)){lastEnvElev=el;lastEnvCloud=cl;updateEnv();}
 }
