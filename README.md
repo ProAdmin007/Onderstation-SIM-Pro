@@ -100,6 +100,11 @@ Een 3D-onderstationsimulator die in de browser draait (Three.js, geen installati
   - **AR dode tijd per lijn** (0,3 / 1 / 3 s). Kort: de herinschakeling mislukt soms omdat de boog nog niet gedoofd is. 3 s: altijd raak, maar draait het station op één lijn, dan vallen processen bij klanten uit.
   - **Thermische trip per trafo** (95 / 100 / 110 °C). Hoog geeft meer reserve, maar boven 105 °C ontstaat gasvorming en dreigt een Buchholz-trip met een lange inspectie.
 - **SCADA** heeft tabbladen voor 10 kV, 20 kV, de ring, **kabels** en de **prognose**.
+  - Is er een storing in een deel van de installatie, dan **knippert het tabblad rood** tot hij is opgelost. Beweeg over het tabblad om te zien welke storing het is.
+    - **10 kV:** kabelfout of uitval van een veld, railfout of dode rail A/B, T1 geblokkeerd, vastzittende schakelaar.
+    - **20 kV:** hetzelfde voor rail C1/C2, T2 en de G-velden.
+    - **Ring:** kabelfout, beschadigd station, doorgeslagen zekeringen of onverwacht spanningsloos station.
+    - Een 110 kV-lijn die uitvalt of een geblokkeerde T3 laat zowel 10 kV als 20 kV oplichten.
   - **Kabels:** per ringkabel de stroom tegen de rating (330 A, kopkabels 400 A), een belastingsbalk (groen, oranje boven 85%, rood boven 100%), de spanning aan het eind en of hij een fout heeft of spanningsloos is. Ook de uitgaande veldkabels en de distributietrafo's per MS-station. Klik op een ringkabel voor het station erachter. Zoomen kan met de knoppen **−/+**, met `Ctrl` + scrollwiel of met de toetsen `+` en `−` (75–250 %). Het paneel wordt dan mee breder.
 
 ## Leven in de wijk

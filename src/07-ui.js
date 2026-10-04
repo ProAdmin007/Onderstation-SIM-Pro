@@ -71,6 +71,19 @@ function buildSLD(){
   svg.querySelectorAll('[data-m]').forEach(el=>(SLD.meas[el.dataset.m]??=[]).push(el));
   $('#sldTabs').addEventListener('click',e=>{const b=e.target.closest('[data-t]');if(b)setTab(b.dataset.t);});
 }
+// ---- tabbladen laten oplichten zolang er in dat deel van de installatie een storing is
+function tabAlarms(){const out={'10':[],'20':[],R:[]},add=(t,why)=>out[t].push(why),both=why=>{add('10',why);add('20',why);};
+  LINES.forEach(L=>{if(!SIM.lines[L].avail&&!SIM.lines[L].maint)both(`lijn ${L} spanningsloos`);});
+  if(D.T3.blocked)both('T3 geblokkeerd');
+  BUS_IDS.forEach(b=>{const t=is20(b)?'20':'10',nm=BUSES[b].nm;if(BUSF[b])add(t,`railfout rail ${nm}`);else if(!EN.has(b))add(t,`rail ${nm} spanningsloos`);});
+  if(D.T1.blocked)add('10','T1 geblokkeerd');if(D.T2.blocked)add('20','T2 geblokkeerd');
+  FEEDERS.forEach(f=>{const t=is20(f.bus)?'20':'10';if(f.ring)return;if(f.fault)add(t,`kabelfout ${f.id}`);else if(f.unplanned&&!EN.has(f.node))add(t,`${f.id} spanningsloos`);});
+  CB_IDS.forEach(id=>{const d=D[id];if(d.stuck)add(d.feeder&&is20(d.feeder.bus)?'20':'10',`${id} zit vast`);});
+  RING.secs.forEach(s=>{if(s.fault)add('R',`kabelfout ${secName(s)}`);});
+  RING.stations.forEach(s=>{if(s.damaged)add('R',`${s.id} beschadigd`);else if(s.fuse)add('R',`zekeringen ${s.id}`);else if(s.unplanned&&!EN.has(s.node))add('R',`${s.id} spanningsloos`);});
+  return out;}
+function updateTabAlarms(){const a=tabAlarms();document.querySelectorAll('#sldTabs button').forEach(b=>{if(b.dataset.tip0==null)b.dataset.tip0=b.title||'';const l=a[b.dataset.t];const on=!!(l&&l.length);
+    b.classList.toggle('alarm',on);const tip=on?`Storing: ${l.slice(0,4).join(', ')}${l.length>4?` (+${l.length-4})`:''}`:'';if(b._tip!==tip){b._tip=tip;b.title=tip||b.dataset.tip0;}});}
 function setTab(t){SLD.tab=t;if(t==='P')setTimeout(renderProg);if(t==='K')setTimeout(renderCables);document.querySelectorAll('#sld [data-tab]').forEach(g=>g.style.display=g.dataset.tab===t?'':'none');
   document.querySelectorAll('#sldTabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));}
 function nodeClass(n){if(ER.has(n))return 'earth';if(!EN.has(n))return 'dead';const v=lvl(n);return v===110?'hv':v===20?'mv20':v<1?'lv':'mv';}
@@ -92,6 +105,7 @@ function updateSLD(){
   RING.secs.forEach(s=>(SLD.byNode[s.node]||[]).forEach(el=>{el.classList.toggle('ovl',s.load>0.85&&s.load<=1);el.classList.toggle('ovl2',s.load>1);}));
   FEEDERS.filter(f=>f.ring).forEach(f=>setM('fa'+f.id,`V-${f.id} · rail ${BUS_BAND[railOf(f.sel)]?.[2]||'–'} · ${Math.round(D[f.cb].I)} A`));
   RING.secs.forEach(s=>setM('flt'+s.id,s.fault?'⚡':''));
+  updateTabAlarms();
   FEEDERS.forEach(f=>{const on=EN.has(f.node);setM('f'+f.id,on?`${fx(f.P)} MW`:'UIT',on?(f.gen?'mh':'m'):'bad');setM('fc'+f.id,f.ring?'ring':f.gen?'productie':f.cust>=1000?`${fx(f.cust/1000)}k kl`:`${f.cust} kl`);});
 }
 

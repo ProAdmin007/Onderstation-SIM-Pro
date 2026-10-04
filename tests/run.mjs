@@ -344,6 +344,17 @@ const TESTS = [
         lijnen: O.SIM.lines.L1.avail && O.SIM.lines.L2.avail, koeling: !D.T1.fanFail, flex: !O.FLEX.some(f => f.id === 'MS6-G2') }; }, id);
     for (const [k, v] of Object.entries(r)) assert(v, `${k} klopt niet: ${JSON.stringify(r)}`);
   } })),
+  { name: 'SCADA-tabbladen lichten op bij een storing', query: '?autostart&t=11', async run(p) {
+      const r = await p.evaluate(() => { T.quiet(); const O = OS, aan = () => [...document.querySelectorAll('#sldTabs button.alarm')].map(b => b.dataset.t).join(','); O.SIM.paused = false; T.step(0.3); O.updateTabAlarms();
+        const rust = aan(); O.feederFault('F6', 10); T.step(0.2); O.updateTabAlarms(); const f6 = aan();
+        O.ringFault(O.FEEDERS.find(f => f.id === 'F3'), O.RING.secs.find(s => s.id === 'K23'), 30); T.step(0.2); O.updateTabAlarms(); const ring = aan();
+        O.busFault('RD', 20); T.step(0.2); O.updateTabAlarms(); const rail = aan(); const tip = document.querySelector('#sldTabs button[data-t="20"]').title;
+        return { rust, f6, ring, rail, tip }; });
+      assert(r.rust === '', `tabbladen lichten op zonder storing: ${r.rust}`);
+      assert(r.f6 === '10', `kabelfout F6 moet alleen 10 kV laten oplichten: ${r.f6}`);
+      assert(r.ring === '10,R', `ringfout moet ook Ring laten oplichten: ${r.ring}`);
+      assert(r.rail === '10,20,R' && /railfout rail C2/.test(r.tip), `railfout C2: ${r.rail} · ${r.tip}`);
+  } },
   { name: 'Esc opent pauzemenu en pauzeert', query: '?autostart', async run(p) {
       await p.keyboard.press('Escape'); await sleep(800);
       const r = await p.evaluate(() => ({ menu: !document.querySelector('#pauseMenu').classList.contains('hidden'), paused: OS.SIM.paused }));
