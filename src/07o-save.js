@@ -6,25 +6,25 @@ var RESUMING=false;
 const SAVE_KEY='osz-save',SAVE_V=1;
 const BASE0=new Map(CONS.map(c=>[c.id,c.base]));   // normale belasting per afnemer (voor het opruimen van een lopend incident)
 const KEYS={dev:['state','ops','wear','stuck','year','wearWarn','oil','tap','avr','fans','fanFail','blocked','resettable','blockText','blockKind','ratio','gas','hot'],
-  feed:['fault','outFrac','clp','offSince','oc','temp','hotWarn','backfed','interruptible','base','unplanned','wait','wasOn'],
+  feed:['relay','relayYear','relayKnown','fault','outFrac','clp','offSince','oc','temp','hotWarn','backfed','interruptible','base','unplanned','wait','wasOn'],
   lvg:['outFrac','lvf','backfed','cut','base','offSince','clp'],sec:['fault','located','temp','ovl','hot'],
   st:['flag','damaged','evac','fuse','genset','trOt','trWarn','unplanned','wait','wasOn']};
 const grab=(o,keys)=>{const r={};keys.forEach(k=>{if(o[k]!==undefined)r[k]=o[k];});return r;};
 const canSave=()=>['free','day','eve'].includes(GAME.mode)&&!GAME.ended&&!RP.on&&$('#intro').classList.contains('hidden');
 // ---- werkopdracht: welk soort opdracht en met welke keuzes, zodat hij exact opnieuw te maken is
-const TASKF={cbMaintTask,thermoTask,stationTask,ringTask,lineTask,reserveTask,railTask,railBTask,feederTask};
-function specOf(t){if(!t)return null;if(t.cbm)return['cbMaintTask',t.cbm];if(t.hot)return['thermoTask',t.hot,t.route,t.temp];if(t.station)return['stationTask',t.station];
+const TASKF={relayTask,cbMaintTask,thermoTask,stationTask,ringTask,lineTask,reserveTask,railTask,railBTask,feederTask};
+function specOf(t){if(!t)return null;if(t.relayF)return['relayTask',t.relayF];if(t.cbm)return['cbMaintTask',t.cbm];if(t.hot)return['thermoTask',t.hot,t.route,t.temp];if(t.station)return['stationTask',t.station];
   if(t.sec)return['ringTask',t.sec];if(t.line)return['lineTask',t.line];if(t.tr)return['reserveTask',t.tr];if(t.bus==='RD')return['railTask'];if(t.bus==='RB')return['railBTask'];
   if(t.feeder)return['feederTask',t.feeder];return null;}
 function taskSave(){const t=TASK;if(!t)return null;
-  return{spec:t.aborted?null:specOf(t),origSpec:t.origSpec||null,i:t.i,code:t.code,until:t.steps.map(s=>s.until??null),found:!!t.found,approved:!!t.approved,briefMode:!!t.briefMode,tries:t.tries||0,brief:t.brief||null,
+  return{spec:t.aborted?null:specOf(t),origSpec:t.origSpec||null,i:t.i,code:t.code,until:t.steps.map(s=>s.until??null),found:!!t.found,kit:t.kit||null,approved:!!t.approved,briefMode:!!t.briefMode,tries:t.tries||0,brief:t.brief||null,
     aborted:t.aborted?{title:t.title,acts:t.steps.map(s=>s.act)}:null};}
 function taskLoad(s){if(!s)return;
   if(s.aborted){const o=s.origSpec?TASKF[s.origSpec[0]](...s.origSpec.slice(1)):null;
     TASK={aborted:true,code:s.code,title:s.aborted.title,origSpec:s.origSpec,tr:o?.tr,feeder:o?.feeder,afterAbort:o?.afterAbort,i:s.i,
       desc:'De ploeg is van het werk gehaald. Zet de installatie terug in de normale toestand, in omgekeerde volgorde van het vrijschakelen.',
       steps:s.aborted.acts.map(([id,to])=>({t:'Herstel: '+actLabel(actKey([id,to])),act:[id,to],why:'Terug naar de normale situatie, in omgekeerde volgorde.',ok:()=>D[id].state===to}))};return;}
-  if(!s.spec||!TASKF[s.spec[0]])return;const t=TASKF[s.spec[0]](...s.spec.slice(1));if(s.found&&t.reveal)t.reveal();
+  if(!s.spec||!TASKF[s.spec[0]])return;const t=TASKF[s.spec[0]](...s.spec.slice(1));if(s.found&&t.reveal)t.reveal();if(s.kit&&t.kit){t.kit=s.kit;const w=t.steps.find(x=>/Relais vervangen/.test(x.t));if(w&&s.kit.verdict==='reject')w.wait=20;}
   t.code=s.code;t.i=s.i;briefInit(t);Object.assign(t,{approved:s.approved,briefMode:s.briefMode,tries:s.tries});if(s.brief)t.brief=s.brief;
   t.steps.forEach((st,k)=>{if(s.until[k]!=null)st.until=s.until[k];});TASK=t;
   const st=t.steps[t.i];if(st&&st.wait!=null&&st.until!=null&&t.crew){const c=t.crew();if(c)crewDispatch({...c,until:()=>!TASK||TASK.steps[TASK.i]!==st});}}

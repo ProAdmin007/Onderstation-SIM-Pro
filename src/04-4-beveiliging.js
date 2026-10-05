@@ -6,8 +6,9 @@ function feederTick(dm){
   FEEDERS.forEach(f=>{const on=EN.has(f.node);
     if(on&&f.fault&&f.fault.stage==='search'&&D[f.cb].state===1){tripBreaker(f.cb);GAME.stats.recloseFault++;award(-40,'Ingeschakeld op kortsluiting');
       pushAlarm(`${f.cb}: kabel onder spanning gebracht met fout – I>> momentaan trip. Wacht op de storingsdienst!`,'warn');return;}
-    const r=f.gen?0:f.P/f.rate,ps=PROT.f[f.id];overloadHeat(f,r,dm);
-    if(r>ps.pick&&D[f.cb].state===1){f.oc+=dm*(r*r-1)/(10*ps.tms);if(f.oc>=1){f.oc=0;tripBreaker(f.cb);GAME.stats.clpTrips++;award(-30,`${f.id} overbelast afgeschakeld`);pushAlarm(`${f.cb} ${f.name}: overstroombeveiliging I> (${Math.round(ps.pick*100)}%) na ${Math.round(r*100)}% belasting${f.clp>1.05?' (koude-lastopname)':''}`,'warn');}}
+    // een verlopen of traag relais (zie relaistest) spreekt later aan dan de instelling
+    const r=f.gen?0:f.P/f.rate,ps=PROT.f[f.id],rl=f.relay||{},pk=ps.pick*(rl.drift||1);overloadHeat(f,r,dm);
+    if(r>pk&&D[f.cb].state===1){f.oc+=dm*(r*r-1)/(10*ps.tms*(rl.delay||1));if(f.oc>=1){f.oc=0;tripBreaker(f.cb);GAME.stats.clpTrips++;award(-30,`${f.id} overbelast afgeschakeld`);pushAlarm(`${f.cb} ${f.name}: overstroombeveiliging I> (${Math.round(ps.pick*100)}%) na ${Math.round(r*100)}% belasting${f.clp>1.05?' (koude-lastopname)':''}`,'warn');}}
     else f.oc=Math.max(0,f.oc-dm*0.1);});
   // koude-lastopname per afnemer
   CONS.forEach(c=>{const on=EN.has(c.node);

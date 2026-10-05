@@ -104,9 +104,10 @@ const canLine=()=>LINES.every(L=>SIM.lines[L].avail&&D[L+'-Q0'].state===1);
 const canFeeder=F=>{const f=FEEDERS.find(x=>x.id===F);return D[f.cb].state===1&&!f.fault&&EN.has(f.node);};
 const canRing=()=>!RING.secs.some(s=>s.fault)&&RING.stations.every(s=>EN.has(s.node))&&RINGS.every(rg=>D[rg.nop].state===0);
 const canRail=()=>!D['W-T3'].state&&D['W-K'].state===1&&D['W-T2'].state===1&&EN.has('RD')&&!BUSF.RD&&canFeeder('G3')&&canFeeder('G4');
-function offerTask(){const defs=[[()=>reserveTask('T2'),()=>canRes('T2')],[()=>ringTask(),canRing],[()=>lineTask('L2'),canLine],[()=>thermoTask(),canThermo],[()=>reserveTask('T1'),()=>canRes('T1')],
+function offerTask(){const defs=[[()=>reserveTask('T2'),()=>canRes('T2')],[()=>ringTask(),canRing],[()=>lineTask('L2'),canLine],[()=>thermoTask(),canThermo],[()=>relayTask(relayDue()),()=>!!relayDue()],[()=>reserveTask('T1'),()=>canRes('T1')],
     [()=>railTask(),canRail],[()=>railBTask(),canRailB],[()=>feederTask('G3'),()=>canFeeder('G3')],[()=>cbMaintTask(worstCb()),()=>!!worstCb()],[()=>stationTask(),canRing],[()=>feederTask('F5'),()=>canFeeder('F5')],[()=>lineTask('L1'),canLine]];
-  computeFlows();let def=GAME.planCb&&D[GAME.planCb]?(id=>()=>cbMaintTask(id))(GAME.planCb):null;GAME.planCb=null;   // zelf ingeplande revisie gaat voor
+  computeFlows();let def=GAME.planCb&&D[GAME.planCb]?(id=>()=>cbMaintTask(id))(GAME.planCb):null;GAME.planCb=null;   // zelf ingeplande revisie of relaistest gaat voor
+  if(!def&&GAME.planRelay&&canRelay(FD(GAME.planRelay)))def=(F=>()=>relayTask(F))(GAME.planRelay);GAME.planRelay=null;
   for(let k=0;k<defs.length&&!def;k++){const d=defs[taskCycle++%defs.length];if(d[1]())def=d[0];}
   if(!def){SIM.nextTaskAt=SIM.t+10;return;}   // nu niets veilig uit te voeren: later opnieuw
   TASK=def();TASK.i=0;TASK.code='WV-2026-'+(taskSeq++);briefInit(TASK);

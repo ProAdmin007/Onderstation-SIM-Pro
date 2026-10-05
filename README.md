@@ -18,6 +18,7 @@ Een 3D-onderstationsimulator die in de browser draait (Three.js, geen installati
 - Klik op een schakelaar in 3D of in het SCADA-schema en kies vervolgens IN/UIT of SLUITEN/OPENEN.
 - Linker muisknop draaien, rechter muisknop schuiven, scrollen om te zoomen.
 - `1`–`9` camerastandpunten (6 = binnen 10 kV, 7 = binnen 20 kV, 8 = woonwijk, 9 = centrum en De Vaart)
+- `K` opent de **testkoffer** tijdens een relaistest
 - **Rondlopen (first person):** druk op `V` of op de knop *Rondlopen*.
   - Je loopt met `WASD`, rent met `Shift` en kijkt rond met de muis.
   - Richt het kruis op een schakelaar: `F` schakelt direct. `E` maakt de cursor vrij (en opent het paneel als je naar een schakelaar kijkt), zodat je ook in het SCADA-schema kunt schakelen. Met nog een keer `E` loop je verder.
@@ -107,6 +108,16 @@ Een 3D-onderstationsimulator die in de browser draait (Three.js, geen installati
   - Elke vermogenschakelaar heeft een conditie, een aantal schakelingen en een jaar van de laatste revisie. Schakelen slijt een beetje, het afschakelen van een foutstroom veel meer.
   - Een versleten veldschakelaar kan bij een storing **weigeren**. De reservebeveiliging (50BF) schakelt dan de hele rail af en de schakelaar zit mechanisch vast. Open zijn railkeuzescheider zolang de rail spanningsloos is (dat mag dan), neem de rail weer in bedrijf en laat hem reviseren.
   - De werkopdracht *Revisie vermogenschakelaar* komt vanzelf bij een slechte conditie, of plan hem zelf in vanuit het overzicht. Bij een ringveld sluit je eerst het normaal-open punt en maak je de kabel ook aan de ringkant vrij.
+- **Relaistest met de testkoffer** (10 kV-velden F1–F6):
+  - Een beveiligingsrelais kan ongemerkt afwijken: de **aanspreekwaarde is verlopen**, het relais is **te traag** of het **uitschakelcircuit is defect**. Dat merk je pas bij een storing. Een relais dat niet uitschakelt, laat de reservebeveiliging de hele rail afschakelen; het veld blijft dan IN staan. Verlopen of trage relais schakelen een overbelasting te laat af, waardoor de kabel langer warm loopt.
+  - Afwijkingen komen alleen voor in de vrije dienst en de dag- en avonddienst, niet in scenario's en lessen.
+  - De werkopdracht *Relaistest veld …* komt vanzelf voor relais die 3 jaar of langer niet getest zijn. Je kunt hem ook zelf inplannen in het overzicht *Onderhoud* (`O`). Daar zie je per veld wanneer het relais het laatst is getest, en of het bij een storing heeft geweigerd.
+  - Je maakt het veld vrij (railkeuzescheiders open; bij een ringveld eerst het normaal-open punt dicht en de kabel aan de ringkant vrij). Daarna sluit de monteur de testkoffer aan en zet je de vermogenschakelaar voor de uitschakelproef in.
+  - In de **testkoffer** (toets `K` of de knop in de werkopdracht) injecteer je secundaire teststromen via de stroomtransformator (600/1 A):
+    - aanspreekproeven op 0,95× en 1,05× I>;
+    - tijdproeven op 2× en 5× I> tegen de IEC-kromme (standaard-invers, tolerantie ±10%);
+    - een uitschakelproef op de vermogenschakelaar.
+  - Daarna beoordeel je zelf: *goedkeuren* of *afkeuren – relais vervangen*. Een terecht afgekeurd relais levert +60 op en een terecht goedgekeurd relais +40. Onnodig vervangen kost −20. Keur je een afwijkend relais goed, dan vindt de wachtchef dat later in het testrapport (−50) en blijft het defect in het net.
 - **Werk staken:** onder elke werkopdracht staat *Werk staken*. Dat gebruik je bij een storing waarvoor je de installatie nodig hebt, bijvoorbeeld T3 die bij onderhoud aan T2 meedraait terwijl T1 uitvalt.
   - Alles wat al geschakeld is, wordt een herstelprogramma in omgekeerde volgorde (eerst de aarding eraf, als laatste de reserve terug).
   - Na het herstel krijg je +30. Staken zonder storing kost −20; staken vanwege een storing kost niets.
@@ -266,9 +277,10 @@ De broncode staat in `src/`. `build.ps1` plakt de bestanden in strikte naamvolgo
 | `04-7-simloop.js` | de simulatiestap |
 | `04-8-flex.js` | flexibel vermogen, congestie en distributietrafo's |
 | `04-9-wear.js` | veroudering, weigering (50BF) en revisies |
+| `04-a-relay.js` | relaisafwijkingen, werkopdracht relaistest en de metingen van de testkoffer |
 | `04b`–`04g` | spelmodi en score, ring, lessen, dienstoverdracht, extra scenario's |
 | `05`–`06` | effecten, geluid, interieur, opbouw van de scène |
-| `07`–`07o` | SCADA en panelen, rondlopen, monteurs, schakelbrief, beveiligingsvenster, prognose, telefoon, tijdlijn/herhaling, modelcontrole, flex- en onderhoudsvenster, leven in de wijk, instellingen, tabblad Kabels, opslaan en hervatten |
+| `07`–`07p` | SCADA en panelen, rondlopen, monteurs, schakelbrief, beveiligingsvenster, prognose, telefoon, tijdlijn/herhaling, modelcontrole, flex- en onderhoudsvenster, leven in de wijk, instellingen, tabblad Kabels, opslaan en hervatten, testkoffer |
 | `08-main.js` | HUD, menu's, start en hoofdlus |
 
 **Rails, lijnen en railkeuzevelden** staan op één plek (`BUSES`, `LINES` en het register `SEL_BAYS` in `04-1-net.js`); de koppelingen, spanningsbanden, SCADA-metingen en werkopdrachten worden daarvan afgeleid. Bij het opstarten controleert `checkModel()` of alle verwijzingen naar apparaten kloppen, of elke schakelaar ergens te bedienen is en of alles in de normale toestand spanning heeft. Een fout verschijnt als consolefout, en de tests vallen er dan direct over.

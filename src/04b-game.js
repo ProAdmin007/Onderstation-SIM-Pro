@@ -96,7 +96,7 @@ function applyMode(id){
   GAME.events=!m.scen;GAME.tasks=!m.scen;SIM.nextEvent=SIM.t+16*df.ev;SIM.nextTaskAt=m.scen?Infinity:SIM.t+3;
   FEEDERS.concat(RING.stations).forEach(f=>{f.unplanned=false;f.wait=0;});
   setSeason(m.season||GAME.season);if(m.weather)setWeather(m.weather,true,true);else if(!WX.lock)setWeather(pickWeather(),false,true);
-  initTaps();m.setup&&m.setup();
+  initTaps();if(['free','day','eve'].includes(GAME.mode)&&!LITE&&!RESUMING)initRelays();m.setup&&m.setup();
   GAME.handover=null;if(GAME.mode!=='free'&&!m.les&&!RESUMING)handoverInit(m);
   GAME.obj=m.obj?m.obj().map(o=>({...o,state:null})):[];
   computeFlows();FEEDERS.concat(RING.stations).forEach(f=>{f.wasOn=EN.has(f.node);});

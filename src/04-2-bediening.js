@@ -58,12 +58,13 @@ function operate(id,to,opts={}){
 function tripFrom(node){
   const seen=new Set([node]),q=[node],tripped=[];let src=null;
   while(q.length){const n=q.pop();if(n==='L1x'||n==='L2x')src=n.slice(0,2);
-    for(const d of ADJ[n]||[]){if(d.type==='es')continue;if(d.type==='cb'){if(d.state!==1)continue;if(!breakerFails(d)){d.state=0;tripped.push(d.id);wearOp(d,true);continue;}}if(d.type!=='tr'&&d.type!=='mstr'&&d.state!==1)continue;
+    for(const d of ADJ[n]||[]){if(d.type==='es')continue;if(d.type==='cb'){if(d.state!==1)continue;if(!d.noTrip&&!relayRefuses(d,n)&&!breakerFails(d)){d.state=0;tripped.push(d.id);wearOp(d,true);continue;}}if(d.type!=='tr'&&d.type!=='mstr'&&d.state!==1)continue;
       const m=d.a===n?d.b:d.a;if(!seen.has(m)){seen.add(m);q.push(m);}}}
   setTimeout(()=>{tripped.forEach(id=>pushAlarm(`${id}: beveiliging – UIT`,'warn'));if(tripped.length)AudioSys.breaker(0.6);},120);
   if(src){const ln=SIM.lines[src];if(ln.avail){ln.avail=false;ln.reason='afgeschakeld door TenneT (fout in station)';pushAlarm(`TenneT: lijn ${src} aan overzijde afgeschakeld – fout in OS Zuidwolde`,'crit');addTimer(rnd(10,18),()=>lineRestore(src));}}
 }
-function tripBreaker(id){const d=D[id];if(d.state!==1)return false;if(breakerFails(d)){tripFrom(d.a);return false;}d.state=0;wearOp(d,true);const v=VIEWS[id];AudioSys.breaker(v?distGain(v.center):0.5);return true;}
+// weigert de schakelaar of zijn relais, dan schakelt de reservebeveiliging de rail af en blijft deze schakelaar IN
+function tripBreaker(id){const d=D[id];if(d.state!==1)return false;if(relayRefuses(d)||breakerFails(d)){d.noTrip=true;tripFrom(d.a);d.noTrip=false;return false;}d.state=0;wearOp(d,true);const v=VIEWS[id];AudioSys.breaker(v?distGain(v.center):0.5);return true;}
 function lineRestore(L){const ln=SIM.lines[L];if(ln.avail||ln.maint)return;
   if(D[L+'-Q8'].state===1){pushAlarm(`TenneT: lijn ${L} kan niet onder spanning – ${L}-Q8 is geaard`,'warn');addTimer(5,()=>lineRestore(L));return;}
   ln.avail=true;ln.reason='';if(D[L+'-Q0'].state)pushAlarm(`TenneT: lijn ${L} ${ln.name} weer onder spanning`,'ok');else readyNotice(`TenneT: lijn ${L} ${ln.name} weer onder spanning – ${L}-Q0 mag weer IN`,L+'-Q0',()=>!D[L+'-Q0'].state&&SIM.lines[L].avail);}

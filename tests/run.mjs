@@ -28,7 +28,7 @@ const PAGE_HELPERS = `
   window.T = {
     step(min){ const O=window.OS; const p=O.SIM.paused; O.SIM.paused=false; for(let i=0;i<min*4;i++) O.simStep(0.25*60/O.SIM.speed); O.SIM.paused=p; },
     sleep: ms => new Promise(r=>setTimeout(r,ms)),
-    quiet(){ const S=window.OS.SIM; S.nextEvent=1e9; S.nextTaskAt=1e9; },
+    quiet(){ const S=window.OS.SIM; S.nextEvent=1e9; S.nextTaskAt=1e9; window.OS.INC.next=1e9; },
     toast: () => document.querySelector('#toast').textContent,
     async op(id,to){ const O=window.OS,d=O.D[id]; if(d.state===to) return true; if(d.springAt>performance.now()) await T.sleep(d.springAt-performance.now()+50); for(let i=0;d.busy&&i<60;i++) await T.sleep(100);
       O.operate(id,to); const r=document.querySelector('#radio'); if(!r.classList.contains('hidden')){ r.querySelector('[data-rd="meld"]').click(); await T.sleep(1700); } return d.state===to; },
@@ -303,6 +303,32 @@ const TESTS = [
         O.startTask('cbMaintTask', 'V-F6');
         for (let k = 0; k < 120 && O.task(); k++) { const s = O.task().steps[O.task().i]; if (s.act && !(s.act[0] === 'V-F6' && D['V-F6'].stuck)) await T.op(...s.act); T.step(0.5); }
         return { slijt, railB, railA, vast, weiger, iso, herstel, klaar: !O.task(), nieuw: !D['V-F6'].stuck && O.cond(D['V-F6']) > 0.9, aan: EN().has('F6') }; });
+      for (const [k, v] of Object.entries(r)) assert(v, `${k} klopt niet: ${JSON.stringify(r)}`);
+  } },
+  { name: 'relaistest met de testkoffer: goed relais goedkeuren', query: '?autostart&t=11', async run(p) {
+      const r = await p.evaluate(async () => { T.quiet(); const O = OS, D = O.D, EN = () => O.EN(), f = O.FD('F4'); O.SIM.paused = false; T.step(0.3); f.relayYear = 2021;
+        O.startTask('relayTask', 'F4'); const sc0 = O.GAME.score; let kit = null, dicht = false;
+        for (let k = 0; k < 150 && O.task(); k++) { const t = O.task(), s = t.steps[t.i];
+          if (s.kit && !kit) { O.openKit(); dicht = !document.querySelector('#kit').classList.contains('hidden'); for (const x of O.kitTests(f)) O.kitRun(x.id); kit = JSON.parse(JSON.stringify(t.kit.res));
+            kit.uit = D['V-F4'].state === 0; document.querySelector('#kit [data-kv="ok"]').click(); O.closeKit(); }
+          else if (s.act) await T.op(...s.act); T.step(0.5); }
+        const exp = O.kitTests(f).find(x => x.id === 't2').expectT;
+        return { open: dicht, p95: kit.p95.txt === 'spreekt niet aan', p105: kit.p105.txt === 'spreekt aan', t2: Math.abs(kit.t2.t / exp - 1) < 0.05, trip: kit.uit && /schakelt af/.test(kit.trip.txt),
+          klaar: !O.task(), jaar: f.relayYear === 2026, aan: D['V-F4'].state === 1 && EN().has('F4') && D[O.RINGS.find(g => g.from === 'F4' || g.to === 'F4').nop].state === 0, punten: O.GAME.score > sc0 }; });
+      for (const [k, v] of Object.entries(r)) assert(v, `${k} klopt niet: ${JSON.stringify(r)}`);
+  } },
+  { name: 'defect relais: weigert bij storing (rail uit), afkeuren en vervangen', query: '?autostart&t=11', async run(p) {
+      const r = await p.evaluate(async () => { T.quiet(); const O = OS, D = O.D, EN = () => O.EN(), f = O.FD('F6'); O.SIM.paused = false; T.step(0.3);
+        const aan0 = Object.values(D).filter(d => d.type === 'cb' && d.state === 1).map(d => d.id);
+        f.relay = { trip: false }; O.feederFault('F6', 5); T.step(0.2);
+        const railUit = !EN().has('RB') && EN().has('RA'), bekend = !!f.relayKnown && D['V-F6'].state === 1;
+        await T.op('V-F6', 0); for (let k = 0; k < 60 && f.fault; k++) T.step(2);
+        for (const id of aan0) if (D[id].state === 0) await T.op(id, 1); f.clp = 1; T.step(1);
+        f.relay = { drift: 1.2 }; O.startTask('relayTask', 'F6'); let kit = null;
+        for (let k = 0; k < 200 && O.task(); k++) { const t = O.task(), s = t.steps[t.i];
+          if (s.kit && !kit) { for (const x of O.kitTests(f)) O.kitRun(x.id); kit = JSON.parse(JSON.stringify(t.kit.res)); O.kitVerdict(t, 'reject'); }
+          else if (s.act) await T.op(...s.act); T.step(0.5); }
+        return { railUit, bekend, afwijking: kit.p105.txt === 'spreekt niet aan', klaar: !O.task() || O.task().steps[O.task().i].t, nieuw: !O.relayDefect(f) && !f.relayKnown, aan: EN().has('F6') }; });
       for (const [k, v] of Object.entries(r)) assert(v, `${k} klopt niet: ${JSON.stringify(r)}`);
   } },
   { name: 'leven in de wijk: ramen per station, auto\'s en buren bij uitval', query: '?autostart&t=21&night&season=winter', async run(p) {

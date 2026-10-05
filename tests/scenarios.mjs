@@ -50,6 +50,10 @@ async function bot(process_full) {
     if (!t.aborted && (lineNeeded || trNeeded)) { O.abortTask(); note(`werk ${t.code} gestaakt (${lineNeeded ? 'lijn' : 'T3'} nodig)`); return; }
     if (t.pool && !t.approved && !t.tried) { t.tried = true; t.brief = O.taskActs(t).map(s => O.actKey(s.act)); if (O.briefSubmit()) note(`schakelbrief ${t.code} goedgekeurd`); }
     const st = t.steps[t.i]; if (!st || st.wait != null) return;
+    if (st.kit) {   // testkoffer: alle proeven en dan zelf beoordelen op de metingen
+      const f = O.FD(t.relayF), tests = O.kitTests(f); tests.forEach(x => O.kitRun(x.id)); const r = t.kit.res;
+      const goed = r.p95.txt === 'spreekt niet aan' && r.p105.txt === 'spreekt aan' && tests.filter(x => x.expectT).every(x => r[x.id].t != null && Math.abs(r[x.id].t / x.expectT - 1) <= 0.1) && /schakelt af|staat al uit/.test(r.trip.txt);
+      O.kitVerdict(t, goed ? 'ok' : 'reject'); note(`relaistest ${f.id}: ${goed ? 'goedgekeurd' : 'afgekeurd'}`); return; }
     if (st.act) return op(...st.act);
     if (st.visit) { const c = O.VIEWS[st.visit].center; O.camera.position.set(c.x + 5, c.y + 3, c.z + 5); return; }   // thermografie: erheen vliegen
     if (/omschakelaar/.test(st.t)) { const r = st.t.includes('20 kV') ? '20' : '10'; if (T3().ratio !== r && !T3().ratioBusy) { await op('T3-Q0', 0); O.setRatio(r); await wait(3300); } }
