@@ -212,7 +212,7 @@ const TESTS = [
       assert(r.station.maxOff === 0, `klanten zonder stroom tijdens onderhoud MS-station: ${r.station.maxOff}`);
       assert(r.thermo.gevonden && r.thermo.extra >= 4, `thermografie: ${JSON.stringify(r.thermo)}`);
   } },
-  ...['les1', 'les2', 'les3', 'les4', 'les5'].map(les => ({ name: `leerscenario ${les} is uit te spelen`, query: `?play=${les}`, async run(p) {
+  ...['les1', 'les2', 'les3', 'les4', 'les5', 'les6', 'les7', 'les8'].map(les => ({ name: `leerscenario ${les} is uit te spelen`, query: `?play=${les}`, async run(p) {
       const r = await p.evaluate(async () => { const O = OS, G = O.GAME;
         for (let k = 0; k < 150 && !G.ended; k++) { const L = G.lesson, s = L.steps[L.i];
           if (s && !L.done) { if (s.next) O.lessonGo(); else if (s.acts) { for (const a of s.acts) await T.op(...a); } else if (s.act) await T.op(...s.act); else if (s.auto) s.auto(); }
@@ -330,6 +330,18 @@ const TESTS = [
           else if (s.act) await T.op(...s.act); T.step(0.5); }
         return { railUit, bekend, afwijking: kit.p105.txt === 'spreekt niet aan', klaar: !O.task() || O.task().steps[O.task().i].t, nieuw: !O.relayDefect(f) && !f.relayKnown, aan: EN().has('F6') }; });
       for (const [k, v] of Object.entries(r)) assert(v, `${k} klopt niet: ${JSON.stringify(r)}`);
+  } },
+  { name: 'toetsenoverzicht opent met H en sluit met Esc', query: '?autostart', async run(p) {
+      await p.keyboard.press('h');
+      const r = await p.evaluate(() => { const k = document.querySelector('#keys'); return { open: !k.classList.contains('hidden'), rows: k.querySelectorAll('tr').length, pauze: OS.SIM.paused,
+        alle: OS.KEY_HELP.flatMap(g => g[1]).length }; });
+      await p.keyboard.press('Escape');
+      const dicht = await p.evaluate(() => document.querySelector('#keys').classList.contains('hidden'));
+      assert(r.open && r.pauze && r.rows === r.alle && r.alle > 15 && dicht, `toetsenoverzicht klopt niet: ${JSON.stringify({ ...r, dicht })}`);
+  } },
+  { name: 'scenario evenement: melding bij het begin van het concert', query: '?play=evenement', async run(p) {
+      const r = await p.evaluate(() => { T.step(50); return { start: !!OS.GAME.flags.evStart, melding: [...document.querySelectorAll('#alarmList .al')].some(e => /Het concert begint/.test(e.textContent)) }; });
+      assert(r.start && r.melding, `concertstart niet gemeld: ${JSON.stringify(r)}`);
   } },
   { name: 'leven in de wijk: ramen per station, auto\'s en buren bij uitval', query: '?autostart&t=21&night&season=winter', async run(p) {
       const r = await p.evaluate(async () => { T.quiet(); const O = OS, s1 = O.RING.stations[0]; O.SIM.paused = false; T.step(0.2); O.updateWindows();

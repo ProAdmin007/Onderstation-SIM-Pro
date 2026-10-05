@@ -43,7 +43,9 @@ Object.assign(MODES,{
     desc:'Een groot zomerconcert op het Marktplein: podium, lichtshow en foodtrucks op het net van MS6. Houd het concert in de lucht zonder dat de zekeringen doorslaan.',
     setup(){const g=LVG.find(x=>x.id==='MS6-G2');GAME.flags.evBase=g.base;FLEX.push({id:'MS6-G2',name:'Concert Marktplein',how:'podium deels op eigen aggregaat',max:0.75,eur:240,c:g,req:0,at:0});
       pushAlarm('Vanavond concert op het Marktplein (19:15–22:00) – de organisatie heeft een flexcontract voor het podium','info');},
-    tick(){const g=LVG.find(x=>x.id==='MS6-G2'),h=hourOf(),on=h>=19.25&&h<22;g.base=GAME.flags.evBase+(on?2.6*clamp((h-19.25)/0.5,0,1):0);   // publiek en podium bouwen in een half uur opif(on&&!GAME.flags.evStart){GAME.flags.evStart=SIM.t;pushAlarm('Het concert begint – de belasting op MS6 Marktplein stijgt sterk','warn');}
+    // publiek en podium bouwen in een half uur op
+    tick(){const g=LVG.find(x=>x.id==='MS6-G2'),h=hourOf(),on=h>=19.25&&h<22;g.base=GAME.flags.evBase+(on?2.6*clamp((h-19.25)/0.5,0,1):0);
+      if(on&&!GAME.flags.evStart){GAME.flags.evStart=SIM.t;pushAlarm('Het concert begint – de belasting op MS6 Marktplein stijgt sterk','warn');}
       if(on&&!EN.has('M6'))GAME.flags.evOff=true;},
     obj:()=>[{t:'Geen doorgeslagen zekeringen',check:()=>GAME.stats.fuses?'fail':null,final:()=>true},
       {t:'Het concert blijft onder spanning',check:()=>GAME.flags.evOff?'fail':null,final:()=>true},

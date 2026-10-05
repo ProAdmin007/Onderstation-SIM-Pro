@@ -5,6 +5,7 @@
   "description": "Realistische 3D-onderstationsimulator in de browser",
   "scripts": {
     "build": "pwsh ./build.ps1",
+    "lint": "node tests/lint.mjs",
     "test": "node tests/run.mjs",
     "test:scenarios": "node tests/scenarios.mjs"
   },

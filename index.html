@@ -283,6 +283,8 @@ body.fp #torch.on{display:block}
 #saved.show{animation:savedIn 2.4s ease forwards}@keyframes savedIn{0%{opacity:0;transform:translate(-50%,-10px)}12%,75%{opacity:1;transform:translate(-50%,0)}100%{opacity:0}}
 .mode.resume{border-color:var(--green)}.mode.resume .mt{color:var(--green)}.mode.delsave{opacity:.75}
 #fps{display:none;position:fixed;right:14px;bottom:14px;z-index:8;font:600 12px var(--mono);color:#9fe39a;background:rgba(13,17,22,.7);padding:3px 8px;border-radius:6px;pointer-events:none}#fps.on{display:block}
+#keys{position:fixed;inset:0;display:grid;place-items:center;background:rgba(6,9,12,.66);z-index:12;overflow:auto;padding:20px 0}#keys.hidden{display:none}
+.keys-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:4px 22px}.keys-grid h4{margin:10px 0 4px;color:var(--accent);font-size:13px}.keys-grid td.kk{white-space:nowrap;width:1%;padding-right:12px}.keys-grid kbd{font-size:11px}
 #kit{position:fixed;inset:0;display:grid;place-items:center;background:rgba(6,9,12,.66);z-index:12;overflow:auto;padding:20px 0}#kit.hidden{display:none}
 #kit .pv span{display:inline;color:var(--muted);font-size:11px}.kit-open{margin:6px 0 2px}
 #assets{position:fixed;inset:0;display:grid;place-items:center;background:rgba(6,9,12,.66);z-index:12;overflow:auto;padding:20px 0}#assets.hidden{display:none}
@@ -348,6 +350,7 @@ body.fp #torch.on{display:block}
   <button data-v="6"><kbd>7</kbd>Binnen 20 kV</button>
   <button data-v="7"><kbd>8</kbd>Woonwijk</button>
   <button data-v="8"><kbd>9</kbd>Centrum &amp; Vaart</button>
+  <button id="keysBtn" class="tool" title="Overzicht van alle toetsen"><kbd>H</kbd>Toetsen</button>
   <button id="settingsBtn" class="tool" title="Prestaties, weer en geluid"><kbd>I</kbd>Instellingen</button>
   <button id="assetsBtn" class="tool" title="Conditie en onderhoud van de schakelaars"><kbd>O</kbd>Onderhoud</button>
   <button id="flexBtn" class="tool" title="Netcongestie en flexibel vermogen"><kbd>C</kbd>Flex</button>
@@ -367,6 +370,7 @@ body.fp #torch.on{display:block}
 <div id="flex" class="hidden"></div>
 <div id="assets" class="hidden"></div>
 <div id="kit" class="hidden"></div>
+<div id="keys" class="hidden"></div>
 <div id="settings" class="hidden"></div>
 <div id="fps"></div>
 <div id="saved"></div>
@@ -380,6 +384,7 @@ body.fp #torch.on{display:block}
   <div class="pm-score"><span id="pmScore">0</span><small>punten</small><em id="pmBest"></em></div>
   <button class="primary" data-pm="resume">Hervatten <kbd>Esc</kbd></button>
   <button data-pm="save" id="pmSave">💾 Spel opslaan <kbd>Ctrl+S</kbd></button>
+  <button data-pm="keys">Toetsenoverzicht <kbd>H</kbd></button>
   <button data-pm="settings">Instellingen (prestaties, weer, geluid)</button>
   <button data-pm="end">Dienst beëindigen · rapport en score opslaan</button>
   <button data-pm="menu" id="pmMenu">Opslaan en naar hoofdmenu</button>
@@ -2046,7 +2051,7 @@ function applyMode(id){
   GAME.handover=null;if(GAME.mode!=='free'&&!m.les&&!RESUMING)handoverInit(m);
   GAME.obj=m.obj?m.obj().map(o=>({...o,state:null})):[];
   computeFlows();FEEDERS.concat(RING.stations).forEach(f=>{f.wasOn=EN.has(f.node);});
-  updateSky(hourOf());refreshAll();renderTasks();
+  updateSky(hourOf());refreshAll();renderTasks();keysHint();
 }
 function gameTick(dm,dtReal){
   if(GAME.ended)return;
@@ -2196,7 +2201,7 @@ const LESSONS={
     {t:'Schakel V-F6 UIT',hl:['V-F6'],act:['V-F6',0],check:()=>D['V-F6'].state===0,txt:'Druk in het paneel op <b>UIT</b>. Kijk wat er gebeurt: de kabel naar de kassen wordt grijs, je hoort de schakelaar en er komt een melding binnen.'},
     {t:'Klantminuten',next:true,txt:'Bovenin lopen <b>klanten zonder stroom</b> en <b>klantminuten (CML)</b> op. Elke minuut dat een klant zonder stroom zit kost punten. Bij een storing is snel en veilig herstel dus belangrijk.'},
     {t:'Schakel V-F6 weer IN',hl:['V-F6'],act:['V-F6',1],check:()=>D['V-F6'].state===1&&EN.has('F6'),txt:'Druk op <b>IN</b>. Een vermogenschakelaar heeft een <b>inschakelveer</b> die na het inschakelen ±7 s laadt; pas daarna kan hij opnieuw inschakelen.'},
-    {t:'Klaar!',next:true,txt:'Handig om te weten: toetsen <b>1–9</b> wisselen van camera, <b>V</b> laat je rondlopen, <b>B</b> opent de beveiligingsinstellingen en <b>Esc</b> het menu. Op naar les 2!'}]},
+    {t:'Klaar!',next:true,txt:'Handig om te weten: toetsen <b>1–9</b> wisselen van camera, <b>V</b> laat je rondlopen, <b>B</b> opent de beveiligingsinstellingen en <b>Esc</b> het menu. Met <b>H</b> zie je altijd een overzicht van alle toetsen. Op naar les 2!'}]},
   les2:{name:'Les 2 · Vrijschakelen en aarden',tag:'Leren · veiligheid',start:10,desc:'De vijf veiligheidsregels in de praktijk: een kabel vrijschakelen, spanningsloos vaststellen en aarden.',steps:[
     {t:'De vijf veiligheidsregels',next:true,txt:'Voordat er aan een kabel gewerkt mag worden: <b>1</b> vrijschakelen, <b>2</b> beveiligen tegen herinschakelen, <b>3</b> spanningsloosheid vaststellen, <b>4</b> aarden en kortsluiten, <b>5</b> afschermen van naastgelegen delen. We oefenen dit op de kabel naar de kassen (F6).'},
     {t:'Vrijschakelen: V-F6 UIT',hl:['V-F6'],act:['V-F6',0],enter:()=>{setTab('10');selectDevice('V-F6');},check:()=>D['V-F6'].state===0,txt:'Schakel <b>V-F6 UIT</b>. Alleen een vermogenschakelaar kan belastingstroom veilig onderbreken.'},
@@ -2228,8 +2233,45 @@ const LESSONS={
     {t:'Spanningsband',next:true,txt:'Kom je buiten de band van 10–11 kV, dan krijg je na 2 minuten een melding en strafpunten. Werken twee transformatoren parallel met verschillende trappen, dan gaat er een <b>circulatiestroom</b> lopen.'},
     {t:'Terug naar AUTO',hl:['T1'],auto:()=>setAVR('T1','auto'),check:()=>D.T1.avr==='auto',txt:'Druk op <b>HAND → AUTO</b>.'},
     {t:'De regelaar werkt',check:()=>Math.abs(D.T1.Ulv-10.5)<0.13&&!D.T1.tapBusy,txt:'Wacht even: de AVR zet de trappen vanzelf terug tot de spanning weer rond <b>10,5 kV</b> ligt.'}]},
+  // les 6 loopt mee met een echte werkopdracht: de stappen volgen de voortgang van TASK
+  les6:{name:'Les 6 · Relaistest met de testkoffer',tag:'Leren · onderhoud',start:10,desc:'Maak veld F6 vrij, test het overstroomrelais met de testkoffer en beoordeel zelf de metingen.',steps:[
+    {t:'Onderhoud en beveiliging',next:true,enter:()=>{const f=FD('F6');f.relay={delay:1.5};f.relayYear=2021;TASK=relayTask('F6');TASK.i=0;TASK.code='LES-6';setTab('10');},
+      txt:'Een beveiligingsrelais doet jaren niets – tot er een storing is. Of het dan goed werkt, weet je alleen door het <b>periodiek te testen</b>. Het relais van <b>F6 Kassen</b> is sinds 2021 niet getest.<br><br>In het overzicht <b>Onderhoud</b> (toets <b>O</b>) zie je per veld de conditie van de schakelaar en de laatste relaistest. Daar kun je ook zelf een test inplannen.'},
+    {t:'Terugvoeding van de klanten',check:()=>!TASK||TASK.i>=1,txt:'Eerst schakelt de storingsdienst de kassen om naar een ander deel van het net (<b>terugvoeding</b>). Dan zitten ze niet zonder stroom tijdens de test. Even wachten…'},
+    {t:'Schakel V-F6 UIT',hl:['V-F6'],act:['V-F6',0],enter:()=>selectDevice('V-F6'),check:()=>!TASK||TASK.i>=2,txt:'De klanten zijn omgeschakeld. Schakel <b>V-F6 UIT</b>.'},
+    {t:'Maak het veld vrij van de rails',hl:['F6-QA','F6-QB'],acts:[['F6-QA',0],['F6-QB',0]],check:()=>!TASK||TASK.i>=4,txt:'Open beide <b>railkeuzescheiders F6-QA en F6-QB</b> (één staat al open). Nu is het veld aan de railkant vrij. Daardoor mag de vermogenschakelaar straks dicht voor de uitschakelproef, zonder dat de kabel onder spanning komt.'},
+    {t:'De monteur sluit de testkoffer aan',check:()=>!TASK||TASK.i>=5,txt:'De monteur opent het <b>testblok</b> in de relaiskast. Dat sluit de stroomtransformator (600/1 A) kort en koppelt het relais los, zodat de testkoffer zijn eigen teststroom kan injecteren: <b>secundaire injectie</b>.'},
+    {t:'Schakel V-F6 IN voor de uitschakelproef',hl:['V-F6'],act:['V-F6',1],check:()=>!TASK||TASK.i>=6,txt:'Het veld is vrij. Schakel <b>V-F6 IN</b>: bij de laatste proef moet het relais hem echt laten afschakelen.'},
+    {t:'Voer de proeven uit',auto:()=>{const f=FD('F6');kitTests(f).forEach(x=>kitRun(x.id));},check:()=>!!TASK?.kit&&kitTests(FD('F6')).every(x=>TASK.kit.res[x.id]),
+      txt:'Open de <b>testkoffer</b> (toets <b>K</b> of <button class="mini" data-kit>🧰 testkoffer</button>) en druk bij elke proef op <b>Injecteren</b>:<br>• <b>aanspreekproeven</b>: bij 0,95× de instelling mag het relais niet aanspreken, bij 1,05× wel;<br>• <b>tijdproeven</b>: de uitschakeltijd moet binnen ±10% van de IEC-kromme liggen;<br>• <b>uitschakelproef</b>: V-F6 moet echt afschakelen.'},
+    {t:'Beoordeel het relais',auto:()=>kitVerdict(TASK,'reject'),check:()=>!!TASK?.kit?.verdict,txt:'Vergelijk de gemeten waarden met de verwachte. Spreekt het relais op de goede waarde aan? Zijn de tijden binnen ±10%? Kies dan in de testkoffer <b>Goedkeuren</b> of <b>Afkeuren – relais vervangen</b>.'},
+    {t:'Wat was er aan de hand?',next:true,txt:'De aanspreekwaarde klopte, maar het relais was ongeveer <b>50% te traag</b>: buiten de tolerantie, dus <b>afkeuren</b> was juist. Bij een overbelasting had F6 te lang aangestaan en was de kabel te warm geworden.<br><br>Een defect <b>uitschakelcircuit</b> is nog erger: dan schakelt de reservebeveiliging de hele rail af. Een afwijkend relais goedkeuren kost punten zodra de wachtchef het rapport leest.'},
+    {t:'De monteur rondt af',check:()=>!TASK||TASK.i>=9,txt:'Na afkeuren vervangt de monteur het relais, of anders sluit hij gewoon het testblok. Even wachten…'},
+    {t:'Zet het veld terug in bedrijf',hl:['F6-QB','V-F6'],acts:[['F6-QB',1],['V-F6',1]],check:()=>!TASK,txt:'Sluit <b>F6-QB</b> (de normale rail B) en schakel <b>V-F6 IN</b>. Daarna heft de storingsdienst de terugvoeding op.'}]},
+  les7:{name:'Les 7 · OS Meppel en de koppelkabel',tag:'Leren · netkoppeling',start:10,desc:'Een kabelfout bij MS5: voed MS4 en MS5 terug vanuit OS Meppel, zonder parallel te schakelen met de andere netbeheerder.',steps:[
+    {t:'Kabelfout bij MS5',next:true,enter:()=>{ringFault(FD('F4'),lsec('F4'),999);setTab('R');},txt:'<b>V-F4</b> is afgeschakeld: de kopkabel van het station naar <b>MS5 Bedrijvenpark Zuid</b> is kapot. Er is geen verklikker aangesproken, dus de fout zit direct achter het station. MS4 en MS5 zitten zonder stroom.<br><br>Normaal sluit je het normaal-open punt MS3-R. Vandaag oefenen we de andere route: de <b>koppelkabel uit OS Meppel</b>.'},
+    {t:'Isoleer de kapotte kabel',hl:['MS5-R'],act:['MS5-R',0],check:()=>D['MS5-R'].state===0,txt:'Open lastscheider <b>MS5-R</b>, de kant van de kapotte kopkabel in MS5.'},
+    {t:'OS Meppel',next:true,enter:()=>setTab('M'),txt:'Op het tabblad <b>Meppel</b> zie je het station aan het andere eind van lijn L2. Het 110 kV-deel en de transformator zijn van <b>Netbeheer Noord</b> (grijs, niet te bedienen). Alleen de uitgaande velden zijn van ons. Eén ervan is <b>MP3</b>: de koppelkabel naar MS5, met normaal-open lastscheider <b>MS5-K</b>.<br><br>Afspraak met Netbeheer Noord: <b>nooit parallel</b> met hun net, en maximaal ±<b>4 MW</b> over de koppeling.'},
+    {t:'Sluit de koppeling MS5-K',hl:['MS5-K'],act:['MS5-K',1],enter:()=>setTab('R'),check:()=>EN.has('M5')&&EN.has('M4'),txt:'De ringkant van MS5 is spanningsloos, dus <b>MS5-K</b> mag dicht. Sluit hem: Meppel voedt MS5 en via de ring ook MS4.'},
+    {t:'Houd de koppeling binnen 4 MW',auto:()=>setFlex('MS5-G2',1),check:()=>(FLEX.find(f=>f.id==='MS5-G2')?.req||0)>0,txt:'Op het tabblad Meppel zie je hoeveel er over de koppeling gaat. Dat zit dicht tegen de grens. Open het flexvenster (toets <b>C</b>) en vraag het <b>Koelhuis</b> (MS5) om terug te regelen. De aggregator reageert binnen ±2 minuten.'},
+    {t:'De kabel is gerepareerd',next:true,enter:()=>{const s=lsec('F4');s.fault=false;s.located=false;RING.stations.forEach(x=>x.flag=false);pushAlarm('Storingsdienst: kopkabel V-F4 – MS5 gerepareerd','ok');},
+      txt:'De storingsdienst is klaar. Terug naar normaal, maar let op: als je V-F4 en MS5-R sluit terwijl MS5-K nog dicht is, sta je <b>parallel met Netbeheer Noord</b>. Dan schakelt hun beveiliging de koppeling af.<br><br>Daarom eerst <b>openen, dan sluiten</b>: MS4 en MS5 zijn heel even zonder stroom.'},
+    {t:'Open MS5-K',hl:['MS5-K'],act:['MS5-K',0],check:()=>D['MS5-K'].state===0,txt:'Open eerst de koppeling <b>MS5-K</b>.'},
+    {t:'Schakel V-F4 IN',hl:['V-F4'],act:['V-F4',1],check:()=>D['V-F4'].state===1&&EN.has('F4'),txt:'Schakel <b>V-F4 IN</b>: de gerepareerde kopkabel staat weer onder spanning.'},
+    {t:'Sluit MS5-R',hl:['MS5-R'],act:['MS5-R',1],check:()=>EN.has('M5')&&EN.has('M4'),txt:'Sluit <b>MS5-R</b>: MS5 en MS4 krijgen weer stroom uit Zuidwolde.'},
+    {t:'Geef de flex vrij',auto:()=>setFlex('MS5-G2',0),check:()=>!(FLEX.find(f=>f.id==='MS5-G2')?.req),txt:'Zet in het flexvenster (<b>C</b>) het Koelhuis terug op 0%. Flex kost geld zolang hij actief is.'}]},
+  les8:{name:'Les 8 · Kabeltemperatuur en congestie',tag:'Leren · belasting',start:17.75,season:'winter',weather:'bewolkt',desc:'Een winteravond met een verkeerd geschakelde ring: herken een te warme kabel en los de overbelasting op.',steps:[
+    {t:'Een drukke winteravond',next:true,enter:()=>{D['MS3-R'].state=1;D['MS5-R'].state=0;computeFlows();const s=lsec('F3');s.temp=78;setTab('K');},
+      txt:'Het is 17:45 in de winter: iedereen kookt en stookt. Op het tabblad <b>Kabels</b> zie je per ringkabel de stroom tegen de rating, de belasting en de <b>geleidertemperatuur</b>.<br><br>De kopkabel <b>V-F3 – MS1</b> draait ver boven 100% en is al <b>78 °C</b>.'},
+    {t:'Hoe warm mag een kabel worden?',next:true,txt:'Een XLPE-kabel mag maximaal <b>90 °C</b> worden. Vanaf <b>105 °C</b> raakt de isolatie beschadigd en brandt de kabel door. De temperatuur loopt <b>langzaam</b> op (tijdconstante ±40 min). Kort overbelasten mag dus, lang niet.<br><br>Je hebt even tijd, maar niet eindeloos.'},
+    {t:'Zoek de oorzaak',next:true,enter:()=>setTab('R'),txt:'Kijk naar het tabblad <b>Ring</b>. Het normaal-open punt <b>MS3-R</b> is gesloten en <b>MS5-R</b> staat open. Na werk aan de ring is er niet teruggeschakeld. Daardoor voedt <b>V-F3 de hele woonwijkring</b> alleen, en V-F4 draait leeg.'},
+    {t:'Snelle verlichting: flex',auto:()=>setFlex('MS4-G3',1),check:()=>(FLEX.find(f=>f.id==='MS4-G3')?.req||0)>0,txt:'Als eerste hulp kun je <b>flex</b> inzetten. Open het flexvenster (toets <b>C</b>) en vraag het <b>Laadplein Zuiderveld</b> (MS4) om de laadstroom te begrenzen. Flex is snel, maar kost geld en lost de oorzaak niet op.'},
+    {t:'Sluit MS5-R',hl:['MS5-R'],act:['MS5-R',1],check:()=>D['MS5-R'].state===1,txt:'Nu de echte oplossing. Sluit <b>MS5-R</b>: de ring is even helemaal gesloten en V-F3 en V-F4 delen de belasting.'},
+    {t:'Open het normaal-open punt MS3-R',hl:['MS3-R'],act:['MS3-R',0],check:()=>D['MS3-R'].state===0&&lsec('F3').load<1,txt:'Open <b>MS3-R</b>: de ring is weer normaal, met twee helften die elk door hun eigen veld worden gevoed.'},
+    {t:'Geef de flex vrij',auto:()=>setFlex('MS4-G3',0),check:()=>!(FLEX.find(f=>f.id==='MS4-G3')?.req),enter:()=>setTab('K'),txt:'De kopkabel zit weer onder 100% en koelt langzaam af (zie <b>Kabels</b>). Geef in het flexvenster (<b>C</b>) het laadplein weer vrij.'},
+    {t:'Klaar!',next:true,txt:'Onthoud: controleer na elk werk of de ring weer in de <b>normale toestand</b> staat. Houd bij drukte het tabblad <b>Kabels</b> en de <b>Prognose</b> in de gaten.'}]},
 };
-Object.entries(LESSONS).forEach(([id,l])=>{MODES[id]={scen:true,les:true,name:l.name,tag:l.tag,start:l.start,season:'herfst',weather:'bewolkt',desc:l.desc,
+Object.entries(LESSONS).forEach(([id,l])=>{MODES[id]={scen:true,les:true,name:l.name,tag:l.tag,start:l.start,season:l.season||'herfst',weather:l.weather||'bewolkt',desc:l.desc,
   setup(){GAME.lesson={id,i:-1,steps:l.steps,done:false};pushAlarm(`${l.name} gestart – volg de stappen links`,'info');lessonGo();},
   obj:()=>[{t:'Les afgerond',check:()=>GAME.lesson&&GAME.lesson.done?'done':null}]};});
 function lessonGo(){const L=GAME.lesson;L.i++;
@@ -2390,7 +2432,9 @@ Object.assign(MODES,{
     desc:'Een groot zomerconcert op het Marktplein: podium, lichtshow en foodtrucks op het net van MS6. Houd het concert in de lucht zonder dat de zekeringen doorslaan.',
     setup(){const g=LVG.find(x=>x.id==='MS6-G2');GAME.flags.evBase=g.base;FLEX.push({id:'MS6-G2',name:'Concert Marktplein',how:'podium deels op eigen aggregaat',max:0.75,eur:240,c:g,req:0,at:0});
       pushAlarm('Vanavond concert op het Marktplein (19:15–22:00) – de organisatie heeft een flexcontract voor het podium','info');},
-    tick(){const g=LVG.find(x=>x.id==='MS6-G2'),h=hourOf(),on=h>=19.25&&h<22;g.base=GAME.flags.evBase+(on?2.6*clamp((h-19.25)/0.5,0,1):0);   // publiek en podium bouwen in een half uur opif(on&&!GAME.flags.evStart){GAME.flags.evStart=SIM.t;pushAlarm('Het concert begint – de belasting op MS6 Marktplein stijgt sterk','warn');}
+    // publiek en podium bouwen in een half uur op
+    tick(){const g=LVG.find(x=>x.id==='MS6-G2'),h=hourOf(),on=h>=19.25&&h<22;g.base=GAME.flags.evBase+(on?2.6*clamp((h-19.25)/0.5,0,1):0);
+      if(on&&!GAME.flags.evStart){GAME.flags.evStart=SIM.t;pushAlarm('Het concert begint – de belasting op MS6 Marktplein stijgt sterk','warn');}
       if(on&&!EN.has('M6'))GAME.flags.evOff=true;},
     obj:()=>[{t:'Geen doorgeslagen zekeringen',check:()=>GAME.stats.fuses?'fail':null,final:()=>true},
       {t:'Het concert blijft onder spanning',check:()=>GAME.flags.evOff?'fail':null,final:()=>true},
@@ -3877,6 +3921,28 @@ $('#kit').addEventListener('click',e=>{if(e.target.closest('[data-kclose]')||e.t
 addEventListener('keydown',e=>{if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT')return;if((e.key==='k'||e.key==='K')&&$('#intro').classList.contains('hidden'))kitOpen()?closeKit():openKit();});
 
 
+// ============================================================ toetsenoverzicht (toets H of ?)
+const KEY_HELP=[
+  ['Spel',[['Spatie','Pauze aan/uit (ook P)'],['Esc','Venster of paneel sluiten, anders het pauzemenu'],['Ctrl+S','Spel opslaan (vrije dienst, dag- en avonddienst)'],['M','Geluid aan/uit'],['H of ?','Dit overzicht']]],
+  ['Camera en kijken',[['1 – 9','Camerastandpunten (6 = binnen 10 kV, 7 = binnen 20 kV, 8 = woonwijk, 9 = centrum)'],['L','Labels aan/uit'],['+ / −','SCADA in- en uitzoomen (ook Ctrl + scrollwiel op het schema)']]],
+  ['Rondlopen',[['V','Rondlopen starten of stoppen'],['W A S D','Lopen'],['Shift / Q','Rennen / sprinten'],['Spatie','Springen'],['F','Schakelaar in het vizier direct bedienen'],['E','Cursor vrij (paneel open van wat je ziet); nog eens E = verder lopen'],['Z','Zaklamp aan/uit']]],
+  ['Vensters',[['B','Beveiligingsinstellingen'],['C','Flex en netcongestie'],['O','Onderhoud: conditie van schakelaars en relaistests'],['K','Testkoffer (tijdens een relaistest)'],['I','Instellingen: prestaties, weer en geluid']]]];
+let keysPrev=false;
+const keysOpen=()=>!$('#keys').classList.contains('hidden');
+function openKeys(){if(keysOpen())return;keysPrev=SIM.paused;SIM.paused=true;syncSpeed();if(FP.on)unlockPointer();
+  $('#keys').innerHTML=`<div class="card pr"><div class="eyebrow">Hulp</div><h2>Toetsenoverzicht</h2><div class="keys-grid">${KEY_HELP.map(([h,rows])=>`<div><h4>${h}</h4><table>${rows.map(([k,t])=>`<tr><td class="kk">${k.split(' / ').map(x=>x.split(' of ').map(y=>`<kbd>${y}</kbd>`).join(' of ')).join(' / ')}</td><td>${t}</td></tr>`).join('')}</table></div>`).join('')}</div>
+    <p class="bf-desc">Alle vensters openen ook met de knoppen bovenin. Klik op een schakelaar in het SCADA-schema of in 3D voor zijn paneel.</p>
+    <div class="rep-btns"><button class="primary" data-kclose2>Sluiten <kbd>H</kbd></button></div></div>`;
+  $('#keys').classList.remove('hidden');}
+function closeKeys(){$('#keys').classList.add('hidden');SIM.paused=keysPrev;syncSpeed();}
+$('#keys').addEventListener('click',e=>{if(e.target.closest('[data-kclose2]')||e.target.id==='keys')closeKeys();});
+$('#keysBtn').addEventListener('click',()=>keysOpen()?closeKeys():openKeys());
+addEventListener('keydown',e=>{if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT'||e.ctrlKey||e.metaKey)return;if((e.key==='h'||e.key==='H'||e.key==='?')&&$('#intro').classList.contains('hidden'))keysOpen()?closeKeys():openKeys();});
+// eenmalige tip bij het eerste spel
+function keysHint(){let seen=false;try{seen=!!localStorage.getItem('osz-keyhint');localStorage.setItem('osz-keyhint','1');}catch(e){}
+  if(!seen&&!LITE)pushAlarm('Tip: druk op H (of ?) voor een overzicht van alle toetsen','info');}
+
+
 // ============================================================ HUD + bediening
 function updateHUD(){
   $('#clock').textContent=fmtClock(SIM.t);
@@ -3900,7 +3966,7 @@ addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;
   else if(e.code==='KeyP'){if($('#intro').classList.contains('hidden'))setSpeed(0);}
   else if(e.key==='l'||e.key==='L')document.body.classList.toggle('nolabels');
   else if(e.key==='m'||e.key==='M')$('#mute').click();
-  else if(e.key==='Escape'){if(GAME.handover?.open)closeHandover();else if(setOpen())closeSettings();else if(flexOpen())closeFlex();else if(assOpen())closeAssets();else if(kitOpen())closeKit();else if(protOpen())closeProt();else if(menuOpen()){if(performance.now()-menuAt>350)closeMenu();}else if(SEL&&!document.pointerLockElement)selectDevice(null);else openMenu();}});
+  else if(e.key==='Escape'){if(GAME.handover?.open)closeHandover();else if(setOpen())closeSettings();else if(flexOpen())closeFlex();else if(assOpen())closeAssets();else if(kitOpen())closeKit();else if(keysOpen())closeKeys();else if(protOpen())closeProt();else if(menuOpen()){if(performance.now()-menuAt>350)closeMenu();}else if(SEL&&!document.pointerLockElement)selectDevice(null);else openMenu();}});
 // ---------- SCADA-zoom
 let SLDZ=1;try{SLDZ=+localStorage.getItem('osz-sldz')||1;}catch(e){}
 function setZoom(z){SLDZ=clamp(Math.round(z*4)/4,0.75,2.5);document.documentElement.style.setProperty('--sldz',SLDZ);$('#zVal').textContent=Math.round(SLDZ*100)+'%';try{localStorage.setItem('osz-sldz',SLDZ);}catch(e){}}
@@ -3921,6 +3987,7 @@ function closeMenu(){$('#pauseMenu').classList.add('hidden');document.body.class
 $('#pauseMenu').addEventListener('click',e=>{const b=e.target.closest('[data-pm]');if(!b)return;const a=b.dataset.pm;
   if(a==='resume')closeMenu();
   else if(a==='settings'){closeMenu();openSettings();}
+  else if(a==='keys'){closeMenu();openKeys();}
   else if(a==='save'){if(saveGame())closeMenu();else deny('Opslaan kan in de vrije dienst en in de dag- en avonddienst');}
   else if(a==='end'){$('#pauseMenu').classList.add('hidden');document.body.classList.remove('menu');if(FP.on)exitFP();endGame();}
   else if(a==='menu'){if(canSave())saveGame(true);else{finalizeGame();saveBest();}location.search='';}});
@@ -3946,7 +4013,7 @@ else{renderMenu();$('#intro').classList.remove('hidden');controls.autoRotate=tru
 if(params.has('night'))updateSky(22);
 if(params.has('view')){const v=VIEWPOS[+params.get('view')];camera.position.copy(v[0]);controls.target.copy(v[1]);controls.autoRotate=false;controls.update();}
 
-window.OS={RELAY_BAYS,relayTask,relayDue,relayDefect,initRelays,kitTests,kitMeasure,kitVerdict,kitRun,openKit,closeKit,saveGame,readSave,deleteSave,resumeGame,canSave,specOf,CABLE,soilT,FD,meppelFault,linkTick,tabAlarms,updateTabAlarms,renderTasks,INC,INCIDENTS,startIncident,endIncident,incidentTick,setTab,renderCables,GFX,setGfx,applyGfx,openSettings,closeSettings,WX_TYPES,renderer,scene,FIRE,CARS,updateWindows,updateLife,stationLive,cbMaintTask,worstCb,cond,breakerFails,CB_IDS,FLEX,setFlex,flexTick,congestion,openFlex,closeFlex,checkModel,homeBus,BUSES,SEL_BAYS,TORCH,setTorch,HO_POOL,handoverTick,REC,RP,startReplay,stopReplay,analyse,stationDamage,closeHandover,deviations,PHONE,lvFault,callFrom,phoneAnswer,dispatchLV,LVG,forecast,progAdvice,PROG,startTask:(k,...a)=>{TASK={relayTask,cbMaintTask,railTask,railBTask,stationTask,thermoTask,ringTask,feederTask,lineTask,reserveTask}[k](...a);TASK.i=0;TASK.code='WV-TEST';briefInit(TASK);renderTasks();},SIM,D,LESSONS,lessonGo,selectDevice,abortTask,railTask,stationTask,thermoTask,nearDev,VIEWS,PROT,setProt,openProt,closeProt,busFault,BUSF,RINGS,task:()=>TASK,briefSubmit,briefCheck,briefWatch,actKey,taskActs,crewNear,boxOf:id=>VIEWS[id]&&VIEWS[id].box,AudioSys,updateAudio,WX,setWeather,setSeason,SEASONS,ambient,enterKiosk,ROOMS,blockedAt,RING,NPCS,crewDispatch,ringFault,FP,enterFP,exitFP,pickCenter,camera,camInside,setRatio,setTab,GAME,MODES,applyMode,endGame,EN:()=>EN,FLOW,operate,tapStep,setAVR,resetLockout,toggleAR,regulate,computeFlows,randomEvent,lineFault,feederFault,trafoFault,offerTask,simStep,FEEDERS};
+window.OS={openKeys,closeKeys,KEY_HELP,RELAY_BAYS,relayTask,relayDue,relayDefect,initRelays,kitTests,kitMeasure,kitVerdict,kitRun,openKit,closeKit,saveGame,readSave,deleteSave,resumeGame,canSave,specOf,CABLE,soilT,FD,meppelFault,linkTick,tabAlarms,updateTabAlarms,renderTasks,INC,INCIDENTS,startIncident,endIncident,incidentTick,setTab,renderCables,GFX,setGfx,applyGfx,openSettings,closeSettings,WX_TYPES,renderer,scene,FIRE,CARS,updateWindows,updateLife,stationLive,cbMaintTask,worstCb,cond,breakerFails,CB_IDS,FLEX,setFlex,flexTick,congestion,openFlex,closeFlex,checkModel,homeBus,BUSES,SEL_BAYS,TORCH,setTorch,HO_POOL,handoverTick,REC,RP,startReplay,stopReplay,analyse,stationDamage,closeHandover,deviations,PHONE,lvFault,callFrom,phoneAnswer,dispatchLV,LVG,forecast,progAdvice,PROG,startTask:(k,...a)=>{TASK={relayTask,cbMaintTask,railTask,railBTask,stationTask,thermoTask,ringTask,feederTask,lineTask,reserveTask}[k](...a);TASK.i=0;TASK.code='WV-TEST';briefInit(TASK);renderTasks();},SIM,D,LESSONS,lessonGo,selectDevice,abortTask,railTask,stationTask,thermoTask,nearDev,VIEWS,PROT,setProt,openProt,closeProt,busFault,BUSF,RINGS,task:()=>TASK,briefSubmit,briefCheck,briefWatch,actKey,taskActs,crewNear,boxOf:id=>VIEWS[id]&&VIEWS[id].box,AudioSys,updateAudio,WX,setWeather,setSeason,SEASONS,ambient,enterKiosk,ROOMS,blockedAt,RING,NPCS,crewDispatch,ringFault,FP,enterFP,exitFP,pickCenter,camera,camInside,setRatio,setTab,GAME,MODES,applyMode,endGame,EN:()=>EN,FLOW,operate,tapStep,setAVR,resetLockout,toggleAR,regulate,computeFlows,randomEvent,lineFault,feederFault,trafoFault,offerTask,simStep,FEEDERS};
 const clock=new THREE.Clock();let hudT=0,skyT=0,progT=0;
 let liteAcc=0;
 renderer.setAnimationLoop(()=>{

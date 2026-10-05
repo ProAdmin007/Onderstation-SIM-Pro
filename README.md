@@ -15,6 +15,7 @@ Een 3D-onderstationsimulator die in de browser draait (Three.js, geen installati
 | ![Wijk en MS-ring](docs/wijk.jpg) | ![Monteurs bij T2](docs/monteurs.jpg) |
 
 ## Bediening
+- Druk op `H` (of `?`, of de knop *Toetsen*) voor een **overzicht van alle toetsen**.
 - Klik op een schakelaar in 3D of in het SCADA-schema en kies vervolgens IN/UIT of SLUITEN/OPENEN.
 - Linker muisknop draaien, rechter muisknop schuiven, scrollen om te zoomen.
 - `1`–`9` camerastandpunten (6 = binnen 10 kV, 7 = binnen 20 kV, 8 = woonwijk, 9 = centrum en De Vaart)
@@ -189,6 +190,9 @@ Alle afnemers liggen 25% hoger dan in eerdere versies. De velden en distributiet
   3. *Kabelfout in de ring*: verklikkers lezen, isoleren en terugvoeden via het normaal-open punt.
   4. *Reservetransformator T3*: T2 valt uit; T3 omschakelen naar 20 kV en beide railhelften voeden.
   5. *Spanningsregeling*: de trappenschakelaar met de hand bedienen en de AVR het laten overnemen.
+  6. *Relaistest met de testkoffer*: veld F6 vrijmaken, de proeven uitvoeren en een te traag relais afkeuren.
+  7. *OS Meppel en de koppelkabel*: MS4 en MS5 terugvoeden vanuit Meppel, flex inzetten om binnen 4 MW te blijven, en bij het terugschakelen eerst openen en dan sluiten (nooit parallel met Netbeheer Noord).
+  8. *Kabeltemperatuur en congestie*: een winteravond met een verkeerd geschakelde ring. Lees het tabblad Kabels, zet flex in als eerste hulp en normaliseer de ring.
 - **Scenario's:**
   - *Kabelstoring ziekenhuis*: T1 valt uit en het ziekenhuis draait op noodstroom.
   - *Storm boven Drenthe*: regen, onweer, blikseminslagen en een defect AR-relais.
@@ -291,4 +295,12 @@ Bouw `index.html` opnieuw met:
 ./build.ps1
 ```
 
-URL-parameters om te testen: `?autostart`, `?t=18.5` (starttijd), `?view=0..6`, `?night`, `?play=zkh|storm|piek|blackout|hitte|winter|dubbel|aanrijding|cyber|overstroming|zonnepiek|kraan|brand|evenement|laadpiek|les1…les5|day|eve|free&diff=rustig|normaal|zwaar`.
+Voor het bouwen draait eerst `npm run lint` (`tests/lint.mjs`), die verborgen fouten zoekt die de browser niet meldt:
+- een `//`-commentaar dat de rest van een regel code uitschakelt (de code blijft vaak geldig, dus geen syntaxfout). Is code in een commentaar bewust, zet er dan `lint-ok` in;
+- dubbele declaraties tussen bestanden (alles wordt één module);
+- syntaxfouten per bestand;
+- buiten het bouwen: of `index.html` nog gelijkloopt met `src/` (vergeten te bouwen).
+
+De lint draait ook op GitHub vóór de tests.
+
+URL-parameters om te testen: `?autostart`, `?t=18.5` (starttijd), `?view=0..6`, `?night`, `?play=zkh|storm|piek|blackout|hitte|winter|dubbel|aanrijding|cyber|overstroming|zonnepiek|kraan|brand|evenement|laadpiek|les1…les8|day|eve|free&diff=rustig|normaal|zwaar`.

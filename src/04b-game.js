@@ -100,7 +100,7 @@ function applyMode(id){
   GAME.handover=null;if(GAME.mode!=='free'&&!m.les&&!RESUMING)handoverInit(m);
   GAME.obj=m.obj?m.obj().map(o=>({...o,state:null})):[];
   computeFlows();FEEDERS.concat(RING.stations).forEach(f=>{f.wasOn=EN.has(f.node);});
-  updateSky(hourOf());refreshAll();renderTasks();
+  updateSky(hourOf());refreshAll();renderTasks();keysHint();
 }
 function gameTick(dm,dtReal){
   if(GAME.ended)return;

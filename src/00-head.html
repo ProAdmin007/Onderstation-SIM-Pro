@@ -283,6 +283,8 @@ body.fp #torch.on{display:block}
 #saved.show{animation:savedIn 2.4s ease forwards}@keyframes savedIn{0%{opacity:0;transform:translate(-50%,-10px)}12%,75%{opacity:1;transform:translate(-50%,0)}100%{opacity:0}}
 .mode.resume{border-color:var(--green)}.mode.resume .mt{color:var(--green)}.mode.delsave{opacity:.75}
 #fps{display:none;position:fixed;right:14px;bottom:14px;z-index:8;font:600 12px var(--mono);color:#9fe39a;background:rgba(13,17,22,.7);padding:3px 8px;border-radius:6px;pointer-events:none}#fps.on{display:block}
+#keys{position:fixed;inset:0;display:grid;place-items:center;background:rgba(6,9,12,.66);z-index:12;overflow:auto;padding:20px 0}#keys.hidden{display:none}
+.keys-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:4px 22px}.keys-grid h4{margin:10px 0 4px;color:var(--accent);font-size:13px}.keys-grid td.kk{white-space:nowrap;width:1%;padding-right:12px}.keys-grid kbd{font-size:11px}
 #kit{position:fixed;inset:0;display:grid;place-items:center;background:rgba(6,9,12,.66);z-index:12;overflow:auto;padding:20px 0}#kit.hidden{display:none}
 #kit .pv span{display:inline;color:var(--muted);font-size:11px}.kit-open{margin:6px 0 2px}
 #assets{position:fixed;inset:0;display:grid;place-items:center;background:rgba(6,9,12,.66);z-index:12;overflow:auto;padding:20px 0}#assets.hidden{display:none}
@@ -348,6 +350,7 @@ body.fp #torch.on{display:block}
   <button data-v="6"><kbd>7</kbd>Binnen 20 kV</button>
   <button data-v="7"><kbd>8</kbd>Woonwijk</button>
   <button data-v="8"><kbd>9</kbd>Centrum &amp; Vaart</button>
+  <button id="keysBtn" class="tool" title="Overzicht van alle toetsen"><kbd>H</kbd>Toetsen</button>
   <button id="settingsBtn" class="tool" title="Prestaties, weer en geluid"><kbd>I</kbd>Instellingen</button>
   <button id="assetsBtn" class="tool" title="Conditie en onderhoud van de schakelaars"><kbd>O</kbd>Onderhoud</button>
   <button id="flexBtn" class="tool" title="Netcongestie en flexibel vermogen"><kbd>C</kbd>Flex</button>
@@ -367,6 +370,7 @@ body.fp #torch.on{display:block}
 <div id="flex" class="hidden"></div>
 <div id="assets" class="hidden"></div>
 <div id="kit" class="hidden"></div>
+<div id="keys" class="hidden"></div>
 <div id="settings" class="hidden"></div>
 <div id="fps"></div>
 <div id="saved"></div>
@@ -380,6 +384,7 @@ body.fp #torch.on{display:block}
   <div class="pm-score"><span id="pmScore">0</span><small>punten</small><em id="pmBest"></em></div>
   <button class="primary" data-pm="resume">Hervatten <kbd>Esc</kbd></button>
   <button data-pm="save" id="pmSave">💾 Spel opslaan <kbd>Ctrl+S</kbd></button>
+  <button data-pm="keys">Toetsenoverzicht <kbd>H</kbd></button>
   <button data-pm="settings">Instellingen (prestaties, weer, geluid)</button>
   <button data-pm="end">Dienst beëindigen · rapport en score opslaan</button>
   <button data-pm="menu" id="pmMenu">Opslaan en naar hoofdmenu</button>
