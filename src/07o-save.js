@@ -6,9 +6,9 @@ var RESUMING=false;
 const SAVE_KEY='osz-save',SAVE_V=1;
 const BASE0=new Map(CONS.map(c=>[c.id,c.base]));   // normale belasting per afnemer (voor het opruimen van een lopend incident)
 const KEYS={dev:['state','ops','wear','refusals','year','wearWarn','oil','tap','avr','fans','fanFail','blocked','resettable','blockText','blockKind','ratio','gas','hot'],
-  feed:['relay','relayYear','relayKnown','fault','outFrac','clp','offSince','oc','temp','hotWarn','backfed','interruptible','base','unplanned','wait','wasOn'],
-  lvg:['outFrac','lvf','backfed','cut','base','offSince','clp'],sec:['fault','located','temp','ovl','hot'],
-  st:['flag','damaged','evac','fuse','genset','trOt','trWarn','unplanned','wait','wasOn']};
+  feed:['eta','etaAt','aOff','aOffAt','lsOff','lsOffAt','lsManual','shed','called','relay','relayYear','relayKnown','fault','outFrac','clp','offSince','oc','temp','hotWarn','backfed','interruptible','base','unplanned','wait','wasOn'],
+  lvg:['pvTrip','ovAt','lsOff','lsOffAt','lsManual','shed','called','outFrac','lvf','backfed','cut','base','offSince','clp'],sec:['fault','located','temp','ovl','hot'],
+  st:['tapLv','gs','eta','etaAt','aOff','aOffAt','ovFixed','flag','damaged','evac','fuse','genset','trOt','trWarn','unplanned','wait','wasOn']};
 const grab=(o,keys)=>{const r={};keys.forEach(k=>{if(o[k]!==undefined)r[k]=o[k];});return r;};
 const canSave=()=>['free','day','eve'].includes(GAME.mode)&&!GAME.ended&&!RP.on&&$('#intro').classList.contains('hidden');
 // ---- werkopdracht: welk soort opdracht en met welke keuzes, zodat hij exact opnieuw te maken is
@@ -38,7 +38,7 @@ function saveGame(silent){if(!canSave())return false;
     LV:Object.fromEntries(LVG.map(g=>[g.id,grab(g,KEYS.lvg)])),SEC:Object.fromEntries(RING.secs.map(s=>[s.id,grab(s,KEYS.sec)])),
     ST:Object.fromEntries(RING.stations.map(s=>[s.id,grab(s,KEYS.st)])),BUSF:Object.keys(BUSF),
     WX:{type:WX.type,lock:WX.lock,next:WX.next,cur:{...WX.cur},cover:WX.cover},FLEX:FLEX.map(f=>({id:f.id,req:f.req,at:f.at})),PROT:JSON.parse(JSON.stringify(PROT)),
-    TASK:taskSave(),taskSeq,taskCycle,INC:{next:INC.next,done:INC.done,active:INC.active?.def.id||null},PHONE:{...PHONE.stats},
+    TASK:taskSave(),taskSeq,taskCycle,INC:{next:INC.next,done:INC.done,active:INC.active?.def.id||null},PHONE:{...PHONE.stats},LS:{busy:GENSET.busy,orders:LS_ORDERS.map(o=>({...o}))},
     REC:{samples:REC.samples.slice(-600),events:REC.events.slice(-1500)}};
   try{localStorage.setItem(SAVE_KEY,JSON.stringify(data));}catch(e){if(!silent)deny('Opslaan mislukt: niet genoeg ruimte in de browser');return false;}
   if(!silent){pushAlarm(`💾 Spel opgeslagen (${MODES[GAME.mode].name}, ${fmtClock(SIM.t)})`,'ok');toastSaved('Spel opgeslagen');}else toastSaved('Automatisch opgeslagen');return true;}
@@ -62,7 +62,7 @@ function resumeGame(d){$('#intro').classList.add('hidden');AudioSys.init();contr
   d.FLEX.forEach(s=>{const f=FLEX.find(x=>x.id===s.id);if(f){f.req=s.req;f.at=s.at;}});
   for(const k of ['f','ln','tr'])for(const id in d.PROT[k])if(PROT[k][id])Object.assign(PROT[k][id],d.PROT[k][id]);
   TASK=null;taskSeq=d.taskSeq;taskCycle=d.taskCycle;taskLoad(d.TASK);
-  Object.assign(PHONE.stats,d.PHONE);REC.samples=d.REC.samples;REC.events=d.REC.events;REC.lastM=null;
+  Object.assign(PHONE.stats,d.PHONE);if(d.LS){GENSET.busy=d.LS.busy;LS_ORDERS.splice(0,LS_ORDERS.length,...d.LS.orders);}REC.samples=d.REC.samples;REC.events=d.REC.events;REC.lastM=null;
   INC.next=d.INC.next;INC.done=d.INC.done;INC.active=null;if(d.INC.active)clearIncident(d.INC.active);
   resumeTimers();computeFlows();FEEDERS.concat(RING.stations).forEach(f=>{f.wasOn=EN.has(f.node);});
   updateSky(hourOf());refreshAll();renderTasks();setSpeed(d.SIM.speed||60);

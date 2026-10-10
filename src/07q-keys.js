@@ -4,7 +4,7 @@ const KEY_HELP=[
   ['Spel',[['Spatie','Pauze aan/uit (ook P)'],['Esc','Venster of paneel sluiten, anders het pauzemenu'],['Ctrl+S','Spel opslaan (vrije dienst, dag- en avonddienst)'],['M','Geluid aan/uit'],['H of ?','Dit overzicht']]],
   ['Camera en kijken',[['1 – 9','Camerastandpunten (6 = binnen 10 kV, 7 = binnen 20 kV, 8 = woonwijk, 9 = centrum)'],['L','Labels aan/uit'],['+ / −','SCADA in- en uitzoomen (ook Ctrl + scrollwiel op het schema)']]],
   ['Rondlopen',[['V','Rondlopen starten of stoppen'],['W A S D','Lopen'],['Shift / Q','Rennen / sprinten'],['Spatie','Springen'],['F','Schakelaar in het vizier direct bedienen'],['E','Cursor vrij (paneel open van wat je ziet); nog eens E = verder lopen'],['Z','Zaklamp aan/uit']]],
-  ['Vensters',[['B','Beveiligingsinstellingen'],['C','Flex en netcongestie'],['O','Onderhoud: conditie van schakelaars en relaistests'],['K','Testkoffer (tijdens een relaistest)'],['I','Instellingen: prestaties, weer en geluid']]]];
+  ['Vensters',[['B','Beveiligingsinstellingen'],['C','Flex en netcongestie'],['O','Onderhoud: conditie van schakelaars en relaistests'],['K','Testkoffer (tijdens een relaistest)'],['N','Laagspanning: LS-velden, kabelkasten, noodaggregaten en klanten informeren'],['I','Instellingen: prestaties, weer en geluid']]]];
 let keysPrev=false;
 const keysOpen=()=>!$('#keys').classList.contains('hidden');
 function openKeys(){if(keysOpen())return;keysPrev=SIM.paused;SIM.paused=true;syncSpeed();if(FP.on)unlockPointer();

@@ -5,6 +5,7 @@ function addTimer(min,fn){SIM.timers.push({at:SIM.t+min,fn});}
 const springOk=d=>performance.now()>=d.springAt;
 function actionText(d,to){return d.type==='cb'||d.type==='lvs'?(to?'IN':'UIT'):(to?'GESLOTEN':'GEOPEND');}
 function interlockCheck(d,to){
+  const ls=lsInterlock(d,to);if(ls)return ls;
   if(d.type==='ds'){const cb=D[d.cb];if(d.sel&&to===1&&D[d.other].state===1&&D['V-K'].state!==1)return 'Vergrendeling: een veld mag alleen op beide rails als koppeling V-K gesloten is';
     if(cb.state===1&&!selPar(d))return d.sel?`Vergrendeling: ${cb.id} moet eerst UIT (of: V-K dicht en het veld eerst ook op de andere rail)`:`Vergrendeling: ${cb.id} moet eerst UIT`;if(to===1&&d.es&&D[d.es].state===1)return `Vergrendeling: aardschakelaar ${d.es} is gesloten`;}
   if(d.type==='es'&&to===1){if(d.ds&&D[d.ds].state===1)return `Vergrendeling: ${d.ds} moet eerst open`;if(d.cb&&D[d.cb].state===1)return `Vergrendeling: ${d.cb} moet eerst UIT`;if(EN.has(d.a))return 'Vergrendeling: spanning aanwezig (spanningsdetectie)';}
@@ -22,6 +23,7 @@ function operate(id,to,opts={}){
   const d=D[id];if(!d||!['cb','ds','es','lbs','lvs'].includes(d.type)||d.state===to)return;
   if(SIM.paused)return deny(GAME.ended?'De dienst is afgelopen':'Simulatie gepauzeerd – hervat om te schakelen');
   const dst=d.bay&&RING.stations.find(s=>s.id===d.bay);if(dst&&dst.damaged)return deny(`${dst.id} is beschadigd (${dst.damaged}) – niet bedienbaar. Isoleer vanaf het buurstation.`);
+  if(d.type==='lvs'&&!opts.crew&&!localOk(id))return lsSwitchOrder(id,to);   // LS: lokaal of via een monteur
   if(SCADA_DOWN()&&!localOk(id))return deny('SCADA-verbinding verbroken – loop erheen (V) en bedien lokaal aan het veld');
   if(to===1&&/-T$/.test(id)&&RING.stations.find(s=>s.id+'-T'===id)?.fuse)return deny('Zekeringen nog niet vervangen – wacht op de monteur');
   if(d.busy)return deny('Bediening loopt nog…');

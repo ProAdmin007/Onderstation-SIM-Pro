@@ -14,7 +14,8 @@ function lvFault(force){const c=LVG.filter(g=>g.cust>1&&!g.lvf&&EN.has(g.node)&&
   addTimer(150,()=>{if(!g.lvf)return;g.lvf=null;g.outFrac=0;pushAlarm(`Storingsdienst (0800-nummer): LS-storing ${g.st.id} ${g.name} na veel klachten alsnog verholpen`,'warn');});}
 function callFrom(g,kind){if(!g||(PHONE.cd[g.id]||-99)>SIM.t-12)return;PHONE.cd[g.id]=SIM.t;if(knownOut(g))return toTape(g);if(PHONE.queue.length>=3)return;const pl=placeOf(g);
   const who=pl.biz?`de bedrijfsleider van ${g.name}`:pick(CALLERS);
-  const say=kind==='house'?pick(['Ik heb geen stroom, maar de buren wel.','Bij mij is alles uit, bij de overburen brandt gewoon licht.','Mijn aardlekschakelaar springt steeds en nu doet niks het meer.'])
+  const say=kind==='pv'?pick(['Mijn zonnepanelen vallen steeds uit, de omvormer zegt: netspanning te hoog.','Bij mooi weer gaat mijn omvormer telkens in storing. De buren hebben het ook.','Mijn lampen branden feller dan normaal en de omvormer schakelt af.'])
+    :kind==='house'?pick(['Ik heb geen stroom, maar de buren wel.','Bij mij is alles uit, bij de overburen brandt gewoon licht.','Mijn aardlekschakelaar springt steeds en nu doet niks het meer.'])
     :kind==='lv'?pick(['Bij ons is de stroom uit, de buren hebben het ook.','Halve straat zit zonder stroom, het licht flikkerde eerst.','Wij hebben geen stroom meer, de straatverlichting doet het nog wel.'])
     :pick(['Alles is uit hier, de hele buurt is donker.','We zitten zonder stroom! Weet u hoe lang het duurt?','Mijn vriezer staat uit, wanneer komt de stroom terug?']);
   PHONE.queue.push({g,kind,who,addr:pl.addr,biz:pl.biz,say,t:SIM.t,wait:0});renderPhone();}
@@ -44,7 +45,8 @@ function renderPhone(){const el=$('#phone');const c=PHONE.cur,w=PHONE.queue.filt
 function phoneAnswer(choice,st){const c=PHONE.cur;if(!c)return;PHONE.queue=PHONE.queue.filter(x=>x!==c);PHONE.cur=null;
   const mvOut=!EN.has(c.g.node)&&!c.g.backfed,lv=!!c.g.lvf&&!mvOut,good=(p,t)=>{PHONE.stats.ok++;award(p,t);},bad=(p,t)=>{PHONE.stats.bad++;award(p,t);};
   pushAlarm(`☎ ${c.who} (${c.addr}): “${c.say}”`,'radio');
-  if(choice==='known'){if(mvOut)good(5,'Klant goed geïnformeerd');else bad(-10,'Klant verkeerd geïnformeerd');}
+  if(c.kind==='pv'){if(choice==='known')good(10,'Klant geïnformeerd over de spanning');else bad(-10,choice==='own'?'Spanningsprobleem ligt niet bij de klant':'Geen LS-storing: het is de spanning');}
+  else if(choice==='known'){if(mvOut)good(5,'Klant goed geïnformeerd');else bad(-10,'Klant verkeerd geïnformeerd');}
   else if(choice==='own'){if(c.kind==='house'&&!mvOut&&!lv)good(10,'Juist advies: eigen installatie');else bad(-15,'Klant ten onrechte doorverwezen');}
   else if(choice==='send'&&st){dispatchLV(st,c);}
   renderPhone();}

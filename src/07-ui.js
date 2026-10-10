@@ -76,7 +76,7 @@ function buildSLD(){
   T(60,486,'naar MS5 Bedrijvenpark Zuid (ring woonwijk)','start','fs');T(338,384,'koppelkabel','end','fs dl');T(338,397,'max. 4 MW','end','fs dl');M('lnk',338,410,'end','mh');
   T(235,516,'MS5-K is normaal open. Sluiten mag alleen als de','middle','fs dl');T(235,529,'ringkant spanningsloos is: dan voedt Meppel MS5 terug.','middle','fs dl');T(235,542,'Parallel met Netbeheer Noord is niet toegestaan.','middle','fs dl');
   T(235,540,'⚑ verklikker aangesproken · ⚡ kabelfout','middle','fs');T(235,553,'klik op een station voor alle schakelaars','middle','fs');
-  const svg=$('#sld');svg.innerHTML=`<g data-tab="10">${out[10].join('')}</g><g data-tab="20" style="display:none">${out[20].join('')}</g><g data-tab="R" style="display:none">${out.R.join('')}</g><g data-tab="P" style="display:none"><g id="progG"></g></g><g data-tab="K" style="display:none"><g id="cabG"></g></g><g data-tab="M" style="display:none">${out.M.join('')}</g>`;
+  const svg=$('#sld');svg.innerHTML=`<g data-tab="10">${out[10].join('')}</g><g data-tab="20" style="display:none">${out[20].join('')}</g><g data-tab="R" style="display:none">${out.R.join('')}</g><g data-tab="P" style="display:none"><g id="progG"></g></g><g data-tab="K" style="display:none"><g id="cabG"></g></g><g data-tab="L" style="display:none"><g id="lsG"></g></g><g data-tab="M" style="display:none">${out.M.join('')}</g>`;
   SLD.nodes=[...svg.querySelectorAll('[data-n]')];SLD.byNode={};SLD.nodes.forEach(el=>(SLD.byNode[el.dataset.n]??=[]).push(el));
   svg.querySelectorAll('.dev').forEach(el=>{const id=el.dataset.id,tab=el.closest('[data-tab]').dataset.tab;(SLD.devs[id]??=[]).push(el);(SLD.devTab[id]??=new Set()).add(tab);
     el.addEventListener('click',()=>selectDevice(id));});
@@ -96,7 +96,7 @@ function tabAlarms(){const out={'10':[],'20':[],R:[],M:[]},add=(t,why)=>out[t].p
   return out;}
 function updateTabAlarms(){const a=tabAlarms();document.querySelectorAll('#sldTabs button').forEach(b=>{if(b.dataset.tip0==null)b.dataset.tip0=b.title||'';const l=a[b.dataset.t];const on=!!(l&&l.length);
     b.classList.toggle('alarm',on);const tip=on?`Storing: ${l.slice(0,4).join(', ')}${l.length>4?` (+${l.length-4})`:''}`:'';if(b._tip!==tip){b._tip=tip;b.title=tip||b.dataset.tip0;}});}
-function setTab(t){SLD.tab=t;if(t==='P')setTimeout(renderProg);if(t==='K')setTimeout(renderCables);document.querySelectorAll('#sld [data-tab]').forEach(g=>g.style.display=g.dataset.tab===t?'':'none');
+function setTab(t){SLD.tab=t;if(t==='P')setTimeout(renderProg);if(t==='K')setTimeout(renderCables);if(t==='L')setTimeout(renderLSTab);document.querySelectorAll('#sld [data-tab]').forEach(g=>g.style.display=g.dataset.tab===t?'':'none');
   document.querySelectorAll('#sldTabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));}
 function nodeClass(n){if(ER.has(n))return 'earth';if(!EN.has(n))return 'dead';const v=lvl(n);return v===110?'hv':v===20?'mv20':v<1?'lv':'mv';}
 function setM(k,txt,cls){(SLD.meas[k]||[]).forEach(el=>{el.textContent=txt;if(cls)el.setAttribute('class',cls);});}
@@ -169,8 +169,11 @@ function rowsFor(d){const r=[],A=(k,f)=>r.push([k,f]);
   A('Status',()=>{const s=statusOf(d);return `<span class="chip ${s[1]}">${s[0]}</span>`;});
   if(['cb','ds','lbs','lvs'].includes(d.type))A('Spanning',()=>fmtKV(Math.max(nodeU(d.a),nodeU(d.b))));
   if(d.type==='mstr'){A('Belasting',()=>`${(d.id&&RING.stations.find(s=>s.id+'-TR'===d.id).P*1000).toFixed(0)} kW · ${Math.round(RING.stations.find(s=>s.id+'-TR'===d.id).P/trMW(RING.stations.find(s=>s.id+'-TR'===d.id))*100)}% van ${RING.stations.find(s=>s.id+'-TR'===d.id).kva} kVA`);A('LS-spanning',()=>`${Math.round(nodeU(d.b)*1000)} V`);}
-  if(d.type==='lvs')A(d.lvg.kind==='ovl'?'Lantaarns':'Klanten',()=>d.lvg.kind==='ovl'?`${d.lvg.st.lamps||0} (schemerschakeling)`:d.lvg.cust.toLocaleString('nl-NL'));
-  if(d.type==='lvs')A('Belasting',()=>`${(d.lvg.Pc*1000).toFixed(0)} kW`);
+  if(d.lvg)A(d.lvg.kind==='ovl'?'Lantaarns':'Klanten',()=>d.lvg.kind==='ovl'?`${d.lvg.st.lamps||0} (schemerschakeling)`:d.lvg.cust.toLocaleString('nl-NL'));
+  if(d.lvg)A('Belasting',()=>`${(d.lvg.Pc*1000).toFixed(0)} kW${d.lvg.pv?` · zon ${Math.round(Math.max(0,-d.lvg.pv*profile('pv',hourOf()))*1000)} kW`:''}`);
+  if(d.lvg)A('Spanning straat',()=>d.lvg.U?`<span class="${d.lvg.U>U_MAX||d.lvg.U<U_MIN?'bad':''}">${Math.round(d.lvg.U)} V</span>`:'—');
+  if(d.lslink)A('Belasting',()=>`${Math.round((d.load||0)*280)} kW / 280 kW`);
+  if(d.type==='lvs')A('Bediening',()=>localOk(d.id)?'lokaal':'<span class="dl">op afstand: een monteur schakelt</span>');
   if(d.type==='kiosk'){const s=d.st;A('Klanten',()=>s.cust.toLocaleString('nl-NL'));A('Straatverlichting',()=>`${s.lamps||0} lantaarns · ${EN.has(s.ovl)?(profile('ovl',hourOf())?'<span class="warnc">brandt</span>':'uit (dag)'):'<span class="bad">geen spanning</span>'}`);A('Belasting',()=>`${s.P.toFixed(2)} MW`);
     A('Gevoed via',()=>{const t=FLOW.TAG[s.node];return t&&t.cb?`${t.cb} (rail ${BUS_BAND[t.bus][2]})`:'<span class="bad">geen voeding</span>';});
     const kab=sec=>()=>sec?(EN.has(sec.node)?`<span class="${sec.load>1||sec.temp>CABLE.max?'bad':sec.load>0.85||sec.temp>CABLE.warn?'warnc':''}">${Math.round(sec.I)} A · ${Math.round(sec.load*100)}% · ${Math.round(sec.temp??0)} °C</span>`:'spanningsloos'):'—';

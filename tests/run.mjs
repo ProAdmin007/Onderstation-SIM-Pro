@@ -378,6 +378,63 @@ const TESTS = [
         return { inc: O.SIM.incidents - i0, vals: [...document.querySelectorAll('#alarmList .al')].some(e => /weer spanning op terwijl/.test(e.textContent)), geblust: [...document.querySelectorAll('#alarmList .al')].some(e => /brand geblust/.test(e.textContent)) }; });
       assert(r.inc === 1 && !r.vals && r.geblust, `brand verloopt niet goed: ${JSON.stringify(r)}`);
   } },
+  { name: 'punten terugverdienen: herstelbonus, rotatie bij capaciteitstekort en hersteltijd', query: '?autostart&t=11', async run(p) {
+      const r = await p.evaluate(async () => { T.quiet(); const O = OS, D = O.D, EN = () => O.EN(); const ev = t => O.REC.events.some(e => JSON.stringify(e).includes(t)); O.SIM.paused = false; T.step(0.5);
+        O.tripBreaker('V-F3'); T.step(0.3); const ms1 = O.RING.stations.find(x => x.id === 'MS1'); const uit = !EN().has('M1');
+        O.setEta(ms1, 30); const eta = ev('Hersteltijd doorgegeven'); const hp = O.CONS.find(c => c.id === 'MS3-G3'); O.callPrio(hp); const prio = ev('Prioriteitsklant');
+        T.step(5); await T.op('V-F3', 1); T.step(0.5); const bonus = ev('Herstelbonus'), gehaald = ev('Hersteltijd MS1 gehaald');
+        // rotatie: tijdens een capaciteitstekort een station afschakelen telt half en levert bij terugschakelen punten op
+        O.GAME.flags.shortUntil = O.SIM.t + 120; await T.op('MS6-T', 0); T.step(0.3); const g = O.LVG.find(x => x.id === 'MS6-G1'); const shed = g.shed && O.shedFactor(g) === 0.5;
+        T.step(15); await T.op('MS6-T', 1); T.step(0.3);
+        return { uit, eta, prio, bonus, gehaald, shed, rotatie: ev('Rotatie'), geenBonusVoorEigenSchakeling: !O.REC.events.filter(e => JSON.stringify(e).includes('Herstelbonus')).some(e => e.t > O.SIM.t - 1) }; });
+      for (const [k, v] of Object.entries(r)) assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
+  } },
+  { name: 'noodaggregaat: monteur sluit aan, overbelasting, afkoppelen', query: '?autostart&t=11', async run(p) {
+      const r = await p.evaluate(async () => { T.quiet(); const O = OS, D = O.D, EN = () => O.EN(), s = O.RING.stations.find(x => x.id === 'MS2'); O.SIM.paused = false; T.step(0.5);
+        O.tripBreaker('V-F3'); T.step(0.3); O.gsSend(s); const onderweg = O.GENSET.busy === 1 && O.LS_ORDERS.length === 1;
+        for (let k = 0; k < 30 && !s.gs; k++) T.step(1);
+        const aan = s.gs?.state === 'aan' && D['MS2-T'].state === 0, last = s.gs?.load;
+        // te zwaar? dan valt hij uit; daarna groepen lokaal afschakelen en herstarten
+        let boven = 0; for (let k = 0; k < 24 && s.gs.state === 'aan'; k++) { T.step(0.25); boven = s.gs.load > 1.1 ? boven + 0.25 : 0; }
+        const trip = s.gs.state === 'trip' || boven < 2.5;   // valt uit na ±2 min boven 110%
+        O.SIM.localTest = true; for (const g of s.groups.slice(1)) await T.op(g.id, 0); O.SIM.localTest = false;
+        if (s.gs.state === 'trip') { O.gsRestart(s); for (let k = 0; k < 6; k++) T.step(1); }
+        const draait = s.gs.state === 'aan' && s.gs.load < 1.1 && s.groups[0].backfed && O.SIM.off >= 0;
+        await T.op('V-F3', 1); T.step(0.5); const tSlot = await T.op('MS2-T', 1); const vergrendeld = D['MS2-T'].state === 0;
+        O.gsOff(s); for (let k = 0; k < 6 && s.gs; k++) T.step(1);
+        const terug = !s.gs && D['MS2-T'].state === 1 && EN().has('M2v'); T.step(21);
+        return { onderweg, aan, trip, draait, vergrendeld, terug, vrij: O.GENSET.busy === 0 }; });
+      for (const [k, v] of Object.entries(r)) assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
+  } },
+  { name: 'LS-koppeling: alleen met LS-veld open, niet parallel, op afstand via een monteur', query: '?autostart&t=11', async run(p) {
+      const r = await p.evaluate(async () => { T.quiet(); const O = OS, D = O.D, EN = () => O.EN(); O.SIM.paused = false; T.step(0.5);
+        O.tripBreaker('V-F3'); T.step(0.3); const ms3uit = !EN().has('MS3-G4') && EN().has('MS4-G1');
+        O.operate('MS3-G4', 0); const opAfstand = D['MS3-G4'].state === 1 && O.LS_ORDERS.some(o => o.args.id === 'MS3-G4');
+        O.LS_ORDERS.splice(0); O.SIM.localTest = true;
+        await T.op('KK34', 1); const terugvoedWeigert = D.KK34.state === 0;
+        await T.op('MS3-G4', 0); await T.op('KK34', 1); T.step(0.3); const gevoed = EN().has('MS3-G4') && !EN().has('M3v') && O.LS_LINKS.find(d => d.id === 'KK34').load > 0;
+        await T.op('V-F3', 1); T.step(0.3); await T.op('MS3-G4', 1); const parallelWeigert = D['MS3-G4'].state === 0;
+        await T.op('KK34', 0); await T.op('MS3-G4', 1); T.step(0.3); O.SIM.localTest = false;
+        return { ms3uit, opAfstand, terugvoedWeigert, gevoed, parallelWeigert, normaal: D['MS3-G4'].state === 1 && D.KK34.state === 0 && EN().has('MS3-G4') }; });
+      for (const [k, v] of Object.entries(r)) assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
+  } },
+  { name: 'LS-spanning: zonnepanelen geven overspanning, vaste trap alleen spanningsloos', query: '?autostart&t=13.5&season=zomer', async run(p) {
+      const r = await p.evaluate(async () => { T.quiet(); const O = OS, D = O.D, s = O.RING.stations.find(x => x.id === 'MS4'), g = O.LVG.find(x => x.id === 'MS4-G1'); const ev = t => O.REC.events.some(e => JSON.stringify(e).includes(t));
+        O.setWeather('helder', true, true); O.SIM.paused = false; s.tapLv = 2; T.step(0.5); const hoog = g.U > 253;
+        for (let k = 0; k < 6 && !(g.pvTrip > O.SIM.t); k++) T.step(0.5); const omvormers = g.pvTrip > O.SIM.t;
+        O.tapOrder(s, -1); for (let k = 0; k < 15 && O.LS_ORDERS.length; k++) T.step(1); const weigert = s.tapLv === 2;
+        await T.op('MS4-T', 0); for (const n of [1, 2, 3]) { O.tapOrder(s, -1); for (let k = 0; k < 15 && O.LS_ORDERS.length; k++) T.step(1); } await T.op('MS4-T', 1); T.step(0.5);
+        return { hoog, omvormers, weigert, trap: s.tapLv === -1, opgelost: ev('Spanningsklacht opgelost'), lager: g.U < 253 }; });
+      for (const [k, v] of Object.entries(r)) assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
+  } },
+  { name: 'LS-venster (N) en SCADA-tabblad LS', query: '?autostart&t=11', async run(p) {
+      await p.keyboard.press('n');
+      const r = await p.evaluate(() => { const O = OS, w = document.querySelector('#lsWin'); const open = !w.classList.contains('hidden') && O.SIM.paused;
+        w.querySelector('[data-lst="MS4"]').click(); const ms4 = /MS4 Zuiderveld/.test(w.textContent) && w.querySelectorAll('[data-lsw]').length >= 3;
+        O.closeLS(); O.setTab('L'); O.renderLS(); const tab = document.querySelectorAll('#lsG [data-ls]').length >= 9;
+        return { open, ms4, tab, dicht: w.classList.contains('hidden') }; });
+      for (const [k, v] of Object.entries(r)) assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
+  } },
   { name: 'leven in de wijk: ramen per station, auto\'s en buren bij uitval', query: '?autostart&t=21&night&season=winter', async run(p) {
       const r = await p.evaluate(async () => { T.quiet(); const O = OS, s1 = O.RING.stations[0]; O.SIM.paused = false; T.step(0.2); O.updateWindows();
         const aan = s1.winMats.some(m => m.opacity > 0.3), autos = O.CARS.filter(c => c.g.visible).length;
@@ -428,7 +485,7 @@ const TESTS = [
       assert(r.ring === '10,R', `ringfout moet ook Ring laten oplichten: ${r.ring}`);
       assert(r.rail === '10,20,R' && /railfout rail C2/.test(r.tip), `railfout C2: ${r.rail} · ${r.tip}`);
   } },
-  { name: 'kabeltemperatuur: kort overbelasten mag, lang niet', query: '?autostart&t=12', async run(p) {
+  { name: 'kabeltemperatuur: kort overbelasten mag, lang niet', query: '?autostart&t=16.5&season=winter', async run(p) {
       const r = await p.evaluate(() => { T.quiet(); const O = OS, s = O.RING.secs.find(x => x.id === 'K12'); O.SIM.paused = false; T.step(0.5);
         const t0 = s.temp, rate0 = s.rate; s.rate = s.I / 1.4; T.step(10); const kort = { temp: Math.round(s.temp), heel: !s.fault && !O.GAME.stats.burn };
         T.step(70); return { t0: Math.round(t0), kort, lang: { burn: O.GAME.stats.burn || 0 }, normaal: t0 < 70 }; });

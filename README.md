@@ -20,6 +20,7 @@ Een 3D-onderstationsimulator die in de browser draait (Three.js, geen installati
 - Linker muisknop draaien, rechter muisknop schuiven, scrollen om te zoomen.
 - `1`–`9` camerastandpunten (6 = binnen 10 kV, 7 = binnen 20 kV, 8 = woonwijk, 9 = centrum en De Vaart)
 - `K` opent de **testkoffer** tijdens een relaistest
+- `N` opent het **LS-venster**: LS-velden, kabelkasten, noodaggregaten en klanten informeren
 - **Rondlopen (first person):** druk op `V` of op de knop *Rondlopen*.
   - Je loopt met `WASD`, rent met `Shift` en kijkt rond met de muis.
   - Richt het kruis op een schakelaar: `F` schakelt direct. `E` maakt de cursor vrij (en opent het paneel als je naar een schakelaar kijkt), zodat je ook in het SCADA-schema kunt schakelen. Met nog een keer `E` loop je verder.
@@ -100,6 +101,16 @@ Een 3D-onderstationsimulator die in de browser draait (Three.js, geen installati
   - *“Laat uw installateur kijken”* als alleen één woning zonder stroom zit (+10);
   - *monteur sturen naar een MS-station* bij een **LS-storing**: een doorgebrande zekering in een laagspanningsveld. Die zie je **niet** in SCADA, alleen via klantmeldingen. Zoek het adres op in het ringschema (welke straat hangt aan welk station) en stuur de monteur naar het goede station (+60 bij snel herstel, −20 bij een verkeerd station). Ook vanuit het stationspaneel kun je een monteur sturen.
   - Neemt niemand op, dan hangt de klant na ±45 s op (−5). Loopt er een uitval, dan wachten bellers ±2 minuten en kost ophangen geen punten.
+- **Laagspanning** (toets `N`, de knop *LS* of het SCADA-tabblad *LS*):
+  - Per MS-station zie je de **LS-velden** (straten en bedrijven): aan/uit, afname, opwek van zonnepanelen en de **spanning per straat** (norm 207–253 V).
+  - LS is **niet op afstand bedienbaar**. Je schakelt lokaal (loop het station binnen met `V` en gebruik `F`) of je stuurt een **monteur** (±7–11 min reistijd, korter als er al iemand is).
+  - **Kabelkasten** (KK12, KK23, KK34, KK45, KK67) koppelen een straat aan een straat van het buurstation. Valt een station uit, dan voed je zo één straat via de buurman. Dat mag alleen als één kant spanningsloos is én het LS-veld aan die kant open staat: anders voed je via de distributietrafo het MS-net terug. Parallel schakelen is niet toegestaan. Een kabelkast kan ±280 kW aan; daarboven smelt de zekering.
+  - **Zonnepanelen** (±1,2 kWp per woning) verhogen op zonnige middagen de spanning in lange straten. Boven 253 V schakelen de omvormers af en bellen klanten. De oplossing is de **vaste trap** van de distributietrafo (−2 … +2, 2,5% per stand). Die mag alleen spanningsloos worden versteld: open eerst `MSx-T`, eventueel met een kabelkast of aggregaat om de klanten te voeden. Te laag zetten geeft op een winteravond onderspanning (< 207 V).
+- **Punten terugverdienen bij een grote uitval.** Klantminuten blijven tellen, maar je kunt met acties punten terugverdienen:
+  - **Herstelbonus:** elke klant die na een storing weer stroom krijgt, levert punten op; sneller herstel levert meer op, en prioriteitsklanten geven extra. Wie je zelf afschakelde, telt niet mee.
+  - **Noodaggregaten:** drie aggregaten van 400 kVA. Stuur er een naar een spanningsloos MS-station (±15–25 min). De monteur opent `MSx-T` en het aggregaat voedt de LS-velden die IN staan. Houd het onder 400 kVA (schakel zo nodig straten af), anders valt het uit. Is het MS-net terug, laat het dan afkoppelen: de monteur sluit `MSx-T` weer.
+  - **Rotatie:** is er te weinig transformatorcapaciteit (een 110/10 kV-trafo boven 88%), dan tellen klanten die je zelf afschakelt de eerste 45 minuten maar half. Schakel je ze binnen 10–75 minuten weer in (rouleren), dan krijg je punten. Na 45 minuten krijg je een waarschuwing.
+  - **Klanten informeren:** geef per uitgevallen gebied een **verwachte hersteltijd** door (+10 binnen 10 min); haal je die, dan krijg je punten, ben je later, dan kost het punten. **Bel prioriteitsklanten** (ziekenhuis, RWZI, huisartsenpost) als ze zonder stroom zitten (+20 binnen 10 min).
 - **Netcongestie en flexibel vermogen** (toets `C` of de knop *Flex*):
   - Een overzicht toont de zwaarst belaste kabels en transformatoren.
   - Zeven klanten hebben een flexcontract: het laadplein (slim laden), het transportbedrijf (e-trucks later laden), het koelhuis, de metaalbewerking, de batterij van het distributiecentrum, de kassen (belichting dimmen) en het zonnepark (terugregelen).
@@ -128,7 +139,7 @@ Een 3D-onderstationsimulator die in de browser draait (Three.js, geen installati
   - **I> per uitgaand veld** (110–150 %) en een **tijdfactor** (×0,5–×2). Te scherp: koude-lastopname leidt tot afschakeling. Te ruim: een langdurig overbelaste kabel raakt beschadigd.
   - **AR dode tijd per lijn** (0,3 / 1 / 3 s). Kort: de herinschakeling mislukt soms omdat de boog nog niet gedoofd is. 3 s: altijd raak, maar draait het station op één lijn, dan vallen processen bij klanten uit.
   - **Thermische trip per trafo** (95 / 100 / 110 °C). Hoog geeft meer reserve, maar boven 105 °C ontstaat gasvorming en dreigt een Buchholz-trip met een lange inspectie.
-- **SCADA** heeft tabbladen voor 10 kV, 20 kV, de ring, **Meppel**, **kabels** en de **prognose**.
+- **SCADA** heeft tabbladen voor 10 kV, 20 kV, de ring, **Meppel**, **kabels**, **LS** en de **prognose**.
   - Is er een storing in een deel van de installatie, dan **knippert het tabblad rood** tot hij is opgelost. Beweeg over het tabblad om te zien welke storing het is.
     - **10 kV:** kabelfout of uitval van een veld, railfout of dode rail A/B, T1 geblokkeerd, vastzittende schakelaar.
     - **20 kV:** hetzelfde voor rail C1/C2, T2 en de G-velden.
@@ -289,9 +300,10 @@ De broncode staat in `src/`. `build.ps1` plakt de bestanden in strikte naamvolgo
 | `04-8-flex.js` | flexibel vermogen, congestie en distributietrafo's |
 | `04-9-wear.js` | veroudering, weigering (50BF) en revisies |
 | `04-a-relay.js` | relaisafwijkingen, werkopdracht relaistest en de metingen van de testkoffer |
+| `04-b-ls.js` | laagspanning (spanning per straat, kabelkasten, monteurs), noodaggregaten, rotatie, herstelbonus en klantcommunicatie |
 | `04b`–`04g` | spelmodi en score, ring, lessen, dienstoverdracht, extra scenario's |
 | `05`–`06` | effecten, geluid, interieur, opbouw van de scène |
-| `07`–`07p` | SCADA en panelen, rondlopen, monteurs, schakelbrief, beveiligingsvenster, prognose, telefoon, tijdlijn/herhaling, modelcontrole, flex- en onderhoudsvenster, leven in de wijk, instellingen, tabblad Kabels, opslaan en hervatten, testkoffer |
+| `07`–`07r` | SCADA en panelen, rondlopen, monteurs, schakelbrief, beveiligingsvenster, prognose, telefoon, tijdlijn/herhaling, modelcontrole, flex- en onderhoudsvenster, leven in de wijk, instellingen, tabblad Kabels, opslaan en hervatten, testkoffer, toetsenoverzicht, LS-venster en -tabblad |
 | `08-main.js` | HUD, menu's, start en hoofdlus |
 
 **Rails, lijnen en railkeuzevelden** staan op één plek (`BUSES`, `LINES` en het register `SEL_BAYS` in `04-1-net.js`); de koppelingen, spanningsbanden, SCADA-metingen en werkopdrachten worden daarvan afgeleid. Bij het opstarten controleert `checkModel()` of alle verwijzingen naar apparaten kloppen, of elke schakelaar ergens te bedienen is en of alles in de normale toestand spanning heeft. Een fout verschijnt als consolefout, en de tests vallen er dan direct over.

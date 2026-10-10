@@ -104,7 +104,7 @@ function applyMode(id){
 }
 function gameTick(dm,dtReal){
   if(GAME.ended)return;
-  GAME.score-=CONS.reduce((s,c)=>s+custOff(c)*(c.interruptible?0.1:1),0)*dm/500;
+  GAME.score-=CONS.reduce((s,c)=>s+custOff(c)*(c.interruptible?0.1:1)*shedFactor(c),0)*dm/500;
   const hosp=FD('F5');
   if(!EN.has(hosp.node)&&!hosp.backfed){GAME.score-=5*dm;GAME.flags.hospRun=(GAME.flags.hospRun||0)+dm;GAME.stats.hospMin+=dm;}else GAME.flags.hospRun=0;
   TR.forEach(T=>GAME.stats.maxOil=Math.max(GAME.stats.maxOil,D[T].oil));

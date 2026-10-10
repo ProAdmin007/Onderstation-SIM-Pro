@@ -34,7 +34,9 @@ while (Date.now() < end) {
         () => O.selectDevice(pk(ids)), () => O.setTab(pk(['10', '20', 'R', 'M', 'K', 'P'])),
         () => { O.openFlex(); O.closeFlex?.(); }, () => { O.openProt(); O.closeProt?.(); },
         () => { const c = O.PHONE.queue[0]; if (c) { O.PHONE.cur = c; O.phoneAnswer(pk(['known', 'own'])); } },
-        () => { if (O.SIM.paused) O.SIM.paused = false; }];
+        () => { if (O.SIM.paused) O.SIM.paused = false; },
+        () => { O.openLS(pk(O.RING.stations).id); O.renderLS(); O.closeLS(); }, () => O.setTab('L'),
+        () => O.gsSend(pk(O.RING.stations)), () => { const d = pk([...O.LS_LINKS, ...O.LVG.map(g => O.D[g.id])]); O.lsSwitchOrder(d.id, d.state ? 0 : 1); }];
       try { pk(acts)(); pk(acts)(); } catch (e) { return { err: 'actie: ' + e.stack }; }
       const r = { t: Math.round(O.SIM.t), inc: O.INC.active?.def.id || '-', off: O.SIM.off, fps: Math.round(window.__fr / 3), worstMs: Math.round(window.__worst), heapMB: Math.round((performance.memory?.usedJSHeapSize || 0) / 1e6), scene: O.scene?.children.length, npcs: O.NPCS?.length, fx: O.FX?.length, dom: document.getElementsByTagName('*').length, timers: O.SIM.timers?.length, rec: O.REC?.samples?.length, loopErr: [...(window.LOOP_ERR || new Map()).keys()].join(' ## ') };
       window.__fr = 0; window.__worst = 0; return r; }, k++),

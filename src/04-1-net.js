@@ -137,10 +137,12 @@ const TAP_STEP=0.0125,Z_DROP=0.05;
 function computeFlows(){
   EN=energized();ER=earthed();const h=hourOf();const busLoad=perBus(0);
   FLOW.TAG=supplyTags();const feederP={};
-  CONS.forEach(c=>{c.demand=c.base*profile(c.kind,h)*(c.gen?1:seasonMul(c.kind))*(1+c.noise)*(c.gen?1:c.clp)*(1-(c.cut||0));c.Pc=EN.has(c.node)?c.demand*(1-c.outFrac):0;
+  CONS.forEach(c=>{c.demand=c.base*profile(c.kind,h)*(c.gen?1:seasonMul(c.kind))*(1+c.noise)*(c.gen?1:c.clp)*(1-(c.cut||0));
+    if(c.pv)c.demand+=c.pv*profile('pv',h)*(c.pvTrip>SIM.t?0.25:1);   // zonnepanelen op de woningen (omvormers uit bij overspanning)
+    c.Pc=EN.has(c.node)?c.demand*(1-c.outFrac):0;
     const t=FLOW.TAG[c.node];if(t&&c.Pc){busLoad[t.bus]+=c.Pc;if(t.cb)feederP[t.cb]=(feederP[t.cb]||0)+c.Pc;}});
   FEEDERS.forEach(f=>{f.P=feederP[f.cb]||0;D[f.cb].I=Math.abs(f.P)*kA(f.bus);});
-  RING.stations.forEach(s=>{s.P=s.groups.reduce((a,g)=>a+g.Pc,0);});
+  stationLoads();
   FLOW.load=busLoad.RA+busLoad.RB;FLOW.load20=busLoad.RC+busLoad.RD;
   // 110 kV-netspanning (TenneT) varieert over de dag
   const U110=110.5+1.6*Math.sin((h-4)/24*2*Math.PI)+0.25*Math.sin(SIM.t*0.05)-0.012*FLOW.P110;FLOW.U110=U110;

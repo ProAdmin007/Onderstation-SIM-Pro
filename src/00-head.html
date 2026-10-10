@@ -283,6 +283,9 @@ body.fp #torch.on{display:block}
 #saved.show{animation:savedIn 2.4s ease forwards}@keyframes savedIn{0%{opacity:0;transform:translate(-50%,-10px)}12%,75%{opacity:1;transform:translate(-50%,0)}100%{opacity:0}}
 .mode.resume{border-color:var(--green)}.mode.resume .mt{color:var(--green)}.mode.delsave{opacity:.75}
 #fps{display:none;position:fixed;right:14px;bottom:14px;z-index:8;font:600 12px var(--mono);color:#9fe39a;background:rgba(13,17,22,.7);padding:3px 8px;border-radius:6px;pointer-events:none}#fps.on{display:block}
+#lsWin{position:fixed;inset:0;display:grid;place-items:center;background:rgba(6,9,12,.66);z-index:12;overflow:auto;padding:20px 0}#lsWin.hidden{display:none}
+.ls-tabs{display:flex;flex-wrap:wrap;gap:4px;margin:6px 0 8px}.ls-tabs .on{background:var(--accent);color:#1a1206;border-color:var(--accent)}.ls-tabs .off{border-color:var(--red)}
+#lsWin select{background:#0b0f14;color:var(--text);border:1px solid var(--line);border-radius:6px;padding:2px 4px;font:inherit;font-size:12px}#lsWin .bad{color:var(--red)}#lsWin .warnc{color:var(--accent)}
 #keys{position:fixed;inset:0;display:grid;place-items:center;background:rgba(6,9,12,.66);z-index:12;overflow:auto;padding:20px 0}#keys.hidden{display:none}
 .keys-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:4px 22px}.keys-grid h4{margin:10px 0 4px;color:var(--accent);font-size:13px}.keys-grid td.kk{white-space:nowrap;width:1%;padding-right:12px}.keys-grid kbd{font-size:11px}
 #kit{position:fixed;inset:0;display:grid;place-items:center;background:rgba(6,9,12,.66);z-index:12;overflow:auto;padding:20px 0}#kit.hidden{display:none}
@@ -332,7 +335,7 @@ body.fp #torch.on{display:block}
 <aside id="tasks" class="panel"><div class="ph"><span id="taskTitle">Werkopdracht</span><span id="taskCode" class="tag"></span></div><div id="taskBody"><div class="idle">Geen actieve opdracht.</div></div></aside>
 <aside id="alarms" class="panel"><div class="ph"><span>Meldingen &amp; gebeurtenissen</span><span class="cnt" id="alarmCnt">0</span></div><div id="alarmList"></div></aside>
 <aside id="scada" class="panel">
-  <div class="ph"><span>SCADA</span><div class="zoom" title="Zoomen: Ctrl + scrollwiel of + / −"><button id="zOut" class="mini">−</button><span id="zVal">100%</span><button id="zIn" class="mini">+</button></div><div class="tabs" id="sldTabs"><button data-t="10" class="on">10 kV</button><button data-t="20">20 kV</button><button data-t="R">Ring</button><button data-t="M" title="OS Meppel: onze uitgaande velden en de koppelkabel naar MS5">Meppel</button><button data-t="K" title="Belasting per kabel en per distributietrafo">Kabels</button><button data-t="P" title="Belastingprognose komende 8 uur">Prognose</button></div><button id="scadaToggle" class="mini" title="In-/uitklappen">–</button></div>
+  <div class="ph"><span>SCADA</span><div class="zoom" title="Zoomen: Ctrl + scrollwiel of + / −"><button id="zOut" class="mini">−</button><span id="zVal">100%</span><button id="zIn" class="mini">+</button></div><div class="tabs" id="sldTabs"><button data-t="10" class="on">10 kV</button><button data-t="20">20 kV</button><button data-t="R">Ring</button><button data-t="M" title="OS Meppel: onze uitgaande velden en de koppelkabel naar MS5">Meppel</button><button data-t="K" title="Belasting per kabel en per distributietrafo">Kabels</button><button data-t="L" title="Laagspanning: LS-velden, spanning per straat, kabelkasten en aggregaten">LS</button><button data-t="P" title="Belastingprognose komende 8 uur">Prognose</button></div><button id="scadaToggle" class="mini" title="In-/uitklappen">–</button></div>
   <svg id="sld" viewBox="0 0 470 575"></svg>
   <div class="legend">
     <span><i style="background:var(--hv)"></i>110 kV</span><span><i style="background:var(--mv)"></i>10 kV</span><span><i style="background:var(--mv20)"></i>20 kV</span><span><i style="background:var(--dead)"></i>spanningsloos</span><span><i style="background:var(--earth)"></i>geaard</span>
@@ -350,6 +353,7 @@ body.fp #torch.on{display:block}
   <button data-v="6"><kbd>7</kbd>Binnen 20 kV</button>
   <button data-v="7"><kbd>8</kbd>Woonwijk</button>
   <button data-v="8"><kbd>9</kbd>Centrum &amp; Vaart</button>
+  <button id="lsBtn" class="tool" title="Laagspanning, noodaggregaten en klanten informeren"><kbd>N</kbd>LS</button>
   <button id="keysBtn" class="tool" title="Overzicht van alle toetsen"><kbd>H</kbd>Toetsen</button>
   <button id="settingsBtn" class="tool" title="Prestaties, weer en geluid"><kbd>I</kbd>Instellingen</button>
   <button id="assetsBtn" class="tool" title="Conditie en onderhoud van de schakelaars"><kbd>O</kbd>Onderhoud</button>
@@ -371,6 +375,7 @@ body.fp #torch.on{display:block}
 <div id="assets" class="hidden"></div>
 <div id="kit" class="hidden"></div>
 <div id="keys" class="hidden"></div>
+<div id="lsWin" class="hidden"></div>
 <div id="settings" class="hidden"></div>
 <div id="fps"></div>
 <div id="saved"></div>
