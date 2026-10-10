@@ -96,10 +96,10 @@ Een 3D-onderstationsimulator die in de browser draait (Three.js, geen installati
   - Je ziet de piek, het moment van overbelasting en een advies (T3 bijschakelen, kassen afschakelen), plus een N-1-tip.
   - Dreigt er binnen 1,5 uur overbelasting, dan krijg je een melding.
 - **Telefoon en klantmeldingen:** klanten bellen bij uitval. De telefoon gaat over bovenin beeld; neem op en kies je antwoord:
-  - *“Dat is bekend, we werken eraan”* bij uitval die je in SCADA ziet (+5);
+  - *“Dat is bekend, we werken eraan”* bij uitval die je in SCADA ziet (+5). Meestal hoef je dat niet zelf te zeggen: wie belt uit een gebied dat in SCADA spanningsloos is, krijgt automatisch het **storingsbandje**. Je telefoon gaat dan niet over. Zo heeft het oplossen van de storing voorrang. Elke ±10 minuten zie je een samenvatting (bijvoorbeeld *📼 Storingsbandje: 23 bellers uit MS2, MS3 …*), en het aantal staat in het eindrapport;
   - *“Laat uw installateur kijken”* als alleen één woning zonder stroom zit (+10);
   - *monteur sturen naar een MS-station* bij een **LS-storing**: een doorgebrande zekering in een laagspanningsveld. Die zie je **niet** in SCADA, alleen via klantmeldingen. Zoek het adres op in het ringschema (welke straat hangt aan welk station) en stuur de monteur naar het goede station (+60 bij snel herstel, −20 bij een verkeerd station). Ook vanuit het stationspaneel kun je een monteur sturen.
-  - Neemt niemand op, dan hangt de klant na ±45 s op (−5).
+  - Neemt niemand op, dan hangt de klant na ±45 s op (−5). Loopt er een uitval, dan wachten bellers ±2 minuten en kost ophangen geen punten.
 - **Netcongestie en flexibel vermogen** (toets `C` of de knop *Flex*):
   - Een overzicht toont de zwaarst belaste kabels en transformatoren.
   - Zeven klanten hebben een flexcontract: het laadplein (slim laden), het transportbedrijf (e-trucks later laden), het koelhuis, de metaalbewerking, de batterij van het distributiecentrum, de kassen (belichting dimmen) en het zonnepark (terugregelen).

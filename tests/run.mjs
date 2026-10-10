@@ -256,6 +256,18 @@ const TESTS = [
       assert(r.gebeld && /Lindehof/.test(r.adres), `geen klant gebeld vanaf de Lindehof: ${JSON.stringify(r)}`);
       assert(r.fout && r.opgelost, `verkeerd/juist station klopt niet: ${JSON.stringify(r)}`);
   } },
+  { name: 'telefoon: bij een uitval vangt het storingsbandje de bellers op', query: '?autostart&t=11', async run(p) {
+      const r = await p.evaluate(async () => { T.quiet(); const O = OS, P = O.PHONE; O.SIM.paused = false; T.step(0.3);
+        await T.op('V-F3', 0); T.step(3);
+        O.LVG.filter(g => g.cust > 1 && g.kind !== 'ovl' && !O.EN().has(g.node)).forEach(g => O.callFrom(g, 'mv')); O.phoneTick(0.1);
+        const rinkelt = P.queue.length, bandje = P.stats.tape, melding = [...document.querySelectorAll('#alarmList .al')].some(e => /Storingsbandje/.test(e.textContent));
+        // een losse woning met stroom belt wél, en ophangen tijdens de uitval kost geen punten
+        const g = O.LVG.find(x => x.cust > 1 && x.kind !== 'ovl' && O.EN().has(x.node)); P.cd = {}; O.callFrom(g, 'house'); const wel = P.queue.length;
+        P.queue.forEach(c => c.wait = 200); O.phoneTick(0.1);
+        return { rinkelt, bandje, melding, wel, gemist: P.stats.missed, straf: O.REC.events.some(e => /Klant hing op/.test(JSON.stringify(e))) }; });
+      assert(r.rinkelt === 0 && r.bandje > 3 && r.melding, `bandje werkt niet: ${JSON.stringify(r)}`);
+      assert(r.wel === 1 && r.gemist === 1 && !r.straf, `gewoon gesprek tijdens uitval klopt niet: ${JSON.stringify(r)}`);
+  } },
   { name: 'dienstoverdracht: afwijkingen en open punten', query: '?play=day', async run(p) {
       const r = await p.evaluate(() => { const O = OS, G = O.GAME, h = G.handover; const it = Object.create(O.HO_POOL.find(x => x.id === 'avr')); it.setup(); h.items.push(it);
         const dev = O.deviations().join(' '), s0 = G.score; O.setAVR('T1', 'auto'); O.handoverTick();

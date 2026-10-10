@@ -1,13 +1,18 @@
 
 // ============================================================ telefoon: klantmeldingen en LS-storingen die SCADA niet ziet
-const PHONE={queue:[],cur:null,lastRing:0,cd:{},nextHouse:0,stats:{ok:0,bad:0,missed:0}};
+const PHONE={queue:[],cur:null,lastRing:0,cd:{},nextHouse:0,stats:{ok:0,bad:0,missed:0,tape:0},tapeNew:{},tapeAt:0};
+// storingsbandje: wie belt uit een gebied dat in SCADA spanningsloos is, hoort automatisch dat de storing bekend is.
+// Zo gaat bij een grote uitval het oplossen van de storing voor; alleen gesprekken die jij moet beoordelen gaan over.
+const knownOut=g=>!EN.has(g.node)&&!g.backfed;
+const mvOutage=()=>LVG.some(g=>g.cust>1&&g.kind!=='ovl'&&knownOut(g));
+function toTape(g){PHONE.stats.tape++;PHONE.tapeNew[g.st.id]=(PHONE.tapeNew[g.st.id]||0)+1;}
 const CALLERS=['mevrouw De Vries','meneer Jansen','mevrouw Bakker','meneer Visser','mevrouw Smit','meneer Mulder','mevrouw Bos','meneer Dekker','mevrouw Hendriks','meneer Van Dijk','mevrouw Meijer','meneer De Boer'];
 const placeOf=g=>{const m=g.name.match(/^(Woningen|Appartementen) (.+)$/);return m?{addr:`${m[2]} ${Math.floor(rnd(2,140))}`,biz:false}:{addr:g.name,biz:true};};
 function lvFault(force){const c=LVG.filter(g=>g.cust>1&&!g.lvf&&EN.has(g.node)&&g.kind!=='ovl'&&(!force||g.id===force));if(!c.length)return feederFault();
   const g=pick(c);g.lvf={at:SIM.t,frac:rnd(0.2,0.55)};g.outFrac=g.lvf.frac;GAME.stats.lvf=(GAME.stats.lvf||0)+1;
   addTimer(rnd(2,5),()=>g.lvf&&callFrom(g,'lv'));addTimer(rnd(7,11),()=>g.lvf&&callFrom(g,'lv'));
   addTimer(150,()=>{if(!g.lvf)return;g.lvf=null;g.outFrac=0;pushAlarm(`Storingsdienst (0800-nummer): LS-storing ${g.st.id} ${g.name} na veel klachten alsnog verholpen`,'warn');});}
-function callFrom(g,kind){if(!g||PHONE.queue.length>=3||(PHONE.cd[g.id]||-99)>SIM.t-12)return;PHONE.cd[g.id]=SIM.t;const pl=placeOf(g);
+function callFrom(g,kind){if(!g||(PHONE.cd[g.id]||-99)>SIM.t-12)return;PHONE.cd[g.id]=SIM.t;if(knownOut(g))return toTape(g);if(PHONE.queue.length>=3)return;const pl=placeOf(g);
   const who=pl.biz?`de bedrijfsleider van ${g.name}`:pick(CALLERS);
   const say=kind==='house'?pick(['Ik heb geen stroom, maar de buren wel.','Bij mij is alles uit, bij de overburen brandt gewoon licht.','Mijn aardlekschakelaar springt steeds en nu doet niks het meer.'])
     :kind==='lv'?pick(['Bij ons is de stroom uit, de buren hebben het ook.','Halve straat zit zonder stroom, het licht flikkerde eerst.','Wij hebben geen stroom meer, de straatverlichting doet het nog wel.'])
@@ -18,9 +23,14 @@ function phoneTick(dtReal){if(SIM.paused||GAME.ended||GAME.lesson)return;
   const dm=dtReal*SIM.speed/60;
   LVG.forEach(g=>{if(g.cust>1&&g.kind!=='ovl'&&!g.backfed&&!EN.has(g.node)&&g.offSince!=null&&SIM.t-g.offSince>1.5&&Math.random()<dm*0.02)callFrom(g,'mv');});
   if(GAME.events&&SIM.t>PHONE.nextHouse){if(PHONE.nextHouse)callFrom(pick(LVG.filter(g=>g.cust>1&&g.kind!=='ovl'&&EN.has(g.node)&&!g.outFrac)),'house');PHONE.nextHouse=SIM.t+rnd(50,110);}
+  // wachtende bellers uit een gebied dat inmiddels spanningsloos is: naar het bandje
+  const taped=PHONE.queue.filter(c=>c!==PHONE.cur&&knownOut(c.g));taped.forEach(c=>toTape(c.g));
+  const out=mvOutage(),patience=out?120:45;   // tijdens een uitval wachten bellers langer en kost ophangen geen punten
   PHONE.queue.forEach(c=>{if(c!==PHONE.cur)c.wait+=dtReal;});
-  const gone=PHONE.queue.filter(c=>c!==PHONE.cur&&c.wait>45);gone.forEach(c=>{PHONE.stats.missed++;award(-5,'Klant hing op');pushAlarm(`☎ ${c.who} (${c.addr}) hing op – niemand nam op`,'warn');});
-  if(gone.length){PHONE.queue=PHONE.queue.filter(c=>!gone.includes(c));renderPhone();}
+  const gone=PHONE.queue.filter(c=>c!==PHONE.cur&&c.wait>patience);gone.forEach(c=>{PHONE.stats.missed++;if(!out)award(-5,'Klant hing op');pushAlarm(`☎ ${c.who} (${c.addr}) hing op – niemand nam op`,out?'info':'warn');});
+  if(gone.length||taped.length){PHONE.queue=PHONE.queue.filter(c=>!gone.includes(c)&&!taped.includes(c));renderPhone();}
+  const ids=Object.keys(PHONE.tapeNew);if(ids.length&&SIM.t-PHONE.tapeAt>=10){const n=ids.reduce((a,k)=>a+PHONE.tapeNew[k],0);PHONE.tapeAt=SIM.t;PHONE.tapeNew={};
+    pushAlarm(`📼 Storingsbandje: ${n} beller${n>1?'s':''} uit ${ids.sort().join(', ')} hoorde${n>1?'n':''} dat de storing bekend is`,'info');}
   if(PHONE.queue.some(c=>c!==PHONE.cur)&&performance.now()-PHONE.lastRing>3200){PHONE.lastRing=performance.now();AudioSys.ring();}}
 function stationOptions(){return RING.stations.map(s=>`<option value="${s.id}">${s.id} ${s.name}</option>`).join('');}
 function renderPhone(){const el=$('#phone');const c=PHONE.cur,w=PHONE.queue.filter(x=>x!==c);
