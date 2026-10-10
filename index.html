@@ -1504,7 +1504,7 @@ function tripTrafo(T,reason,inspectMin,kind){const t=D[T];tripBreaker(T+'-Q0');T
   if(inspectMin)addTimer(inspectMin,()=>{t.resettable=true;readyNotice(`${T}: inspectie gereed, geen schade gevonden – reset blokkeerrelais 86 in het transformatorpaneel`,T,()=>t.blocked);});
   setTimeout(()=>{computeFlows();const dead=FEEDERS.filter(f=>!EN.has(f.node)&&D[f.cb].state===1);if(!dead.length)return;
     if(dead.some(f=>is20(f.bus)))pushAlarm(`Tip: neem reservetransformator T3 in bedrijf op 20 kV (W-T3 voedt rail C2, via W-K ook C1) – T3 staat nu op ${D.T3.ratio} kV`,'info');
-    if(dead.some(f=>!is20(f.bus)))pushAlarm(`Tip: neem reservetransformator T3 in bedrijf op 10 kV (V-T3) – T3 staat nu op ${D.T3.ratio} kV. Let op de belasting!`,'info');},600);}
+    if(dead.some(f=>f.bus==='RA'||f.bus==='RB'))pushAlarm(`Tip: neem reservetransformator T3 in bedrijf op 10 kV (V-T3) – T3 staat nu op ${D.T3.ratio} kV. Let op de belasting!`,'info');},600);}
 function resetLockout(T){const t=D[T];if(!t.blocked)return;
   if(!t.resettable)return deny(`Reset 86 niet mogelijk: ${t.blockKind==='temp'?'transformator nog te warm (< 75 °C)':t.blockKind==='ratio'?'wikkelingsschade, inspectie loopt':'inspectie nog niet gereed'}`);
   t.blocked=false;t.blockText='';pushAlarm(`${T}: blokkeerrelais 86 gereset – transformator vrijgegeven`,'op');refreshAll();}
@@ -2493,9 +2493,10 @@ const INCIDENTS=[
       FIRE.glow.position.set((b.min.x+b.max.x)/2-8,b.min.y+2.5,b.min.z-0.4);FIRE.glow.scale.set(6,4,1);scene.add(FIRE.glow);crewDispatch({box:b,say:'Brandweer: verkenning',until:()=>!FIRE.on});
       pushAlarm('BRANDMELDING 10 kV-gebouw – brandweer onderweg','crit');
       addTimer(5,()=>{GAME.flags.mustOpen=['V-T1','V-T3'];pushAlarm('Brandweer: maak de 10 kV spanningsloos (V-T1 en V-T3 UIT) – dan gaan we blussen','crit');});},
+    // na het zelf afschakelen door de brandweer is EN pas in de volgende stap bijgewerkt: dan stoppen (anders vals veiligheidsincident)
     tick(){const dead=!EN.has('RA')&&!EN.has('RB'),t=SIM.t-this.t0;
       if(t>5&&dead&&this.dead==null){this.dead=SIM.t;pushAlarm('Brandweer: 10 kV spanningsloos – we gaan naar binnen','ok');}
-      if(t>20&&this.dead==null){['V-T1','V-T3'].forEach(tripBreaker);this.dead=SIM.t;incident();pushAlarm('Brandweer: niemand reageerde – wij hebben de 10 kV zelf afgeschakeld','crit');}
+      if(t>20&&this.dead==null){['V-T1','V-T3'].forEach(tripBreaker);this.dead=SIM.t;incident();pushAlarm('Brandweer: niemand reageerde – wij hebben de 10 kV zelf afgeschakeld','crit');return;}
       if(this.dead!=null&&!this.out&&SIM.t>this.dead+30){this.out=true;FIRE.on=false;if(FIRE.glow){scene.remove(FIRE.glow);FIRE.glow=null;}GAME.flags.mustOpen=null;D['V-F6'].stuck=true;
         readyNotice('Brandweer: brand geblust – de 10 kV mag weer onder spanning. V-F6 heeft rookschade (revisie nodig)',null);INC.active.until=SIM.t+25;}
       if(this.dead!=null&&!this.out&&!dead&&!this.danger){this.danger=true;incident();pushAlarm('Brandweer: er staat weer spanning op terwijl wij binnen zijn!','crit');}},
@@ -3034,7 +3035,7 @@ function rowsFor(d){const r=[],A=(k,f)=>r.push([k,f]);
   if(d.type==='bb')A('Doorvoer',()=>`${FLOW.P110.toFixed(1)} MW`);
   if(d.id==='MS'){A('Rail A',()=>fmtKV(FLOW.U.RA)+(BUSF.RA?' <span class="bad">RAILFOUT</span>':''));A('Rail B',()=>fmtKV(FLOW.U.RB)+(BUSF.RB?' <span class="bad">RAILFOUT</span>':''));A('Totale belasting',()=>`${FLOW.load.toFixed(1)} MW`);A('Koppeling V-K',()=>D['V-K'].state?'gesloten':'open');A('Reserve V-T3',()=>D['V-T3'].state?'IN':'uit');}
   if(d.id==='MS20'){A('Rail C1',()=>fmtKV(FLOW.U.RC)+(BUSF.RC?' <span class="bad">RAILFOUT</span>':''));A('Rail C2',()=>fmtKV(FLOW.U.RD)+(BUSF.RD?' <span class="bad">RAILFOUT</span>':''));A('Koppeling W-K',()=>D['W-K'].state?'gesloten':'open');A('Netto belasting',()=>`${FLOW.load20.toFixed(1)} MW${FLOW.load20<0?' (teruglevering)':''}`);A('Voeding',()=>['W-T2','W-T3'].filter(id=>D[id].state).join(' + ')||'geen');}
-  if(d.sel||(d.feeder&&!is20(d.feeder.bus))||d.id==='V-T1'||d.id==='V-T3'){const bay=d.sel?d.bay:d.feeder?d.feeder.id:d.tr;A('Railkeuze',()=>{const a=D[bay+'-QA'].state,b=D[bay+'-QB'].state;return a&&b?'<span class="warnc">rail A + B (omzetten)</span>':a?'rail A':b?'rail B':'<span class="bad">geen rail</span>';});}
+  if(d.sel||(d.feeder&&SEL_BAYS[d.feeder.id])||d.id==='V-T1'||d.id==='V-T3'){const bay=d.sel?d.bay:d.feeder?d.feeder.id:d.tr;A('Railkeuze',()=>{const a=D[bay+'-QA'].state,b=D[bay+'-QB'].state;return a&&b?'<span class="warnc">rail A + B (omzetten)</span>':a?'rail A':b?'rail B':'<span class="bad">geen rail</span>';});}
   if(d.feeder){const f=d.feeder;A('Belasting',()=>`${f.P.toFixed(2)} MW${f.clp>1.03?` <span class="warnc">(+${Math.round((f.clp-1)*100)}% KLO)</span>`:''}`);A('Klanten',()=>f.ring?RING.stations.filter(s=>FLOW.TAG[s.node]?.cb===f.cb).reduce((a,s)=>a+s.cust,0).toLocaleString('nl-NL')+' (ring)':f.cust.toLocaleString('nl-NL'));
     A('Kabel',()=>feederState(f));if(!f.gen)A('Kabeltemperatuur',()=>f.temp==null?'—':`<span class="${f.temp>CABLE.max?'bad':f.temp>CABLE.warn?'warnc':''}">${Math.round(f.temp)} °C</span> (max. ${CABLE.max} °C)`);A('Terugvoeding',()=>f.backfed?'<span class="warnc">actief (via net)</span>':'—');}
   if(d.type==='sa')A('Ontladingsteller',()=>d.count);
@@ -4013,10 +4014,10 @@ else{renderMenu();$('#intro').classList.remove('hidden');controls.autoRotate=tru
 if(params.has('night'))updateSky(22);
 if(params.has('view')){const v=VIEWPOS[+params.get('view')];camera.position.copy(v[0]);controls.target.copy(v[1]);controls.autoRotate=false;controls.update();}
 
-window.OS={openKeys,closeKeys,KEY_HELP,RELAY_BAYS,relayTask,relayDue,relayDefect,initRelays,kitTests,kitMeasure,kitVerdict,kitRun,openKit,closeKit,saveGame,readSave,deleteSave,resumeGame,canSave,specOf,CABLE,soilT,FD,meppelFault,linkTick,tabAlarms,updateTabAlarms,renderTasks,INC,INCIDENTS,startIncident,endIncident,incidentTick,setTab,renderCables,GFX,setGfx,applyGfx,openSettings,closeSettings,WX_TYPES,renderer,scene,FIRE,CARS,updateWindows,updateLife,stationLive,cbMaintTask,worstCb,cond,breakerFails,CB_IDS,FLEX,setFlex,flexTick,congestion,openFlex,closeFlex,checkModel,homeBus,BUSES,SEL_BAYS,TORCH,setTorch,HO_POOL,handoverTick,REC,RP,startReplay,stopReplay,analyse,stationDamage,closeHandover,deviations,PHONE,lvFault,callFrom,phoneAnswer,dispatchLV,LVG,forecast,progAdvice,PROG,startTask:(k,...a)=>{TASK={relayTask,cbMaintTask,railTask,railBTask,stationTask,thermoTask,ringTask,feederTask,lineTask,reserveTask}[k](...a);TASK.i=0;TASK.code='WV-TEST';briefInit(TASK);renderTasks();},SIM,D,LESSONS,lessonGo,selectDevice,abortTask,railTask,stationTask,thermoTask,nearDev,VIEWS,PROT,setProt,openProt,closeProt,busFault,BUSF,RINGS,task:()=>TASK,briefSubmit,briefCheck,briefWatch,actKey,taskActs,crewNear,boxOf:id=>VIEWS[id]&&VIEWS[id].box,AudioSys,updateAudio,WX,setWeather,setSeason,SEASONS,ambient,enterKiosk,ROOMS,blockedAt,RING,NPCS,crewDispatch,ringFault,FP,enterFP,exitFP,pickCenter,camera,camInside,setRatio,setTab,GAME,MODES,applyMode,endGame,EN:()=>EN,FLOW,operate,tapStep,setAVR,resetLockout,toggleAR,regulate,computeFlows,randomEvent,lineFault,feederFault,trafoFault,offerTask,simStep,FEEDERS};
+window.OS={refreshDevPanel,updateSLD,openKeys,closeKeys,KEY_HELP,RELAY_BAYS,relayTask,relayDue,relayDefect,initRelays,kitTests,kitMeasure,kitVerdict,kitRun,openKit,closeKit,saveGame,readSave,deleteSave,resumeGame,canSave,specOf,CABLE,soilT,FD,meppelFault,linkTick,tabAlarms,updateTabAlarms,renderTasks,INC,INCIDENTS,startIncident,endIncident,incidentTick,setTab,renderCables,GFX,setGfx,applyGfx,openSettings,closeSettings,WX_TYPES,renderer,scene,FIRE,CARS,updateWindows,updateLife,stationLive,cbMaintTask,worstCb,cond,breakerFails,CB_IDS,FLEX,setFlex,flexTick,congestion,openFlex,closeFlex,checkModel,homeBus,BUSES,SEL_BAYS,TORCH,setTorch,HO_POOL,handoverTick,REC,RP,startReplay,stopReplay,analyse,stationDamage,closeHandover,deviations,PHONE,lvFault,callFrom,phoneAnswer,dispatchLV,LVG,forecast,progAdvice,PROG,startTask:(k,...a)=>{TASK={relayTask,cbMaintTask,railTask,railBTask,stationTask,thermoTask,ringTask,feederTask,lineTask,reserveTask}[k](...a);TASK.i=0;TASK.code='WV-TEST';briefInit(TASK);renderTasks();},SIM,D,LESSONS,lessonGo,selectDevice,abortTask,railTask,stationTask,thermoTask,nearDev,VIEWS,PROT,setProt,openProt,closeProt,busFault,BUSF,RINGS,task:()=>TASK,briefSubmit,briefCheck,briefWatch,actKey,taskActs,crewNear,boxOf:id=>VIEWS[id]&&VIEWS[id].box,AudioSys,updateAudio,WX,setWeather,setSeason,SEASONS,ambient,enterKiosk,ROOMS,blockedAt,RING,NPCS,crewDispatch,ringFault,FP,enterFP,exitFP,pickCenter,camera,camInside,setRatio,setTab,GAME,MODES,applyMode,endGame,EN:()=>EN,FLOW,operate,tapStep,setAVR,resetLockout,toggleAR,regulate,computeFlows,randomEvent,lineFault,feederFault,trafoFault,offerTask,simStep,FEEDERS};
 const clock=new THREE.Clock();let hudT=0,skyT=0,progT=0;
 let liteAcc=0;
-renderer.setAnimationLoop(()=>{
+function frame(){
   // testmodus (?lite): de hele lus 15× per seconde in plaats van 60× – elke wijziging aan de pagina kost een compositie in software-grafiek
   // (en in het spel bij een ingestelde maximale beeldfrequentie)
   const raw=clock.getDelta(),cap=LITE?1/15:GFX.fps?1/GFX.fps:0;liteAcc+=raw;if(cap&&liteAcc<cap*0.9)return;
@@ -4037,7 +4038,13 @@ renderer.setAnimationLoop(()=>{
   // terwijl de tests alleen de simulatie en de panelen controleren (aanwijzen gaat met raycasting, niet met pixels)
   if(!LITE)renderer.render(scene,camera);
   if(off)camera.position.sub(off);
-});
+}
+// een fout in één beeld mag het spel niet stilzetten: three.js vraagt het volgende beeld pas na dit beeld aan
+const LOOP_ERR=new Map();window.LOOP_ERR=LOOP_ERR;
+function loopError(e){const msg=String(e&&e.message||e),where=(String(e&&e.stack||'').split('\n').find(l=>/index\.html|\.js/.test(l))||'').trim().replace(/^at /,'');
+  const n=(LOOP_ERR.get(msg)||0)+1;LOOP_ERR.set(msg,n);console.error('Fout in de hoofdlus:',e);
+  if(n===1)pushAlarm(`⚠ Interne fout (het spel loopt door): ${msg}${where?` – ${where.slice(-80)}`:''}. Meld dit graag, met wat je net deed.`,'crit');}
+renderer.setAnimationLoop(()=>{try{frame();}catch(e){loopError(e);}});
 
 
 </script>

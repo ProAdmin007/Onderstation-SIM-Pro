@@ -343,6 +343,19 @@ const TESTS = [
       const r = await p.evaluate(() => { T.step(50); return { start: !!OS.GAME.flags.evStart, melding: [...document.querySelectorAll('#alarmList .al')].some(e => /Het concert begint/.test(e.textContent)) }; });
       assert(r.start && r.melding, `concertstart niet gemeld: ${JSON.stringify(r)}`);
   } },
+  { name: 'elk apparaatpaneel opent zonder fout, ook bij storingen', query: '?play=free&t=11', async run(p) {
+      const r = await p.evaluate(() => { const O = OS, fout = []; O.closeHandover?.(); T.quiet();
+        const ronde = wat => { for (const id of Object.keys(O.D)) { try { O.selectDevice(id); O.refreshDevPanel(); O.updateSLD?.(); } catch (e) { fout.push(`${wat} ${id}: ${e.message}`); } } O.selectDevice(null); };
+        ronde('normaal'); O.meppelFault(); O.feederFault('F6', 30); O.busFault?.(); O.ringFault(O.FEEDERS.find(f => f.id === 'F3'), O.RING.secs.find(s => s.id === 'K23'), 60); T.step(1); ronde('storing');
+        return fout.slice(0, 8); });
+      assert(!r.length, `paneel geeft fouten: ${r.join(' | ')}`);
+  } },
+  { name: 'incident brand (vrije dienst): brandweer schakelt zelf af zonder vals veiligheidsincident', query: '?play=free&t=11', async run(p) {
+      const r = await p.evaluate(() => { const O = OS; O.closeHandover?.(); T.quiet(); O.SIM.paused = false; T.step(0.5); const i0 = O.SIM.incidents;
+        O.startIncident('brand', true); for (let k = 0; k < 60; k++) T.step(1);
+        return { inc: O.SIM.incidents - i0, vals: [...document.querySelectorAll('#alarmList .al')].some(e => /weer spanning op terwijl/.test(e.textContent)), geblust: [...document.querySelectorAll('#alarmList .al')].some(e => /brand geblust/.test(e.textContent)) }; });
+      assert(r.inc === 1 && !r.vals && r.geblust, `brand verloopt niet goed: ${JSON.stringify(r)}`);
+  } },
   { name: 'leven in de wijk: ramen per station, auto\'s en buren bij uitval', query: '?autostart&t=21&night&season=winter', async run(p) {
       const r = await p.evaluate(async () => { T.quiet(); const O = OS, s1 = O.RING.stations[0]; O.SIM.paused = false; T.step(0.2); O.updateWindows();
         const aan = s1.winMats.some(m => m.opacity > 0.3), autos = O.CARS.filter(c => c.g.visible).length;

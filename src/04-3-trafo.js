@@ -8,7 +8,7 @@ function tripTrafo(T,reason,inspectMin,kind){const t=D[T];tripBreaker(T+'-Q0');T
   if(inspectMin)addTimer(inspectMin,()=>{t.resettable=true;readyNotice(`${T}: inspectie gereed, geen schade gevonden – reset blokkeerrelais 86 in het transformatorpaneel`,T,()=>t.blocked);});
   setTimeout(()=>{computeFlows();const dead=FEEDERS.filter(f=>!EN.has(f.node)&&D[f.cb].state===1);if(!dead.length)return;
     if(dead.some(f=>is20(f.bus)))pushAlarm(`Tip: neem reservetransformator T3 in bedrijf op 20 kV (W-T3 voedt rail C2, via W-K ook C1) – T3 staat nu op ${D.T3.ratio} kV`,'info');
-    if(dead.some(f=>!is20(f.bus)))pushAlarm(`Tip: neem reservetransformator T3 in bedrijf op 10 kV (V-T3) – T3 staat nu op ${D.T3.ratio} kV. Let op de belasting!`,'info');},600);}
+    if(dead.some(f=>f.bus==='RA'||f.bus==='RB'))pushAlarm(`Tip: neem reservetransformator T3 in bedrijf op 10 kV (V-T3) – T3 staat nu op ${D.T3.ratio} kV. Let op de belasting!`,'info');},600);}
 function resetLockout(T){const t=D[T];if(!t.blocked)return;
   if(!t.resettable)return deny(`Reset 86 niet mogelijk: ${t.blockKind==='temp'?'transformator nog te warm (< 75 °C)':t.blockKind==='ratio'?'wikkelingsschade, inspectie loopt':'inspectie nog niet gereed'}`);
   t.blocked=false;t.blockText='';pushAlarm(`${T}: blokkeerrelais 86 gereset – transformator vrijgegeven`,'op');refreshAll();}

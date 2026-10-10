@@ -253,7 +253,12 @@ npm install
 npm test            # of: npm test -- ring   (alleen tests met 'ring' in de naam)
 npm run test:scenarios          # speelt alle scenario's en beide diensten volledig uit (±12 min)
 npm run test:scenarios -- storm # alleen één scenario
+npm run test:stress             # 10 min vrije dienst mét 3D-code, met storingen, incidenten en klikken (NORENDER=1: zonder tekenen)
 ```
+
+De stresstest draait zonder `?lite`, dus ook de code voor labels, panelen en het 3D-beeld. Hij faalt bij een paginafout, een fout in de hoofdlus of als de klok stilstaat.
+
+In het spel zelf vangt de hoofdlus fouten op. Een fout in één beeld zet het spel dus niet meer stil, maar verschijnt als melding *Interne fout*.
 
 Bij `test:scenarios` speelt een automatische operator het spel uit zoals een goede speler dat doet. Hij isoleert kabelfouten, zet T3 in als reserve, voert werkopdrachten uit (met schakelbrief) en meldt zich bij monteurs. Per run zie je de score, de klantminuten, de doelen en de langste uitval. Een afwijkend resultaat speel je opnieuw met dezelfde seed: `SEED=123456`. Met `FULLLOG=1` krijg je het volledige verloop.
 
