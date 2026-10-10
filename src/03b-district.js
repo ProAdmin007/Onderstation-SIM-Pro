@@ -38,10 +38,11 @@ function houseRow(x0,z,n,faceSouth){const W=6,Dp=9,H=5.6,len=n*W,cx=x0+len/2,v=M
   for(let i=0;i<n;i++){const x=x0+W/2+i*W;for(const s of[-1,1]){const p=mesh(new THREE.PlaneGeometry(W-0.1,H),DM.facades[(v+i)%3],staticRoot,x,H/2,z+s*(Dp/2+0.02));p.rotation.y=s>0?0:Math.PI;p.castShadow=false;
     const gl=mesh(new THREE.PlaneGeometry(W-0.1,H),winGlow(nearestStation(x,z),(v+i+(s>0?0:1))%3),staticRoot,x,H/2,z+s*(Dp/2+0.05));gl.rotation.y=p.rotation.y;gl.castShadow=gl.receiveShadow=false;gl.renderOrder=1;}}
   const sh=new THREE.Shape();sh.moveTo(-Dp/2-0.4,0);sh.lineTo(0,3.4);sh.lineTo(Dp/2+0.4,0);sh.closePath();
-  const rg=new THREE.ExtrudeGeometry(sh,{depth:len+0.4,bevelEnabled:false});rg.rotateY(Math.PI/2);rg.translate(-len/2-0.2,0,0);mesh(rg,DM.roof[v],staticRoot,cx,H,z);
+  const rg=new THREE.ExtrudeGeometry(sh,{depth:len+0.4,bevelEnabled:false});rg.rotateY(Math.PI/2);rg.translate(-len/2-0.2,0,0);mesh(rg,SM.roofs[v],staticRoot,cx,H,z);
   for(let i=1;i<n;i+=2)box(0.5,1.2,0.5,MAT.concreteDark,staticRoot,x0+i*W,H+2.6,z);   // schoorstenen
   // tuintjes met schuurtjes aan de achterkant
-  const back=faceSouth?-1:1;for(let i=0;i<n;i++)box(2.2,2.1,2,DM.brick[(v+1)%3],staticRoot,x0+W/2+i*W,1.05,z+back*(Dp/2+6));
+  const back=faceSouth?-1:1;for(let i=0;i<n;i++){const sx=x0+W/2+i*W+(i%2?1:-1),sz=z+back*(Dp/2+6);box(2.2,2.1,2,i%3?SM.woodGrey:SM.wood,staticRoot,sx,1.05,sz);box(2.5,0.12,2.3,SM.shedRoof,staticRoot,sx,2.16,sz);}
+  houseExtras(x0,z,n,faceSouth,W,Dp,H,v);
   DISTRICT_RECTS.push([x0,z-Dp/2,x0+len,z+Dp/2]);}
 function hall(cx,cz,w,d,h,label,blue){box(w,h,d,blue?DM.hallBlue:DM.hall,staticRoot,cx,h/2,cz);box(w+0.6,0.4,d+0.6,MAT.roof,staticRoot,cx,h+0.2,cz);
   for(let i=0;i<3;i++){const p=mesh(new THREE.PlaneGeometry(4,4.5),MAT.louvre,staticRoot,cx-w/2+5+i*6,2.25,cz-d/2-0.02);p.rotation.y=Math.PI;p.castShadow=false;}
@@ -144,8 +145,9 @@ function shopCanvas(){const c=cnv(512,128),g=c.getContext('2d');g.fillStyle='#3a
     const gr=g.createLinearGradient(x,30,x+120,120);gr.addColorStop(0,'#c9d6df');gr.addColorStop(1,'#56646f');g.fillStyle=gr;g.fillRect(x+10,34,108,90);g.fillStyle='#3a3f44';g.fillRect(x+60,34,4,90);}
   const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.colorSpace=THREE.SRGBColorSpace;return t;}
 const APT={tex:aptCanvas(),shop:shopCanvas()};
-function aptBlock(x0,z0,x1,z1,floors){const W=x1-x0,Dz=z1-z0,H=floors*3+3.6,cx=(x0+x1)/2,cz=(z0+z1)/2;
-  const facade=(len)=>{const t=APT.tex.clone();t.repeat.set(len/8,floors);t.needsUpdate=true;return mat({map:t,roughness:0.85});};
+const APT_TINT=[0xffffff,0xead9c0,0xc99a82,0xd9e2e6];let aptN=0;   // gevelkleur per flat
+function aptBlock(x0,z0,x1,z1,floors){const W=x1-x0,Dz=z1-z0,H=floors*3+3.6,cx=(x0+x1)/2,cz=(z0+z1)/2,tint=APT_TINT[aptN++%APT_TINT.length];
+  const facade=(len)=>{const t=APT.tex.clone();t.repeat.set(len/8,floors);t.needsUpdate=true;return mat({map:t,roughness:0.85,color:tint});};
   const shop=(len)=>{const t=APT.shop.clone();t.repeat.set(len/16,1);t.needsUpdate=true;return mat({map:t,roughness:0.6});};
   box(W,H,Dz,DM.kiosk,staticRoot,cx,H/2,cz);
   const st=nearestStation(cx,cz),glow=(len,x,z,ry)=>{const t=APT_GLOW.clone();t.repeat.set(len/32,floors/4);t.needsUpdate=true;const m=glowMat(t);(st.winApt??=[]).push(m);
@@ -155,6 +157,7 @@ function aptBlock(x0,z0,x1,z1,floors){const W=x1-x0,Dz=z1-z0,H=floors*3+3.6,cx=(
     box(W,0.15,1.6,MAT.trim,staticRoot,cx,3.5,cz+s*(Dz/2+0.8));}
   for(const s of[-1,1]){const f=mesh(new THREE.PlaneGeometry(Dz,floors*3),facade(Dz),staticRoot,cx+s*(W/2+0.02),3.6+floors*1.5,cz);f.rotation.y=s*Math.PI/2;f.castShadow=false;glow(Dz,cx+s*(W/2+0.05),cz,f.rotation.y);}
   box(W+0.4,0.6,Dz+0.4,MAT.concreteDark,staticRoot,cx,H+0.3,cz);box(3,1.4,2,MAT.cabinet,staticRoot,cx-W/4,H+1.3,cz);box(2,1,2,MAT.cabinet,staticRoot,cx+W/4,H+1.1,cz);
+  aptExtras(x0,z0,x1,z1,floors);
   DISTRICT_RECTS.push([x0,z0-1.7,x1,z1+1.7]);}
 // straatlantaarn, gevoed uit het LS-veld openbare verlichting van het dichtstbijzijnde MS-station
 const poolTex=(()=>{const c=cnv(128),g=c.getContext('2d'),gr=g.createRadialGradient(64,64,0,64,64,64);gr.addColorStop(0,'rgba(255,214,150,0.9)');gr.addColorStop(0.45,'rgba(255,190,110,0.35)');gr.addColorStop(1,'rgba(255,170,90,0)');g.fillStyle=gr;g.fillRect(0,0,128,128);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t;})();
@@ -186,5 +189,6 @@ function buildDistrict(){
   hall(62,318,38,24,9,'METAALBEWERKING SMIT');hall(158,322,50,32,11,'DISTRIBUTIECENTRUM',true);hall(70,362,32,18,7,'BOUWMARKT');
   box(14,0.5,9,MAT.trim,staticRoot,96,5.2,300);for(const [dx,dz] of[[-6,-4],[6,-4],[-6,4],[6,4]])cyl(0.15,0.15,5,MAT.galv,staticRoot,96+dx,2.5,300+dz,8);   // tankstation
   for(let x=-120;x<190;x+=30){streetLight(x,268.5);streetLight(x+15,391.5);}
+  dressStreets();
   RING.stations.forEach(kiosk);
 }

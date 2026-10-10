@@ -148,6 +148,7 @@ Een 3D-onderstationsimulator die in de browser draait (Three.js, geen installati
   - **Kabels:** per ringkabel de stroom tegen de rating (330 A, kopkabels 400 A), een belastingsbalk (groen, oranje boven 85%, rood boven 100%), de spanning aan het eind en of hij een fout heeft of spanningsloos is. Ook de uitgaande veldkabels en de distributietrafo's per MS-station. Klik op een ringkabel voor het station erachter. Zoomen kan met de knoppen **−/+**, met `Ctrl` + scrollwiel of met de toetsen `+` en `−` (75–250 %). Het paneel wordt dan mee breder.
 
 ## Leven in de wijk
+- **Straatbeeld:** stoepen van tegels met stoepranden, belijning op de doorgaande wegen en een woonerf met klinkers, bomen en geparkeerde auto's. De rijtjeshuizen hebben voortuinen met een heg en tuinpad, kliko's, schuttingen en schuurtjes in de achtertuin, pannendaken met dakgoten, dakkapellen en op ongeveer een derde van de huizen **zonnepanelen** (op het zuiden). De flats hebben balkons en elk een eigen gevelkleur; in het centrum zijn er parkeerstroken, een winkelstoep en een parkeerterrein. Alles is procedureel en wordt per materiaal samengevoegd, dus het kost nauwelijks extra rekenkracht.
 - **Verlichte ramen:** 's avonds gaat het licht aan in de woningen en appartementen; laat in de nacht nog maar een paar. Elk huis hangt aan het dichtstbijzijnde MS-station: valt dat station uit, dan gaan de lichten in die buurt uit. Bij een noodaggregaat blijven ze branden.
 - **Verkeer:** een dozijn auto's rijdt rechts over de straten van beide wijken, met koplampen en een lichtbundel in het donker. In de spits rijden er meer.
 - **Buren:** zit een station een paar minuten zonder stroom, dan komen de buren naar buiten; 's avonds met de zaklamp van hun telefoon.
@@ -266,6 +267,7 @@ npm install
 npm test            # of: npm test -- ring   (alleen tests met 'ring' in de naam)
 npm run test:scenarios          # speelt alle scenario's en beide diensten volledig uit (±12 min)
 npm run test:scenarios -- storm # alleen één scenario
+node tests/shots.mjs            # screenshots van de wijk met het echte 3D-beeld (map shots/)
 npm run test:stress             # 10 min vrije dienst mét 3D-code, met storingen, incidenten en klikken (NORENDER=1: zonder tekenen)
 ```
 
@@ -289,7 +291,7 @@ De broncode staat in `src/`. `build.ps1` plakt de bestanden in strikte naamvolgo
 | Bestanden | Inhoud |
 |---|---|
 | `00-head.html` | opmaak (CSS) en de HTML van alle panelen |
-| `01`–`03c` | Three.js-basis, apparatuur, terrein, wijk, weer en seizoenen |
+| `01`–`03d` | Three.js-basis, apparatuur, terrein, wijk, weer en seizoenen, straatbeeld |
 | `04-1-net.js` | **centrale definities** (`BUSES`, `LINES`), velden, apparaten, ringen, netgraaf en belastingstromen |
 | `04-2-bediening.js` | vergrendelingen, schakelen, synchrocheck, trips, 110 kV-lijnen |
 | `04-3-trafo.js` | blokkeerrelais, omschakelaar T3, spanningsregeling, thermiek |
