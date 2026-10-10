@@ -10,10 +10,11 @@ Schakel als bedrijfsvoerder in SCADA, los storingen op, stuur monteurs aan en ho
 ![Geen installatie](https://img.shields.io/badge/installatie-niet%20nodig-3fcf72)
 ![Taal](https://img.shields.io/badge/taal-Nederlands-f0a43a)
 ![Bestand](https://img.shields.io/badge/één%20HTML--bestand-±490%20kB-8d99a6)
+[![Licentie: CC BY-NC-SA 4.0](https://img.shields.io/badge/licentie-CC%20BY--NC--SA%204.0-lightgrey)](LICENSE)
 
 ![OS Zuidwolde bij avondzon met het SCADA-eénlijnschema – 3D-onderstationsimulator in de browser](docs/overzicht.jpg)
 
-[🚀 Snel starten](#snel-starten) · [✨ Functies](#functies) · [📸 Screenshots](#screenshots) · [🎮 Spelmodi](#spelmodi) · [⌨️ Bediening](#bediening) · [🏭 Het net](#het-net) · [🧑‍💻 Ontwikkelen](#ontwikkelen) · [🇬🇧 English](#english)
+[🚀 Snel starten](#snel-starten) · [✨ Functies](#functies) · [📸 Screenshots](#screenshots) · [🎮 Spelmodi](#spelmodi) · [⌨️ Bediening](#bediening) · [🏭 Het net](#het-net) · [🧑‍💻 Ontwikkelen](#ontwikkelen) · [📄 Licentie](#licentie) · [🇬🇧 English](#english)
 
 </div>
 
@@ -503,10 +504,29 @@ Beide draaien parallel met meerdere browsers tegelijk, maar zuinig, zodat de mac
 
 Gebruik `CHROME_PATH` als Chrome niet op een standaardplek staat.
 
+<a id="licentie"></a>
+## 📄 Licentie
+
+[![CC BY-NC-SA 4.0](https://licensebuttons.net/l/by-nc-sa/4.0/88x31.png)](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.nl)
+
+Deze simulator valt onder **[Creative Commons Naamsvermelding-NietCommercieel-GelijkDelen 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.nl)** (zie [LICENSE](LICENSE)).
+
+| ✅ Mag | ❌ Mag niet |
+|---|---|
+| Gratis kopiëren, delen en verspreiden | Verkopen of doorverkopen |
+| Aanpassen en erop voortbouwen | Commercieel gebruiken (bijvoorbeeld in een betaalde cursus of een betaald product) |
+| Gebruiken voor les, opleiding en hobby | Bewerkingen onder een andere licentie uitbrengen |
+
+Vermeld daarbij de maker (**ProAdmin007**) met een link naar deze repo, en geef aan wat je hebt veranderd. Wil je het commercieel gebruiken? Neem dan contact op via een [issue](https://github.com/ProAdmin007/Onderstation-SIM-Pro/issues).
+
+Three.js (MIT) en de lettertypen Inter en JetBrains Mono (SIL OFL) worden via een CDN geladen en vallen onder hun eigen licentie.
+
 <a id="english"></a>
 ## 🇬🇧 English
 
 **Onderstation Simulator** is a free, realistic **3D electrical substation simulator** that runs in your browser (Three.js, WebGL, no installation). You operate OS Zuidwolde, a fictional Dutch **110/10/20 kV substation**, through a **SCADA single-line diagram** or by walking around in first person: switch breakers and disconnectors with interlocks, restore supply after cable faults, lightning strikes and transformer trips, back-feed **10 kV ring networks**, manage **grid congestion** with flexible demand, test protection relays, dispatch field crews and mobile generators, and deal with **low-voltage** issues such as rooftop-solar overvoltage. It includes guided lessons, scenarios, 8-hour shifts with a score and replay, and an endless free mode with random incidents. The user interface is in **Dutch**.
+
+**License:** [CC BY-NC-SA 4.0](LICENSE) – free to copy, share and adapt with attribution, no commercial use or resale.
 
 **Play:** download the repository and open `index.html`, or clone it with `git clone https://github.com/ProAdmin007/Onderstation-SIM-Pro.git`.
 
