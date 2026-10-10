@@ -1,185 +1,68 @@
-# Onderstation Simulator: OS Zuidwolde 110/10/20 kV
+<div align="center">
 
-Een 3D-onderstationsimulator die in de browser draait (Three.js, geen installatie nodig).
+# ⚡ Onderstation Simulator · OS Zuidwolde
 
-![Overzicht van OS Zuidwolde bij avondzon, met het SCADA-eénlijnschema](docs/overzicht.jpg)
+**Realistische 3D-simulator van een 110/10/20 kV-onderstation, gewoon in je browser.**<br>
+Schakel als bedrijfsvoerder in SCADA, los storingen op, stuur monteurs aan en houd het licht aan in de wijk.
 
-**Spelen:** dubbelklik op `index.html` (internet nodig voor Three.js en lettertypen via CDN).
+[![Tests](https://github.com/ProAdmin007/Onderstation-SIM-Pro/actions/workflows/test.yml/badge.svg)](https://github.com/ProAdmin007/Onderstation-SIM-Pro/actions/workflows/test.yml)
+![Three.js](https://img.shields.io/badge/Three.js-r169-049ef4?logo=threedotjs&logoColor=white)
+![Geen installatie](https://img.shields.io/badge/installatie-niet%20nodig-3fcf72)
+![Taal](https://img.shields.io/badge/taal-Nederlands-f0a43a)
+![Bestand](https://img.shields.io/badge/één%20HTML--bestand-±490%20kB-8d99a6)
+
+![OS Zuidwolde bij avondzon met het SCADA-eénlijnschema – 3D-onderstationsimulator in de browser](docs/overzicht.jpg)
+
+[🚀 Snel starten](#snel-starten) · [✨ Functies](#functies) · [📸 Screenshots](#screenshots) · [🎮 Spelmodi](#spelmodi) · [⌨️ Bediening](#bediening) · [🏭 Het net](#het-net) · [🧑‍💻 Ontwikkelen](#ontwikkelen) · [🇬🇧 English](#english)
+
+</div>
+
+---
+
+**Onderstation Simulator** is een gratis, realistische **schakelsimulator voor het elektriciteitsnet**. Je bent bedrijfsvoerder van OS Zuidwolde, een onderstation met 110 kV-lijnen, drie transformatoren, een 10 kV-dubbelrailsysteem, een 20 kV-installatie en twee 10 kV-ringen met MS-stations in de wijk erachter. Alles is in 3D te zien en te bedienen, via een **SCADA-eénlijnschema** of door zelf rond te lopen.
+
+Bedoeld voor **bedrijfsvoerders en monteurs in opleiding**, studenten **elektrotechniek** en iedereen die wil weten hoe een **netbeheerder** het licht aan houdt: van vrijschakelen en aarden tot kabelfouten, terugvoeden, netcongestie, laagspanning en relaistesten.
+
+<a id="snel-starten"></a>
+## 🚀 Snel starten
+
+1. Download de repo (**Code → Download ZIP**) of kloon hem: `git clone https://github.com/ProAdmin007/Onderstation-SIM-Pro.git`
+2. Dubbelklik op **`index.html`**. Klaar: geen installatie, geen server.
+3. Kies in het menu een **les**, een **scenario**, een **dienst** of **vrij spelen**. Druk op **`H`** voor alle toetsen.
+
+> Internet is nodig voor Three.js en de lettertypen (via CDN). Werkt in Chrome, Edge en Firefox. Op een trage laptop: **Instellingen (`I`) → Prestaties → Laag**.
+
+<a id="functies"></a>
+## ✨ Functies in het kort
+
+| | |
+|---|---|
+| 🔌 **Echt schakelen** | 110/10/20 kV met lijnvelden, transformatoren, dubbelrail, railkoppelingen, aardschakelaars en **vergrendelingen**, synchrocheck, AVR en trappenschakelaars. |
+| ⚡ **Storingen** | Blikseminslag met AR, kabelfouten met kortsluitverklikkers, trafotrips (relais 86), railfouten, weigerende schakelaars (50BF) en grote incidenten zoals brand, kraan of black-out. |
+| 🏘️ **10 kV-ringen** | Negen MS-stations met normaal-open punten, terugvoeden, **kabeltemperatuur** per sectie en een koppelkabel naar **OS Meppel** van een andere netbeheerder. |
+| 🏠 **Laagspanning** | LS-velden per straat, **kabelkasten** tussen stations, **zonnepanelen** met overspanning, vaste trappen, **noodaggregaten**, alles lokaal of via een monteur. |
+| 👷 **Werkopdrachten** | Onderhoud met optionele **schakelbrief**, werk staken, monteurs met **portofoon**, revisies, **relaistest met testkoffer** en thermografie. |
+| 📞 **Klanten** | Telefoon met klantmeldingen, storingsbandje, **verwachte hersteltijd** doorgeven en prioriteitsklanten bellen. |
+| 📈 **Netbeheer** | **Netcongestie** en flexibel vermogen, belastingprognose, veroudering en preventief onderhoud, beveiligingsinstellingen. |
+| 🎓 **Leren en spelen** | 8 lessen, 15 scenario's, dag- en avonddiensten, vrij spelen met incidenten, score met cijfer, **tijdlijn en herhaling**, opslaan en verder spelen. |
+| 🌦️ **Sfeer** | Dag en nacht, vier seizoenen, weer (onweer, sneeuw, mist, hittegolf), verkeer, buren op straat bij uitval, ramen die uitgaan als het station uitvalt. |
+
+<a id="screenshots"></a>
+## 📸 Screenshots
 
 | Transformatorvelden T1–T3 | 20 kV-schakelinstallatie binnen | 's Nachts met terreinverlichting |
 |---|---|---|
-| ![Transformatorvelden](docs/transformatoren.jpg) | ![20 kV-binnenruimte](docs/binnen-20kv.jpg) | ![Nachtbeeld](docs/nacht.jpg) |
+| ![Transformatorvelden van het 110/10 kV-onderstation](docs/transformatoren.jpg) | ![20 kV-binnenschakelinstallatie](docs/binnen-20kv.jpg) | ![Onderstation bij nacht](docs/nacht.jpg) |
 
-| Wijk met de 10 kV-ring | Monteurs bij een inspectie |
-|---|---|
-| ![Wijk en MS-ring](docs/wijk.jpg) | ![Monteurs bij T2](docs/monteurs.jpg) |
+| Woonwijk met zonnepanelen | Woonerf met MS-station | LS-venster: spanning per straat |
+|---|---|---|
+| ![Woonwijk met MS-ring, zonnepanelen en tuinen](docs/wijk.jpg) | ![Klinkerstraat met geparkeerde auto's](docs/woonerf.jpg) | ![Laagspanningsvenster met LS-velden en kabelkasten](docs/ls-venster.jpg) |
 
-## Bediening
-- Druk op `H` (of `?`, of de knop *Toetsen*) voor een **overzicht van alle toetsen**.
-- Klik op een schakelaar in 3D of in het SCADA-schema en kies vervolgens IN/UIT of SLUITEN/OPENEN.
-- Linker muisknop draaien, rechter muisknop schuiven, scrollen om te zoomen.
-- `1`–`9` camerastandpunten (6 = binnen 10 kV, 7 = binnen 20 kV, 8 = woonwijk, 9 = centrum en De Vaart)
-- `K` opent de **testkoffer** tijdens een relaistest
-- `N` opent het **LS-venster**: LS-velden, kabelkasten, noodaggregaten en klanten informeren
-- **Rondlopen (first person):** druk op `V` of op de knop *Rondlopen*.
-  - Je loopt met `WASD`, rent met `Shift` en kijkt rond met de muis.
-  - Richt het kruis op een schakelaar: `F` schakelt direct. `E` maakt de cursor vrij (en opent het paneel als je naar een schakelaar kijkt), zodat je ook in het SCADA-schema kunt schakelen. Met nog een keer `E` loop je verder.
-  - Je loopt niet door apparatuur, muren, huizen of het hek. De gebouwen kun je via de deuren in, en via de open poort loop je de wijk in naar de MS-stations.
-  - Met `V` stop je met rondlopen; met nog een keer `V` ga je verder waar je was.
-  - Lopen gaat met 2,2 m/s, rennen met `Shift` met 8 m/s en sprinten met `Q` met 16 m/s. Met `spatie` spring je; pauzeren gaat tijdens het rondlopen met `P`.
-  - Met `Z` zet je je **zaklamp** aan of uit. Handig 's nachts op het terrein, in een donker MS-station of bij een storing in het gebouw.
-- **Instellingen (`I`, de knop *Instellingen* of het pauzemenu):**
-  - **Prestaties:** voorinstelling Laag / Midden / Hoog, of zelf: resolutie (40–100%), schaduwen (uit/laag/hoog), maximaal 30, 60 of onbeperkt beelden per seconde, omgevingslicht dat de zon volgt, verkeer en buren, regen en sneeuw, en een beeldenteller. Op een trage computer of laptop: kies *Laag*.
-  - **Weer en seizoen:** zet het weer zelf op helder, bewolkt, regen, onweer, sneeuw, mist of hittegolf (geleidelijk; dubbelklik = direct), of laat het automatisch wisselen. Ook het seizoen kun je tijdens het spelen veranderen.
-  - **Geluid:** hoofdvolume plus vier kanalen: omgeving (brom, verkeer, vogels, regen), schakelen (vermogenschakelaars, motoren, vlambogen), meldingen en alarmen, en telefoon.
-  - Alles wordt in de browser bewaard.
-- **Opslaan en verder spelen** (vrije dienst, dag- en avonddienst):
-  - Opslaan kan met *💾 Spel opslaan* in het pauzemenu of met `Ctrl+S`. Het spel slaat ook elke 2 minuten en bij het sluiten van de pagina automatisch op. *Opslaan en naar hoofdmenu* bewaart je spel.
-  - In het hoofdmenu staat dan bovenaan *Verder spelen*, met de dienst, de tijd, het seizoen, de score en wanneer je opsloeg.
-  - Bewaard worden: de stand van alle schakelaars, storingen, slijtage, temperaturen, de lopende werkopdracht (met je schakelbrief), weer, flex, beveiligingsinstellingen, score, statistieken en de tijdlijn.
-  - Reparaties en andere geplande gebeurtenissen worden bij het hervatten opnieuw ingepland. Een groot incident dat liep, wordt netjes afgerond.
-  - Speel je een dienst tot het einde, dan verdwijnt het opgeslagen spel.
-- **Pauzemenu (`Esc`):** hervatten, de dienst beëindigen met rapport, of de score opslaan en terug naar het hoofdmenu.
-- **Klaar om te schakelen:** als de storingsdienst of TenneT klaar is, of een transformator weer gereset mag worden, hoor je een oplopend klokgeluid en verschijnt een groene banner. Het betreffende veld knippert groen in SCADA en in 3D tot je het schakelt. · `spatie` pauze · `L` labels · `M` geluid · `Esc` deselecteren
+![Monteurs bij een inspectie van transformator T2](docs/monteurs.jpg)
 
-## Installatie
-- **110 kV:** twee lijnvelden (L1 Hoogeveen, L2 Meppel), een railsysteem en drie transformatorvelden.
-- **T1** (110/10,5 kV, 31,5/40 MVA) voedt de 10 kV-installatie. Dat is een **dubbelrailsysteem**: rail A en rail B, normaal gekoppeld via V-K, met de velden F1–F6.
-  - Elk veld (ook V-T1 en V-T3) heeft twee **railkeuzescheiders**: QA naar rail A en QB naar rail B. Normaal staan F1–F3 en T1 op rail A, en F4–F6 en T3 op rail B.
-  - **Omzetten onder last** mag alleen als V-K gesloten is: eerst de scheider naar de nieuwe rail sluiten, dan de oude openen. Zonder koppeling blokkeert de vergrendeling (of, met de vergrendelingen uit, ontstaat er een vlamboog). V-K kan niet open zolang een veld op beide rails staat.
-  - Railaardschakelaars RA-Q8 en RB-Q8 zitten in de meetvelden.
-- **T2** (110/21 kV, 20/25 MVA) voedt de 20 kV-installatie in het tweede gebouw. Die heeft twee railhelften:
-  - **rail C1** met W-T2, G1 Zonnepark (productie en teruglevering) en G2 Industrieterrein Noord;
-  - **rail C2** met W-T3, G3 Buitengebied Oost en G4 Waterzuivering;
-  - de **railkoppeling W-K** (normaal gesloten, met synchrocheck tot 0,5 kV verschil) en per railhelft een **railaardschakelaar** (RC-Q8, RD-Q8) in het meetveld.
-- **T3** is de omschakelbare reservetransformator (110/10,5-21 kV, 20/25 MVA).
-  - Hij staat als warme reserve op 10 kV.
-  - Via **V-T3** voedt hij 10 kV-rail B, via **W-T3** 20 kV-rail C2 (en via W-K ook C1).
-  - Omschakelen kan alleen spanningsloos (T3-Q0, V-T3 en W-T3 UIT).
-  - Inschakelen op de verkeerde spanning blokkeert de vergrendeling. Met de vergrendelingen uit leidt het tot een incident en wikkelingsschade.
-  - Let op: T3 is kleiner dan T1. Neemt hij tijdens de avondpiek de hele 10 kV over, dan raakt hij overbelast.
-- **OS Meppel** (aan de andere kant van L2): het 110 kV-deel en de transformator zijn van een andere netbeheerder (*Netbeheer Noord*), grijs in SCADA en niet bedienbaar. Alleen de **uitgaande velden zijn van jou**:
-  - **MP1** Meppel-Oost (woningen);
-  - **MP2** Bedrijventerrein Blankenstein;
-  - **MP3** de **koppelkabel** naar MS5 Bedrijvenpark Zuid in je woonwijkring.
-  De koppeling **MS5-K** is normaal open. Sluiten mag alleen als de ringkant spanningsloos is: dan voedt Meppel MS5 (en verder) terug. Parallel schakelen met Netbeheer Noord is niet toegestaan. De vergrendeling houdt dat tegen, en ontstaat het toch, dan schakelt Netbeheer Noord de koppeling af. Over de koppeling mag maximaal ±4 MW. Af en toe heeft Netbeheer Noord zelf een storing aan de 110 kV-kant; dan vallen je velden in Meppel even weg. Alles zie je op het SCADA-tabblad *Meppel*.
-- **Twee 10 kV-ringen achter het station:**
-  - **Ring Woonwijk:** V-F3 (rail A) → MS1–MS5 → V-F4 (rail B), normaal-open punt **MS3-R**.
-  - **Ring Centrum – De Vaart:** V-F1 → MS6 Marktplein → MS7 Stationsstraat ‖ MS8 De Vaart Noord → MS9 De Vaart Zuid → V-F2, normaal-open punt **MS7-R**. Het centrum heeft appartementen met winkels, een plein en een station; bedrijventerrein De Vaart heeft hallen, een bouwmarkt en een tankstation.
-  - Elk station heeft lastscheiders naar links en rechts, een transformatorschakelaar, een 10/0,4 kV-trafo en laagspanningsvelden naar woonwijken, een school, een supermarkt, een huisartsenpost, een laadplein en bedrijven.
-  - Bij een kabelfout spreken **kortsluitverklikkers** aan bij de stations tussen het voedingspunt en de fout. Isoleer de kabel achter het laatste station met een verklikker, sluit het normaal-open punt en schakel het veld weer in.
-- **Stroom en spanning in de ringkabels:** per kabelsectie wordt de belastingstroom berekend (rating 330 A, kopkabels 400 A), plus de spanning per station inclusief het spanningsverlies over de kabels.
-  - In SCADA zie je de stroom per veld, MW en kV per station, en kabels die oranje of rood knipperen bij hoge belasting.
-  - **Kabeltemperatuur:** elke ringkabel en veldkabel warmt langzaam op naar de grondtemperatuur plus 65 °C × (belasting)². De tijdconstante is 40 min voor ringkabels en 30 min voor veldkabels. Kort overbelasten mag dus, lang niet:
-    - boven 85 °C krijg je een waarschuwing;
-    - boven 90 °C (het maximum voor XLPE) kost het punten;
-    - vanaf 105 °C brandt de kabel door.
-    Bij 130% duurt dat ongeveer een uur, bij 150% zo'n 40 minuten. De temperatuur staat in het tabblad *Kabels*, in het stationspaneel en in het veldpaneel.
-- **Straatverlichting:** elk MS-station heeft een LS-veld *Openbare verlichting* met een schemerschakeling. Alle lantaarns hangen aan het dichtstbijzijnde station en gaan uit als dat station of het OVL-veld spanningsloos is, met een lichtvlek op straat als ze branden.
-- **Inloop-MS-stations:** elk ringstation kun je in, via de open deur of met de knop *Naar binnen* in het stationspaneel. Binnen staan:
-  - een compacte RMU met de velden L, T en R, met standmelders, spanningslampjes en een kortsluitverklikker (KSV);
-  - een laagspanningsrek met een hoofdschakelaar en NH-lastscheiders per LS-veld (de klep gaat echt open of dicht);
-  - de distributietransformator achter een gaashek.
-  Schakelen gaat met het richtkruis: `F` voor direct schakelen, `E` voor het paneel.
-- **Schakelbrieven (optioneel):** bij een werkopdracht zie je de stappen meteen en kun je gewoon schakelen. Wil je bonuspunten, kies dan vóór de eerste stap *Zelf een schakelbrief opstellen*. Je kiest de handelingen (er zitten afleiders tussen), zet ze in volgorde en dient de brief in bij wachtchef Marieke.
-  - Goedgekeurd: +40 (+15 na correcties). Afgekeurd: −10, met uitleg waarom die stap niet klopt. Hint: −5.
-  - Ben je aan een brief begonnen, dan zie je de stappen pas na goedkeuring. Wijk je daarna af van je goedgekeurde brief, dan kost dat −25. Zonder brief is er geen straf.
-- **Portofoon:** monteurs hebben een naam en melden zich bij aankomst en als het werk klaar is. Wil je schakelen aan of vlakbij hun werk, dan opent eerst het portofoonvenster:
-  - **melden**: de monteur bevestigt en daarna wordt er geschakeld (+10);
-  - **zonder melden schakelen**: −50 en een boze monteur;
-  - **annuleren**.
-- **Monteurs:** collega's in een veiligheidsvest lopen het station of de wijk in bij inspecties, werkopdrachten en kabelfouten, en vertrekken weer als het werk klaar is.
-- **Dienstoverdracht** (bij diensten en scenario's, niet bij vrij spelen of de lessen): bij de start geeft de operator van de vorige dienst een overdracht.
-  - Je ziet alle afwijkingen van de normale toestand, automatisch uit de installatie gehaald, plus het weer en de verwachte piek.
-  - Bij dag- en avonddiensten begint het station met 2–3 willekeurige afwijkingen. Voorbeelden: AR van een lijn nog uit na een relaistest, het normaal-open punt verlegd, F5 tijdelijk op rail A, T3 nog op 20 kV, L2 in onderhoud, of de kassen uit tot een afgesproken tijd.
-  - Open punten staan links bij je dienst; elk netjes afgehandeld punt geeft +25. Afspraken niet nakomen (bijvoorbeeld te vroeg inschakelen) kost −20.
-- **Belastingprognose** (tabblad *Prognose*): de verwachte belasting op 10 en 20 kV voor de komende 8 uur, met seizoen en het huidige weer, afgezet tegen de capaciteit van de transformatoren in bedrijf (en met T3 erbij).
-  - Je ziet de piek, het moment van overbelasting en een advies (T3 bijschakelen, kassen afschakelen), plus een N-1-tip.
-  - Dreigt er binnen 1,5 uur overbelasting, dan krijg je een melding.
-- **Telefoon en klantmeldingen:** klanten bellen bij uitval. De telefoon gaat over bovenin beeld; neem op en kies je antwoord:
-  - *“Dat is bekend, we werken eraan”* bij uitval die je in SCADA ziet (+5). Meestal hoef je dat niet zelf te zeggen: wie belt uit een gebied dat in SCADA spanningsloos is, krijgt automatisch het **storingsbandje**. Je telefoon gaat dan niet over. Zo heeft het oplossen van de storing voorrang. Elke ±10 minuten zie je een samenvatting (bijvoorbeeld *📼 Storingsbandje: 23 bellers uit MS2, MS3 …*), en het aantal staat in het eindrapport;
-  - *“Laat uw installateur kijken”* als alleen één woning zonder stroom zit (+10);
-  - *monteur sturen naar een MS-station* bij een **LS-storing**: een doorgebrande zekering in een laagspanningsveld. Die zie je **niet** in SCADA, alleen via klantmeldingen. Zoek het adres op in het ringschema (welke straat hangt aan welk station) en stuur de monteur naar het goede station (+60 bij snel herstel, −20 bij een verkeerd station). Ook vanuit het stationspaneel kun je een monteur sturen.
-  - Neemt niemand op, dan hangt de klant na ±45 s op (−5). Loopt er een uitval, dan wachten bellers ±2 minuten en kost ophangen geen punten.
-- **Laagspanning** (toets `N`, de knop *LS* of het SCADA-tabblad *LS*):
-  - Per MS-station zie je de **LS-velden** (straten en bedrijven): aan/uit, afname, opwek van zonnepanelen en de **spanning per straat** (norm 207–253 V).
-  - LS is **niet op afstand bedienbaar**. Je schakelt lokaal (loop het station binnen met `V` en gebruik `F`) of je stuurt een **monteur** (±7–11 min reistijd, korter als er al iemand is).
-  - **Kabelkasten** (KK12, KK23, KK34, KK45, KK67) koppelen een straat aan een straat van het buurstation. Valt een station uit, dan voed je zo één straat via de buurman. Dat mag alleen als één kant spanningsloos is én het LS-veld aan die kant open staat: anders voed je via de distributietrafo het MS-net terug. Parallel schakelen is niet toegestaan. Een kabelkast kan ±280 kW aan; daarboven smelt de zekering.
-  - **Zonnepanelen** (±1,2 kWp per woning) verhogen op zonnige middagen de spanning in lange straten. Boven 253 V schakelen de omvormers af en bellen klanten. De oplossing is de **vaste trap** van de distributietrafo (−2 … +2, 2,5% per stand). Die mag alleen spanningsloos worden versteld: open eerst `MSx-T`, eventueel met een kabelkast of aggregaat om de klanten te voeden. Te laag zetten geeft op een winteravond onderspanning (< 207 V).
-- **Punten terugverdienen bij een grote uitval.** Klantminuten blijven tellen, maar je kunt met acties punten terugverdienen:
-  - **Herstelbonus:** elke klant die na een storing weer stroom krijgt, levert punten op; sneller herstel levert meer op, en prioriteitsklanten geven extra. Wie je zelf afschakelde, telt niet mee.
-  - **Noodaggregaten:** drie aggregaten van 400 kVA. Stuur er een naar een spanningsloos MS-station (±15–25 min). De monteur opent `MSx-T` en het aggregaat voedt de LS-velden die IN staan. Houd het onder 400 kVA (schakel zo nodig straten af), anders valt het uit. Is het MS-net terug, laat het dan afkoppelen: de monteur sluit `MSx-T` weer.
-  - **Rotatie:** is er te weinig transformatorcapaciteit (een 110/10 kV-trafo boven 88%), dan tellen klanten die je zelf afschakelt de eerste 45 minuten maar half. Schakel je ze binnen 10–75 minuten weer in (rouleren), dan krijg je punten. Na 45 minuten krijg je een waarschuwing.
-  - **Klanten informeren:** geef per uitgevallen gebied een **verwachte hersteltijd** door (+10 binnen 10 min); haal je die, dan krijg je punten, ben je later, dan kost het punten. **Bel prioriteitsklanten** (ziekenhuis, RWZI, huisartsenpost) als ze zonder stroom zitten (+20 binnen 10 min).
-- **Netcongestie en flexibel vermogen** (toets `C` of de knop *Flex*):
-  - Een overzicht toont de zwaarst belaste kabels en transformatoren.
-  - Zeven klanten hebben een flexcontract: het laadplein (slim laden), het transportbedrijf (e-trucks later laden), het koelhuis, de metaalbewerking, de batterij van het distributiecentrum, de kassen (belichting dimmen) en het zonnepark (terugregelen).
-  - Je vraagt ze 25–100% terug te regelen. Na ±2 min is het actief; de vergoeding (€/MWh) gaat van je score af (1 punt per € 100). Dat is meestal veel goedkoper dan uitval.
-  - De distributietrafo's in de MS-stations zijn gedimensioneerd op hun winterpiek (2000–3150 kVA). Zit een trafo lang boven 120%, dan slaan de MS-zekeringen door; de monteur plaatst nieuwe en pas daarna mag de transformatorschakelaar weer dicht. Vanaf 105% krijg je een waarschuwing.
-- **Veroudering en preventief onderhoud** (toets `O` of de knop *Onderhoud*):
-  - Elke vermogenschakelaar heeft een conditie, een aantal schakelingen en een jaar van de laatste revisie. Schakelen slijt een beetje, het afschakelen van een foutstroom veel meer.
-  - Een versleten veldschakelaar kan bij een storing **weigeren**. De reservebeveiliging (50BF) schakelt dan de hele rail af; de schakelaar blijft IN staan. Schakel hem met de hand uit, neem de rail weer in bedrijf en laat hem reviseren.
-  - Een schakelaar zit na een weigering niet vast, maar **elke weigering maakt een volgende waarschijnlijker**: bij een storing én bij gewoon schakelen (dan reageert hij soms niet op het commando; opnieuw proberen kan). In het paneel en in *Onderhoud* zie je hoe vaak hij weigerde. Na een revisie is dat weer nul.
-  - Bij het terugzetten na een revisie mag het veld ook op de andere rail.
-  - De werkopdracht *Revisie vermogenschakelaar* komt vanzelf bij een slechte conditie, of plan hem zelf in vanuit het overzicht. Bij een ringveld sluit je eerst het normaal-open punt en maak je de kabel ook aan de ringkant vrij.
-- **Relaistest met de testkoffer** (10 kV-velden F1–F6):
-  - Een beveiligingsrelais kan ongemerkt afwijken: de **aanspreekwaarde is verlopen**, het relais is **te traag** of het **uitschakelcircuit is defect**. Dat merk je pas bij een storing. Een relais dat niet uitschakelt, laat de reservebeveiliging de hele rail afschakelen; het veld blijft dan IN staan. Verlopen of trage relais schakelen een overbelasting te laat af, waardoor de kabel langer warm loopt.
-  - Afwijkingen komen alleen voor in de vrije dienst en de dag- en avonddienst, niet in scenario's en lessen.
-  - De werkopdracht *Relaistest veld …* komt vanzelf voor relais die 3 jaar of langer niet getest zijn. Je kunt hem ook zelf inplannen in het overzicht *Onderhoud* (`O`). Daar zie je per veld wanneer het relais het laatst is getest, en of het bij een storing heeft geweigerd.
-  - Je maakt het veld vrij (railkeuzescheiders open; bij een ringveld eerst het normaal-open punt dicht en de kabel aan de ringkant vrij). Daarna sluit de monteur de testkoffer aan en zet je de vermogenschakelaar voor de uitschakelproef in.
-  - In de **testkoffer** (toets `K` of de knop in de werkopdracht) injecteer je secundaire teststromen via de stroomtransformator (600/1 A):
-    - aanspreekproeven op 0,95× en 1,05× I>;
-    - tijdproeven op 2× en 5× I> tegen de IEC-kromme (standaard-invers, tolerantie ±10%);
-    - een uitschakelproef op de vermogenschakelaar.
-  - Daarna beoordeel je zelf: *goedkeuren* of *afkeuren – relais vervangen*. Een terecht afgekeurd relais levert +60 op en een terecht goedgekeurd relais +40. Onnodig vervangen kost −20. Keur je een afwijkend relais goed, dan vindt de wachtchef dat later in het testrapport (−50) en blijft het defect in het net.
-- **Werk staken:** onder elke werkopdracht staat *Werk staken*. Dat gebruik je bij een storing waarvoor je de installatie nodig hebt, bijvoorbeeld T3 die bij onderhoud aan T2 meedraait terwijl T1 uitvalt.
-  - Alles wat al geschakeld is, wordt een herstelprogramma in omgekeerde volgorde (eerst de aarding eraf, als laatste de reserve terug).
-  - Na het herstel krijg je +30. Staken zonder storing kost −20; staken vanwege een storing kost niets.
-- **Beveiligingsinstellingen** (toets `B` of de knop *Beveiliging*):
-  - **I> per uitgaand veld** (110–150 %) en een **tijdfactor** (×0,5–×2). Te scherp: koude-lastopname leidt tot afschakeling. Te ruim: een langdurig overbelaste kabel raakt beschadigd.
-  - **AR dode tijd per lijn** (0,3 / 1 / 3 s). Kort: de herinschakeling mislukt soms omdat de boog nog niet gedoofd is. 3 s: altijd raak, maar draait het station op één lijn, dan vallen processen bij klanten uit.
-  - **Thermische trip per trafo** (95 / 100 / 110 °C). Hoog geeft meer reserve, maar boven 105 °C ontstaat gasvorming en dreigt een Buchholz-trip met een lange inspectie.
-- **SCADA** heeft tabbladen voor 10 kV, 20 kV, de ring, **Meppel**, **kabels**, **LS** en de **prognose**.
-  - Is er een storing in een deel van de installatie, dan **knippert het tabblad rood** tot hij is opgelost. Beweeg over het tabblad om te zien welke storing het is.
-    - **10 kV:** kabelfout of uitval van een veld, railfout of dode rail A/B, T1 geblokkeerd, vastzittende schakelaar.
-    - **20 kV:** hetzelfde voor rail C1/C2, T2 en de G-velden.
-    - **Ring:** kabelfout, beschadigd station, doorgeslagen zekeringen of onverwacht spanningsloos station.
-    - Een 110 kV-lijn die uitvalt of een geblokkeerde T3 laat zowel 10 kV als 20 kV oplichten.
-  - **Kabels:** per ringkabel de stroom tegen de rating (330 A, kopkabels 400 A), een belastingsbalk (groen, oranje boven 85%, rood boven 100%), de spanning aan het eind en of hij een fout heeft of spanningsloos is. Ook de uitgaande veldkabels en de distributietrafo's per MS-station. Klik op een ringkabel voor het station erachter. Zoomen kan met de knoppen **−/+**, met `Ctrl` + scrollwiel of met de toetsen `+` en `−` (75–250 %). Het paneel wordt dan mee breder.
+<a id="spelmodi"></a>
+## 🎮 Spelmodi en score
 
-## Leven in de wijk
-- **Straatbeeld:** stoepen van tegels met stoepranden, belijning op de doorgaande wegen en een woonerf met klinkers, bomen en geparkeerde auto's. De rijtjeshuizen hebben voortuinen met een heg en tuinpad, kliko's, schuttingen en schuurtjes in de achtertuin, pannendaken met dakgoten, dakkapellen en op ongeveer een derde van de huizen **zonnepanelen** (op het zuiden). De flats hebben balkons en elk een eigen gevelkleur; in het centrum zijn er parkeerstroken, een winkelstoep en een parkeerterrein. Alles is procedureel en wordt per materiaal samengevoegd, dus het kost nauwelijks extra rekenkracht.
-- **Verlichte ramen:** 's avonds gaat het licht aan in de woningen en appartementen; laat in de nacht nog maar een paar. Elk huis hangt aan het dichtstbijzijnde MS-station: valt dat station uit, dan gaan de lichten in die buurt uit. Bij een noodaggregaat blijven ze branden.
-- **Verkeer:** een dozijn auto's rijdt rechts over de straten van beide wijken, met koplampen en een lichtbundel in het donker. In de spits rijden er meer.
-- **Buren:** zit een station een paar minuten zonder stroom, dan komen de buren naar buiten; 's avonds met de zaklamp van hun telefoon.
-
-## Geluid
-Alle geluid wordt in de browser gemaakt (Web Audio) en hangt af van waar je bent:
-- **In de MS-gebouwen:** zoemen van de installatie en ventilatie.
-- **In een MS-station:** trafobrom die meegroeit met de belasting.
-- **Op het 110 kV-terrein:** transformatorbrom en corona-geknetter (sterker bij regen en mist).
-- **In de wijk:** verkeersgeruis, passerende auto's, vogels overdag en krekels op zomer- en lenteavonden.
-- **Overal:** wind, regen en onweer.
-
-## Seizoenen en weer
-- **Seizoenen** (lente, zomer, herfst, winter) kies je in het menu; standaard is het **zomer**. Scenario's en lessen hebben hun eigen seizoen. Ze bepalen:
-  - zonsopkomst, zonsondergang en zonnehoogte;
-  - de buitentemperatuur;
-  - de belasting (winter: verwarming, zomer: airco);
-  - de opbrengst van het zonnepark;
-  - de schakeltijden van kassen en straatverlichting.
-- **Weer:** helder, bewolkt, regen, onweer, mist, sneeuw (met sneeuwdek) en hittegolf, wisselend tijdens een dienst. Het weer beïnvloedt:
-  - lucht en zicht;
-  - neerslag;
-  - transformatortemperaturen;
-  - zonne-opbrengst;
-  - de kans op blikseminslag.
-- De weerindicator met de buitentemperatuur staat in de bovenbalk. Voor testen kun je `?season=winter&weer=sneeuw` gebruiken.
-
-## Belasting
-Alle afnemers liggen 25% hoger dan in eerdere versies. De velden en distributietrafo's zijn gedimensioneerd op de winterpiek met 20–25% marge. In de normale schakeltoestand blijft alles onder 90%; bij terugvoeding, uitval of een extra piek wordt het snel krap. Daar zijn het tabblad *Kabels* en de flexmarkt voor.
-
-## Spelmodi en score
 - **Vrije dienst:** eindeloos spelen. Storingen komen hier vaker dan in een dienst, en af en toe slaat er een **groot incident** uit de scenario's toe.
   - De eerste komt na 1–2 uur, daarna één per paar uur. Welke het wordt is willekeurig, maar het moet passen bij het moment:
     - kabelstoring ziekenhuis met trip T1;
@@ -232,10 +115,270 @@ Alle afnemers liggen 25% hoger dan in eerdere versies. De velden en distributiet
   - Eraf: klantminuten, het ziekenhuis zonder net, veiligheidsincidenten (−150), een gemist doel (−150), thermische trips (−100), inschakelen op een fout (−40), overbelasting (−30), spanningsafwijkingen en circulatiestroom (−20).
 - Tijdens een pauze kun je niet schakelen.
 
-## 10 kV-gebouw
-Binnen staat een rij van 13 metaalomsloten schakelvelden (V-T1, F1–F3, meetveld, koppeling V-K, F4–F6, V-T3). In het 20 kV-gebouw staan W-T2, G1, G2, meetveld C1 met RC-Q8, koppeling W-K, meetveld C2 met RD-Q8, G3, G4 en W-T3. Elk veld heeft een live display, mimic-schema met standmelder en spanningslampjes. Klik op een veld om het te bedienen. Verder: beveiligingskasten, bedieningsbureau met live SCADA- en meldingenscherm, accubatterij en eigenbedrijfstransformator.
+<a id="bediening"></a>
+## ⌨️ Bediening
 
-## Spelregels (bewust simpel)
+| Toets | Functie | Toets | Functie |
+|---|---|---|---|
+| `H` / `?` | toetsenoverzicht | `V` | rondlopen (`WASD`, `F` schakelt) |
+| `1`–`9` | camerastandpunten | `Z` | zaklamp |
+| `Spatie` / `P` | pauze | `Esc` | sluiten / pauzemenu |
+| `B` | beveiliging | `C` | flex en congestie |
+| `O` | onderhoud | `K` | testkoffer |
+| `N` | laagspanning | `I` | instellingen |
+| `Ctrl+S` | opslaan | `L` / `M` | labels / geluid |
+
+<details>
+<summary><b>Alle details over bediening, instellingen en opslaan</b></summary>
+
+- Druk op `H` (of `?`, of de knop *Toetsen*) voor een **overzicht van alle toetsen**.
+- Klik op een schakelaar in 3D of in het SCADA-schema en kies vervolgens IN/UIT of SLUITEN/OPENEN.
+- Linker muisknop draaien, rechter muisknop schuiven, scrollen om te zoomen.
+- `1`–`9` camerastandpunten (6 = binnen 10 kV, 7 = binnen 20 kV, 8 = woonwijk, 9 = centrum en De Vaart)
+- `K` opent de **testkoffer** tijdens een relaistest
+- `N` opent het **LS-venster**: LS-velden, kabelkasten, noodaggregaten en klanten informeren
+- **Rondlopen (first person):** druk op `V` of op de knop *Rondlopen*.
+  - Je loopt met `WASD`, rent met `Shift` en kijkt rond met de muis.
+  - Richt het kruis op een schakelaar: `F` schakelt direct. `E` maakt de cursor vrij (en opent het paneel als je naar een schakelaar kijkt), zodat je ook in het SCADA-schema kunt schakelen. Met nog een keer `E` loop je verder.
+  - Je loopt niet door apparatuur, muren, huizen of het hek. De gebouwen kun je via de deuren in, en via de open poort loop je de wijk in naar de MS-stations.
+  - Met `V` stop je met rondlopen; met nog een keer `V` ga je verder waar je was.
+  - Lopen gaat met 2,2 m/s, rennen met `Shift` met 8 m/s en sprinten met `Q` met 16 m/s. Met `spatie` spring je; pauzeren gaat tijdens het rondlopen met `P`.
+  - Met `Z` zet je je **zaklamp** aan of uit. Handig 's nachts op het terrein, in een donker MS-station of bij een storing in het gebouw.
+- **Instellingen (`I`, de knop *Instellingen* of het pauzemenu):**
+  - **Prestaties:** voorinstelling Laag / Midden / Hoog, of zelf: resolutie (40–100%), schaduwen (uit/laag/hoog), maximaal 30, 60 of onbeperkt beelden per seconde, omgevingslicht dat de zon volgt, verkeer en buren, regen en sneeuw, en een beeldenteller. Op een trage computer of laptop: kies *Laag*.
+  - **Weer en seizoen:** zet het weer zelf op helder, bewolkt, regen, onweer, sneeuw, mist of hittegolf (geleidelijk; dubbelklik = direct), of laat het automatisch wisselen. Ook het seizoen kun je tijdens het spelen veranderen.
+  - **Geluid:** hoofdvolume plus vier kanalen: omgeving (brom, verkeer, vogels, regen), schakelen (vermogenschakelaars, motoren, vlambogen), meldingen en alarmen, en telefoon.
+  - Alles wordt in de browser bewaard.
+- **Opslaan en verder spelen** (vrije dienst, dag- en avonddienst):
+  - Opslaan kan met *💾 Spel opslaan* in het pauzemenu of met `Ctrl+S`. Het spel slaat ook elke 2 minuten en bij het sluiten van de pagina automatisch op. *Opslaan en naar hoofdmenu* bewaart je spel.
+  - In het hoofdmenu staat dan bovenaan *Verder spelen*, met de dienst, de tijd, het seizoen, de score en wanneer je opsloeg.
+  - Bewaard worden: de stand van alle schakelaars, storingen, slijtage, temperaturen, de lopende werkopdracht (met je schakelbrief), weer, flex, beveiligingsinstellingen, score, statistieken en de tijdlijn.
+  - Reparaties en andere geplande gebeurtenissen worden bij het hervatten opnieuw ingepland. Een groot incident dat liep, wordt netjes afgerond.
+  - Speel je een dienst tot het einde, dan verdwijnt het opgeslagen spel.
+- **Pauzemenu (`Esc`):** hervatten, de dienst beëindigen met rapport, of de score opslaan en terug naar het hoofdmenu.
+- **Klaar om te schakelen:** als de storingsdienst of TenneT klaar is, of een transformator weer gereset mag worden, hoor je een oplopend klokgeluid en verschijnt een groene banner. Het betreffende veld knippert groen in SCADA en in 3D tot je het schakelt. · `spatie` pauze · `L` labels · `M` geluid · `Esc` deselecteren
+</details>
+
+<a id="het-net"></a>
+## 🏭 Het net in de simulator
+
+<details>
+<summary><b>Installatie: 110 kV, transformatoren, 10/20 kV, ringen en OS Meppel</b></summary>
+
+- **110 kV:** twee lijnvelden (L1 Hoogeveen, L2 Meppel), een railsysteem en drie transformatorvelden.
+- **T1** (110/10,5 kV, 31,5/40 MVA) voedt de 10 kV-installatie. Dat is een **dubbelrailsysteem**: rail A en rail B, normaal gekoppeld via V-K, met de velden F1–F6.
+  - Elk veld (ook V-T1 en V-T3) heeft twee **railkeuzescheiders**: QA naar rail A en QB naar rail B. Normaal staan F1–F3 en T1 op rail A, en F4–F6 en T3 op rail B.
+  - **Omzetten onder last** mag alleen als V-K gesloten is: eerst de scheider naar de nieuwe rail sluiten, dan de oude openen. Zonder koppeling blokkeert de vergrendeling (of, met de vergrendelingen uit, ontstaat er een vlamboog). V-K kan niet open zolang een veld op beide rails staat.
+  - Railaardschakelaars RA-Q8 en RB-Q8 zitten in de meetvelden.
+- **T2** (110/21 kV, 20/25 MVA) voedt de 20 kV-installatie in het tweede gebouw. Die heeft twee railhelften:
+  - **rail C1** met W-T2, G1 Zonnepark (productie en teruglevering) en G2 Industrieterrein Noord;
+  - **rail C2** met W-T3, G3 Buitengebied Oost en G4 Waterzuivering;
+  - de **railkoppeling W-K** (normaal gesloten, met synchrocheck tot 0,5 kV verschil) en per railhelft een **railaardschakelaar** (RC-Q8, RD-Q8) in het meetveld.
+- **T3** is de omschakelbare reservetransformator (110/10,5-21 kV, 20/25 MVA).
+  - Hij staat als warme reserve op 10 kV.
+  - Via **V-T3** voedt hij 10 kV-rail B, via **W-T3** 20 kV-rail C2 (en via W-K ook C1).
+  - Omschakelen kan alleen spanningsloos (T3-Q0, V-T3 en W-T3 UIT).
+  - Inschakelen op de verkeerde spanning blokkeert de vergrendeling. Met de vergrendelingen uit leidt het tot een incident en wikkelingsschade.
+  - Let op: T3 is kleiner dan T1. Neemt hij tijdens de avondpiek de hele 10 kV over, dan raakt hij overbelast.
+- **OS Meppel** (aan de andere kant van L2): het 110 kV-deel en de transformator zijn van een andere netbeheerder (*Netbeheer Noord*), grijs in SCADA en niet bedienbaar. Alleen de **uitgaande velden zijn van jou**:
+  - **MP1** Meppel-Oost (woningen);
+  - **MP2** Bedrijventerrein Blankenstein;
+  - **MP3** de **koppelkabel** naar MS5 Bedrijvenpark Zuid in je woonwijkring.
+  De koppeling **MS5-K** is normaal open. Sluiten mag alleen als de ringkant spanningsloos is: dan voedt Meppel MS5 (en verder) terug. Parallel schakelen met Netbeheer Noord is niet toegestaan. De vergrendeling houdt dat tegen, en ontstaat het toch, dan schakelt Netbeheer Noord de koppeling af. Over de koppeling mag maximaal ±4 MW. Af en toe heeft Netbeheer Noord zelf een storing aan de 110 kV-kant; dan vallen je velden in Meppel even weg. Alles zie je op het SCADA-tabblad *Meppel*.
+- **Twee 10 kV-ringen achter het station:**
+  - **Ring Woonwijk:** V-F3 (rail A) → MS1–MS5 → V-F4 (rail B), normaal-open punt **MS3-R**.
+  - **Ring Centrum – De Vaart:** V-F1 → MS6 Marktplein → MS7 Stationsstraat ‖ MS8 De Vaart Noord → MS9 De Vaart Zuid → V-F2, normaal-open punt **MS7-R**. Het centrum heeft appartementen met winkels, een plein en een station; bedrijventerrein De Vaart heeft hallen, een bouwmarkt en een tankstation.
+  - Elk station heeft lastscheiders naar links en rechts, een transformatorschakelaar, een 10/0,4 kV-trafo en laagspanningsvelden naar woonwijken, een school, een supermarkt, een huisartsenpost, een laadplein en bedrijven.
+  - Bij een kabelfout spreken **kortsluitverklikkers** aan bij de stations tussen het voedingspunt en de fout. Isoleer de kabel achter het laatste station met een verklikker, sluit het normaal-open punt en schakel het veld weer in.
+- **Stroom en spanning in de ringkabels:** per kabelsectie wordt de belastingstroom berekend (rating 330 A, kopkabels 400 A), plus de spanning per station inclusief het spanningsverlies over de kabels.
+  - In SCADA zie je de stroom per veld, MW en kV per station, en kabels die oranje of rood knipperen bij hoge belasting.
+  - **Kabeltemperatuur:** elke ringkabel en veldkabel warmt langzaam op naar de grondtemperatuur plus 65 °C × (belasting)². De tijdconstante is 40 min voor ringkabels en 30 min voor veldkabels. Kort overbelasten mag dus, lang niet:
+    - boven 85 °C krijg je een waarschuwing;
+    - boven 90 °C (het maximum voor XLPE) kost het punten;
+    - vanaf 105 °C brandt de kabel door.
+    Bij 130% duurt dat ongeveer een uur, bij 150% zo'n 40 minuten. De temperatuur staat in het tabblad *Kabels*, in het stationspaneel en in het veldpaneel.
+- **Straatverlichting:** elk MS-station heeft een LS-veld *Openbare verlichting* met een schemerschakeling. Alle lantaarns hangen aan het dichtstbijzijnde station en gaan uit als dat station of het OVL-veld spanningsloos is, met een lichtvlek op straat als ze branden.
+- **Inloop-MS-stations:** elk ringstation kun je in, via de open deur of met de knop *Naar binnen* in het stationspaneel. Binnen staan:
+  - een compacte RMU met de velden L, T en R, met standmelders, spanningslampjes en een kortsluitverklikker (KSV);
+  - een laagspanningsrek met een hoofdschakelaar en NH-lastscheiders per LS-veld (de klep gaat echt open of dicht);
+  - de distributietransformator achter een gaashek.
+  Schakelen gaat met het richtkruis: `F` voor direct schakelen, `E` voor het paneel.
+</details>
+
+<details>
+<summary><b>Gebouwen en schakelvelden</b></summary>
+
+Binnen staat een rij van 13 metaalomsloten schakelvelden (V-T1, F1–F3, meetveld, koppeling V-K, F4–F6, V-T3). In het 20 kV-gebouw staan W-T2, G1, G2, meetveld C1 met RC-Q8, koppeling W-K, meetveld C2 met RD-Q8, G3, G4 en W-T3. Elk veld heeft een live display, mimic-schema met standmelder en spanningslampjes. Klik op een veld om het te bedienen. Verder: beveiligingskasten, bedieningsbureau met live SCADA- en meldingenscherm, accubatterij en eigenbedrijfstransformator.
+</details>
+
+<details>
+<summary><b>Belasting</b></summary>
+
+Alle afnemers liggen 25% hoger dan in eerdere versies. De velden en distributietrafo's zijn gedimensioneerd op de winterpiek met 20–25% marge. In de normale schakeltoestand blijft alles onder 90%; bij terugvoeding, uitval of een extra piek wordt het snel krap. Daar zijn het tabblad *Kabels* en de flexmarkt voor.
+</details>
+
+## 🛠️ Bedrijfsvoering en hulpmiddelen
+
+<details>
+<summary><b>Schakelbrieven</b></summary>
+
+Bij een werkopdracht zie je de stappen meteen en kun je gewoon schakelen. Wil je bonuspunten, kies dan vóór de eerste stap *Zelf een schakelbrief opstellen*. Je kiest de handelingen (er zitten afleiders tussen), zet ze in volgorde en dient de brief in bij wachtchef Marieke.
+  - Goedgekeurd: +40 (+15 na correcties). Afgekeurd: −10, met uitleg waarom die stap niet klopt. Hint: −5.
+  - Ben je aan een brief begonnen, dan zie je de stappen pas na goedkeuring. Wijk je daarna af van je goedgekeurde brief, dan kost dat −25. Zonder brief is er geen straf.
+</details>
+
+<details>
+<summary><b>Portofoon</b></summary>
+
+Monteurs hebben een naam en melden zich bij aankomst en als het werk klaar is. Wil je schakelen aan of vlakbij hun werk, dan opent eerst het portofoonvenster:
+  - **melden**: de monteur bevestigt en daarna wordt er geschakeld (+10);
+  - **zonder melden schakelen**: −50 en een boze monteur;
+  - **annuleren**.
+</details>
+
+<details>
+<summary><b>Monteurs</b></summary>
+
+Collega's in een veiligheidsvest lopen het station of de wijk in bij inspecties, werkopdrachten en kabelfouten, en vertrekken weer als het werk klaar is.
+</details>
+
+<details>
+<summary><b>Dienstoverdracht</b></summary>
+
+Bij diensten en scenario's, niet bij vrij spelen of de lessen.
+
+bij de start geeft de operator van de vorige dienst een overdracht.
+  - Je ziet alle afwijkingen van de normale toestand, automatisch uit de installatie gehaald, plus het weer en de verwachte piek.
+  - Bij dag- en avonddiensten begint het station met 2–3 willekeurige afwijkingen. Voorbeelden: AR van een lijn nog uit na een relaistest, het normaal-open punt verlegd, F5 tijdelijk op rail A, T3 nog op 20 kV, L2 in onderhoud, of de kassen uit tot een afgesproken tijd.
+  - Open punten staan links bij je dienst; elk netjes afgehandeld punt geeft +25. Afspraken niet nakomen (bijvoorbeeld te vroeg inschakelen) kost −20.
+</details>
+
+<details>
+<summary><b>Belastingprognose</b></summary>
+
+Tabblad *Prognose*.
+
+de verwachte belasting op 10 en 20 kV voor de komende 8 uur, met seizoen en het huidige weer, afgezet tegen de capaciteit van de transformatoren in bedrijf (en met T3 erbij).
+  - Je ziet de piek, het moment van overbelasting en een advies (T3 bijschakelen, kassen afschakelen), plus een N-1-tip.
+  - Dreigt er binnen 1,5 uur overbelasting, dan krijg je een melding.
+</details>
+
+<details>
+<summary><b>Telefoon en klantmeldingen</b></summary>
+
+Klanten bellen bij uitval. De telefoon gaat over bovenin beeld; neem op en kies je antwoord:
+  - *“Dat is bekend, we werken eraan”* bij uitval die je in SCADA ziet (+5). Meestal hoef je dat niet zelf te zeggen: wie belt uit een gebied dat in SCADA spanningsloos is, krijgt automatisch het **storingsbandje**. Je telefoon gaat dan niet over. Zo heeft het oplossen van de storing voorrang. Elke ±10 minuten zie je een samenvatting (bijvoorbeeld *📼 Storingsbandje: 23 bellers uit MS2, MS3 …*), en het aantal staat in het eindrapport;
+  - *“Laat uw installateur kijken”* als alleen één woning zonder stroom zit (+10);
+  - *monteur sturen naar een MS-station* bij een **LS-storing**: een doorgebrande zekering in een laagspanningsveld. Die zie je **niet** in SCADA, alleen via klantmeldingen. Zoek het adres op in het ringschema (welke straat hangt aan welk station) en stuur de monteur naar het goede station (+60 bij snel herstel, −20 bij een verkeerd station). Ook vanuit het stationspaneel kun je een monteur sturen.
+  - Neemt niemand op, dan hangt de klant na ±45 s op (−5). Loopt er een uitval, dan wachten bellers ±2 minuten en kost ophangen geen punten.
+</details>
+
+<details>
+<summary><b>Laagspanning</b></summary>
+
+Toets `N`, de knop *LS* of het SCADA-tabblad *LS*.
+
+- Per MS-station zie je de **LS-velden** (straten en bedrijven): aan/uit, afname, opwek van zonnepanelen en de **spanning per straat** (norm 207–253 V).
+  - LS is **niet op afstand bedienbaar**. Je schakelt lokaal (loop het station binnen met `V` en gebruik `F`) of je stuurt een **monteur** (±7–11 min reistijd, korter als er al iemand is).
+  - **Kabelkasten** (KK12, KK23, KK34, KK45, KK67) koppelen een straat aan een straat van het buurstation. Valt een station uit, dan voed je zo één straat via de buurman. Dat mag alleen als één kant spanningsloos is én het LS-veld aan die kant open staat: anders voed je via de distributietrafo het MS-net terug. Parallel schakelen is niet toegestaan. Een kabelkast kan ±280 kW aan; daarboven smelt de zekering.
+  - **Zonnepanelen** (±1,2 kWp per woning) verhogen op zonnige middagen de spanning in lange straten. Boven 253 V schakelen de omvormers af en bellen klanten. De oplossing is de **vaste trap** van de distributietrafo (−2 … +2, 2,5% per stand). Die mag alleen spanningsloos worden versteld: open eerst `MSx-T`, eventueel met een kabelkast of aggregaat om de klanten te voeden. Te laag zetten geeft op een winteravond onderspanning (< 207 V).
+</details>
+
+<details>
+<summary><b>Punten terugverdienen bij een grote uitval</b></summary>
+
+Klantminuten blijven tellen, maar je kunt met acties punten terugverdienen:
+  - **Herstelbonus:** elke klant die na een storing weer stroom krijgt, levert punten op; sneller herstel levert meer op, en prioriteitsklanten geven extra. Wie je zelf afschakelde, telt niet mee.
+  - **Noodaggregaten:** drie aggregaten van 400 kVA. Stuur er een naar een spanningsloos MS-station (±15–25 min). De monteur opent `MSx-T` en het aggregaat voedt de LS-velden die IN staan. Houd het onder 400 kVA (schakel zo nodig straten af), anders valt het uit. Is het MS-net terug, laat het dan afkoppelen: de monteur sluit `MSx-T` weer.
+  - **Rotatie:** is er te weinig transformatorcapaciteit (een 110/10 kV-trafo boven 88%), dan tellen klanten die je zelf afschakelt de eerste 45 minuten maar half. Schakel je ze binnen 10–75 minuten weer in (rouleren), dan krijg je punten. Na 45 minuten krijg je een waarschuwing.
+  - **Klanten informeren:** geef per uitgevallen gebied een **verwachte hersteltijd** door (+10 binnen 10 min); haal je die, dan krijg je punten, ben je later, dan kost het punten. **Bel prioriteitsklanten** (ziekenhuis, RWZI, huisartsenpost) als ze zonder stroom zitten (+20 binnen 10 min).
+</details>
+
+<details>
+<summary><b>Netcongestie en flexibel vermogen</b></summary>
+
+Toets `C` of de knop *Flex*.
+
+- Een overzicht toont de zwaarst belaste kabels en transformatoren.
+  - Zeven klanten hebben een flexcontract: het laadplein (slim laden), het transportbedrijf (e-trucks later laden), het koelhuis, de metaalbewerking, de batterij van het distributiecentrum, de kassen (belichting dimmen) en het zonnepark (terugregelen).
+  - Je vraagt ze 25–100% terug te regelen. Na ±2 min is het actief; de vergoeding (€/MWh) gaat van je score af (1 punt per € 100). Dat is meestal veel goedkoper dan uitval.
+  - De distributietrafo's in de MS-stations zijn gedimensioneerd op hun winterpiek (2000–3150 kVA). Zit een trafo lang boven 120%, dan slaan de MS-zekeringen door; de monteur plaatst nieuwe en pas daarna mag de transformatorschakelaar weer dicht. Vanaf 105% krijg je een waarschuwing.
+</details>
+
+<details>
+<summary><b>Veroudering en preventief onderhoud</b></summary>
+
+Toets `O` of de knop *Onderhoud*.
+
+- Elke vermogenschakelaar heeft een conditie, een aantal schakelingen en een jaar van de laatste revisie. Schakelen slijt een beetje, het afschakelen van een foutstroom veel meer.
+  - Een versleten veldschakelaar kan bij een storing **weigeren**. De reservebeveiliging (50BF) schakelt dan de hele rail af; de schakelaar blijft IN staan. Schakel hem met de hand uit, neem de rail weer in bedrijf en laat hem reviseren.
+  - Een schakelaar zit na een weigering niet vast, maar **elke weigering maakt een volgende waarschijnlijker**: bij een storing én bij gewoon schakelen (dan reageert hij soms niet op het commando; opnieuw proberen kan). In het paneel en in *Onderhoud* zie je hoe vaak hij weigerde. Na een revisie is dat weer nul.
+  - Bij het terugzetten na een revisie mag het veld ook op de andere rail.
+  - De werkopdracht *Revisie vermogenschakelaar* komt vanzelf bij een slechte conditie, of plan hem zelf in vanuit het overzicht. Bij een ringveld sluit je eerst het normaal-open punt en maak je de kabel ook aan de ringkant vrij.
+</details>
+
+<details>
+<summary><b>Relaistest met de testkoffer</b></summary>
+
+10 kV-velden F1–F6.
+
+- Een beveiligingsrelais kan ongemerkt afwijken: de **aanspreekwaarde is verlopen**, het relais is **te traag** of het **uitschakelcircuit is defect**. Dat merk je pas bij een storing. Een relais dat niet uitschakelt, laat de reservebeveiliging de hele rail afschakelen; het veld blijft dan IN staan. Verlopen of trage relais schakelen een overbelasting te laat af, waardoor de kabel langer warm loopt.
+  - Afwijkingen komen alleen voor in de vrije dienst en de dag- en avonddienst, niet in scenario's en lessen.
+  - De werkopdracht *Relaistest veld …* komt vanzelf voor relais die 3 jaar of langer niet getest zijn. Je kunt hem ook zelf inplannen in het overzicht *Onderhoud* (`O`). Daar zie je per veld wanneer het relais het laatst is getest, en of het bij een storing heeft geweigerd.
+  - Je maakt het veld vrij (railkeuzescheiders open; bij een ringveld eerst het normaal-open punt dicht en de kabel aan de ringkant vrij). Daarna sluit de monteur de testkoffer aan en zet je de vermogenschakelaar voor de uitschakelproef in.
+  - In de **testkoffer** (toets `K` of de knop in de werkopdracht) injecteer je secundaire teststromen via de stroomtransformator (600/1 A):
+    - aanspreekproeven op 0,95× en 1,05× I>;
+    - tijdproeven op 2× en 5× I> tegen de IEC-kromme (standaard-invers, tolerantie ±10%);
+    - een uitschakelproef op de vermogenschakelaar.
+  - Daarna beoordeel je zelf: *goedkeuren* of *afkeuren – relais vervangen*. Een terecht afgekeurd relais levert +60 op en een terecht goedgekeurd relais +40. Onnodig vervangen kost −20. Keur je een afwijkend relais goed, dan vindt de wachtchef dat later in het testrapport (−50) en blijft het defect in het net.
+</details>
+
+<details>
+<summary><b>Werk staken</b></summary>
+
+Onder elke werkopdracht staat *Werk staken*. Dat gebruik je bij een storing waarvoor je de installatie nodig hebt, bijvoorbeeld T3 die bij onderhoud aan T2 meedraait terwijl T1 uitvalt.
+  - Alles wat al geschakeld is, wordt een herstelprogramma in omgekeerde volgorde (eerst de aarding eraf, als laatste de reserve terug).
+  - Na het herstel krijg je +30. Staken zonder storing kost −20; staken vanwege een storing kost niets.
+</details>
+
+<details>
+<summary><b>Beveiligingsinstellingen</b></summary>
+
+Toets `B` of de knop *Beveiliging*.
+
+- **I> per uitgaand veld** (110–150 %) en een **tijdfactor** (×0,5–×2). Te scherp: koude-lastopname leidt tot afschakeling. Te ruim: een langdurig overbelaste kabel raakt beschadigd.
+  - **AR dode tijd per lijn** (0,3 / 1 / 3 s). Kort: de herinschakeling mislukt soms omdat de boog nog niet gedoofd is. 3 s: altijd raak, maar draait het station op één lijn, dan vallen processen bij klanten uit.
+  - **Thermische trip per trafo** (95 / 100 / 110 °C). Hoog geeft meer reserve, maar boven 105 °C ontstaat gasvorming en dreigt een Buchholz-trip met een lange inspectie.
+</details>
+
+<details>
+<summary><b>SCADA</b></summary>
+
+**SCADA** heeft tabbladen voor 10 kV, 20 kV, de ring, **Meppel**, **kabels**, **LS** en de **prognose**.
+  - Is er een storing in een deel van de installatie, dan **knippert het tabblad rood** tot hij is opgelost. Beweeg over het tabblad om te zien welke storing het is.
+    - **10 kV:** kabelfout of uitval van een veld, railfout of dode rail A/B, T1 geblokkeerd, vastzittende schakelaar.
+    - **20 kV:** hetzelfde voor rail C1/C2, T2 en de G-velden.
+    - **Ring:** kabelfout, beschadigd station, doorgeslagen zekeringen of onverwacht spanningsloos station.
+    - Een 110 kV-lijn die uitvalt of een geblokkeerde T3 laat zowel 10 kV als 20 kV oplichten.
+  - **Kabels:** per ringkabel de stroom tegen de rating (330 A, kopkabels 400 A), een belastingsbalk (groen, oranje boven 85%, rood boven 100%), de spanning aan het eind en of hij een fout heeft of spanningsloos is. Ook de uitgaande veldkabels en de distributietrafo's per MS-station. Klik op een ringkabel voor het station erachter. Zoomen kan met de knoppen **−/+**, met `Ctrl` + scrollwiel of met de toetsen `+` en `−` (75–250 %). Het paneel wordt dan mee breder.
+</details>
+
+<details>
+<summary><b>Realistische bedrijfsvoering (spanningsregeling, synchrocheck, AR, relais 86 …)</b></summary>
+
+- **Spanningsregeling:** de 110 kV-netspanning varieert over de dag. De trappenschakelaar (17 standen, 1,25 % per trap) houdt de 10 kV-rail op 10,50 kV ±1,2 %. AUTO of HAND kies je in het transformatorpaneel. Bij gekoppelde rails regelen de transformatoren als master-follower. Ongelijke trappen geven circulatiestroom en extra belasting.
+- **Synchrocheck:** V-K schakelt alleen in bij minder dan 0,25 kV spanningsverschil tussen rail A en rail B, W-K bij minder dan 0,5 kV tussen C1 en C2.
+- **Automatische herinschakeling (AR)** op de 110 kV-lijnen: een tijdelijke fout wordt na de dode tijd (standaard 1 s) hersteld, een blijvende fout leidt tot lockout. AR en dode tijd stel je per lijn in.
+- **Inschakelveer:** na het inschakelen laadt de veer ongeveer 7 s; zolang dat duurt kan de schakelaar niet opnieuw inschakelen.
+- **Blokkeerrelais 86:** na een transformatortrip handmatig resetten, en pas na de inspectie of na afkoelen tot onder 75 °C.
+- **Kabelstoringen:** eerst zoekt de storingsdienst de fout (inschakelen geeft dan direct weer een trip), daarna wordt de fout geïsoleerd en kun je het veld inschakelen. Een deel van de klanten wacht nog op de reparatie.
+- **Koude-lastopname:** na een lange onderbreking ligt de belasting tijdelijk tot 60 % hoger. Een vertraagde overstroombeveiliging (I>) kan dan afschakelen.
+- **Aardschakelaars kabelzijde** (F1-Q8 … F6-Q8) met een opdracht voor kabelwerk, waarbij de klanten eerst via het net worden omgeschakeld.
+</details>
+
+<details>
+<summary><b>Spelregels (bewust simpel)</b></summary>
+
 - Een scheider (Q1/Q9) schakel je alleen als de vermogenschakelaar (Q0) van hetzelfde veld UIT staat. Doe je dat met de vergrendelingen uit, dan ontstaat er een vlamboog.
 - Sluit een aardschakelaar (Q8) alleen op een spanningsloze lijn.
 - Willekeurige storingen: blikseminslag op een lijn, kabelfouten, LS-storingen (alleen via de telefoon te vinden), transformatortrips (hooguit één keer per trafo per dienst) en af en toe een **railfout**. Bij een railfout schakelt de railbeveiliging alle velden van één railhelft af; die helft blijft spanningsloos tot de monteur klaar is. Inschakelen op de rail geeft een nieuwe trip.
@@ -248,44 +391,51 @@ Binnen staat een rij van 13 metaalomsloten schakelvelden (V-T1, F1–F3, meetvel
   - **onderhoud MS-station**: de klanten op een noodaggregaat, de ring sluiten en het station eruit halen;
   - **thermografie-ronde**: loop (`V`) of vlieg langs drie onderdelen. Dichtbij zie je met de warmtebeeldcamera een gloeiende hotspot, en daarna volgt direct de herstelopdracht.
 - Een transformator is 20 MVA (ONAN) of 25 MVA met ventilatoren (ONAF). Draait één transformator alles tijdens de avondpiek, dan wordt hij te warm en schakelt hij af bij een olietemperatuur van 100 °C.
+</details>
 
-## Realistische bedrijfsvoering
-- **Spanningsregeling:** de 110 kV-netspanning varieert over de dag. De trappenschakelaar (17 standen, 1,25 % per trap) houdt de 10 kV-rail op 10,50 kV ±1,2 %. AUTO of HAND kies je in het transformatorpaneel. Bij gekoppelde rails regelen de transformatoren als master-follower. Ongelijke trappen geven circulatiestroom en extra belasting.
-- **Synchrocheck:** V-K schakelt alleen in bij minder dan 0,25 kV spanningsverschil tussen rail A en rail B, W-K bij minder dan 0,5 kV tussen C1 en C2.
-- **Automatische herinschakeling (AR)** op de 110 kV-lijnen: een tijdelijke fout wordt na de dode tijd (standaard 1 s) hersteld, een blijvende fout leidt tot lockout. AR en dode tijd stel je per lijn in.
-- **Inschakelveer:** na het inschakelen laadt de veer ongeveer 7 s; zolang dat duurt kan de schakelaar niet opnieuw inschakelen.
-- **Blokkeerrelais 86:** na een transformatortrip handmatig resetten, en pas na de inspectie of na afkoelen tot onder 75 °C.
-- **Kabelstoringen:** eerst zoekt de storingsdienst de fout (inschakelen geeft dan direct weer een trip), daarna wordt de fout geïsoleerd en kun je het veld inschakelen. Een deel van de klanten wacht nog op de reparatie.
-- **Koude-lastopname:** na een lange onderbreking ligt de belasting tijdelijk tot 60 % hoger. Een vertraagde overstroombeveiliging (I>) kan dan afschakelen.
-- **Aardschakelaars kabelzijde** (F1-Q8 … F6-Q8) met een opdracht voor kabelwerk, waarbij de klanten eerst via het net worden omgeschakeld.
+## 🌳 Wereld en sfeer
 
-## Tests
-Automatische tests sturen de simulator aan in headless Chrome. Ze dekken onder meer vergrendelingen, vlamboog, reservetransformator, ringfout met terugvoeding, spanningsregelaar, schakelbrief, portofoon, de railsplitsing met railfout, het dubbelrailsysteem, beveiligingsinstellingen, werk staken, de onderhoudstypes, alle vijf de lessen, de prognose, de telefoon, de dienstoverdracht, de nieuwe scenario's, de tijdlijn met herhaling en het pauzemenu.
+<details>
+<summary><b>Leven in de wijk</b></summary>
 
-```powershell
-npm install
-npm test            # of: npm test -- ring   (alleen tests met 'ring' in de naam)
-npm run test:scenarios          # speelt alle scenario's en beide diensten volledig uit (±12 min)
-npm run test:scenarios -- storm # alleen één scenario
-node tests/shots.mjs            # screenshots van de wijk met het echte 3D-beeld (map shots/)
-npm run test:stress             # 10 min vrije dienst mét 3D-code, met storingen, incidenten en klikken (NORENDER=1: zonder tekenen)
-```
+- **Straatbeeld:** stoepen van tegels met stoepranden, belijning op de doorgaande wegen en een woonerf met klinkers, bomen en geparkeerde auto's. De rijtjeshuizen hebben voortuinen met een heg en tuinpad, kliko's, schuttingen en schuurtjes in de achtertuin, pannendaken met dakgoten, dakkapellen en op ongeveer een derde van de huizen **zonnepanelen** (op het zuiden). De flats hebben balkons en elk een eigen gevelkleur; in het centrum zijn er parkeerstroken, een winkelstoep en een parkeerterrein. Alles is procedureel en wordt per materiaal samengevoegd, dus het kost nauwelijks extra rekenkracht.
+- **Verlichte ramen:** 's avonds gaat het licht aan in de woningen en appartementen; laat in de nacht nog maar een paar. Elk huis hangt aan het dichtstbijzijnde MS-station: valt dat station uit, dan gaan de lichten in die buurt uit. Bij een noodaggregaat blijven ze branden.
+- **Verkeer:** een dozijn auto's rijdt rechts over de straten van beide wijken, met koplampen en een lichtbundel in het donker. In de spits rijden er meer.
+- **Buren:** zit een station een paar minuten zonder stroom, dan komen de buren naar buiten; 's avonds met de zaklamp van hun telefoon.
+</details>
 
-De stresstest draait zonder `?lite`, dus ook de code voor labels, panelen en het 3D-beeld. Hij faalt bij een paginafout, een fout in de hoofdlus of als de klok stilstaat.
+<details>
+<summary><b>Seizoenen en weer</b></summary>
 
-In het spel zelf vangt de hoofdlus fouten op. Een fout in één beeld zet het spel dus niet meer stil, maar verschijnt als melding *Interne fout*.
+- **Seizoenen** (lente, zomer, herfst, winter) kies je in het menu; standaard is het **zomer**. Scenario's en lessen hebben hun eigen seizoen. Ze bepalen:
+  - zonsopkomst, zonsondergang en zonnehoogte;
+  - de buitentemperatuur;
+  - de belasting (winter: verwarming, zomer: airco);
+  - de opbrengst van het zonnepark;
+  - de schakeltijden van kassen en straatverlichting.
+- **Weer:** helder, bewolkt, regen, onweer, mist, sneeuw (met sneeuwdek) en hittegolf, wisselend tijdens een dienst. Het weer beïnvloedt:
+  - lucht en zicht;
+  - neerslag;
+  - transformatortemperaturen;
+  - zonne-opbrengst;
+  - de kans op blikseminslag.
+- De weerindicator met de buitentemperatuur staat in de bovenbalk. Voor testen kun je `?season=winter&weer=sneeuw` gebruiken.
+</details>
 
-Bij `test:scenarios` speelt een automatische operator het spel uit zoals een goede speler dat doet. Hij isoleert kabelfouten, zet T3 in als reserve, voert werkopdrachten uit (met schakelbrief) en meldt zich bij monteurs. Per run zie je de score, de klantminuten, de doelen en de langste uitval. Een afwijkend resultaat speel je opnieuw met dezelfde seed: `SEED=123456`. Met `FULLLOG=1` krijg je het volledige verloop.
+<details>
+<summary><b>Geluid</b></summary>
 
-Beide draaien parallel met meerdere browsers tegelijk, maar zuinig, zodat de machine bruikbaar blijft:
-- standaard een kwart van de processorkernen (maximaal 3, op GitHub 2); met `TEST_JOBS=…` kies je zelf;
-- de tests en hun browsers draaien met **lagere prioriteit** (`TEST_PRIORITY=normal` om dat uit te zetten);
-- de tests openen het spel met `?lite`: de simulatie, panelen en meldingen lopen gewoon, maar het 3D-beeld wordt niet getekend en de hoofdlus draait 15× per seconde. Zonder grafische kaart kost één 3D-beeld in software ±2 kernseconden; zo gebruikt een testbrowser in rust nog maar ±0,3 kern in plaats van alle kernen;
-- de browsers tekenen de pagina (SCADA, panelen) met de gewone processor in plaats van via de software-grafiek SwiftShader (`--disable-gpu-compositing`, `--disable-gpu-rasterization`, `--disable-accelerated-2d-canvas`).
+Alle geluid wordt in de browser gemaakt (Web Audio) en hangt af van waar je bent:
+- **In de MS-gebouwen:** zoemen van de installatie en ventilatie.
+- **In een MS-station:** trafobrom die meegroeit met de belasting.
+- **Op het 110 kV-terrein:** transformatorbrom en corona-geknetter (sterker bij regen en mist).
+- **In de wijk:** verkeersgeruis, passerende auto's, vogels overdag en krekels op zomer- en lenteavonden.
+- **Overal:** wind, regen en onweer.
+</details>
 
-Gebruik `CHROME_PATH` als Chrome niet op een standaardplek staat.
+<a id="ontwikkelen"></a>
+## 🧑‍💻 Ontwikkelen
 
-## Ontwikkelen
 De broncode staat in `src/`. `build.ps1` plakt de bestanden in strikte naamvolgorde aan elkaar tot één `index.html`.
 
 | Bestanden | Inhoud |
@@ -325,3 +475,43 @@ Voor het bouwen draait eerst `npm run lint` (`tests/lint.mjs`), die verborgen fo
 De lint draait ook op GitHub vóór de tests.
 
 URL-parameters om te testen: `?autostart`, `?t=18.5` (starttijd), `?view=0..6`, `?night`, `?play=zkh|storm|piek|blackout|hitte|winter|dubbel|aanrijding|cyber|overstroming|zonnepiek|kraan|brand|evenement|laadpiek|les1…les8|day|eve|free&diff=rustig|normaal|zwaar`.
+
+## 🧪 Tests
+
+Automatische tests sturen de simulator aan in headless Chrome. Ze dekken onder meer vergrendelingen, vlamboog, reservetransformator, ringfout met terugvoeding, spanningsregelaar, schakelbrief, portofoon, de railsplitsing met railfout, het dubbelrailsysteem, beveiligingsinstellingen, werk staken, de onderhoudstypes, alle vijf de lessen, de prognose, de telefoon, de dienstoverdracht, de nieuwe scenario's, de tijdlijn met herhaling en het pauzemenu.
+
+```powershell
+npm install
+npm test            # of: npm test -- ring   (alleen tests met 'ring' in de naam)
+npm run test:scenarios          # speelt alle scenario's en beide diensten volledig uit (±12 min)
+npm run test:scenarios -- storm # alleen één scenario
+node tests/shots.mjs            # screenshots van de wijk met het echte 3D-beeld (map shots/)
+npm run test:stress             # 10 min vrije dienst mét 3D-code, met storingen, incidenten en klikken (NORENDER=1: zonder tekenen)
+```
+
+De stresstest draait zonder `?lite`, dus ook de code voor labels, panelen en het 3D-beeld. Hij faalt bij een paginafout, een fout in de hoofdlus of als de klok stilstaat.
+
+In het spel zelf vangt de hoofdlus fouten op. Een fout in één beeld zet het spel dus niet meer stil, maar verschijnt als melding *Interne fout*.
+
+Bij `test:scenarios` speelt een automatische operator het spel uit zoals een goede speler dat doet. Hij isoleert kabelfouten, zet T3 in als reserve, voert werkopdrachten uit (met schakelbrief) en meldt zich bij monteurs. Per run zie je de score, de klantminuten, de doelen en de langste uitval. Een afwijkend resultaat speel je opnieuw met dezelfde seed: `SEED=123456`. Met `FULLLOG=1` krijg je het volledige verloop.
+
+Beide draaien parallel met meerdere browsers tegelijk, maar zuinig, zodat de machine bruikbaar blijft:
+- standaard een kwart van de processorkernen (maximaal 3, op GitHub 2); met `TEST_JOBS=…` kies je zelf;
+- de tests en hun browsers draaien met **lagere prioriteit** (`TEST_PRIORITY=normal` om dat uit te zetten);
+- de tests openen het spel met `?lite`: de simulatie, panelen en meldingen lopen gewoon, maar het 3D-beeld wordt niet getekend en de hoofdlus draait 15× per seconde. Zonder grafische kaart kost één 3D-beeld in software ±2 kernseconden; zo gebruikt een testbrowser in rust nog maar ±0,3 kern in plaats van alle kernen;
+- de browsers tekenen de pagina (SCADA, panelen) met de gewone processor in plaats van via de software-grafiek SwiftShader (`--disable-gpu-compositing`, `--disable-gpu-rasterization`, `--disable-accelerated-2d-canvas`).
+
+Gebruik `CHROME_PATH` als Chrome niet op een standaardplek staat.
+
+<a id="english"></a>
+## 🇬🇧 English
+
+**Onderstation Simulator** is a free, realistic **3D electrical substation simulator** that runs in your browser (Three.js, WebGL, no installation). You operate OS Zuidwolde, a fictional Dutch **110/10/20 kV substation**, through a **SCADA single-line diagram** or by walking around in first person: switch breakers and disconnectors with interlocks, restore supply after cable faults, lightning strikes and transformer trips, back-feed **10 kV ring networks**, manage **grid congestion** with flexible demand, test protection relays, dispatch field crews and mobile generators, and deal with **low-voltage** issues such as rooftop-solar overvoltage. It includes guided lessons, scenarios, 8-hour shifts with a score and replay, and an endless free mode with random incidents. The user interface is in **Dutch**.
+
+**Play:** download the repository and open `index.html`, or clone it with `git clone https://github.com/ProAdmin007/Onderstation-SIM-Pro.git`.
+
+---
+
+<div align="center">
+<sub>Gemaakt met Three.js · alles procedureel (geen modellen of texturen) · één HTML-bestand van ±490 kB</sub>
+</div>
