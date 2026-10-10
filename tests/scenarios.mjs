@@ -86,7 +86,6 @@ async function bot(process_full) {
         if (!O.RING.secs.some(x => x.ring === s.ring && x.handled)) await op(s.ring.nop, 0); }
     }
     // 2a. vastzittende vermogenschakelaar (weigering): railkeuzescheiders openen zolang de rail dood is
-    for (const f of O.FEEDERS) { const d = D[f.cb]; if (d.stuck && !EN().has(f.sel)) for (const q of ['QA', 'QB']) if (D[f.id + '-' + q]?.state) await op(f.id + '-' + q, 0); }
     // 2b. beschadigd of te ontruimen MS-station: vanaf de buren isoleren en terugvoeden; daarna terug
     for (const s of O.RING.stations) { const st = s.ring.stations, i = st.indexOf(s), L = st[i - 1], R = st[i + 1], iso = [L && L.id + '-R', R && R.id + '-L'].filter(Boolean);
       if ((s.damaged || s.evac) && !s.botIso) { if (!iso.includes(s.ring.nop)) await op(s.ring.nop, 1); for (const id of iso) await op(id, 0); if (i === 0) await op(cbOf(s.ring.from), 0); if (i === st.length - 1) await op(cbOf(s.ring.to), 0); s.botIso = true; note(`${s.id} geïsoleerd`); }

@@ -5,7 +5,7 @@
 var RESUMING=false;
 const SAVE_KEY='osz-save',SAVE_V=1;
 const BASE0=new Map(CONS.map(c=>[c.id,c.base]));   // normale belasting per afnemer (voor het opruimen van een lopend incident)
-const KEYS={dev:['state','ops','wear','stuck','year','wearWarn','oil','tap','avr','fans','fanFail','blocked','resettable','blockText','blockKind','ratio','gas','hot'],
+const KEYS={dev:['state','ops','wear','refusals','year','wearWarn','oil','tap','avr','fans','fanFail','blocked','resettable','blockText','blockKind','ratio','gas','hot'],
   feed:['relay','relayYear','relayKnown','fault','outFrac','clp','offSince','oc','temp','hotWarn','backfed','interruptible','base','unplanned','wait','wasOn'],
   lvg:['outFrac','lvf','backfed','cut','base','offSince','clp'],sec:['fault','located','temp','ovl','hot'],
   st:['flag','damaged','evac','fuse','genset','trOt','trWarn','unplanned','wait','wasOn']};
@@ -52,6 +52,8 @@ function resumeGame(d){$('#intro').classList.add('hidden');AudioSys.init();contr
   Object.assign(GAME,d.GAME,{obj:GAME.obj,ended:false});GAME.obj.forEach((o,k)=>{o.state=d.GAME.obj[k]??null;});
   if(d.ho){GAME.handover={op:d.hoOp,open:false,dev:[],items:d.ho.map(h=>{const o=Object.create(HO_POOL.find(x=>x.id===h.id));Object.assign(o,h.f);o.done=h.done;return o;})};}
   for(const id in d.D)if(D[id])Object.assign(D[id],d.D[id]);
+  // oudere saves: een vastzittende schakelaar telt nu als één weigering
+  Object.values(D).forEach(x=>{if(x.stuck){delete x.stuck;x.refusals=Math.max(1,x.refusals||0);}});
   FEEDERS.forEach(f=>Object.assign(f,d.F[f.id]||{}));LVG.forEach(g=>Object.assign(g,d.LV[g.id]||{}));
   RING.secs.forEach(s=>Object.assign(s,d.SEC[s.id]||{}));RING.stations.forEach(s=>Object.assign(s,d.ST[s.id]||{}));
   for(const k in BUSF)delete BUSF[k];d.BUSF.forEach(b=>BUSF[b]=true);

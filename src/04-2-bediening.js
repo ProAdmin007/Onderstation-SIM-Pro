@@ -6,8 +6,8 @@ const springOk=d=>performance.now()>=d.springAt;
 function actionText(d,to){return d.type==='cb'||d.type==='lvs'?(to?'IN':'UIT'):(to?'GESLOTEN':'GEOPEND');}
 function interlockCheck(d,to){
   if(d.type==='ds'){const cb=D[d.cb];if(d.sel&&to===1&&D[d.other].state===1&&D['V-K'].state!==1)return 'Vergrendeling: een veld mag alleen op beide rails als koppeling V-K gesloten is';
-    if(cb.state===1&&!selPar(d)&&!(cb.stuck&&!EN.has(d.a)&&!EN.has(d.b)))return d.sel?`Vergrendeling: ${cb.id} moet eerst UIT (of: V-K dicht en het veld eerst ook op de andere rail)`:`Vergrendeling: ${cb.id} moet eerst UIT`;if(to===1&&d.es&&D[d.es].state===1)return `Vergrendeling: aardschakelaar ${d.es} is gesloten`;}
-  if(d.type==='es'&&to===1){if(d.ds&&D[d.ds].state===1)return `Vergrendeling: ${d.ds} moet eerst open`;if(d.cb&&D[d.cb].state===1&&!(D[d.cb].stuck&&!EN.has(d.a)))return `Vergrendeling: ${d.cb} moet eerst UIT`;if(EN.has(d.a))return 'Vergrendeling: spanning aanwezig (spanningsdetectie)';}
+    if(cb.state===1&&!selPar(d))return d.sel?`Vergrendeling: ${cb.id} moet eerst UIT (of: V-K dicht en het veld eerst ook op de andere rail)`:`Vergrendeling: ${cb.id} moet eerst UIT`;if(to===1&&d.es&&D[d.es].state===1)return `Vergrendeling: aardschakelaar ${d.es} is gesloten`;}
+  if(d.type==='es'&&to===1){if(d.ds&&D[d.ds].state===1)return `Vergrendeling: ${d.ds} moet eerst open`;if(d.cb&&D[d.cb].state===1)return `Vergrendeling: ${d.cb} moet eerst UIT`;if(EN.has(d.a))return 'Vergrendeling: spanning aanwezig (spanningsdetectie)';}
   if(d.link&&to===1){if(!EN.has(d.b))return 'Vergrendeling: de koppelkabel uit Meppel is spanningsloos – koppelen mag alleen om vanuit Meppel te voeden';
     if(EN.has(d.a))return 'Vergrendeling: niet parallel schakelen met het net van Netbeheer Noord – maak eerst de ringkant spanningsloos';}
   if(d.id==='V-K'&&to===0){const both=Object.values(D).find(x=>x.sel&&x.id.endsWith('QA')&&x.state===1&&D[x.other].state===1);if(both)return `Vergrendeling: veld ${both.bay} staat op beide rails – open eerst één railkeuzescheider`;}
@@ -24,8 +24,8 @@ function operate(id,to,opts={}){
   const dst=d.bay&&RING.stations.find(s=>s.id===d.bay);if(dst&&dst.damaged)return deny(`${dst.id} is beschadigd (${dst.damaged}) – niet bedienbaar. Isoleer vanaf het buurstation.`);
   if(SCADA_DOWN()&&!localOk(id))return deny('SCADA-verbinding verbroken – loop erheen (V) en bedien lokaal aan het veld');
   if(to===1&&/-T$/.test(id)&&RING.stations.find(s=>s.id+'-T'===id)?.fuse)return deny('Zekeringen nog niet vervangen – wacht op de monteur');
-  if(d.type==='cb'&&d.stuck)return deny(`${id} zit mechanisch vast na een weigering – isoleer hem met de railkeuzescheider en laat hem reviseren`);
   if(d.busy)return deny('Bediening loopt nog…');
+  if(d.type==='cb'&&manualRefuses(d)){pushAlarm(`${id} reageert niet op het ${to?'in':'uit'}schakelcommando (weigerde eerder ${d.refusals}×) – probeer het opnieuw en laat hem reviseren`,'warn');return deny(`${id} weigert – probeer het opnieuw`);}
   if(d.type==='cb'&&to===1){
     if(d.tr&&D[d.tr].blocked)return deny(`${d.tr} geblokkeerd door relais 86 (${D[d.tr].blockText}) – eerst resetten`);
     if(!springOk(d))return deny(`${id}: inschakelveer wordt nog geladen…`);}

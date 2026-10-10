@@ -91,7 +91,6 @@ function tabAlarms(){const out={'10':[],'20':[],R:[],M:[]},add=(t,why)=>out[t].p
   BUS_IDS.forEach(b=>{const t=b==='MP'?'M':is20(b)?'20':'10',nm=BUSES[b].nm;if(b==='MP'&&!SIM.meppel.avail)return;if(BUSF[b])add(t,`railfout rail ${nm}`);else if(!EN.has(b))add(t,`rail ${nm} spanningsloos`);});
   if(D.T1.blocked)add('10','T1 geblokkeerd');if(D.T2.blocked)add('20','T2 geblokkeerd');
   FEEDERS.forEach(f=>{const t=f.bus==='MP'?'M':is20(f.bus)?'20':'10';if(f.ring)return;if(f.fault)add(t,`kabelfout ${f.id}`);else if(f.unplanned&&!EN.has(f.node))add(t,`${f.id} spanningsloos`);});
-  CB_IDS.forEach(id=>{const d=D[id];if(d.stuck)add(d.feeder?.bus==='MP'?'M':d.feeder&&is20(d.feeder.bus)?'20':'10',`${id} zit vast`);});
   RING.secs.forEach(s=>{if(s.fault)add('R',`kabelfout ${secName(s)}`);else if(s.temp>CABLE.max)add('R',`kabel ${secName(s)} te warm`);});
   RING.stations.forEach(s=>{if(s.damaged)add('R',`${s.id} beschadigd`);else if(s.fuse)add('R',`zekeringen ${s.id}`);else if(s.unplanned&&!EN.has(s.node))add('R',`${s.id} spanningsloos`);});
   return out;}
@@ -180,7 +179,7 @@ function rowsFor(d){const r=[],A=(k,f)=>r.push([k,f]);
   if(d.type==='es')A(d.cb?'Spanning kabelzijde':'Spanning lijnzijde',()=>fmtKV(nodeU(d.a)));
   if(['ct','sa','bb','line','kiosk'].includes(d.type))A('Spanning',()=>fmtKV(nodeU(d.node)));
   if(['cb','ds','ct','lbs'].includes(d.type))A('Stroom',()=>`${Math.round(D[d.ref||d.id].I)} A`);
-  if(d.type==='cb'){A('Conditie',()=>`<span class="${d.stuck||cond(d)<0.25?'bad':cond(d)<0.4?'warnc':''}">${d.stuck?'VAST (weigering) · ':''}${Math.round(cond(d)*100)}%</span> · revisie ${d.year}`);A('Inschakelveer',()=>springOk(d)?'geladen':'<span class="warnc">laden…</span>');A('Schakelingen',()=>d.ops);}
+  if(d.type==='cb'){A('Conditie',()=>`<span class="${d.refusals||cond(d)<0.25?'bad':cond(d)<0.4?'warnc':''}">${d.refusals?`weigerde ${d.refusals}× · `:''}${Math.round(cond(d)*100)}%</span> · revisie ${d.year}`);A('Inschakelveer',()=>springOk(d)?'geladen':'<span class="warnc">laden…</span>');A('Schakelingen',()=>d.ops);}
   if(d.line)A('Herinschakeling (AR)',()=>(SIM.lines[d.line].ar?'IN bedrijf':'<span class="warnc">UIT bedrijf</span>')+` · dode tijd ${protTxt('dt',PROT.ln[d.line].dt)}`);
   if(d.feeder&&!d.feeder.gen)A('Beveiliging I>',()=>`${protTxt('pick',PROT.f[d.feeder.id].pick)} · t ${protTxt('tms',PROT.f[d.feeder.id].tms)}`);
   if(d.type==='tr')A('Thermische trip',()=>protTxt('trip',PROT.tr[d.id].trip)+(d.gas>0.5?' · <span class="bad">gasvorming!</span>':''));

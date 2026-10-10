@@ -32,7 +32,7 @@ Object.assign(MODES,{
           pushAlarm('Tip: het ziekenhuis gaat op noodstroom (±60 min brandstof). De 20 kV-installatie in het andere gebouw kan gewoon in bedrijf blijven.','info');});});},
     tick(dm){const r=GAME.flags.fireReq;if(r==null)return;const dead=!EN.has('RA')&&!EN.has('RB');
       if(dead&&!GAME.flags.deadAt){GAME.flags.deadAt=SIM.t;GAME.countdown={label:'Noodstroom ziekenhuis',until:SIM.t+60};pushAlarm('Brandweer: 10 kV spanningsloos bevestigd – we gaan naar binnen','ok');
-        at(SIM.t-GAME.t0+30,()=>{FIRE.on=false;if(FIRE.glow){scene.remove(FIRE.glow);FIRE.glow=null;}GAME.flags.mustOpen=null;GAME.flags.outAt=SIM.t;D['V-F6'].stuck=true;
+        at(SIM.t-GAME.t0+30,()=>{FIRE.on=false;if(FIRE.glow){scene.remove(FIRE.glow);FIRE.glow=null;}GAME.flags.mustOpen=null;GAME.flags.outAt=SIM.t;{const v=D['V-F6'];v.refusals=(v.refusals||0)+2;v.wear=Math.max(v.wear,0.8);}
           readyNotice('Brandweer: brand geblust, rook afgezogen. De 10 kV mag weer onder spanning – V-F6 heeft rookschade en blijft defect',null);});}
       if(GAME.flags.deadAt&&!GAME.flags.outAt&&!dead&&!GAME.flags.danger){GAME.flags.danger=true;incident();pushAlarm('Brandweer: er staat weer spanning op de installatie terwijl wij binnen zijn! Iedereen naar buiten!','crit');}},
     obj:()=>[{t:'10 kV spanningsloos binnen 10 min na het verzoek',check:()=>GAME.flags.fireReq==null?null:GAME.flags.deadAt?'done':SIM.t>GAME.flags.fireReq+10?'fail':null},

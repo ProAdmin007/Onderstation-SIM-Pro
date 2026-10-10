@@ -23,7 +23,7 @@ function deviations(){const out=[],sw=(id,norm)=>D[id]&&D[id].state!==norm;
   RINGS.forEach(rg=>{const open=rg.stations.flatMap(s=>[s.id+'-L',s.id+'-R']).filter(id=>D[id].state===0);if(open.join()!==rg.nop)out.push(`${rg.name}: open lastscheiders <b>${open.join(', ')||'geen (ring gesloten)'}</b> (normaal ${rg.nop})`);});
   FEEDERS.forEach(f=>{if(!D[f.cb].state)out.push(`Veld <b>${f.cb}</b> (${f.name}) UIT`);});
   Object.values(D).forEach(d=>{if(d.type==='es'&&d.state)out.push(`Aardschakelaar <b>${d.id}</b> gesloten`);});
-  CB_IDS.forEach(id=>{const d=D[id];if(d.stuck)out.push(`<b>${id}</b> zit vast na een weigering`);else if(cond(d)<0.3)out.push(`<b>${id}</b> in slechte conditie (${Math.round(cond(d)*100)}%) – revisie aanbevolen`);});
+  CB_IDS.forEach(id=>{const d=D[id];if(d.refusals)out.push(`<b>${id}</b> weigerde ${d.refusals}× – revisie nodig`);else if(cond(d)<0.3)out.push(`<b>${id}</b> in slechte conditie (${Math.round(cond(d)*100)}%) – revisie aanbevolen`);});
   if(TASK)out.push(`Lopende werkopdracht <b>${TASK.code}</b>: ${TASK.title}`);return out;}
 function handoverInit(m){const op=pick(PREV_OP),items=[];
   if(!m.scen){const n=2+(Math.random()<0.5?1:0);HO_POOL.slice().sort(()=>Math.random()-0.5).slice(0,n).forEach(it=>{const o=Object.create(it);o.setup();items.push(o);});}

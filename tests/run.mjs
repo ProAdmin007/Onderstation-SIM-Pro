@@ -305,17 +305,27 @@ const TESTS = [
       assert(r.teVroeg && r.p1 < r.p0 * 0.4 && r.eur > 0, `flex werkt niet: ${JSON.stringify(r)}`);
       assert(r.zeker && r.geweigerd && r.terug && r.cg > 0, `zekeringen/congestie kloppen niet: ${JSON.stringify(r)}`);
   } },
-  { name: 'veroudering: weigering met 50BF, isoleren en revisie', query: '?autostart&t=11', async run(p) {
-      const r = await p.evaluate(async () => { T.quiet(); const O = OS, D = O.D, EN = () => O.EN(); O.SIM.paused = false; T.step(0.3);
+  { name: 'veroudering: weigering (50BF) wordt steeds waarschijnlijker, maar zit niet vast; revisie in andere volgorde', query: '?autostart&t=11', async run(p) {
+      const r = await p.evaluate(async () => { T.quiet(); const O = OS, D = O.D, d = D['V-F6'], EN = () => O.EN(), rnd0 = Math.random; O.SIM.paused = false; T.step(0.3);
         const ops0 = D['V-F4'].ops, w0 = D['V-F4'].wear; await T.op('V-F4', 0); await T.op('V-F4', 1); const slijt = D['V-F4'].ops === ops0 + 2 && D['V-F4'].wear > w0;
-        D['V-F6'].stuck = true; O.feederFault('F6', 5); T.step(0.2);
-        const railB = !EN().has('RB'), railA = EN().has('RA'), vast = D['V-F6'].state === 1;
-        O.operate('V-F6', 0); const weiger = D['V-F6'].state === 1;
-        const iso = await T.op('F6-QB', 1 - 1); await T.op('V-K', 1); await T.op('V-F5', 1); T.step(0.3); const herstel = EN().has('RB') && EN().has('F5');
-        O.startTask('cbMaintTask', 'V-F6');
-        for (let k = 0; k < 120 && O.task(); k++) { const s = O.task().steps[O.task().i]; if (s.act && !(s.act[0] === 'V-F6' && D['V-F6'].stuck)) await T.op(...s.act); T.step(0.5); }
-        return { slijt, railB, railA, vast, weiger, iso, herstel, klaar: !O.task(), nieuw: !D['V-F6'].stuck && O.cond(D['V-F6']) > 0.9, aan: EN().has('F6') }; });
-      for (const [k, v] of Object.entries(r)) assert(v, `${k} klopt niet: ${JSON.stringify(r)}`);
+        const aan0 = Object.values(D).filter(x => x.type === 'cb' && x.state === 1).map(x => x.id);
+        O.SIM.failTest = true; d.wear = 0.8; const p0 = O.failP(d);
+        Math.random = () => 0; O.feederFault('F6', 5); Math.random = rnd0; T.step(0.2);
+        const railB = !EN().has('RB'), railA = EN().has('RA'), blijftIn = d.state === 1, geteld = d.refusals === 1, vaker = O.failP(d) > p0 && O.manualP(d) > 0;
+        // handmatig: soms weigert hij, maar opnieuw proberen lukt
+        Math.random = () => 0; O.operate('V-F6', 0); const handWeigert = d.state === 1; Math.random = () => 0.99; await T.sleep(50); await T.op('V-F6', 0); Math.random = rnd0;
+        const losGekregen = d.state === 0;
+        for (let k = 0; k < 60 && O.FD('F6').fault; k++) T.step(2);
+        O.SIM.failTest = false; for (const id of aan0) if (id !== 'V-F6' && D[id].state === 0) await T.op(id, 1); T.step(0.5); const herstel = EN().has('RB') && EN().has('F5');
+        await T.op('V-F6', 1); T.step(0.3); O.FD('F6').clp = 1;
+        // revisie, en bij het terugzetten bewust in een andere volgorde: eerst V-F6 IN proberen en het veld op rail A zetten
+        O.startTask('cbMaintTask', 'V-F6'); let afwijkend = false;
+        for (let k = 0; k < 160 && O.task(); k++) { const t = O.task(), s = t.steps[t.i];
+          if (s.act && /railkeuzescheider .*normale rail/.test(s.t) && !afwijkend) { afwijkend = true; O.operate('V-F6', 1); T.step(0.2); await T.op('V-K', 1); await T.op('F6-QA', 1); }
+          else if (s.act && D[s.act[0]].state !== s.act[1]) { if (s.act[0] === 'V-F6' && s.act[1] === 1 && d.state === 1) { /* al in */ } else await T.op(...s.act); }
+          T.step(0.5); }
+        return { slijt, railB, railA, blijftIn, geteld, vaker, handWeigert, losGekregen, herstel, afwijkend, klaar: !O.task() || O.task().steps[O.task().i].t, nieuw: !d.refusals && O.cond(d) > 0.9, aan: EN().has('F6') }; });
+      for (const [k, v] of Object.entries(r)) assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
   } },
   { name: 'relaistest met de testkoffer: goed relais goedkeuren', query: '?autostart&t=11', async run(p) {
       const r = await p.evaluate(async () => { T.quiet(); const O = OS, D = O.D, EN = () => O.EN(), f = O.FD('F4'); O.SIM.paused = false; T.step(0.3); f.relayYear = 2021;

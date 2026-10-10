@@ -13,7 +13,7 @@ function relayRefuses(d,van){const f=d.feeder;if(!f||f.relay?.trip!==false||(van
 function relayFails(d){GAME.stats.relayFail=(GAME.stats.relayFail||0)+1;d.feeder.relayKnown=true;
   setTimeout(()=>pushAlarm(`Beveiliging ${d.id} weigert: uitschakelcircuit van het relais defect – reserve-uitschakeling van de rail!`,'crit'),150);
   setTimeout(()=>pushAlarm(`Tip: laat het relais van ${d.bay} testen en vervangen (Onderhoud, O) – tot die tijd is dit veld niet goed beveiligd`,'info'),400);}
-const canRelay=f=>D[f.cb].state===1&&!f.fault&&!D[f.cb].stuck&&EN.has(f.node)&&(f.ring?canRing():!f.backfed);
+const canRelay=f=>D[f.cb].state===1&&!f.fault&&EN.has(f.node)&&(f.ring?canRing():!f.backfed);
 const relayDue=()=>RELAY_BAYS.filter(canRelay).sort((a,b)=>a.relayYear-b.relayYear).find(f=>f.relayYear<=2023)?.id||null;
 // ---- werkopdracht relaistest
 function relayTask(F){const f=FD(F),cb=f.cb,rg=f.ring&&RINGS.find(r=>r.from===F||r.to===F),home=SEL_BAYS[F].home==='RA'?'QA':'QB';

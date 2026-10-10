@@ -46,7 +46,7 @@ const INCIDENTS=[
     tick(){const dead=!EN.has('RA')&&!EN.has('RB'),t=SIM.t-this.t0;
       if(t>5&&dead&&this.dead==null){this.dead=SIM.t;pushAlarm('Brandweer: 10 kV spanningsloos – we gaan naar binnen','ok');}
       if(t>20&&this.dead==null){['V-T1','V-T3'].forEach(tripBreaker);this.dead=SIM.t;incident();pushAlarm('Brandweer: niemand reageerde – wij hebben de 10 kV zelf afgeschakeld','crit');return;}
-      if(this.dead!=null&&!this.out&&SIM.t>this.dead+30){this.out=true;FIRE.on=false;if(FIRE.glow){scene.remove(FIRE.glow);FIRE.glow=null;}GAME.flags.mustOpen=null;D['V-F6'].stuck=true;
+      if(this.dead!=null&&!this.out&&SIM.t>this.dead+30){this.out=true;FIRE.on=false;if(FIRE.glow){scene.remove(FIRE.glow);FIRE.glow=null;}GAME.flags.mustOpen=null;{const v=D['V-F6'];v.refusals=(v.refusals||0)+2;v.wear=Math.max(v.wear,0.8);}
         readyNotice('Brandweer: brand geblust – de 10 kV mag weer onder spanning. V-F6 heeft rookschade (revisie nodig)',null);INC.active.until=SIM.t+25;}
       if(this.dead!=null&&!this.out&&!dead&&!this.danger){this.danger=true;incident();pushAlarm('Brandweer: er staat weer spanning op terwijl wij binnen zijn!','crit');}},
     end(){FIRE.on=false;if(FIRE.glow){scene.remove(FIRE.glow);FIRE.glow=null;}GAME.flags.mustOpen=null;}},

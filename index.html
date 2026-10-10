@@ -1428,8 +1428,8 @@ const springOk=d=>performance.now()>=d.springAt;
 function actionText(d,to){return d.type==='cb'||d.type==='lvs'?(to?'IN':'UIT'):(to?'GESLOTEN':'GEOPEND');}
 function interlockCheck(d,to){
   if(d.type==='ds'){const cb=D[d.cb];if(d.sel&&to===1&&D[d.other].state===1&&D['V-K'].state!==1)return 'Vergrendeling: een veld mag alleen op beide rails als koppeling V-K gesloten is';
-    if(cb.state===1&&!selPar(d)&&!(cb.stuck&&!EN.has(d.a)&&!EN.has(d.b)))return d.sel?`Vergrendeling: ${cb.id} moet eerst UIT (of: V-K dicht en het veld eerst ook op de andere rail)`:`Vergrendeling: ${cb.id} moet eerst UIT`;if(to===1&&d.es&&D[d.es].state===1)return `Vergrendeling: aardschakelaar ${d.es} is gesloten`;}
-  if(d.type==='es'&&to===1){if(d.ds&&D[d.ds].state===1)return `Vergrendeling: ${d.ds} moet eerst open`;if(d.cb&&D[d.cb].state===1&&!(D[d.cb].stuck&&!EN.has(d.a)))return `Vergrendeling: ${d.cb} moet eerst UIT`;if(EN.has(d.a))return 'Vergrendeling: spanning aanwezig (spanningsdetectie)';}
+    if(cb.state===1&&!selPar(d))return d.sel?`Vergrendeling: ${cb.id} moet eerst UIT (of: V-K dicht en het veld eerst ook op de andere rail)`:`Vergrendeling: ${cb.id} moet eerst UIT`;if(to===1&&d.es&&D[d.es].state===1)return `Vergrendeling: aardschakelaar ${d.es} is gesloten`;}
+  if(d.type==='es'&&to===1){if(d.ds&&D[d.ds].state===1)return `Vergrendeling: ${d.ds} moet eerst open`;if(d.cb&&D[d.cb].state===1)return `Vergrendeling: ${d.cb} moet eerst UIT`;if(EN.has(d.a))return 'Vergrendeling: spanning aanwezig (spanningsdetectie)';}
   if(d.link&&to===1){if(!EN.has(d.b))return 'Vergrendeling: de koppelkabel uit Meppel is spanningsloos – koppelen mag alleen om vanuit Meppel te voeden';
     if(EN.has(d.a))return 'Vergrendeling: niet parallel schakelen met het net van Netbeheer Noord – maak eerst de ringkant spanningsloos';}
   if(d.id==='V-K'&&to===0){const both=Object.values(D).find(x=>x.sel&&x.id.endsWith('QA')&&x.state===1&&D[x.other].state===1);if(both)return `Vergrendeling: veld ${both.bay} staat op beide rails – open eerst één railkeuzescheider`;}
@@ -1446,8 +1446,8 @@ function operate(id,to,opts={}){
   const dst=d.bay&&RING.stations.find(s=>s.id===d.bay);if(dst&&dst.damaged)return deny(`${dst.id} is beschadigd (${dst.damaged}) – niet bedienbaar. Isoleer vanaf het buurstation.`);
   if(SCADA_DOWN()&&!localOk(id))return deny('SCADA-verbinding verbroken – loop erheen (V) en bedien lokaal aan het veld');
   if(to===1&&/-T$/.test(id)&&RING.stations.find(s=>s.id+'-T'===id)?.fuse)return deny('Zekeringen nog niet vervangen – wacht op de monteur');
-  if(d.type==='cb'&&d.stuck)return deny(`${id} zit mechanisch vast na een weigering – isoleer hem met de railkeuzescheider en laat hem reviseren`);
   if(d.busy)return deny('Bediening loopt nog…');
+  if(d.type==='cb'&&manualRefuses(d)){pushAlarm(`${id} reageert niet op het ${to?'in':'uit'}schakelcommando (weigerde eerder ${d.refusals}×) – probeer het opnieuw en laat hem reviseren`,'warn');return deny(`${id} weigert – probeer het opnieuw`);}
   if(d.type==='cb'&&to===1){
     if(d.tr&&D[d.tr].blocked)return deny(`${d.tr} geblokkeerd door relais 86 (${D[d.tr].blockText}) – eerst resetten`);
     if(!springOk(d))return deny(`${id}: inschakelveer wordt nog geladen…`);}
@@ -1850,7 +1850,8 @@ function congestion(){const out=[];
 
 
 // Veroudering en preventief onderhoud: vermogenschakelaars slijten door schakelen en vooral door het afschakelen van foutstromen.
-// Een versleten schakelaar kan weigeren (50BF: de reservebeveiliging schakelt de hele rail af) en blijft dan mechanisch vastzitten.
+// Een versleten schakelaar kan weigeren (50BF: de reservebeveiliging schakelt de hele rail af). Hij zit daarna niet vast,
+// maar elke weigering maakt een volgende waarschijnlijker – ook bij handmatig schakelen – tot hij gereviseerd is.
 const CB_IDS=Object.values(D).filter(d=>d.type==='cb').map(d=>d.id);
 const MAINT_CBS=FEEDERS.filter(f=>SEL_BAYS[f.id]).map(f=>f.cb);   // velden met railkeuzescheiders: te reviseren zonder rail vrij te maken
 CB_IDS.forEach(id=>{const d=D[id];d.wear=rnd(0.05,0.5);});
@@ -1859,34 +1860,39 @@ CB_IDS.forEach(id=>{const d=D[id];d.year=2026-Math.round(d.wear*14);d.ops=Math.r
 const cond=d=>Math.max(0,1-(d.wear||0));
 function wearOp(d,fault){d.wear=Math.min(1,(d.wear||0)+(fault?0.025:0.003));d.ops++;
   if(d.wear>0.75&&!d.wearWarn){d.wearWarn=true;pushAlarm(`${d.id}: conditie ${Math.round(cond(d)*100)}% – schakelaar is aan revisie toe (overzicht Onderhoud, O)`,'warn');}}
-// kans dat een schakelaar weigert bij een beveiligingstrip
 // alleen in diensten en vrij spelen: scenario's verlopen zoals bedoeld, en in de testmodus alleen als een test het vraagt
-const failP=d=>d.feeder&&!MODES[GAME.mode]?.scen&&(!LITE||SIM.failTest)?Math.max(0,d.wear-0.72)*1.6:0;
-function breakerFails(d){if(d.stuck)return true;if(Math.random()>=failP(d))return false;
-  d.stuck=true;GAME.stats.bf=(GAME.stats.bf||0)+1;
+const failOn=d=>!!d.feeder&&!MODES[GAME.mode]?.scen&&(!LITE||!!SIM.failTest);
+// kans dat een schakelaar weigert bij een beveiligingstrip: slijtage plus eerdere weigeringen
+const failP=d=>failOn(d)?Math.min(0.9,Math.max(0,d.wear-0.72)*1.6+0.15*(d.refusals||0)):0;
+// handmatig schakelen: een schakelaar die eerder weigerde, reageert soms niet (opnieuw proberen kan)
+const manualP=d=>d.refusals&&failOn(d)?Math.min(0.6,0.12*d.refusals+Math.max(0,d.wear-0.8)):0;
+function manualRefuses(d){if(Math.random()>=manualP(d))return false;GAME.stats.bfMan=(GAME.stats.bfMan||0)+1;return true;}
+function breakerFails(d){if(Math.random()>=failP(d))return false;
+  d.refusals=(d.refusals||0)+1;d.wear=Math.min(1,d.wear+0.04);GAME.stats.bf=(GAME.stats.bf||0)+1;
   const sel=SEL_BAYS[d.bay],rail=sel?BUSES[railOf(sel.node)||sel.home].nm:BUSES[d.a]?.nm||'?';
-  setTimeout(()=>{pushAlarm(`50BF: ${d.id} weigert af te schakelen (versleten mechanisme) – reserve-uitschakeling van rail ${rail}!`,'crit');
-    pushAlarm(`Tip: ${d.id} zit vast. Open zijn railkeuzescheider zolang de rail spanningsloos is, neem de rail daarna weer in bedrijf en laat ${d.id} reviseren.`,'info');},150);
+  setTimeout(()=>{pushAlarm(`50BF: ${d.id} weigert af te schakelen (${d.refusals===1?'versleten mechanisme':d.refusals+'e weigering'}) – reserve-uitschakeling van rail ${rail}!`,'crit');
+    pushAlarm(`Tip: schakel ${d.id} met de hand UIT (weigert hij, probeer het opnieuw), neem de rail weer in bedrijf en laat ${d.id} reviseren (Onderhoud, O). Na elke weigering wordt een volgende waarschijnlijker.`,'info');},150);
   return true;}
 // revisie van een vermogenschakelaar (10 kV-velden): veld vrijschakelen via railkeuzescheider en kabelaarding
-const worstCb=()=>MAINT_CBS.map(id=>D[id]).filter(d=>(d.wear>0.62||d.stuck)&&!d.feeder.fault).sort((a,b)=>b.wear-a.wear)[0]?.id||null;
+const worstCb=()=>MAINT_CBS.map(id=>D[id]).filter(d=>(d.wear>0.62||d.refusals)&&!d.feeder.fault).sort((a,b)=>b.wear-a.wear)[0]?.id||null;
 function cbMaintTask(id){const d=D[id],f=d.feeder,F=f.id,rg=f.ring&&RINGS.find(r=>r.from===F||r.to===F),sel=SEL_BAYS[F],home=sel.home==='RA'?'QA':'QB';
   const head=rg?(rg.from===F?rg.stations[0].id+'-L':rg.stations[rg.stations.length-1].id+'-R'):null,bf=v=>{if(!f.ring)f.backfed=v;};
   const st=[];
   if(rg)st.push({t:`Sluit het normaal-open punt ${rg.nop}`,act:[rg.nop,1],why:'Eerst de ring sluiten, zodat de stations via de andere kant gevoed blijven.',ok:()=>D[rg.nop].state===1});
   else st.push({t:`Wacht: storingsdienst schakelt de klanten van ${F} om (terugvoeding)`,wait:6,done:()=>{bf(true);pushAlarm(`Storingsdienst: klanten van ${F} omgeschakeld – ${id} mag UIT`,'info');}});
-  st.push({t:`Schakel ${id} UIT${d.stuck?' (zit vast – overslaan als hij al geïsoleerd is)':''}`,act:[id,0],why:'Eerst de vermogenschakelaar uit.',ok:()=>D[id].state===0||D[id].stuck&&!EN.has(F+'s')});
+  st.push({t:`Schakel ${id} UIT${d.refusals?' (weigert hij, probeer het opnieuw)':''}`,act:[id,0],why:'Eerst de vermogenschakelaar uit.',ok:()=>D[id].state===0});
   if(head)st.push({t:`Open lastscheider ${head} (kabel vrij van de ring)`,act:[head,0],why:'De kabel ook aan de ringkant vrijschakelen.',ok:()=>D[head].state===0});
   ['QA','QB'].forEach(q=>st.push({t:`Open railkeuzescheider ${F}-${q}`,act:[F+'-'+q,0],grp:'sel',why:'Het veld aan de railkant vrijmaken.',ok:()=>D[F+'-'+q].state===0}));
   st.push({t:`Sluit aardschakelaar ${F}-Q8`,act:[F+'-Q8',1],why:'Pas aarden als het veld aan alle kanten vrij en spanningsloos is.',ok:()=>D[F+'-Q8'].state===1,done:()=>pushAlarm(`Werkvergunning afgegeven – revisie ${id} gestart`,'info')});
-  st.push({t:`Revisie ${id}: mechanisme, contacten en veer…`,wait:30,done:()=>{d.wear=0.04;d.stuck=false;d.state=0;d.wearWarn=false;d.year=2026;d.ops=0;pushAlarm(`${id} gereviseerd – conditie 96%`,'ok');}});
+  st.push({t:`Revisie ${id}: mechanisme, contacten en veer…`,wait:30,done:()=>{d.wear=0.04;d.refusals=0;d.state=0;d.wearWarn=false;d.year=2026;d.ops=0;pushAlarm(`${id} gereviseerd – conditie 96%`,'ok');}});
   st.push({t:`Werk gereed – open ${F}-Q8`,act:[F+'-Q8',0],why:'Eerst de aarding opheffen.',ok:()=>D[F+'-Q8'].state===0});
-  st.push({t:`Sluit railkeuzescheider ${F}-${home}`,act:[F+'-'+home,1],why:'Het veld weer op zijn normale rail zetten.',ok:()=>D[F+'-'+home].state===1});
+  // terugzetten mag ook op de andere rail (ok bij QA of QB), zodat een andere volgorde de opdracht niet blokkeert
+  st.push({t:`Sluit railkeuzescheider ${F}-${home} (normale rail)`,act:[F+'-'+home,1],why:'Het veld weer op zijn normale rail zetten.',ok:()=>D[F+'-QA'].state===1||D[F+'-QB'].state===1});
   st.push({t:`Schakel ${id} IN`,act:[id,1],why:'Dan de vermogenschakelaar weer in.',ok:()=>D[id].state===1});
   if(head)st.push({t:`Sluit ${head}`,act:[head,1],why:'De kabel weer in de ring opnemen.',ok:()=>D[head].state===1},{t:`Open het normaal-open punt ${rg.nop} weer`,act:[rg.nop,0],why:'Als laatste de ring normaliseren.',ok:()=>D[rg.nop].state===0});
   else st.push({t:'Wacht: storingsdienst heft de terugvoeding op',wait:3,done:()=>{bf(false);pushAlarm(`Terugvoeding ${F} opgeheven – normale situatie`,'ok');}});
   return{feeder:F,cbm:id,title:`Revisie vermogenschakelaar ${id}`,crew:()=>({box:VIEWS[id]?.box||VIEWS.MS.box,say:`Revisie ${id}`,rel:[id,F+'-QA',F+'-QB',F+'-Q8']}),
-    desc:`${id} (${d.stuck?'zit vast na een weigering':'conditie '+Math.round(cond(d)*100)+'%'}, laatste revisie ${d.year}) krijgt een revisie. ${rg?'Het veld voedt een ring: sluit eerst het normaal-open punt en maak de kabel aan de ringkant vrij.':'De klanten worden eerst via het net omgeschakeld.'}`,
+    desc:`${id} (${d.refusals?`weigerde ${d.refusals}×, `:''}conditie ${Math.round(cond(d)*100)}%, laatste revisie ${d.year}) krijgt een revisie. ${rg?'Het veld voedt een ring: sluit eerst het normaal-open punt en maak de kabel aan de ringkant vrij.':'De klanten worden eerst via het net omgeschakeld.'}`,
     afterAbort:()=>bf(false),steps:st};}
 
 
@@ -1904,7 +1910,7 @@ function relayRefuses(d,van){const f=d.feeder;if(!f||f.relay?.trip!==false||(van
 function relayFails(d){GAME.stats.relayFail=(GAME.stats.relayFail||0)+1;d.feeder.relayKnown=true;
   setTimeout(()=>pushAlarm(`Beveiliging ${d.id} weigert: uitschakelcircuit van het relais defect – reserve-uitschakeling van de rail!`,'crit'),150);
   setTimeout(()=>pushAlarm(`Tip: laat het relais van ${d.bay} testen en vervangen (Onderhoud, O) – tot die tijd is dit veld niet goed beveiligd`,'info'),400);}
-const canRelay=f=>D[f.cb].state===1&&!f.fault&&!D[f.cb].stuck&&EN.has(f.node)&&(f.ring?canRing():!f.backfed);
+const canRelay=f=>D[f.cb].state===1&&!f.fault&&EN.has(f.node)&&(f.ring?canRing():!f.backfed);
 const relayDue=()=>RELAY_BAYS.filter(canRelay).sort((a,b)=>a.relayYear-b.relayYear).find(f=>f.relayYear<=2023)?.id||null;
 // ---- werkopdracht relaistest
 function relayTask(F){const f=FD(F),cb=f.cb,rg=f.ring&&RINGS.find(r=>r.from===F||r.to===F),home=SEL_BAYS[F].home==='RA'?'QA':'QB';
@@ -2307,7 +2313,7 @@ function deviations(){const out=[],sw=(id,norm)=>D[id]&&D[id].state!==norm;
   RINGS.forEach(rg=>{const open=rg.stations.flatMap(s=>[s.id+'-L',s.id+'-R']).filter(id=>D[id].state===0);if(open.join()!==rg.nop)out.push(`${rg.name}: open lastscheiders <b>${open.join(', ')||'geen (ring gesloten)'}</b> (normaal ${rg.nop})`);});
   FEEDERS.forEach(f=>{if(!D[f.cb].state)out.push(`Veld <b>${f.cb}</b> (${f.name}) UIT`);});
   Object.values(D).forEach(d=>{if(d.type==='es'&&d.state)out.push(`Aardschakelaar <b>${d.id}</b> gesloten`);});
-  CB_IDS.forEach(id=>{const d=D[id];if(d.stuck)out.push(`<b>${id}</b> zit vast na een weigering`);else if(cond(d)<0.3)out.push(`<b>${id}</b> in slechte conditie (${Math.round(cond(d)*100)}%) – revisie aanbevolen`);});
+  CB_IDS.forEach(id=>{const d=D[id];if(d.refusals)out.push(`<b>${id}</b> weigerde ${d.refusals}× – revisie nodig`);else if(cond(d)<0.3)out.push(`<b>${id}</b> in slechte conditie (${Math.round(cond(d)*100)}%) – revisie aanbevolen`);});
   if(TASK)out.push(`Lopende werkopdracht <b>${TASK.code}</b>: ${TASK.title}`);return out;}
 function handoverInit(m){const op=pick(PREV_OP),items=[];
   if(!m.scen){const n=2+(Math.random()<0.5?1:0);HO_POOL.slice().sort(()=>Math.random()-0.5).slice(0,n).forEach(it=>{const o=Object.create(it);o.setup();items.push(o);});}
@@ -2421,7 +2427,7 @@ Object.assign(MODES,{
           pushAlarm('Tip: het ziekenhuis gaat op noodstroom (±60 min brandstof). De 20 kV-installatie in het andere gebouw kan gewoon in bedrijf blijven.','info');});});},
     tick(dm){const r=GAME.flags.fireReq;if(r==null)return;const dead=!EN.has('RA')&&!EN.has('RB');
       if(dead&&!GAME.flags.deadAt){GAME.flags.deadAt=SIM.t;GAME.countdown={label:'Noodstroom ziekenhuis',until:SIM.t+60};pushAlarm('Brandweer: 10 kV spanningsloos bevestigd – we gaan naar binnen','ok');
-        at(SIM.t-GAME.t0+30,()=>{FIRE.on=false;if(FIRE.glow){scene.remove(FIRE.glow);FIRE.glow=null;}GAME.flags.mustOpen=null;GAME.flags.outAt=SIM.t;D['V-F6'].stuck=true;
+        at(SIM.t-GAME.t0+30,()=>{FIRE.on=false;if(FIRE.glow){scene.remove(FIRE.glow);FIRE.glow=null;}GAME.flags.mustOpen=null;GAME.flags.outAt=SIM.t;{const v=D['V-F6'];v.refusals=(v.refusals||0)+2;v.wear=Math.max(v.wear,0.8);}
           readyNotice('Brandweer: brand geblust, rook afgezogen. De 10 kV mag weer onder spanning – V-F6 heeft rookschade en blijft defect',null);});}
       if(GAME.flags.deadAt&&!GAME.flags.outAt&&!dead&&!GAME.flags.danger){GAME.flags.danger=true;incident();pushAlarm('Brandweer: er staat weer spanning op de installatie terwijl wij binnen zijn! Iedereen naar buiten!','crit');}},
     obj:()=>[{t:'10 kV spanningsloos binnen 10 min na het verzoek',check:()=>GAME.flags.fireReq==null?null:GAME.flags.deadAt?'done':SIM.t>GAME.flags.fireReq+10?'fail':null},
@@ -2497,7 +2503,7 @@ const INCIDENTS=[
     tick(){const dead=!EN.has('RA')&&!EN.has('RB'),t=SIM.t-this.t0;
       if(t>5&&dead&&this.dead==null){this.dead=SIM.t;pushAlarm('Brandweer: 10 kV spanningsloos – we gaan naar binnen','ok');}
       if(t>20&&this.dead==null){['V-T1','V-T3'].forEach(tripBreaker);this.dead=SIM.t;incident();pushAlarm('Brandweer: niemand reageerde – wij hebben de 10 kV zelf afgeschakeld','crit');return;}
-      if(this.dead!=null&&!this.out&&SIM.t>this.dead+30){this.out=true;FIRE.on=false;if(FIRE.glow){scene.remove(FIRE.glow);FIRE.glow=null;}GAME.flags.mustOpen=null;D['V-F6'].stuck=true;
+      if(this.dead!=null&&!this.out&&SIM.t>this.dead+30){this.out=true;FIRE.on=false;if(FIRE.glow){scene.remove(FIRE.glow);FIRE.glow=null;}GAME.flags.mustOpen=null;{const v=D['V-F6'];v.refusals=(v.refusals||0)+2;v.wear=Math.max(v.wear,0.8);}
         readyNotice('Brandweer: brand geblust – de 10 kV mag weer onder spanning. V-F6 heeft rookschade (revisie nodig)',null);INC.active.until=SIM.t+25;}
       if(this.dead!=null&&!this.out&&!dead&&!this.danger){this.danger=true;incident();pushAlarm('Brandweer: er staat weer spanning op terwijl wij binnen zijn!','crit');}},
     end(){FIRE.on=false;if(FIRE.glow){scene.remove(FIRE.glow);FIRE.glow=null;}GAME.flags.mustOpen=null;}},
@@ -2928,7 +2934,6 @@ function tabAlarms(){const out={'10':[],'20':[],R:[],M:[]},add=(t,why)=>out[t].p
   BUS_IDS.forEach(b=>{const t=b==='MP'?'M':is20(b)?'20':'10',nm=BUSES[b].nm;if(b==='MP'&&!SIM.meppel.avail)return;if(BUSF[b])add(t,`railfout rail ${nm}`);else if(!EN.has(b))add(t,`rail ${nm} spanningsloos`);});
   if(D.T1.blocked)add('10','T1 geblokkeerd');if(D.T2.blocked)add('20','T2 geblokkeerd');
   FEEDERS.forEach(f=>{const t=f.bus==='MP'?'M':is20(f.bus)?'20':'10';if(f.ring)return;if(f.fault)add(t,`kabelfout ${f.id}`);else if(f.unplanned&&!EN.has(f.node))add(t,`${f.id} spanningsloos`);});
-  CB_IDS.forEach(id=>{const d=D[id];if(d.stuck)add(d.feeder?.bus==='MP'?'M':d.feeder&&is20(d.feeder.bus)?'20':'10',`${id} zit vast`);});
   RING.secs.forEach(s=>{if(s.fault)add('R',`kabelfout ${secName(s)}`);else if(s.temp>CABLE.max)add('R',`kabel ${secName(s)} te warm`);});
   RING.stations.forEach(s=>{if(s.damaged)add('R',`${s.id} beschadigd`);else if(s.fuse)add('R',`zekeringen ${s.id}`);else if(s.unplanned&&!EN.has(s.node))add('R',`${s.id} spanningsloos`);});
   return out;}
@@ -3017,7 +3022,7 @@ function rowsFor(d){const r=[],A=(k,f)=>r.push([k,f]);
   if(d.type==='es')A(d.cb?'Spanning kabelzijde':'Spanning lijnzijde',()=>fmtKV(nodeU(d.a)));
   if(['ct','sa','bb','line','kiosk'].includes(d.type))A('Spanning',()=>fmtKV(nodeU(d.node)));
   if(['cb','ds','ct','lbs'].includes(d.type))A('Stroom',()=>`${Math.round(D[d.ref||d.id].I)} A`);
-  if(d.type==='cb'){A('Conditie',()=>`<span class="${d.stuck||cond(d)<0.25?'bad':cond(d)<0.4?'warnc':''}">${d.stuck?'VAST (weigering) · ':''}${Math.round(cond(d)*100)}%</span> · revisie ${d.year}`);A('Inschakelveer',()=>springOk(d)?'geladen':'<span class="warnc">laden…</span>');A('Schakelingen',()=>d.ops);}
+  if(d.type==='cb'){A('Conditie',()=>`<span class="${d.refusals||cond(d)<0.25?'bad':cond(d)<0.4?'warnc':''}">${d.refusals?`weigerde ${d.refusals}× · `:''}${Math.round(cond(d)*100)}%</span> · revisie ${d.year}`);A('Inschakelveer',()=>springOk(d)?'geladen':'<span class="warnc">laden…</span>');A('Schakelingen',()=>d.ops);}
   if(d.line)A('Herinschakeling (AR)',()=>(SIM.lines[d.line].ar?'IN bedrijf':'<span class="warnc">UIT bedrijf</span>')+` · dode tijd ${protTxt('dt',PROT.ln[d.line].dt)}`);
   if(d.feeder&&!d.feeder.gen)A('Beveiliging I>',()=>`${protTxt('pick',PROT.f[d.feeder.id].pick)} · t ${protTxt('tms',PROT.f[d.feeder.id].tms)}`);
   if(d.type==='tr')A('Thermische trip',()=>protTxt('trip',PROT.tr[d.id].trip)+(d.gas>0.5?' · <span class="bad">gasvorming!</span>':''));
@@ -3653,13 +3658,13 @@ let assPrev=false;
 const assOpen=()=>!$('#assets').classList.contains('hidden');
 function openAssets(){if(assOpen())return;assPrev=SIM.paused;SIM.paused=true;syncSpeed();if(FP.on)unlockPointer();$('#assets').classList.remove('hidden');renderAssets();}
 function closeAssets(){$('#assets').classList.add('hidden');SIM.paused=assPrev;syncSpeed();}
-function renderAssets(){if(!assOpen())return;const rows=CB_IDS.map(id=>D[id]).sort((a,b)=>(!!b.stuck-!!a.stuck)||cond(a)-cond(b)).map(d=>{const c=cond(d),cls=d.stuck||c<0.25?'bad':c<0.4?'warnc':'';
+function renderAssets(){if(!assOpen())return;const rows=CB_IDS.map(id=>D[id]).sort((a,b)=>((b.refusals||0)-(a.refusals||0))||cond(a)-cond(b)).map(d=>{const c=cond(d),cls=d.refusals||c<0.25?'bad':c<0.4?'warnc':'';
   const can=MAINT_CBS.includes(d.id),plan=GAME.planCb===d.id||(TASK&&TASK.cbm===d.id);
   return `<tr><td><b>${d.id}</b><span>${d.label}</span></td><td><div class="cg"><i><b class="${cls}" style="width:${Math.round(c*100)}%;background:${cls?'':'var(--green)'}"></b></i></div></td>
-    <td class="pv ${cls}">${d.stuck?'VAST':Math.round(c*100)+'%'}</td><td class="pv">${d.ops.toLocaleString('nl-NL')}</td><td class="pv">${d.year}</td>
+    <td class="pv ${cls}">${Math.round(c*100)+'%'}${d.refusals?`<span>weigerde ${d.refusals}×</span>`:''}</td><td class="pv">${d.ops.toLocaleString('nl-NL')}</td><td class="pv">${d.year}</td>
     <td>${can?(plan?'<span class="warnc">ingepland</span>':`<button class="mini" data-plan="${d.id}" ${GAME.tasks?'':'disabled title="Geen werkopdrachten in dit scenario"'}>Revisie inplannen</button>`):'<span class="dl">alleen met rail vrij</span>'}</td></tr>`;}).join('');
   $('#assets').innerHTML=`<div class="card pr"><div class="eyebrow">Assetmanagement · vermogenschakelaars</div><h2>Onderhoud</h2>
-    <p class="bf-desc">Elke schakeling slijt het mechanisme een beetje, het afschakelen van een foutstroom veel meer. Onder ±28% conditie kan een schakelaar <b>weigeren</b> bij een storing: de reservebeveiliging (50BF) schakelt dan de hele rail af. Plan revisies op tijd – bij voorkeur op een rustig moment.</p>
+    <p class="bf-desc">Elke schakeling slijt het mechanisme een beetje, het afschakelen van een foutstroom veel meer. Onder ±28% conditie kan een schakelaar <b>weigeren</b> bij een storing: de reservebeveiliging (50BF) schakelt dan de hele rail af. Elke weigering maakt een volgende waarschijnlijker, ook bij gewoon schakelen. Plan revisies op tijd – bij voorkeur op een rustig moment.</p>
     <table><tr><th>Schakelaar</th><th style="width:28%">Conditie</th><th></th><th>Schakelingen</th><th>Revisie</th><th></th></tr>${rows}</table>
     <div class="eyebrow" style="margin-top:14px">Beveiligingsrelais · periodieke test met de testkoffer</div>
     <p class="bf-desc">Een relais kan ongemerkt afwijken: de aanspreekwaarde verloopt, het wordt traag of het uitschakelcircuit is defect. Dat merk je pas bij een storing – dan schakelt de reservebeveiliging de hele rail af. Test elk relais minstens eens per 3 jaar.</p>
@@ -3815,7 +3820,7 @@ $('#sld').addEventListener('click',e=>{const c=e.target.closest('[data-cab]');if
 var RESUMING=false;
 const SAVE_KEY='osz-save',SAVE_V=1;
 const BASE0=new Map(CONS.map(c=>[c.id,c.base]));   // normale belasting per afnemer (voor het opruimen van een lopend incident)
-const KEYS={dev:['state','ops','wear','stuck','year','wearWarn','oil','tap','avr','fans','fanFail','blocked','resettable','blockText','blockKind','ratio','gas','hot'],
+const KEYS={dev:['state','ops','wear','refusals','year','wearWarn','oil','tap','avr','fans','fanFail','blocked','resettable','blockText','blockKind','ratio','gas','hot'],
   feed:['relay','relayYear','relayKnown','fault','outFrac','clp','offSince','oc','temp','hotWarn','backfed','interruptible','base','unplanned','wait','wasOn'],
   lvg:['outFrac','lvf','backfed','cut','base','offSince','clp'],sec:['fault','located','temp','ovl','hot'],
   st:['flag','damaged','evac','fuse','genset','trOt','trWarn','unplanned','wait','wasOn']};
@@ -3862,6 +3867,8 @@ function resumeGame(d){$('#intro').classList.add('hidden');AudioSys.init();contr
   Object.assign(GAME,d.GAME,{obj:GAME.obj,ended:false});GAME.obj.forEach((o,k)=>{o.state=d.GAME.obj[k]??null;});
   if(d.ho){GAME.handover={op:d.hoOp,open:false,dev:[],items:d.ho.map(h=>{const o=Object.create(HO_POOL.find(x=>x.id===h.id));Object.assign(o,h.f);o.done=h.done;return o;})};}
   for(const id in d.D)if(D[id])Object.assign(D[id],d.D[id]);
+  // oudere saves: een vastzittende schakelaar telt nu als één weigering
+  Object.values(D).forEach(x=>{if(x.stuck){delete x.stuck;x.refusals=Math.max(1,x.refusals||0);}});
   FEEDERS.forEach(f=>Object.assign(f,d.F[f.id]||{}));LVG.forEach(g=>Object.assign(g,d.LV[g.id]||{}));
   RING.secs.forEach(s=>Object.assign(s,d.SEC[s.id]||{}));RING.stations.forEach(s=>Object.assign(s,d.ST[s.id]||{}));
   for(const k in BUSF)delete BUSF[k];d.BUSF.forEach(b=>BUSF[b]=true);
@@ -4024,7 +4031,7 @@ else{renderMenu();$('#intro').classList.remove('hidden');controls.autoRotate=tru
 if(params.has('night'))updateSky(22);
 if(params.has('view')){const v=VIEWPOS[+params.get('view')];camera.position.copy(v[0]);controls.target.copy(v[1]);controls.autoRotate=false;controls.update();}
 
-window.OS={phoneTick,refreshDevPanel,updateSLD,openKeys,closeKeys,KEY_HELP,RELAY_BAYS,relayTask,relayDue,relayDefect,initRelays,kitTests,kitMeasure,kitVerdict,kitRun,openKit,closeKit,saveGame,readSave,deleteSave,resumeGame,canSave,specOf,CABLE,soilT,FD,meppelFault,linkTick,tabAlarms,updateTabAlarms,renderTasks,INC,INCIDENTS,startIncident,endIncident,incidentTick,setTab,renderCables,GFX,setGfx,applyGfx,openSettings,closeSettings,WX_TYPES,renderer,scene,FIRE,CARS,updateWindows,updateLife,stationLive,cbMaintTask,worstCb,cond,breakerFails,CB_IDS,FLEX,setFlex,flexTick,congestion,openFlex,closeFlex,checkModel,homeBus,BUSES,SEL_BAYS,TORCH,setTorch,HO_POOL,handoverTick,REC,RP,startReplay,stopReplay,analyse,stationDamage,closeHandover,deviations,PHONE,lvFault,callFrom,phoneAnswer,dispatchLV,LVG,forecast,progAdvice,PROG,startTask:(k,...a)=>{TASK={relayTask,cbMaintTask,railTask,railBTask,stationTask,thermoTask,ringTask,feederTask,lineTask,reserveTask}[k](...a);TASK.i=0;TASK.code='WV-TEST';briefInit(TASK);renderTasks();},SIM,D,LESSONS,lessonGo,selectDevice,abortTask,railTask,stationTask,thermoTask,nearDev,VIEWS,PROT,setProt,openProt,closeProt,busFault,BUSF,RINGS,task:()=>TASK,briefSubmit,briefCheck,briefWatch,actKey,taskActs,crewNear,boxOf:id=>VIEWS[id]&&VIEWS[id].box,AudioSys,updateAudio,WX,setWeather,setSeason,SEASONS,ambient,enterKiosk,ROOMS,blockedAt,RING,NPCS,crewDispatch,ringFault,FP,enterFP,exitFP,pickCenter,camera,camInside,setRatio,setTab,GAME,MODES,applyMode,endGame,EN:()=>EN,FLOW,operate,tapStep,setAVR,resetLockout,toggleAR,regulate,computeFlows,randomEvent,lineFault,feederFault,trafoFault,offerTask,simStep,FEEDERS};
+window.OS={failP,manualP,phoneTick,refreshDevPanel,updateSLD,openKeys,closeKeys,KEY_HELP,RELAY_BAYS,relayTask,relayDue,relayDefect,initRelays,kitTests,kitMeasure,kitVerdict,kitRun,openKit,closeKit,saveGame,readSave,deleteSave,resumeGame,canSave,specOf,CABLE,soilT,FD,meppelFault,linkTick,tabAlarms,updateTabAlarms,renderTasks,INC,INCIDENTS,startIncident,endIncident,incidentTick,setTab,renderCables,GFX,setGfx,applyGfx,openSettings,closeSettings,WX_TYPES,renderer,scene,FIRE,CARS,updateWindows,updateLife,stationLive,cbMaintTask,worstCb,cond,breakerFails,CB_IDS,FLEX,setFlex,flexTick,congestion,openFlex,closeFlex,checkModel,homeBus,BUSES,SEL_BAYS,TORCH,setTorch,HO_POOL,handoverTick,REC,RP,startReplay,stopReplay,analyse,stationDamage,closeHandover,deviations,PHONE,lvFault,callFrom,phoneAnswer,dispatchLV,LVG,forecast,progAdvice,PROG,startTask:(k,...a)=>{TASK={relayTask,cbMaintTask,railTask,railBTask,stationTask,thermoTask,ringTask,feederTask,lineTask,reserveTask}[k](...a);TASK.i=0;TASK.code='WV-TEST';briefInit(TASK);renderTasks();},SIM,D,LESSONS,lessonGo,selectDevice,abortTask,railTask,stationTask,thermoTask,nearDev,VIEWS,PROT,setProt,openProt,closeProt,busFault,BUSF,RINGS,task:()=>TASK,briefSubmit,briefCheck,briefWatch,actKey,taskActs,crewNear,boxOf:id=>VIEWS[id]&&VIEWS[id].box,AudioSys,updateAudio,WX,setWeather,setSeason,SEASONS,ambient,enterKiosk,ROOMS,blockedAt,RING,NPCS,crewDispatch,ringFault,FP,enterFP,exitFP,pickCenter,camera,camInside,setRatio,setTab,GAME,MODES,applyMode,endGame,EN:()=>EN,FLOW,operate,tapStep,setAVR,resetLockout,toggleAR,regulate,computeFlows,randomEvent,lineFault,feederFault,trafoFault,offerTask,simStep,FEEDERS};
 const clock=new THREE.Clock();let hudT=0,skyT=0,progT=0;
 let liteAcc=0;
 function frame(){
