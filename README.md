@@ -45,7 +45,7 @@ Bedoeld voor **bedrijfsvoerders en monteurs in opleiding**, studenten **elektrot
 | 👷 **Werkopdrachten** | Onderhoud met optionele **schakelbrief**, werk staken, monteurs met **portofoon**, revisies, **relaistest met testkoffer** en thermografie. |
 | 📞 **Klanten** | Telefoon met klantmeldingen, storingsbandje, **verwachte hersteltijd** doorgeven en prioriteitsklanten bellen. |
 | 📈 **Netbeheer** | **Netcongestie** en flexibel vermogen, belastingprognose, veroudering en preventief onderhoud, beveiligingsinstellingen. |
-| 🎓 **Leren en spelen** | 8 lessen, 17 scenario's, dag- en avonddiensten, vrij spelen met incidenten, score met cijfer, **tijdlijn en herhaling**, opslaan en verder spelen. |
+| 🎓 **Leren en spelen** | 11 lessen, 17 scenario's, dag- en avonddiensten, vrij spelen met incidenten, score met cijfer, **tijdlijn en herhaling**, opslaan en verder spelen. |
 | 🌦️ **Sfeer** | Dag en nacht, vier seizoenen, weer (onweer, sneeuw, mist, hittegolf), verkeer, buren op straat bij uitval, ramen die uitgaan als het station uitvalt. |
 
 <a id="screenshots"></a>
@@ -91,6 +91,9 @@ Bedoeld voor **bedrijfsvoerders en monteurs in opleiding**, studenten **elektrot
   6. *Relaistest met de testkoffer*: veld F6 vrijmaken, de proeven uitvoeren en een te traag relais afkeuren.
   7. *OS Meppel en de koppelkabel*: MS4 en MS5 terugvoeden vanuit Meppel, flex inzetten om binnen 4 MW te blijven, en bij het terugschakelen eerst openen en dan sluiten (nooit parallel met Netbeheer Noord).
   8. *Kabeltemperatuur en congestie*: een winteravond met een verkeerd geschakelde ring. Lees het tabblad Kabels, zet flex in als eerste hulp en normaliseer de ring.
+  9. *Aardfout zoeken*: U0 en de aanwijzingen lezen, T3 inzetten voor rail B, de rails splitsen en de verdachte kabel vrijschakelen tot U0 verdwijnt.
+  10. *Selectiviteit en storingsschrijver*: de tijd-stroomgrafiek, een te snelle reserve die bij een kabelfout de hele 10 kV laat uitvallen, en de registratie lezen.
+  11. *Laagspanning: kabelkast en vaste trap*: een straat via een kabelkast voeden, de distributietrafo spanningsloos maken en de vaste trap laten verlagen.
 - **Scenario's:**
   - *Kabelstoring ziekenhuis*: T1 valt uit en het ziekenhuis draait op noodstroom.
   - *Storm boven Drenthe*: regen, onweer, blikseminslagen en een defect AR-relais.
@@ -509,7 +512,7 @@ Voor het bouwen draait eerst `npm run lint` (`tests/lint.mjs`), die verborgen fo
 
 De lint draait ook op GitHub vóór de tests.
 
-URL-parameters om te testen: `?autostart`, `?t=18.5` (starttijd), `?view=0..6`, `?night`, `?play=zkh|storm|piek|blackout|hitte|winter|dubbel|aanrijding|cyber|overstroming|zonnepiek|pinksteren|aardonweer|kraan|brand|evenement|laadpiek|les1…les8|day|eve|free&diff=rustig|normaal|zwaar`.
+URL-parameters om te testen: `?autostart`, `?t=18.5` (starttijd), `?view=0..6`, `?night`, `?play=zkh|storm|piek|blackout|hitte|winter|dubbel|aanrijding|cyber|overstroming|zonnepiek|pinksteren|aardonweer|kraan|brand|evenement|laadpiek|les1…les11|day|eve|free&diff=rustig|normaal|zwaar`.
 
 ## 🧪 Tests
 

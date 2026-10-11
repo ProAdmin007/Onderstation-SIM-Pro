@@ -24,8 +24,8 @@ function lineFault(forceL,forcePerm){const c=LINES.filter(L=>SIM.lines[L].avail&
     else if(perm)lineLockout(L);
     else readyNotice(`TenneT: lijn ${L} na herinschakeling aan de overzijde weer onder spanning – ${L}-Q0 mag weer IN`,L+'-Q0',()=>!D[L+'-Q0'].state&&SIM.lines[L].avail);
     refreshAll();},700);}
-function feederFault(forceF,searchMin){const c=FEEDERS.filter(f=>D[f.cb].state===1&&EN.has(f.node)&&!f.fault&&!f.backfed&&(!forceF||f.id===forceF));if(!c.length)return;const f=pick(c);if(f.ring)return ringFault(f);
-  tripBreaker(f.cb);shortCircuit(f,rnd(2500,IK_MAX(f)));f.fault={stage:'search',frac:f.prio?0:rnd(0.12,0.35)};
+function feederFault(forceF,searchMin,forceIk){const c=FEEDERS.filter(f=>D[f.cb].state===1&&EN.has(f.node)&&!f.fault&&!f.backfed&&(!forceF||f.id===forceF));if(!c.length)return;const f=pick(c);if(f.ring)return ringFault(f);
+  tripBreaker(f.cb);shortCircuit(f,forceIk||rnd(2500,IK_MAX(f)));f.fault={stage:'search',frac:f.prio?0:rnd(0.12,0.35)};
   const why=pick(['kabelbeschadiging door graafwerk','mofstoring','kortsluiting in een middenspanningsruimte','kabelfout (veroudering)']);
   const ts=searchMin||rnd(12,25);
   pushAlarm(`${f.cb} ${f.name}: overstroombeveiliging I>> – ${why}`,'crit');

@@ -217,7 +217,7 @@ const TESTS = [
       assert(r.station.maxOff === 0, `klanten zonder stroom tijdens onderhoud MS-station: ${r.station.maxOff}`);
       assert(r.thermo.gevonden && r.thermo.extra >= 4, `thermografie: ${JSON.stringify(r.thermo)}`);
   } },
-  ...['les1', 'les2', 'les3', 'les4', 'les5', 'les6', 'les7', 'les8'].map(les => ({ name: `leerscenario ${les} is uit te spelen`, query: `?play=${les}`, async run(p) {
+  ...['les1', 'les2', 'les3', 'les4', 'les5', 'les6', 'les7', 'les8', 'les9', 'les10', 'les11'].map(les => ({ name: `leerscenario ${les} is uit te spelen`, query: `?play=${les}`, async run(p) {
       const r = await p.evaluate(async () => { const O = OS, G = O.GAME;
         for (let k = 0; k < 150 && !G.ended; k++) { const L = G.lesson, s = L.steps[L.i];
           if (s && !L.done) { if (s.next) O.lessonGo(); else if (s.acts) { for (const a of s.acts) await T.op(...a); } else if (s.act) await T.op(...s.act); else if (s.auto) s.auto(); }
