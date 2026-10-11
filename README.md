@@ -492,9 +492,9 @@ De broncode staat in `src/`. `build.ps1` plakt de bestanden in strikte naamvolgo
 | `04-a-relay.js` | relaisafwijkingen, werkopdracht relaistest en de metingen van de testkoffer |
 | `04-b-ls.js` | laagspanning (spanning per straat, kabelkasten, monteurs), noodaggregaten, rotatie, herstelbonus en klantcommunicatie |
 | `04-c-aardfout.js` | aardfout in het gecompenseerde 10 kV-net: U0, aanwijzingen, zoeken, dubbele aardfout |
-| `04b`–`04g` | spelmodi en score, ring, lessen, dienstoverdracht, extra scenario's |
+| `04b`–`04i` | spelmodi en score, ring, lessen, dienstoverdracht, extra scenario's, scenario's pinksterzondag en aardfout tijdens onweer |
 | `05`–`06` | effecten, geluid, interieur, opbouw van de scène |
-| `07`–`07s` | SCADA en panelen, rondlopen, monteurs, schakelbrief, beveiligingsvenster, prognose, telefoon, tijdlijn/herhaling, modelcontrole, flex- en onderhoudsvenster, leven in de wijk, instellingen, tabblad Kabels, opslaan en hervatten, testkoffer, toetsenoverzicht, LS-venster en -tabblad, storingsschrijver |
+| `07`–`07t` | SCADA en panelen, rondlopen, monteurs, schakelbrief, beveiligingsvenster, prognose, telefoon, tijdlijn/herhaling, modelcontrole, flex- en onderhoudsvenster, leven in de wijk, instellingen, tabblad Kabels, opslaan en hervatten, testkoffer, toetsenoverzicht, LS-venster en -tabblad, storingsschrijver, dienstrapport als PDF |
 | `08-main.js` | HUD, menu's, start en hoofdlus |
 
 **Rails, lijnen en railkeuzevelden** staan op één plek (`BUSES`, `LINES` en het register `SEL_BAYS` in `04-1-net.js`); de koppelingen, spanningsbanden, SCADA-metingen en werkopdrachten worden daarvan afgeleid. Bij het opstarten controleert `checkModel()` of alle verwijzingen naar apparaten kloppen, of elke schakelaar ergens te bedienen is en of alles in de normale toestand spanning heeft. Een fout verschijnt als consolefout, en de tests vallen er dan direct over.
