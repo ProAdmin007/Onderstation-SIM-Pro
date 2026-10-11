@@ -121,9 +121,10 @@ function gameTick(dm,dtReal){
 const GRADES={dienst:[3300,2700,2100,1500,900],scen:[1600,1450,1300,1100,850]};
 // vrije dienst: de score omgerekend naar een dienst van 8 uur
 const gradeBasis=s=>GAME.mode==='free'?Math.round(1000+(s-1000)*480/Math.max(60,SIM.t-GAME.t0)):s;
-function grade(s){const m=MODES[GAME.mode]||{};
-  if(m.les)return GAME.lesson?.done?(SIM.incidents?['B',3]:['A+',5]):['E',0];
-  const t=m.scen?GRADES.scen:GRADES.dienst,v=gradeBasis(s);return v>=t[0]?['A+',5]:v>=t[1]?['A',4]:v>=t[2]?['B',3]:v>=t[3]?['C',2]:v>=t[4]?['D',1]:['E',0];}
+// id is de spelmodus. Met los (bijvoorbeeld de beste score in het menu) wordt niet omgerekend naar 8 uur
+function grade(s,id=GAME.mode,los=false){const m=MODES[id]||{};
+  if(m.les&&!los)return GAME.lesson?.done?(SIM.incidents?['B',3]:['A+',5]):['E',0];
+  const t=m.scen?GRADES.scen:GRADES.dienst,v=los?s:gradeBasis(s);return v>=t[0]?['A+',5]:v>=t[1]?['A',4]:v>=t[2]?['B',3]:v>=t[3]?['C',2]:v>=t[4]?['D',1]:['E',0];}
 function finalizeGame(){if(GAME.ended)return;GAME.ended=true;SIM.paused=true;
   GAME.obj.forEach(o=>{if(o.state)return;const ok=o.final?o.final():false;o.state=ok?'done':'fail';award(ok?100:-150,ok?'Doel behaald':'Doel gemist');});
   if(!SIM.incidents&&SIM.t-GAME.t0>=60)award(200,'Veilig gewerkt');}   // bonus pas na minimaal een uur dienst
@@ -151,16 +152,17 @@ function showReport(){
     <div class="rep-h">Statistieken</div><div class="rep-grid">${rows.map(r=>`<div class="row"><span>${r[0]}</span><b>${r[1]}</b></div>`).join('')}</div>
     ${timelineHTML()}
     ${badges.length?`<div class="rep-h">Badges</div><div class="badges">${badges.map(b=>`<div class="badge"><b>${b[0]}</b><span>${b[1]}</span></div>`).join('')}</div>`:''}
-    <div class="rep-btns"><button class="primary" data-r="again">Opnieuw spelen</button><button data-r="menu">Hoofdmenu</button>${REC.samples.length>2?'<button data-r="replay">▶ Herhaling</button>':''}<button data-r="cont">Vrij doorspelen</button></div></div>`;
+    <div class="rep-btns"><button class="primary" data-r="again">Opnieuw spelen</button><button data-r="menu">Hoofdmenu</button>${REC.samples.length>2?'<button data-r="replay">▶ Herhaling</button>':''}<button data-r="pdf" title="Download het rapport als PDF">📄 PDF</button><button data-r="cont">Vrij doorspelen</button></div></div>`;
   $('#report').classList.remove('hidden');
 }
 $('#report').addEventListener('click',e=>{const b=e.target.closest('[data-r]');if(!b)return;const a=b.dataset.r;
+  if(a==='pdf')return;   // (07t-pdf.js)
   if(a==='replay')return startReplay();
   if(a==='again')location.search=`?play=${GAME.mode}&diff=${GAME.diff}`;
   else if(a==='menu')location.search='';
   else{$('#report').classList.add('hidden');GAME.endT=null;GAME.ended=false;GAME.events=true;GAME.tasks=true;GAME.countdown=null;SIM.nextTaskAt=SIM.t+5;setSpeed(60);}});
 function renderMenu(){
-  const card=id=>{const m=MODES[id],b=getBest(id,GAME.diff);return `<button class="mode" data-mode="${id}"><span class="mt">${m.tag}</span><b>${m.name}</b><span class="md">${m.desc}</span>${b?`<span class="mb">Beste: ${b.toLocaleString('nl-NL')} (${grade(b)[0]})</span>`:''}</button>`;};
+  const card=id=>{const m=MODES[id],b=getBest(id,GAME.diff);return `<button class="mode" data-mode="${id}"><span class="mt">${m.tag}</span><b>${m.name}</b><span class="md">${m.desc}</span>${b?`<span class="mb">Beste: ${b.toLocaleString('nl-NL')} ${MODES[id].les?'':` (${grade(b,id,true)[0]})`}</span>`:''}</button>`;};
   const svs=listSaves(),svHtml=svs.length?`<div class="mh">Verder spelen</div><div class="mgrid">${svs.map(({k,d})=>`<div class="savecard"><button class="mode resume" data-resume="${k}"><span class="mt">💾 ${slotName(k)}</span><b>${MODES[d.mode].name} · ${fmtClock(d.SIM.t)}</b><span class="md">${DIFFS[d.diff].label} · ${SEASONS[d.season].name} · score ${Math.round(d.GAME.score).toLocaleString('nl-NL')}<br>opgeslagen ${new Date(d.at).toLocaleString('nl-NL',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</span></button><button class="mini delsave" data-delsave="${k}" title="Dit opgeslagen spel verwijderen">✕ verwijderen</button></div>`).join('')}</div>`:'';
   $('#menu').innerHTML=svHtml+`<div class="mh">Dienst draaien</div><div class="mgrid">${['free','day','eve'].map(card).join('')}</div>
     <div class="mh">Leren · begeleide lessen</div><div class="mgrid">${Object.keys(LESSONS).map(card).join('')}</div>

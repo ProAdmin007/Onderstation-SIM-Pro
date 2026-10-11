@@ -508,6 +508,12 @@ const TESTS = [
       assert(menu.includes('auto') && menu.includes('2'), `hoofdmenu toont de plekken niet: ${menu}`);
       assert(na.score === 4321 && na.f6 === 0 && na.ctrlS && na.weg, `hervatten uit plek 2 klopt niet: ${JSON.stringify(na)}`);
   } },
+  { name: 'dienstrapport als PDF (met tijdlijn)', query: '?play=zkh', async run(p) {
+      const r = await p.evaluate(async () => { const O = OS; O.SIM.paused = false; for (let k = 0; k < 400 && !O.GAME.ended; k++) T.step(1);
+        const rapport = !document.querySelector('#report').classList.contains('hidden'), knop = !!document.querySelector('#report [data-r="pdf"]');
+        const bytes = await O.reportPDF(true); return { rapport, knop, bytes, tijdlijn: !!document.querySelector('#report svg.tl') }; });
+      assert(r.rapport && r.knop && r.tijdlijn && r.bytes > 20000 && r.bytes < 400000, `PDF klopt niet: ${JSON.stringify(r)}`);
+  } },
   { name: 'leven in de wijk: ramen per station, auto\'s en buren bij uitval', query: '?autostart&t=21&night&season=winter', async run(p) {
       const r = await p.evaluate(async () => { T.quiet(); const O = OS, s1 = O.RING.stations[0]; O.SIM.paused = false; T.step(0.2); O.updateWindows();
         const aan = s1.winMats.some(m => m.opacity > 0.3), autos = O.CARS.filter(c => c.g.visible).length;

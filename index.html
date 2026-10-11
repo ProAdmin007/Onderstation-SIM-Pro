@@ -2468,9 +2468,10 @@ function gameTick(dm,dtReal){
 const GRADES={dienst:[3300,2700,2100,1500,900],scen:[1600,1450,1300,1100,850]};
 // vrije dienst: de score omgerekend naar een dienst van 8 uur
 const gradeBasis=s=>GAME.mode==='free'?Math.round(1000+(s-1000)*480/Math.max(60,SIM.t-GAME.t0)):s;
-function grade(s){const m=MODES[GAME.mode]||{};
-  if(m.les)return GAME.lesson?.done?(SIM.incidents?['B',3]:['A+',5]):['E',0];
-  const t=m.scen?GRADES.scen:GRADES.dienst,v=gradeBasis(s);return v>=t[0]?['A+',5]:v>=t[1]?['A',4]:v>=t[2]?['B',3]:v>=t[3]?['C',2]:v>=t[4]?['D',1]:['E',0];}
+// id is de spelmodus. Met los (bijvoorbeeld de beste score in het menu) wordt niet omgerekend naar 8 uur
+function grade(s,id=GAME.mode,los=false){const m=MODES[id]||{};
+  if(m.les&&!los)return GAME.lesson?.done?(SIM.incidents?['B',3]:['A+',5]):['E',0];
+  const t=m.scen?GRADES.scen:GRADES.dienst,v=los?s:gradeBasis(s);return v>=t[0]?['A+',5]:v>=t[1]?['A',4]:v>=t[2]?['B',3]:v>=t[3]?['C',2]:v>=t[4]?['D',1]:['E',0];}
 function finalizeGame(){if(GAME.ended)return;GAME.ended=true;SIM.paused=true;
   GAME.obj.forEach(o=>{if(o.state)return;const ok=o.final?o.final():false;o.state=ok?'done':'fail';award(ok?100:-150,ok?'Doel behaald':'Doel gemist');});
   if(!SIM.incidents&&SIM.t-GAME.t0>=60)award(200,'Veilig gewerkt');}   // bonus pas na minimaal een uur dienst
@@ -2498,16 +2499,17 @@ function showReport(){
     <div class="rep-h">Statistieken</div><div class="rep-grid">${rows.map(r=>`<div class="row"><span>${r[0]}</span><b>${r[1]}</b></div>`).join('')}</div>
     ${timelineHTML()}
     ${badges.length?`<div class="rep-h">Badges</div><div class="badges">${badges.map(b=>`<div class="badge"><b>${b[0]}</b><span>${b[1]}</span></div>`).join('')}</div>`:''}
-    <div class="rep-btns"><button class="primary" data-r="again">Opnieuw spelen</button><button data-r="menu">Hoofdmenu</button>${REC.samples.length>2?'<button data-r="replay">▶ Herhaling</button>':''}<button data-r="cont">Vrij doorspelen</button></div></div>`;
+    <div class="rep-btns"><button class="primary" data-r="again">Opnieuw spelen</button><button data-r="menu">Hoofdmenu</button>${REC.samples.length>2?'<button data-r="replay">▶ Herhaling</button>':''}<button data-r="pdf" title="Download het rapport als PDF">📄 PDF</button><button data-r="cont">Vrij doorspelen</button></div></div>`;
   $('#report').classList.remove('hidden');
 }
 $('#report').addEventListener('click',e=>{const b=e.target.closest('[data-r]');if(!b)return;const a=b.dataset.r;
+  if(a==='pdf')return;   // (07t-pdf.js)
   if(a==='replay')return startReplay();
   if(a==='again')location.search=`?play=${GAME.mode}&diff=${GAME.diff}`;
   else if(a==='menu')location.search='';
   else{$('#report').classList.add('hidden');GAME.endT=null;GAME.ended=false;GAME.events=true;GAME.tasks=true;GAME.countdown=null;SIM.nextTaskAt=SIM.t+5;setSpeed(60);}});
 function renderMenu(){
-  const card=id=>{const m=MODES[id],b=getBest(id,GAME.diff);return `<button class="mode" data-mode="${id}"><span class="mt">${m.tag}</span><b>${m.name}</b><span class="md">${m.desc}</span>${b?`<span class="mb">Beste: ${b.toLocaleString('nl-NL')} (${grade(b)[0]})</span>`:''}</button>`;};
+  const card=id=>{const m=MODES[id],b=getBest(id,GAME.diff);return `<button class="mode" data-mode="${id}"><span class="mt">${m.tag}</span><b>${m.name}</b><span class="md">${m.desc}</span>${b?`<span class="mb">Beste: ${b.toLocaleString('nl-NL')} ${MODES[id].les?'':` (${grade(b,id,true)[0]})`}</span>`:''}</button>`;};
   const svs=listSaves(),svHtml=svs.length?`<div class="mh">Verder spelen</div><div class="mgrid">${svs.map(({k,d})=>`<div class="savecard"><button class="mode resume" data-resume="${k}"><span class="mt">💾 ${slotName(k)}</span><b>${MODES[d.mode].name} · ${fmtClock(d.SIM.t)}</b><span class="md">${DIFFS[d.diff].label} · ${SEASONS[d.season].name} · score ${Math.round(d.GAME.score).toLocaleString('nl-NL')}<br>opgeslagen ${new Date(d.at).toLocaleString('nl-NL',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</span></button><button class="mini delsave" data-delsave="${k}" title="Dit opgeslagen spel verwijderen">✕ verwijderen</button></div>`).join('')}</div>`:'';
   $('#menu').innerHTML=svHtml+`<div class="mh">Dienst draaien</div><div class="mgrid">${['free','day','eve'].map(card).join('')}</div>
     <div class="mh">Leren · begeleide lessen</div><div class="mgrid">${Object.keys(LESSONS).map(card).join('')}</div>
@@ -4611,6 +4613,59 @@ $('#recBtn').addEventListener('click',()=>recOpen()?closeRec():openRec(0));
 addEventListener('keydown',e=>{if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT'||e.ctrlKey||e.metaKey)return;if((e.key==='r'||e.key==='R')&&$('#intro').classList.contains('hidden'))recOpen()?closeRec():openRec(0);});
 
 
+// ============================================================ dienstrapport als PDF (jsPDF wordt pas bij het klikken via de CDN geladen)
+let JSPDF_P=null;
+function loadJsPDF(){if(window.jspdf)return Promise.resolve(window.jspdf);
+  return JSPDF_P??=new Promise((ok,ko)=>{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+    s.onload=()=>ok(window.jspdf);s.onerror=()=>{JSPDF_P=null;ko(new Error('jsPDF kon niet worden geladen (geen internet?)'));};document.head.appendChild(s);});}
+// standaardlettertypen in een PDF kennen alleen Latijnse tekens: symbolen omzetten
+const pdfTxt=t=>String(t??'').replace(/<[^>]+>/g,'').replace(/✓/g,'OK').replace(/✕|✗/g,'X').replace(/★/g,'*').replace(/≥/g,'>=').replace(/≤/g,'<=').replace(/→/g,'->').replace(/[↔⇄]/g,'<->')
+  .replace(/×/g,'x').replace(/·/g,'-').replace(/[^\x20-\xFF€–—‘’“”…•]/g,'').replace(/\s+/g,' ').trim();
+// tijdlijn uit het rapport als PNG, met lichte kleuren voor op papier
+function timelinePNG(){const svg=$('#report svg.tl');if(!svg)return Promise.resolve(null);
+  let x=new XMLSerializer().serializeToString(svg).replace(/var\(--accent\)/g,'#e08a1e').replace(/var\(--green\)/g,'#2f9e57').replace(/var\(--muted\)/g,'#666').replace(/rgba\(255,255,255,/g,'rgba(0,0,0,');
+  if(!/<svg[^>]*xmlns=/.test(x))x=x.replace('<svg','<svg xmlns="http://www.w3.org/2000/svg"');x=x.replace(/(<svg[^>]*>)/,'$1<style>.tl-ax{font:10px monospace;fill:#555}</style>');
+  const vb=svg.viewBox.baseVal,W=vb.width*3,H=vb.height*3;
+  return new Promise(ok=>{const img=new Image();img.onload=()=>{const c=document.createElement('canvas');c.width=W;c.height=H;const g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,W,H);g.drawImage(img,0,0,W,H);ok({url:c.toDataURL('image/jpeg',0.88),ratio:H/W});};
+    img.onerror=()=>ok(null);img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(x);});}
+async function reportPDF(onlyBytes){const {jsPDF}=await loadJsPDF(),doc=new jsPDF({unit:'mm',format:'a4',compress:true}),R=$('#report');
+  const W=210,M=16,CW=W-2*M;let y=0;
+  const need=h=>{if(y+h>282){doc.addPage();y=18;}};
+  const h=(t)=>{need(12);y+=4;doc.setFont('helvetica','bold');doc.setFontSize(12);doc.setTextColor(30,40,55);doc.text(pdfTxt(t),M,y);y+=2;doc.setDrawColor(240,164,58);doc.setLineWidth(0.5);doc.line(M,y,M+CW,y);y+=5;};
+  const p=(t,size=9.5,color=[40,40,40],bold=false)=>{doc.setFont('helvetica',bold?'bold':'normal');doc.setFontSize(size);doc.setTextColor(...color);const ls=doc.splitTextToSize(pdfTxt(t),CW);ls.forEach(l=>{need(5);doc.text(l,M,y);y+=size*0.42+0.6;});};
+  // kopband
+  doc.setFillColor(13,17,22);doc.rect(0,0,W,24,'F');doc.setFillColor(240,164,58);doc.rect(0,24,W,1.2,'F');
+  doc.setTextColor(240,164,58);doc.setFont('helvetica','bold');doc.setFontSize(9);doc.text('ONDERSTATION SIMULATOR - OS ZUIDWOLDE 110/10/20 kV',M,10);
+  doc.setTextColor(255,255,255);doc.setFontSize(16);doc.text(pdfTxt(R.querySelector('h2')?.textContent||'Dienstrapport'),M,19);
+  y=33;p(`${R.querySelector('.eyebrow')?.textContent||''} - gespeeld van ${fmtClock(GAME.t0)} tot ${fmtClock(SIM.t)} - rapport gemaakt op ${new Date().toLocaleString('nl-NL',{day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'})}`,9,[90,90,90]);
+  // cijfer en score
+  y+=2;const g=R.querySelector('.grade')?.textContent||'',sc=R.querySelector('.rs')?.textContent||'',stEl=R.querySelector('.stars'),st=stEl?(stEl.textContent.length-(stEl.querySelector('span')?.textContent.length||0)):0;
+  doc.setFillColor(240,164,58);doc.roundedRect(M,y,22,18,2,2,'F');doc.setTextColor(26,18,6);doc.setFont('helvetica','bold');doc.setFontSize(20);doc.text(pdfTxt(g),M+11,y+12.5,{align:'center'});
+  doc.setTextColor(30,40,55);doc.setFontSize(15);doc.text(pdfTxt(sc),M+28,y+8);doc.setFontSize(11);doc.setTextColor(224,138,30);doc.text(`${'*'.repeat(st)}  (${st} van 5 sterren)`,M+28,y+15);
+  const extra=[...R.querySelectorAll('.rep-top .prev,.rep-top .rec')].map(e=>pdfTxt(e.textContent)).join(' - ');if(extra){doc.setFontSize(8.5);doc.setTextColor(100,100,100);doc.text(extra,M+70,y+15);}
+  y+=26;
+  // doelen
+  const goals=[...R.querySelectorAll('.step')];if(goals.length){h('Doelen');goals.forEach(s=>{const ok=s.classList.contains('done'),txt=pdfTxt(s.textContent.replace(/^[✓✕]/,''));need(6);doc.setFillColor(...(ok?[47,158,87]:[229,72,77]));doc.circle(M+1.6,y-1.2,1.4,'F');
+    doc.setFont('helvetica','normal');doc.setFontSize(9.5);doc.setTextColor(40,40,40);doc.text(doc.splitTextToSize(txt,CW-40),M+5,y);doc.setFont('helvetica','bold');doc.setTextColor(...(ok?[47,158,87]:[229,72,77]));doc.text(ok?'behaald':'niet behaald',M+CW,y,{align:'right'});y+=5.2;});}
+  // statistieken in twee kolommen
+  const rows=[...R.querySelectorAll('.rep-grid .row')].map(r=>[pdfTxt(r.querySelector('span')?.textContent),pdfTxt(r.querySelector('b')?.textContent)]);
+  if(rows.length){h('Statistieken');doc.setFontSize(9);const half=Math.ceil(rows.length/2),colW=CW/2;
+    for(let i=0;i<half;i++){need(6);[rows[i],rows[i+half]].forEach((r,c)=>{if(!r)return;const x=M+c*colW;doc.setFont('helvetica','normal');doc.setTextColor(90,90,90);doc.text(r[0],x,y);doc.setFont('helvetica','bold');doc.setTextColor(30,40,55);doc.text(r[1],x+colW-4,y,{align:'right'});});
+      doc.setDrawColor(230,230,230);doc.setLineWidth(0.2);doc.line(M,y+1.6,M+CW,y+1.6);y+=5.6;}}
+  // tijdlijn
+  const tl=await timelinePNG();if(tl){h('Tijdlijn');p('Rood: klanten zonder stroom - oranje: score - rode driehoek: storing - streepje: jouw handeling - groen: doel behaald of werk voltooid',8,[110,110,110]);const ih=CW*tl.ratio;need(ih+2);doc.addImage(tl.url,'JPEG',M,y,CW,ih);y+=ih+3;}
+  // leermomenten en badges
+  const ins=[...R.querySelectorAll('.tl-i')];if(ins.length){h('Leermomenten');ins.forEach(i=>{p('•  '+i.textContent,9.5);y+=1;});}
+  const bad=[...R.querySelectorAll('.badge')];if(bad.length){h('Badges');bad.forEach(b=>p(`${b.querySelector('b')?.textContent}: ${b.querySelector('span')?.textContent}`,9.5));}
+  // voettekst
+  const n=doc.getNumberOfPages();for(let i=1;i<=n;i++){doc.setPage(i);doc.setFontSize(7.5);doc.setTextColor(140,140,140);doc.setFont('helvetica','normal');
+    doc.text('Onderstation Simulator - github.com/ProAdmin007/Onderstation-SIM-Pro - CC BY-NC-SA 4.0',M,290);doc.text(`pagina ${i} van ${n}`,W-M,290,{align:'right'});}
+  if(onlyBytes==='data')return doc.output('datauristring');if(onlyBytes)return doc.output('arraybuffer').byteLength;
+  doc.save(`dienstrapport-${GAME.mode}-${new Date().toISOString().slice(0,10)}.pdf`);return true;}
+$('#report').addEventListener('click',e=>{const b=e.target.closest('[data-r="pdf"]');if(!b)return;const t=b.textContent;b.disabled=true;b.textContent='PDF maken…';
+  reportPDF().catch(err=>deny(err.message)).finally(()=>{b.disabled=false;b.textContent=t;});});
+
+
 // ============================================================ HUD + bediening
 function updateHUD(){
   $('#clock').textContent=fmtClock(SIM.t);
@@ -4685,7 +4740,7 @@ else{renderMenu();$('#intro').classList.remove('hidden');controls.autoRotate=tru
 if(params.has('night'))updateSky(22);
 if(params.has('view')){const v=VIEWPOS[+params.get('view')];camera.position.copy(v[0]);controls.target.copy(v[1]);controls.autoRotate=false;controls.update();}
 
-window.OS={listSaves,openSlots,closeSlots,SAVE_SLOTS,layoutCheck,LAYOUT,FREC,fltRec,openRec,closeRec,renderRec,selectivity,protSelect,feederT,incT,incOf,shortCircuit,EF,earthFault,efTick,efRails,efU0,railsCoupled,controls,tripBreaker,CONS,LS_LINKS,LS_ORDERS,GENSET,lsTick,lsOrder,lsSwitchOrder,lsExec,gsSend,gsOff,gsRestart,tapOrder,setEta,callPrio,lsAreas,PRIO,openLS,closeLS,renderLS,lvVolt,stationLoads,shedFactor,failP,manualP,phoneTick,refreshDevPanel,updateSLD,openKeys,closeKeys,KEY_HELP,RELAY_BAYS,relayTask,relayDue,relayDefect,initRelays,kitTests,kitMeasure,kitVerdict,kitRun,openKit,closeKit,saveGame,readSave,deleteSave,resumeGame,canSave,specOf,CABLE,soilT,FD,meppelFault,linkTick,tabAlarms,updateTabAlarms,renderTasks,INC,INCIDENTS,startIncident,endIncident,incidentTick,setTab,renderCables,GFX,setGfx,applyGfx,openSettings,closeSettings,WX_TYPES,renderer,scene,FIRE,CARS,updateWindows,updateLife,stationLive,cbMaintTask,worstCb,cond,breakerFails,CB_IDS,FLEX,setFlex,flexTick,congestion,openFlex,closeFlex,checkModel,homeBus,BUSES,SEL_BAYS,TORCH,setTorch,HO_POOL,handoverTick,REC,RP,startReplay,stopReplay,analyse,stationDamage,closeHandover,deviations,PHONE,lvFault,callFrom,phoneAnswer,dispatchLV,LVG,forecast,progAdvice,PROG,startTask:(k,...a)=>{TASK={relayTask,cbMaintTask,railTask,railBTask,stationTask,thermoTask,ringTask,feederTask,lineTask,reserveTask}[k](...a);TASK.i=0;TASK.code='WV-TEST';briefInit(TASK);renderTasks();},SIM,D,LESSONS,lessonGo,selectDevice,abortTask,railTask,stationTask,thermoTask,nearDev,VIEWS,PROT,setProt,openProt,closeProt,busFault,BUSF,RINGS,task:()=>TASK,briefSubmit,briefCheck,briefWatch,actKey,taskActs,crewNear,boxOf:id=>VIEWS[id]&&VIEWS[id].box,AudioSys,updateAudio,WX,setWeather,setSeason,SEASONS,ambient,enterKiosk,ROOMS,blockedAt,RING,NPCS,crewDispatch,ringFault,FP,enterFP,exitFP,pickCenter,camera,camInside,setRatio,setTab,GAME,MODES,applyMode,endGame,EN:()=>EN,FLOW,operate,tapStep,setAVR,resetLockout,toggleAR,regulate,computeFlows,randomEvent,lineFault,feederFault,trafoFault,offerTask,simStep,FEEDERS};
+window.OS={reportPDF,listSaves,openSlots,closeSlots,SAVE_SLOTS,layoutCheck,LAYOUT,FREC,fltRec,openRec,closeRec,renderRec,selectivity,protSelect,feederT,incT,incOf,shortCircuit,EF,earthFault,efTick,efRails,efU0,railsCoupled,controls,tripBreaker,CONS,LS_LINKS,LS_ORDERS,GENSET,lsTick,lsOrder,lsSwitchOrder,lsExec,gsSend,gsOff,gsRestart,tapOrder,setEta,callPrio,lsAreas,PRIO,openLS,closeLS,renderLS,lvVolt,stationLoads,shedFactor,failP,manualP,phoneTick,refreshDevPanel,updateSLD,openKeys,closeKeys,KEY_HELP,RELAY_BAYS,relayTask,relayDue,relayDefect,initRelays,kitTests,kitMeasure,kitVerdict,kitRun,openKit,closeKit,saveGame,readSave,deleteSave,resumeGame,canSave,specOf,CABLE,soilT,FD,meppelFault,linkTick,tabAlarms,updateTabAlarms,renderTasks,INC,INCIDENTS,startIncident,endIncident,incidentTick,setTab,renderCables,GFX,setGfx,applyGfx,openSettings,closeSettings,WX_TYPES,renderer,scene,FIRE,CARS,updateWindows,updateLife,stationLive,cbMaintTask,worstCb,cond,breakerFails,CB_IDS,FLEX,setFlex,flexTick,congestion,openFlex,closeFlex,checkModel,homeBus,BUSES,SEL_BAYS,TORCH,setTorch,HO_POOL,handoverTick,REC,RP,startReplay,stopReplay,analyse,stationDamage,closeHandover,deviations,PHONE,lvFault,callFrom,phoneAnswer,dispatchLV,LVG,forecast,progAdvice,PROG,startTask:(k,...a)=>{TASK={relayTask,cbMaintTask,railTask,railBTask,stationTask,thermoTask,ringTask,feederTask,lineTask,reserveTask}[k](...a);TASK.i=0;TASK.code='WV-TEST';briefInit(TASK);renderTasks();},SIM,D,LESSONS,lessonGo,selectDevice,abortTask,railTask,stationTask,thermoTask,nearDev,VIEWS,PROT,setProt,openProt,closeProt,busFault,BUSF,RINGS,task:()=>TASK,briefSubmit,briefCheck,briefWatch,actKey,taskActs,crewNear,boxOf:id=>VIEWS[id]&&VIEWS[id].box,AudioSys,updateAudio,WX,setWeather,setSeason,SEASONS,ambient,enterKiosk,ROOMS,blockedAt,RING,NPCS,crewDispatch,ringFault,FP,enterFP,exitFP,pickCenter,camera,camInside,setRatio,setTab,GAME,MODES,applyMode,endGame,EN:()=>EN,FLOW,operate,tapStep,setAVR,resetLockout,toggleAR,regulate,computeFlows,randomEvent,lineFault,feederFault,trafoFault,offerTask,simStep,FEEDERS};
 const clock=new THREE.Clock();let hudT=0,skyT=0,progT=0;
 let liteAcc=0;
 function frame(){
