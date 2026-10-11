@@ -475,6 +475,17 @@ const TESTS = [
         return { actief, gevonden, dubbel: !O.EF.on && ev('Dubbele aardfout') && O.RING.secs.find(x => x.id === 'K12').fault }; });
       for (const [k, v] of Object.entries(r)) assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
   } },
+  { name: 'selectiviteit: grafiek, te snelle reserve laat de rail uitvallen, storingsschrijver', query: '?autostart&t=11', async run(p) {
+      const r = await p.evaluate(async () => { T.quiet(); const O = OS, D = O.D, EN = () => O.EN(), f = O.FD('F6'); O.SIM.paused = false; T.step(0.5);
+        const standaard = !O.selectivity(f).bad;
+        O.feederFault('F6', 30); T.step(0.2); const railBlijft = EN().has('RB') && D['V-T1'].state === 1, reg = O.FREC[0]?.kind === 'kortsluiting' && O.FREC[0].dev === 'V-F6';
+        O.openRec(0); const svg = document.querySelectorAll('#recWin polyline').length >= 6; O.closeRec();
+        O.PROT.tr.T1.oc = 0.05; const slecht = O.selectivity(O.FD('F5')).bad;
+        O.openProt(); const grafiek = /Niet selectief/.test(document.querySelector('#prot').textContent) || !!document.querySelector('#prot .selc'); O.closeProt();
+        O.shortCircuit(O.FD('F5'), 12000); T.step(0.2); const railUit = D['V-T1'].state === 0 && !EN().has('RA') && O.FREC[0].inc === 'V-T1';
+        return { standaard, railBlijft, reg, svg, nietSelectief: !!slecht, grafiek, railUit }; });
+      for (const [k, v] of Object.entries(r)) assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
+  } },
   { name: 'leven in de wijk: ramen per station, auto\'s en buren bij uitval', query: '?autostart&t=21&night&season=winter', async run(p) {
       const r = await p.evaluate(async () => { T.quiet(); const O = OS, s1 = O.RING.stations[0]; O.SIM.paused = false; T.step(0.2); O.updateWindows();
         const aan = s1.winMats.some(m => m.opacity > 0.3), autos = O.CARS.filter(c => c.g.visible).length;

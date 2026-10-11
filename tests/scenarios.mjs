@@ -12,7 +12,7 @@ import os from 'node:os';
 if (process.env.TEST_PRIORITY !== 'normal') try { os.setPriority(0, os.constants.priority.PRIORITY_BELOW_NORMAL); } catch (e) {}
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const pageUrl = pathToFileURL(path.join(root, 'index.html')).href;
+const pageUrl = pathToFileURL(process.env.PAGE ? path.resolve(process.env.PAGE) : path.join(root, 'index.html')).href;   // PAGE=…: een andere (bevroren) versie spelen
 const chrome = process.env.CHROME_PATH || ['C:/Program Files/Google/Chrome/Application/chrome.exe', '/usr/bin/google-chrome', '/usr/bin/chromium',
   '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'].find(p => existsSync(p));
 const only = process.argv[2];

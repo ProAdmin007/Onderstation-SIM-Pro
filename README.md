@@ -127,6 +127,7 @@ Bedoeld voor **bedrijfsvoerders en monteurs in opleiding**, studenten **elektrot
 | `B` | beveiliging | `C` | flex en congestie |
 | `O` | onderhoud | `K` | testkoffer |
 | `N` | laagspanning | `I` | instellingen |
+| `R` | storingsschrijver | `E` | cursor vrij tijdens rondlopen |
 | `Ctrl+S` | opslaan | `L` / `M` | labels / geluid |
 
 <details>
@@ -137,6 +138,7 @@ Bedoeld voor **bedrijfsvoerders en monteurs in opleiding**, studenten **elektrot
 - Linker muisknop draaien, rechter muisknop schuiven, scrollen om te zoomen.
 - `1`–`9` camerastandpunten (6 = binnen 10 kV, 7 = binnen 20 kV, 8 = woonwijk, 9 = centrum en De Vaart)
 - `K` opent de **testkoffer** tijdens een relaistest
+- `R` opent de **storingsschrijver**
 - `N` opent het **LS-venster**: LS-velden, kabelkasten, noodaggregaten en klanten informeren
 - **Rondlopen (first person):** druk op `V` of op de knop *Rondlopen*.
   - Je loopt met `WASD`, rent met `Shift` en kijkt rond met de muis.
@@ -365,6 +367,14 @@ Toets `B` of de knop *Beveiliging*.
 </details>
 
 <details>
+<summary><b>Selectiviteit en storingsschrijver</b></summary>
+
+- **Selectiviteit** (beveiligingsvenster, `B`): een log-log **tijd-stroomgrafiek** van het gekozen veld (I> standaard-invers en I>> 50 ms) tegenover de **reserve-overstroom van het inkomende veld** (V-T1, V-T3 of W-T2, instelbaar met TMS 0,05–0,3). Waar de marge kleiner is dan 0,25 s kleurt de grafiek rood: *niet selectief*.
+  - Het heeft gevolgen: is de instelling bij de optredende foutstroom niet selectief, dan schakelt bij een kabelfout ook het inkomende veld af en valt de hele rail uit (−50).
+- **Storingsschrijver** (toets `R` of de knop *Schrijver*): bij elke kortsluiting, overbelastingstrip of aardfout een registratie van de **stroom en spanning per fase**: de foutstroom met gelijkstroomcomponent, de spanningsdip, het afschakelmoment en een eventuele niet-selectieve uitschakeling. Bij een aardfout zie je één fasespanning inzakken, de andere twee naar √3 stijgen en U0 opkomen.
+</details>
+
+<details>
 <summary><b>Aardfout in het 10 kV-net</b></summary>
 
 Het 10 kV-net is **gecompenseerd** (Petersenspoel in het sterpunt van T1 en T3). Een enkele aardsluiting schakelt daarom niet af. Je krijgt een **aardfoutmelding** met **nulpuntsspanning U0** (±5,9 kV) op de rails die galvanisch met de fout verbonden zijn. In SCADA staat dat bovenaan het 10 kV- en het ringtabblad, en beide tabbladen knipperen.
@@ -467,7 +477,7 @@ De broncode staat in `src/`. `build.ps1` plakt de bestanden in strikte naamvolgo
 | `04-c-aardfout.js` | aardfout in het gecompenseerde 10 kV-net: U0, aanwijzingen, zoeken, dubbele aardfout |
 | `04b`–`04g` | spelmodi en score, ring, lessen, dienstoverdracht, extra scenario's |
 | `05`–`06` | effecten, geluid, interieur, opbouw van de scène |
-| `07`–`07r` | SCADA en panelen, rondlopen, monteurs, schakelbrief, beveiligingsvenster, prognose, telefoon, tijdlijn/herhaling, modelcontrole, flex- en onderhoudsvenster, leven in de wijk, instellingen, tabblad Kabels, opslaan en hervatten, testkoffer, toetsenoverzicht, LS-venster en -tabblad |
+| `07`–`07s` | SCADA en panelen, rondlopen, monteurs, schakelbrief, beveiligingsvenster, prognose, telefoon, tijdlijn/herhaling, modelcontrole, flex- en onderhoudsvenster, leven in de wijk, instellingen, tabblad Kabels, opslaan en hervatten, testkoffer, toetsenoverzicht, LS-venster en -tabblad, storingsschrijver |
 | `08-main.js` | HUD, menu's, start en hoofdlus |
 
 **Rails, lijnen en railkeuzevelden** staan op één plek (`BUSES`, `LINES` en het register `SEL_BAYS` in `04-1-net.js`); de koppelingen, spanningsbanden, SCADA-metingen en werkopdrachten worden daarvan afgeleid. Bij het opstarten controleert `checkModel()` of alle verwijzingen naar apparaten kloppen, of elke schakelaar ergens te bedienen is en of alles in de normale toestand spanning heeft. Een fout verschijnt als consolefout, en de tests vallen er dan direct over.

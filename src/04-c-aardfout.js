@@ -24,7 +24,7 @@ function earthFault(forceNode){if(EF.on)return null;computeFlows();
   const others=FEEDERS.filter(f=>f!==fd&&['RA','RB'].includes(f.bus));if(Math.random()<0.15&&others.length)ind[pick(others).id]=true;
   EF.on={node:x.node,secId:x.sec?.id||null,fId:x.f?.id||null,at:SIM.t,ind,warned:false};
   if(fd?.ring)ringPathStations(fd.node,x.node).forEach(id=>{const s=RING.stations.find(y=>y.id===id);if(Math.random()<0.7)s.efFlag=true;});
-  GAME.stats.ef=(GAME.stats.ef||0)+1;
+  GAME.stats.ef=(GAME.stats.ef||0)+1;fltRec({dev:fd?.cb||'10 kV',name:x.sec?`kabel ${secName(x.sec)}`:x.f.name,kind:'aardfout',Ipre:Math.abs(fd?.P||0)*kA('RA'),Ik:0,tTrip:null,phases:1,kv:10});
   pushAlarm(`Aardfoutmelding 10 kV: nulpuntsspanning U0 ±${efU0().toFixed(1).replace('.',',')} kV op rail ${efRails().map(b=>BUSES[b].nm).join(' en ')}. Het net blijft in bedrijf (Petersenspoel) – zoek en isoleer de aardfout`,'crit');
   pushAlarm(`Tip: kijk welk veld een aardfoutrichting meldt (⏚) en welke MS-stations een aardfoutverklikker hebben. Splits de rails (V-K open) of knip de ring op: verdwijnt U0 als je een deel spanningsloos maakt, dan zit de fout daar`,'info');
   refreshAll();return EF.on;}

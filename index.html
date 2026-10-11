@@ -304,6 +304,9 @@ body.fp #torch.on{display:block}
 #saved.show{animation:savedIn 2.4s ease forwards}@keyframes savedIn{0%{opacity:0;transform:translate(-50%,-10px)}12%,75%{opacity:1;transform:translate(-50%,0)}100%{opacity:0}}
 .mode.resume{border-color:var(--green)}.mode.resume .mt{color:var(--green)}.mode.delsave{opacity:.75}
 #fps{display:none;position:fixed;right:14px;bottom:14px;z-index:8;font:600 12px var(--mono);color:#9fe39a;background:rgba(13,17,22,.7);padding:3px 8px;border-radius:6px;pointer-events:none}#fps.on{display:block}
+.selc{width:100%;height:auto;background:rgba(255,255,255,.02);border:1px solid var(--line);border-radius:8px}.selc .ax{font:9px var(--mono);fill:var(--muted)}.sel-btns{display:flex;flex-wrap:wrap;gap:3px;margin:4px 0 6px}.sel-btns .on{background:var(--accent);color:#1a1206;border-color:var(--accent)}.pr .bad{color:var(--red)}
+#recWin{position:fixed;inset:0;display:grid;place-items:center;background:rgba(6,9,12,.66);z-index:12;overflow:auto;padding:20px 0}#recWin.hidden{display:none}
+.rec-grid{display:grid;grid-template-columns:190px 1fr;gap:12px}.rec-list{display:flex;flex-direction:column;gap:3px;max-height:420px;overflow:auto}.rec-it{text-align:left;padding:5px 8px}.rec-it b{display:block;font-size:12px}.rec-it span{font-size:11px;color:var(--muted)}.rec-it.on{border-color:var(--accent)}
 #lsWin{position:fixed;inset:0;display:grid;place-items:center;background:rgba(6,9,12,.66);z-index:12;overflow:auto;padding:20px 0}#lsWin.hidden{display:none}
 .ls-tabs{display:flex;flex-wrap:wrap;gap:4px;margin:6px 0 8px}.ls-tabs .on{background:var(--accent);color:#1a1206;border-color:var(--accent)}.ls-tabs .off{border-color:var(--red)}
 #lsWin select{background:#0b0f14;color:var(--text);border:1px solid var(--line);border-radius:6px;padding:2px 4px;font:inherit;font-size:12px}#lsWin .bad{color:var(--red)}#lsWin .warnc{color:var(--accent)}
@@ -375,6 +378,7 @@ body.fp #torch.on{display:block}
   <button data-v="6"><kbd>7</kbd>Binnen 20 kV</button>
   <button data-v="7"><kbd>8</kbd>Woonwijk</button>
   <button data-v="8"><kbd>9</kbd>Centrum &amp; Vaart</button>
+  <button id="recBtn" class="tool" title="Storingsschrijver: stroom en spanning rond elke storing"><kbd>R</kbd>Schrijver</button>
   <button id="lsBtn" class="tool" title="Laagspanning, noodaggregaten en klanten informeren"><kbd>N</kbd>LS</button>
   <button id="keysBtn" class="tool" title="Overzicht van alle toetsen"><kbd>H</kbd>Toetsen</button>
   <button id="settingsBtn" class="tool" title="Prestaties, weer en geluid"><kbd>I</kbd>Instellingen</button>
@@ -398,6 +402,7 @@ body.fp #torch.on{display:block}
 <div id="kit" class="hidden"></div>
 <div id="keys" class="hidden"></div>
 <div id="lsWin" class="hidden"></div>
+<div id="recWin" class="hidden"></div>
 <div id="settings" class="hidden"></div>
 <div id="fps"></div>
 <div id="saved"></div>
@@ -1683,7 +1688,7 @@ function feederTick(dm){
       pushAlarm(`${f.cb}: kabel onder spanning gebracht met fout – I>> momentaan trip. Wacht op de storingsdienst!`,'warn');return;}
     // een verlopen of traag relais (zie relaistest) spreekt later aan dan de instelling
     const r=f.gen?0:f.P/f.rate,ps=PROT.f[f.id],rl=f.relay||{},pk=ps.pick*(rl.drift||1);overloadHeat(f,r,dm);
-    if(r>pk&&D[f.cb].state===1){f.oc+=dm*(r*r-1)/(10*ps.tms*(rl.delay||1));if(f.oc>=1){f.oc=0;tripBreaker(f.cb);GAME.stats.clpTrips++;award(-30,`${f.id} overbelast afgeschakeld`);pushAlarm(`${f.cb} ${f.name}: overstroombeveiliging I> (${Math.round(ps.pick*100)}%) na ${Math.round(r*100)}% belasting${f.clp>1.05?' (koude-lastopname)':''}`,'warn');}}
+    if(r>pk&&D[f.cb].state===1){f.oc+=dm*(r*r-1)/(10*ps.tms*(rl.delay||1));if(f.oc>=1){f.oc=0;tripBreaker(f.cb);fltRec({dev:f.cb,name:f.name,kind:'overbelasting',Ipre:r*f.rate*kA(f.bus),Ik:r*f.rate*kA(f.bus),tTrip:0,phases:3,kv:is20(f.bus)?20:10});GAME.stats.clpTrips++;award(-30,`${f.id} overbelast afgeschakeld`);pushAlarm(`${f.cb} ${f.name}: overstroombeveiliging I> (${Math.round(ps.pick*100)}%) na ${Math.round(r*100)}% belasting${f.clp>1.05?' (koude-lastopname)':''}`,'warn');}}
     else f.oc=Math.max(0,f.oc-dm*0.1);});
   // koude-lastopname per afnemer
   CONS.forEach(c=>{const on=EN.has(c.node);
@@ -1720,6 +1725,37 @@ function overloadHeat(f,r,dm){   // kabel van een uitgaand veld (tijdconstante 3
 function trafoOverheat(T,t,dm){if(t.oil>105&&EN.has(T+'h')){t.gas=(t.gas||0)+dm;if(t.gas>12){t.gas=0;GAME.stats.thermal++;award(-100,`${T} gasvorming door oververhitting`);
     tripTrafo(T,'Buchholz-beveiliging (gasvorming door oververhitting)',rnd(90,120),'prot');}}else t.gas=Math.max(0,(t.gas||0)-dm*0.5);}
 
+// ---------- selectiviteit: overstroom I> (IEC standaard-invers) en I>> van het veld tegenover de reserve-overstroom van het inkomende veld
+['T1','T2','T3'].forEach(T=>{PROT.tr[T].oc=0.2;});
+PROT_OPT.oc={label:'Reserve I> inkomend',vals:[0.05,0.1,0.2,0.3],fmt:v=>'TMS '+String(v).replace('.',','),tip:'Reserve-overstroom in het inkomende veld (V-T1, V-T3, W-T2). Te snel: bij een kabelfout schakelt ook het inkomende veld af en valt de hele rail uit (niet selectief). Te traag: een railfout blijft langer staan.'};
+const IEC_SI=(m,tms)=>m<=1?Infinity:0.14*tms/(Math.pow(m,0.02)-1);
+const feederIp=f=>PROT.f[f.id].pick*f.rate*kA(f.bus);   // A primair
+const feederIinst=f=>8*f.rate*kA(f.bus);                  // I>> vast op 8 × nominaal, 50 ms
+const feederT=(f,I)=>I>=feederIinst(f)?0.05:IEC_SI(I/feederIp(f),PROT.f[f.id].tms*0.1);
+const incOf=f=>is20(f.bus)?'T2':railOf(f.sel)==='RB'&&D['V-T3'].state===1&&D.T3.ratio==='10'?'T3':'T1';
+const incCb=T=>(T==='T2'?'W-':'V-')+T;
+const incIp=T=>1.2*(T==='T1'?40:25)*1000/(Math.sqrt(3)*(T==='T2'?21:10.5));
+const incT=(T,I)=>IEC_SI(I/incIp(T),PROT.tr[T].oc);
+const IK_MAX=f=>is20(f.bus)?8000:12000;   // kortsluitstroom vlak bij het station (A)
+const SEL_MARGE=0.25;
+// over het hele foutstroombereik: waar is de marge tussen veld en inkomend veld te klein?
+function selectivity(f){const T=incOf(f),Ik=IK_MAX(f);let bad=null;
+  for(let I=feederIp(f)*1.05;I<=Ik;I*=1.03){const tf=feederT(f,I),ti=incT(T,I);if(ti-tf<SEL_MARGE){bad??=[I,I];bad[1]=I;}}
+  return {T,Ik,bad};}
+// bij een kortsluiting: schakelt het inkomende veld onterecht mee af?
+function protSelect(f,Ik){const T=incOf(f),tf=feederT(f,Ik),ti=incT(T,Ik),cb=incCb(T);if(ti-tf>=SEL_MARGE||!D[cb]?.state)return false;
+  tripBreaker(cb);GAME.stats.nonSel=(GAME.stats.nonSel||0)+1;award(-50,'Beveiliging niet selectief');
+  setTimeout(()=>pushAlarm(`Niet selectief: ${cb} schakelde ook af bij ${(Ik/1000).toFixed(1).replace('.',',')} kA (veld ${tf.toFixed(2).replace('.',',')} s, inkomend ${ti.toFixed(2).replace('.',',')} s). Stel de reserve-overstroom trager in (B) en zie de grafiek`,'crit'),200);
+  return true;}
+
+// ---------- storingsschrijver: registratie van stromen en spanningen rond elke storing
+const FREC=[];
+function fltRec(o){FREC.unshift({t:SIM.t,...o});if(FREC.length>12)FREC.pop();GAME.stats.frec=(GAME.stats.frec||0)+1;renderRec();
+  if(o.kind!=='overbelasting')setTimeout(()=>pushAlarm(`Storingsschrijver: nieuwe registratie van ${o.dev} (${o.kind}) – bekijk hem met R`,'info'),300);}
+// kortsluiting in een veld: foutstroom, veldtijd en (zo nodig) het inkomende veld vastleggen
+function shortCircuit(f,Ik){const tf=feederT(f,Ik),T=incOf(f),ti=incT(T,Ik),pre=Math.abs(f.P||0)*kA(f.bus);
+  const ns=protSelect(f,Ik);fltRec({dev:f.cb,name:f.name,kind:'kortsluiting',Ipre:pre,Ik,tTrip:Math.min(tf,ns?ti:tf)+0.06,phases:Math.random()<0.6?2:3,inc:ns?incCb(T):null,tInc:ti,kv:is20(f.bus)?20:10});}
+
 
 // Storingen: lijnen, velden, LS, rails en transformatoren
 // ---------------------------------------------------------- storingen
@@ -1747,7 +1783,7 @@ function lineFault(forceL,forcePerm){const c=LINES.filter(L=>SIM.lines[L].avail&
     else readyNotice(`TenneT: lijn ${L} na herinschakeling aan de overzijde weer onder spanning – ${L}-Q0 mag weer IN`,L+'-Q0',()=>!D[L+'-Q0'].state&&SIM.lines[L].avail);
     refreshAll();},700);}
 function feederFault(forceF,searchMin){const c=FEEDERS.filter(f=>D[f.cb].state===1&&EN.has(f.node)&&!f.fault&&!f.backfed&&(!forceF||f.id===forceF));if(!c.length)return;const f=pick(c);if(f.ring)return ringFault(f);
-  tripBreaker(f.cb);f.fault={stage:'search',frac:f.prio?0:rnd(0.12,0.35)};
+  tripBreaker(f.cb);shortCircuit(f,rnd(2500,IK_MAX(f)));f.fault={stage:'search',frac:f.prio?0:rnd(0.12,0.35)};
   const why=pick(['kabelbeschadiging door graafwerk','mofstoring','kortsluiting in een middenspanningsruimte','kabelfout (veroudering)']);
   const ts=searchMin||rnd(12,25);
   pushAlarm(`${f.cb} ${f.name}: overstroombeveiliging I>> – ${why}`,'crit');
@@ -2245,7 +2281,7 @@ function earthFault(forceNode){if(EF.on)return null;computeFlows();
   const others=FEEDERS.filter(f=>f!==fd&&['RA','RB'].includes(f.bus));if(Math.random()<0.15&&others.length)ind[pick(others).id]=true;
   EF.on={node:x.node,secId:x.sec?.id||null,fId:x.f?.id||null,at:SIM.t,ind,warned:false};
   if(fd?.ring)ringPathStations(fd.node,x.node).forEach(id=>{const s=RING.stations.find(y=>y.id===id);if(Math.random()<0.7)s.efFlag=true;});
-  GAME.stats.ef=(GAME.stats.ef||0)+1;
+  GAME.stats.ef=(GAME.stats.ef||0)+1;fltRec({dev:fd?.cb||'10 kV',name:x.sec?`kabel ${secName(x.sec)}`:x.f.name,kind:'aardfout',Ipre:Math.abs(fd?.P||0)*kA('RA'),Ik:0,tTrip:null,phases:1,kv:10});
   pushAlarm(`Aardfoutmelding 10 kV: nulpuntsspanning U0 ±${efU0().toFixed(1).replace('.',',')} kV op rail ${efRails().map(b=>BUSES[b].nm).join(' en ')}. Het net blijft in bedrijf (Petersenspoel) – zoek en isoleer de aardfout`,'crit');
   pushAlarm(`Tip: kijk welk veld een aardfoutrichting meldt (⏚) en welke MS-stations een aardfoutverklikker hebben. Splits de rails (V-K open) of knip de ring op: verdwijnt U0 als je een deel spanningsloos maakt, dan zit de fout daar`,'info');
   refreshAll();return EF.on;}
@@ -2478,7 +2514,7 @@ function ringFault(f,forced,repairMin){
   const c=forced?[forced]:RING.secs.filter(s=>!s.fault&&EN.has(s.node)&&FLOW.TAG[s.node]?.cb===f.cb);if(!c.length)return;
   const s=pick(c),flagged=ringPathStations(f.node,s.node);
   s.fault=true;s.located=false;RING.stations.forEach(x=>x.flag=flagged.includes(x.id));
-  tripFrom(s.node);
+  tripFrom(s.node);shortCircuit(f,rnd(2000,IK_MAX(f)*0.8));
   pushAlarm(`${f.cb} ${f.name}: I>> – kabelfout in de 10 kV-ring. Kortsluitverklikkers aangesproken: ${flagged.length?flagged.join(', '):'geen'}`,'crit');
   pushAlarm(`Tip: de fout zit achter het laatste station met een aangesproken verklikker. Isoleer die kabel met de lastscheiders aan beide kanten, voed de rest terug via het normaal-open punt ${s.ring.nop} en schakel ${f.cb} weer in.`,'info');
   addTimer(rnd(10,18),()=>{if(!s.fault)return;s.located=true;const open=isoSwitches(s).filter(id=>D[id].state===1);
@@ -3740,19 +3776,38 @@ function renderProt(){
   const th=keys=>keys.map(k=>`<th title="${PROT_OPT[k].tip}">${PROT_OPT[k].label} <i>?</i></th>`).join('');
   const fRows=FEEDERS.filter(f=>!f.gen).map(f=>{const r=f.P/f.rate;return `<tr><td><b>${f.cb}</b><span>${f.name}</span></td><td class="pv ${r>1?'bad':''}">${Math.round(Math.max(0,r)*100)} %</td><td>${sel('f',f.id,'pick')}</td><td>${sel('f',f.id,'tms')}</td></tr>`;}).join('');
   const lRows=LINES.map(L=>`<tr><td><b>${L}-Q0</b><span>${SIM.lines[L].name}</span></td><td><button data-ar="${L}" ${SIM.lines[L].arBroken?'disabled':''}>${SIM.lines[L].arBroken?'AR defect':SIM.lines[L].ar?'AR IN':'AR UIT'}</button></td><td>${sel('ln',L,'dt')}</td></tr>`).join('');
-  const tRows=TR.map(T=>`<tr><td><b>${T}</b><span>${D[T].label.split('·')[0]}</span></td><td class="pv ${D[T].oil>90?'bad':''}">${Math.round(D[T].oil)} °C</td><td>${sel('tr',T,'trip')}</td></tr>`).join('');
+  const tRows=TR.map(T=>`<tr><td><b>${T}</b><span>${D[T].label.split('·')[0]}</span></td><td class="pv ${D[T].oil>90?'bad':''}">${Math.round(D[T].oil)} °C</td><td>${sel('tr',T,'trip')}</td><td>${sel('tr',T,'oc')}</td></tr>`).join('');
   $('#prot').innerHTML=`<div class="card pr"><div class="eyebrow">Beveiligingsinstellingen · OS Zuidwolde</div><h2>Relais-instellingen</h2>
     <p class="bf-desc">Elke instelling is een afweging: te scherp geeft onnodige afschakelingen, te ruim laat schade toe. Wijzigingen gaan direct in. Beweeg over een kolomkop voor uitleg.</p>
     <div class="mh">Uitgaande velden · overstroom I></div><table><tr><th>Veld</th><th>Belasting</th>${th(['pick','tms'])}</tr>${fRows}</table>
     <div class="mh">110 kV-lijnen · automatische herinschakeling</div><table><tr><th>Lijn</th><th>AR</th>${th(['dt'])}</tr>${lRows}</table>
-    <div class="mh">Transformatoren · thermische beveiliging</div><table><tr><th>Trafo</th><th>Olie</th>${th(['trip'])}</tr>${tRows}</table>
+    <div class="mh">Transformatoren · thermische beveiliging</div><table><tr><th>Trafo</th><th>Olie</th>${th(['trip','oc'])}</tr>${tRows}</table>
+    <div class="mh">Selectiviteit · tijd-stroomkarakteristiek</div>${selChart()}
     <div class="rep-btns"><button class="primary" data-pclose>Sluiten <kbd>B</kbd></button><button data-pdef>Standaardwaarden</button></div></div>`;}
 $('#prot').addEventListener('change',e=>{const s=e.target.closest('[data-p]');if(!s)return;const [kind,id,key]=s.dataset.p.split(':');setProt(kind,id,key,+s.value);});
 $('#prot').addEventListener('click',e=>{if(e.target.closest('[data-pclose]')||e.target.id==='prot')return closeProt();
   const ar=e.target.closest('[data-ar]');if(ar){toggleAR(ar.dataset.ar);renderProt();}
-  if(e.target.closest('[data-pdef]')){FEEDERS.forEach(f=>{setProt('f',f.id,'pick',1.3);setProt('f',f.id,'tms',1);});LINES.forEach(L=>setProt('ln',L,'dt',1));TR.forEach(T=>setProt('tr',T,'trip',100));}});
+  if(e.target.closest('[data-pdef]')){FEEDERS.forEach(f=>{setProt('f',f.id,'pick',1.3);setProt('f',f.id,'tms',1);});LINES.forEach(L=>setProt('ln',L,'dt',1));TR.forEach(T=>{setProt('tr',T,'trip',100);setProt('tr',T,'oc',0.2);});}
+  const sf=e.target.closest('[data-self]');if(sf){PROT_SELF=sf.dataset.self;renderProt();}});
 $('#protBtn').addEventListener('click',()=>protOpen()?closeProt():openProt());
 addEventListener('keydown',e=>{if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT')return;if((e.key==='b'||e.key==='B')&&$('#intro').classList.contains('hidden'))protOpen()?closeProt():openProt();});
+// ---------- selectiviteitsgrafiek (log-log): veld I>/I>> tegenover de reserve-overstroom van het inkomende veld
+let PROT_SELF='F6';
+function selChart(){const fs=FEEDERS.filter(f=>!f.gen&&f.bus!=='MP'),f=FD(PROT_SELF)||fs[0],sel=selectivity(f),T=sel.T,W=560,H=230,L=46,B=28,Tp=8;
+  const I0=100,I1=20000,t0=0.01,t1=20,X=I=>L+(W-L-8)*Math.log10(I/I0)/Math.log10(I1/I0),Y=t=>Tp+(H-Tp-B)*(1-Math.log10(Math.min(t1,Math.max(t0,t))/t0)/Math.log10(t1/t0));
+  const pts=fn=>{const o=[];for(let I=I0;I<=sel.Ik*1.02;I*=1.02){const t=fn(I);if(isFinite(t)&&t<=t1)o.push(`${X(I).toFixed(1)},${Y(t).toFixed(1)}`);}return o.join(' ');};
+  const grid=[];[100,200,500,1000,2000,5000,10000,20000].forEach(I=>grid.push(`<line x1="${X(I)}" x2="${X(I)}" y1="${Tp}" y2="${H-B}" stroke="rgba(255,255,255,.07)"/><text x="${X(I)}" y="${H-B+12}" text-anchor="middle" class="ax">${I>=1000?I/1000+' kA':I+' A'}</text>`));
+  [0.01,0.1,1,10].forEach(t=>grid.push(`<line x1="${L}" x2="${W-8}" y1="${Y(t)}" y2="${Y(t)}" stroke="rgba(255,255,255,.07)"/><text x="${L-5}" y="${Y(t)+3}" text-anchor="end" class="ax">${String(t).replace('.',',')} s</text>`));
+  const bad=sel.bad?`<rect x="${X(sel.bad[0])}" y="${Tp}" width="${Math.max(2,X(sel.bad[1])-X(sel.bad[0]))}" height="${H-Tp-B}" fill="rgba(229,72,77,.18)"/>`:'';
+  const fmtI=I=>I>=1000?(I/1000).toFixed(1).replace('.',',')+' kA':Math.round(I)+' A';
+  const btns=fs.map(x=>`<button class="mini ${x===f?'on':''}" data-self="${x.id}">${x.cb}</button>`).join('');
+  return `<div class="sel-btns">${btns}</div><svg class="selc" viewBox="0 0 ${W} ${H}">${grid.join('')}${bad}
+    <line x1="${X(sel.Ik)}" x2="${X(sel.Ik)}" y1="${Tp}" y2="${H-B}" stroke="#e5484d" stroke-dasharray="4 3"/><text x="${X(sel.Ik)-4}" y="${Tp+10}" text-anchor="end" class="ax" style="fill:#e5484d">Ik max ${fmtI(sel.Ik)}</text>
+    <polyline points="${pts(I=>incT(T,I))}" fill="none" stroke="#4aa3ff" stroke-width="2"/>
+    <polyline points="${pts(I=>feederT(f,I))}" fill="none" stroke="#f0a43a" stroke-width="2.4"/>
+    <text x="${L+6}" y="${Tp+12}" class="ax" style="fill:#f0a43a">${f.cb}: I> ${fmtI(feederIp(f))} · TMS ${String(PROT.f[f.id].tms*0.1).replace('.',',')} · I>> ${fmtI(feederIinst(f))} (50 ms)</text>
+    <text x="${L+6}" y="${Tp+25}" class="ax" style="fill:#4aa3ff">${incCb(T)} (reserve): I> ${fmtI(incIp(T))} · TMS ${String(PROT.tr[T].oc).replace('.',',')}</text></svg>
+    <p class="bf-desc ${sel.bad?'bad':''}" style="margin-top:4px">${sel.bad?`✗ <b>Niet selectief</b> tussen ${fmtI(sel.bad[0])} en ${fmtI(sel.bad[1])}: daar schakelt ${incCb(T)} binnen ${String(SEL_MARGE).replace('.',',')} s na het veld af. Bij een kabelfout in dat bereik valt de hele rail uit. Zet de reserve-overstroom trager of het veld sneller.`:`✓ <b>Selectief</b>: over het hele foutstroombereik schakelt ${f.cb} minstens ${String(SEL_MARGE).replace('.',',')} s eerder af dan ${incCb(T)}.`}</p>`;}
 
 
 // ============================================================ belastingprognose: verwachte belasting komende 8 uur tegen de transformatorcapaciteit
@@ -4281,7 +4336,7 @@ const KEY_HELP=[
   ['Spel',[['Spatie','Pauze aan/uit (ook P)'],['Esc','Venster of paneel sluiten, anders het pauzemenu'],['Ctrl+S','Spel opslaan (vrije dienst, dag- en avonddienst)'],['M','Geluid aan/uit'],['H of ?','Dit overzicht']]],
   ['Camera en kijken',[['1 – 9','Camerastandpunten (6 = binnen 10 kV, 7 = binnen 20 kV, 8 = woonwijk, 9 = centrum)'],['L','Labels aan/uit'],['+ / −','SCADA in- en uitzoomen (ook Ctrl + scrollwiel op het schema)']]],
   ['Rondlopen',[['V','Rondlopen starten of stoppen'],['W A S D','Lopen'],['Shift / Q','Rennen / sprinten'],['Spatie','Springen'],['F','Schakelaar in het vizier direct bedienen'],['E','Cursor vrij (paneel open van wat je ziet); nog eens E = verder lopen'],['Z','Zaklamp aan/uit']]],
-  ['Vensters',[['B','Beveiligingsinstellingen'],['C','Flex en netcongestie'],['O','Onderhoud: conditie van schakelaars en relaistests'],['K','Testkoffer (tijdens een relaistest)'],['N','Laagspanning: LS-velden, kabelkasten, noodaggregaten en klanten informeren'],['I','Instellingen: prestaties, weer en geluid']]]];
+  ['Vensters',[['B','Beveiligingsinstellingen'],['C','Flex en netcongestie'],['O','Onderhoud: conditie van schakelaars en relaistests'],['K','Testkoffer (tijdens een relaistest)'],['N','Laagspanning: LS-velden, kabelkasten, noodaggregaten en klanten informeren'],['R','Storingsschrijver: stroom en spanning rond elke storing'],['I','Instellingen: prestaties, weer en geluid']]]];
 let keysPrev=false;
 const keysOpen=()=>!$('#keys').classList.contains('hidden');
 function openKeys(){if(keysOpen())return;modalOpen('keys');if(FP.on)unlockPointer();
@@ -4394,6 +4449,45 @@ $('#lsBtn').addEventListener('click',()=>lsOpen()?closeLS():openLS());
 addEventListener('keydown',e=>{if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT'||e.ctrlKey||e.metaKey)return;if((e.key==='n'||e.key==='N')&&$('#intro').classList.contains('hidden'))lsOpen()?closeLS():openLS();});
 
 
+// ============================================================ storingsschrijver (toets R): golfvormen van stroom en spanning rond elke storing
+let recSel=0;
+const recOpen=()=>!$('#recWin').classList.contains('hidden');
+function openRec(i){if(i!=null)recSel=i;if(!recOpen()){modalOpen('rec');if(FP.on)unlockPointer();$('#recWin').classList.remove('hidden');}renderRec();}
+function closeRec(){$('#recWin').classList.add('hidden');modalClose('rec');}
+// golfvorm per fase (stroom in A, spanning in p.u.) op tijdstip t (s) na het begin van de fout
+function recWave(r,t){const w=2*Math.PI*50,ph=[0,-2*Math.PI/3,2*Math.PI/3],out={I:[0,0,0],U:[0,0,0],U0:0};
+  const tOff=r.tTrip==null?Infinity:r.tTrip,tInc=r.inc?r.tInc+0.06:Infinity;
+  for(let k=0;k<3;k++){const faulted=r.kind==='kortsluiting'&&k<r.phases;let Ia=Math.SQRT2*r.Ipre,Ua=1;
+    if(t>=0&&t<tOff){if(faulted){Ia=Math.SQRT2*r.Ik;Ua=0.3;}else if(r.kind==='kortsluiting')Ua=0.85;if(r.kind==='overbelasting')Ia=Math.SQRT2*r.Ik;}
+    if(t>=tOff)Ia=0;if(t>=tOff&&t<tOff+0.04)Ua=0.9;if(t>=tInc)Ua=0;
+    if(r.kind==='aardfout'&&t>=0){Ua=k===0?0.02:Math.sqrt(3);}
+    const dc=faulted&&k===0&&t>=0&&t<tOff?Math.SQRT2*r.Ik*Math.exp(-t/0.035):0;   // gelijkstroomcomponent bij het ontstaan van de fout
+    out.I[k]=Ia*Math.sin(w*t+ph[k])+dc;out.U[k]=Ua*Math.sin(w*t+ph[k]+(r.kind==='aardfout'&&k&&t>=0?(k===1?-0.52:0.52):0));}
+  if(r.kind==='aardfout'&&t>=0)out.U0=Math.sin(w*t+Math.PI);
+  return out;}
+function recPlot(r){const W=560,Hh=118,L=40,t0=-0.06,t1=Math.max(0.2,(r.inc?r.tInc:r.tTrip??0.25)+0.12),N=700,X=t=>L+(W-L-6)*(t-t0)/(t1-t0);
+  const col=['#f0a43a','#4aa3ff','#c07cff'],samp=[];for(let i=0;i<=N;i++){const t=t0+(t1-t0)*i/N;samp.push([t,recWave(r,t)]);}
+  const Imax=Math.max(...samp.map(([,v])=>Math.max(...v.I.map(Math.abs))),1)*1.05;
+  const pl=(get,y0,sc,c,dash='')=>`<polyline fill="none" stroke="${c}" stroke-width="1.3" ${dash} points="${samp.map(([t,v])=>`${X(t).toFixed(1)},${(y0-get(v)*sc).toFixed(1)}`).join(' ')}"/>`;
+  const panel=(y,title,body,unit)=>`<rect x="${L}" y="${y}" width="${W-L-6}" height="${Hh}" fill="rgba(255,255,255,.02)" stroke="rgba(255,255,255,.08)"/><line x1="${L}" x2="${W-6}" y1="${y+Hh/2}" y2="${y+Hh/2}" stroke="rgba(255,255,255,.12)"/>
+    <text x="${L-4}" y="${y+12}" text-anchor="end" class="ax">${unit}</text><rect x="${L+2}" y="${y+2}" width="${title.length*5.6+8}" height="13" fill="#0f1418"/><text x="${L+6}" y="${y+12}" class="ax" style="fill:#d6dde4">${title}</text>${body}`;
+  const mark=(t,txt,c,row=0)=>{if(t==null||t>t1)return '';const right=X(t)>W-170;return `<line x1="${X(t)}" x2="${X(t)}" y1="6" y2="${2*Hh+20}" stroke="${c}" stroke-dasharray="3 3"/><text x="${X(t)+(right?-3:3)}" y="${2*Hh+30+row*10}" text-anchor="${right?'end':'start'}" class="ax" style="fill:${c}">${txt}</text>`;};
+  const yI=6,yU=Hh+14,sI=(Hh/2-6)/Imax,sU=(Hh/2-6)/1.85;
+  const ticks=[];const stp=t1-t0>0.6?0.2:t1-t0>0.3?0.1:0.05;for(let t=Math.ceil(t0/stp)*stp;t<=t1;t+=stp)ticks.push(`<text x="${X(t)}" y="${2*Hh+46}" text-anchor="middle" class="ax">${Math.round(t*1000)} ms</text>`);
+  return `<svg class="selc" viewBox="0 0 ${W} ${2*Hh+52}">${panel(yI,'Stroom per fase',[0,1,2].map(k=>pl(v=>v.I[k],yI+Hh/2,sI,col[k])).join(''),`±${Imax>=1000?(Imax/1000).toFixed(1).replace('.',',')+' kA':Math.round(Imax)+' A'}`)}
+    ${panel(yU,'Spanning per fase'+(r.kind==='aardfout'?' en U0 (geel)':''),[0,1,2].map(k=>pl(v=>v.U[k],yU+Hh/2,sU,col[k])).join('')+(r.kind==='aardfout'?pl(v=>v.U0,yU+Hh/2,sU,'#e8c547','stroke-dasharray="4 2"'):''),'±1,8 pu')}
+    ${mark(0,r.kind==='overbelasting'?'I> afgelopen':'fout','#e5484d')}${mark(r.tTrip,`${r.dev} uit (${Math.round((r.tTrip||0)*1000)} ms)`,'#3fcf72')}${mark(r.inc?r.tInc+0.06:null,`${r.inc} uit – niet selectief`,'#ff6b3d',1)}${ticks.join('')}</svg>`;}
+function renderRec(){if(!recOpen())return;const r=FREC[Math.min(recSel,FREC.length-1)];
+  const list=FREC.length?FREC.map((x,i)=>`<button class="rec-it ${i===recSel?'on':''}" data-rec="${i}"><b>${fmtClock(x.t)} · ${x.dev}</b><span>${x.kind}${x.Ik?` · ${(x.Ik/1000).toFixed(1).replace('.',',')} kA`:''}${x.inc?' · niet selectief':''}</span></button>`).join(''):'<p class="dl">Nog geen registraties.</p>';
+  const info=r?`<p class="bf-desc"><b>${r.dev} ${r.name}</b> · ${r.kind}${r.kind==='kortsluiting'?` (${r.phases===2?'tweefasig':'driefasig'}) · foutstroom ${(r.Ik/1000).toFixed(2).replace('.',',')} kA · uitgeschakeld na ${Math.round(r.tTrip*1000)} ms`:r.kind==='aardfout'?' · geen afschakeling (gecompenseerd net): één fasespanning zakt in, de andere twee stijgen naar √3, U0 komt op':` · stroom ${Math.round(r.Ik)} A`}${r.inc?` · <span class="bad">${r.inc} schakelde ook af na ${Math.round((r.tInc+0.06)*1000)} ms (niet selectief)</span>`:''}</p>${recPlot(r)}`:'';
+  $('#recWin').innerHTML=`<div class="card pr"><div class="eyebrow">Storingsschrijver · laatste ${FREC.length} registraties</div><h2>Storingsregistratie</h2>
+    <div class="rec-grid"><div class="rec-list">${list}</div><div>${info||'<p class="bf-desc">Bij elke kortsluiting, overbelastingstrip of aardfout legt de storingsschrijver de stromen en spanningen per fase vast.</p>'}</div></div>
+    <div class="rep-btns"><button class="primary" data-recclose>Sluiten <kbd>R</kbd></button></div></div>`;}
+$('#recWin').addEventListener('click',e=>{if(e.target.closest('[data-recclose]')||e.target.id==='recWin')return closeRec();const b=e.target.closest('[data-rec]');if(b){recSel=+b.dataset.rec;renderRec();}});
+$('#recBtn').addEventListener('click',()=>recOpen()?closeRec():openRec(0));
+addEventListener('keydown',e=>{if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT'||e.ctrlKey||e.metaKey)return;if((e.key==='r'||e.key==='R')&&$('#intro').classList.contains('hidden'))recOpen()?closeRec():openRec(0);});
+
+
 // ============================================================ HUD + bediening
 function updateHUD(){
   $('#clock').textContent=fmtClock(SIM.t);
@@ -4417,7 +4511,7 @@ addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;
   else if(e.code==='KeyP'){if($('#intro').classList.contains('hidden'))setSpeed(0);}
   else if(e.key==='l'||e.key==='L')document.body.classList.toggle('nolabels');
   else if(e.key==='m'||e.key==='M')$('#mute').click();
-  else if(e.key==='Escape'){if(GAME.handover?.open)closeHandover();else if(setOpen())closeSettings();else if(flexOpen())closeFlex();else if(assOpen())closeAssets();else if(kitOpen())closeKit();else if(keysOpen())closeKeys();else if(lsOpen())closeLS();else if(protOpen())closeProt();else if(menuOpen()){if(performance.now()-menuAt>350)closeMenu();}else if(SEL&&!document.pointerLockElement)selectDevice(null);else openMenu();}});
+  else if(e.key==='Escape'){if(GAME.handover?.open)closeHandover();else if(setOpen())closeSettings();else if(flexOpen())closeFlex();else if(assOpen())closeAssets();else if(kitOpen())closeKit();else if(keysOpen())closeKeys();else if(lsOpen())closeLS();else if(recOpen())closeRec();else if(protOpen())closeProt();else if(menuOpen()){if(performance.now()-menuAt>350)closeMenu();}else if(SEL&&!document.pointerLockElement)selectDevice(null);else openMenu();}});
 // ---------- SCADA-zoom
 let SLDZ=1;try{SLDZ=+localStorage.getItem('osz-sldz')||1;}catch(e){}
 function setZoom(z){SLDZ=clamp(Math.round(z*4)/4,0.75,2.5);document.documentElement.style.setProperty('--sldz',SLDZ);$('#zVal').textContent=Math.round(SLDZ*100)+'%';$('#scada .zoom').title='Zoom '+Math.round(SLDZ*100)+'% – Ctrl + scrollwiel of + / −';try{localStorage.setItem('osz-sldz',SLDZ);}catch(e){}}
@@ -4467,7 +4561,7 @@ else{renderMenu();$('#intro').classList.remove('hidden');controls.autoRotate=tru
 if(params.has('night'))updateSky(22);
 if(params.has('view')){const v=VIEWPOS[+params.get('view')];camera.position.copy(v[0]);controls.target.copy(v[1]);controls.autoRotate=false;controls.update();}
 
-window.OS={EF,earthFault,efTick,efRails,efU0,railsCoupled,controls,tripBreaker,CONS,LS_LINKS,LS_ORDERS,GENSET,lsTick,lsOrder,lsSwitchOrder,lsExec,gsSend,gsOff,gsRestart,tapOrder,setEta,callPrio,lsAreas,PRIO,openLS,closeLS,renderLS,lvVolt,stationLoads,shedFactor,failP,manualP,phoneTick,refreshDevPanel,updateSLD,openKeys,closeKeys,KEY_HELP,RELAY_BAYS,relayTask,relayDue,relayDefect,initRelays,kitTests,kitMeasure,kitVerdict,kitRun,openKit,closeKit,saveGame,readSave,deleteSave,resumeGame,canSave,specOf,CABLE,soilT,FD,meppelFault,linkTick,tabAlarms,updateTabAlarms,renderTasks,INC,INCIDENTS,startIncident,endIncident,incidentTick,setTab,renderCables,GFX,setGfx,applyGfx,openSettings,closeSettings,WX_TYPES,renderer,scene,FIRE,CARS,updateWindows,updateLife,stationLive,cbMaintTask,worstCb,cond,breakerFails,CB_IDS,FLEX,setFlex,flexTick,congestion,openFlex,closeFlex,checkModel,homeBus,BUSES,SEL_BAYS,TORCH,setTorch,HO_POOL,handoverTick,REC,RP,startReplay,stopReplay,analyse,stationDamage,closeHandover,deviations,PHONE,lvFault,callFrom,phoneAnswer,dispatchLV,LVG,forecast,progAdvice,PROG,startTask:(k,...a)=>{TASK={relayTask,cbMaintTask,railTask,railBTask,stationTask,thermoTask,ringTask,feederTask,lineTask,reserveTask}[k](...a);TASK.i=0;TASK.code='WV-TEST';briefInit(TASK);renderTasks();},SIM,D,LESSONS,lessonGo,selectDevice,abortTask,railTask,stationTask,thermoTask,nearDev,VIEWS,PROT,setProt,openProt,closeProt,busFault,BUSF,RINGS,task:()=>TASK,briefSubmit,briefCheck,briefWatch,actKey,taskActs,crewNear,boxOf:id=>VIEWS[id]&&VIEWS[id].box,AudioSys,updateAudio,WX,setWeather,setSeason,SEASONS,ambient,enterKiosk,ROOMS,blockedAt,RING,NPCS,crewDispatch,ringFault,FP,enterFP,exitFP,pickCenter,camera,camInside,setRatio,setTab,GAME,MODES,applyMode,endGame,EN:()=>EN,FLOW,operate,tapStep,setAVR,resetLockout,toggleAR,regulate,computeFlows,randomEvent,lineFault,feederFault,trafoFault,offerTask,simStep,FEEDERS};
+window.OS={FREC,fltRec,openRec,closeRec,renderRec,selectivity,protSelect,feederT,incT,incOf,shortCircuit,EF,earthFault,efTick,efRails,efU0,railsCoupled,controls,tripBreaker,CONS,LS_LINKS,LS_ORDERS,GENSET,lsTick,lsOrder,lsSwitchOrder,lsExec,gsSend,gsOff,gsRestart,tapOrder,setEta,callPrio,lsAreas,PRIO,openLS,closeLS,renderLS,lvVolt,stationLoads,shedFactor,failP,manualP,phoneTick,refreshDevPanel,updateSLD,openKeys,closeKeys,KEY_HELP,RELAY_BAYS,relayTask,relayDue,relayDefect,initRelays,kitTests,kitMeasure,kitVerdict,kitRun,openKit,closeKit,saveGame,readSave,deleteSave,resumeGame,canSave,specOf,CABLE,soilT,FD,meppelFault,linkTick,tabAlarms,updateTabAlarms,renderTasks,INC,INCIDENTS,startIncident,endIncident,incidentTick,setTab,renderCables,GFX,setGfx,applyGfx,openSettings,closeSettings,WX_TYPES,renderer,scene,FIRE,CARS,updateWindows,updateLife,stationLive,cbMaintTask,worstCb,cond,breakerFails,CB_IDS,FLEX,setFlex,flexTick,congestion,openFlex,closeFlex,checkModel,homeBus,BUSES,SEL_BAYS,TORCH,setTorch,HO_POOL,handoverTick,REC,RP,startReplay,stopReplay,analyse,stationDamage,closeHandover,deviations,PHONE,lvFault,callFrom,phoneAnswer,dispatchLV,LVG,forecast,progAdvice,PROG,startTask:(k,...a)=>{TASK={relayTask,cbMaintTask,railTask,railBTask,stationTask,thermoTask,ringTask,feederTask,lineTask,reserveTask}[k](...a);TASK.i=0;TASK.code='WV-TEST';briefInit(TASK);renderTasks();},SIM,D,LESSONS,lessonGo,selectDevice,abortTask,railTask,stationTask,thermoTask,nearDev,VIEWS,PROT,setProt,openProt,closeProt,busFault,BUSF,RINGS,task:()=>TASK,briefSubmit,briefCheck,briefWatch,actKey,taskActs,crewNear,boxOf:id=>VIEWS[id]&&VIEWS[id].box,AudioSys,updateAudio,WX,setWeather,setSeason,SEASONS,ambient,enterKiosk,ROOMS,blockedAt,RING,NPCS,crewDispatch,ringFault,FP,enterFP,exitFP,pickCenter,camera,camInside,setRatio,setTab,GAME,MODES,applyMode,endGame,EN:()=>EN,FLOW,operate,tapStep,setAVR,resetLockout,toggleAR,regulate,computeFlows,randomEvent,lineFault,feederFault,trafoFault,offerTask,simStep,FEEDERS};
 const clock=new THREE.Clock();let hudT=0,skyT=0,progT=0;
 let liteAcc=0;
 function frame(){

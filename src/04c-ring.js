@@ -32,7 +32,7 @@ function ringFault(f,forced,repairMin){
   const c=forced?[forced]:RING.secs.filter(s=>!s.fault&&EN.has(s.node)&&FLOW.TAG[s.node]?.cb===f.cb);if(!c.length)return;
   const s=pick(c),flagged=ringPathStations(f.node,s.node);
   s.fault=true;s.located=false;RING.stations.forEach(x=>x.flag=flagged.includes(x.id));
-  tripFrom(s.node);
+  tripFrom(s.node);shortCircuit(f,rnd(2000,IK_MAX(f)*0.8));
   pushAlarm(`${f.cb} ${f.name}: I>> – kabelfout in de 10 kV-ring. Kortsluitverklikkers aangesproken: ${flagged.length?flagged.join(', '):'geen'}`,'crit');
   pushAlarm(`Tip: de fout zit achter het laatste station met een aangesproken verklikker. Isoleer die kabel met de lastscheiders aan beide kanten, voed de rest terug via het normaal-open punt ${s.ring.nop} en schakel ${f.cb} weer in.`,'info');
   addTimer(rnd(10,18),()=>{if(!s.fault)return;s.located=true;const open=isoSwitches(s).filter(id=>D[id].state===1);

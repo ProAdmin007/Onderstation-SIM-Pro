@@ -8,7 +8,7 @@ function feederTick(dm){
       pushAlarm(`${f.cb}: kabel onder spanning gebracht met fout – I>> momentaan trip. Wacht op de storingsdienst!`,'warn');return;}
     // een verlopen of traag relais (zie relaistest) spreekt later aan dan de instelling
     const r=f.gen?0:f.P/f.rate,ps=PROT.f[f.id],rl=f.relay||{},pk=ps.pick*(rl.drift||1);overloadHeat(f,r,dm);
-    if(r>pk&&D[f.cb].state===1){f.oc+=dm*(r*r-1)/(10*ps.tms*(rl.delay||1));if(f.oc>=1){f.oc=0;tripBreaker(f.cb);GAME.stats.clpTrips++;award(-30,`${f.id} overbelast afgeschakeld`);pushAlarm(`${f.cb} ${f.name}: overstroombeveiliging I> (${Math.round(ps.pick*100)}%) na ${Math.round(r*100)}% belasting${f.clp>1.05?' (koude-lastopname)':''}`,'warn');}}
+    if(r>pk&&D[f.cb].state===1){f.oc+=dm*(r*r-1)/(10*ps.tms*(rl.delay||1));if(f.oc>=1){f.oc=0;tripBreaker(f.cb);fltRec({dev:f.cb,name:f.name,kind:'overbelasting',Ipre:r*f.rate*kA(f.bus),Ik:r*f.rate*kA(f.bus),tTrip:0,phases:3,kv:is20(f.bus)?20:10});GAME.stats.clpTrips++;award(-30,`${f.id} overbelast afgeschakeld`);pushAlarm(`${f.cb} ${f.name}: overstroombeveiliging I> (${Math.round(ps.pick*100)}%) na ${Math.round(r*100)}% belasting${f.clp>1.05?' (koude-lastopname)':''}`,'warn');}}
     else f.oc=Math.max(0,f.oc-dm*0.1);});
   // koude-lastopname per afnemer
   CONS.forEach(c=>{const on=EN.has(c.node);
@@ -44,3 +44,34 @@ function overloadHeat(f,r,dm){   // kabel van een uitgaand veld (tijdconstante 3
   if(T>=CABLE.burn&&!f.fault){f.temp=soilT()+30;GAME.stats.burn=(GAME.stats.burn||0)+1;pushAlarm(`${f.cb} ${f.name}: kabel door oververhitting (${Math.round(T)} °C) beschadigd – de beveiliging stond te ruim ingesteld`,'crit');feederFault(f.id);}}
 function trafoOverheat(T,t,dm){if(t.oil>105&&EN.has(T+'h')){t.gas=(t.gas||0)+dm;if(t.gas>12){t.gas=0;GAME.stats.thermal++;award(-100,`${T} gasvorming door oververhitting`);
     tripTrafo(T,'Buchholz-beveiliging (gasvorming door oververhitting)',rnd(90,120),'prot');}}else t.gas=Math.max(0,(t.gas||0)-dm*0.5);}
+
+// ---------- selectiviteit: overstroom I> (IEC standaard-invers) en I>> van het veld tegenover de reserve-overstroom van het inkomende veld
+['T1','T2','T3'].forEach(T=>{PROT.tr[T].oc=0.2;});
+PROT_OPT.oc={label:'Reserve I> inkomend',vals:[0.05,0.1,0.2,0.3],fmt:v=>'TMS '+String(v).replace('.',','),tip:'Reserve-overstroom in het inkomende veld (V-T1, V-T3, W-T2). Te snel: bij een kabelfout schakelt ook het inkomende veld af en valt de hele rail uit (niet selectief). Te traag: een railfout blijft langer staan.'};
+const IEC_SI=(m,tms)=>m<=1?Infinity:0.14*tms/(Math.pow(m,0.02)-1);
+const feederIp=f=>PROT.f[f.id].pick*f.rate*kA(f.bus);   // A primair
+const feederIinst=f=>8*f.rate*kA(f.bus);                  // I>> vast op 8 × nominaal, 50 ms
+const feederT=(f,I)=>I>=feederIinst(f)?0.05:IEC_SI(I/feederIp(f),PROT.f[f.id].tms*0.1);
+const incOf=f=>is20(f.bus)?'T2':railOf(f.sel)==='RB'&&D['V-T3'].state===1&&D.T3.ratio==='10'?'T3':'T1';
+const incCb=T=>(T==='T2'?'W-':'V-')+T;
+const incIp=T=>1.2*(T==='T1'?40:25)*1000/(Math.sqrt(3)*(T==='T2'?21:10.5));
+const incT=(T,I)=>IEC_SI(I/incIp(T),PROT.tr[T].oc);
+const IK_MAX=f=>is20(f.bus)?8000:12000;   // kortsluitstroom vlak bij het station (A)
+const SEL_MARGE=0.25;
+// over het hele foutstroombereik: waar is de marge tussen veld en inkomend veld te klein?
+function selectivity(f){const T=incOf(f),Ik=IK_MAX(f);let bad=null;
+  for(let I=feederIp(f)*1.05;I<=Ik;I*=1.03){const tf=feederT(f,I),ti=incT(T,I);if(ti-tf<SEL_MARGE){bad??=[I,I];bad[1]=I;}}
+  return {T,Ik,bad};}
+// bij een kortsluiting: schakelt het inkomende veld onterecht mee af?
+function protSelect(f,Ik){const T=incOf(f),tf=feederT(f,Ik),ti=incT(T,Ik),cb=incCb(T);if(ti-tf>=SEL_MARGE||!D[cb]?.state)return false;
+  tripBreaker(cb);GAME.stats.nonSel=(GAME.stats.nonSel||0)+1;award(-50,'Beveiliging niet selectief');
+  setTimeout(()=>pushAlarm(`Niet selectief: ${cb} schakelde ook af bij ${(Ik/1000).toFixed(1).replace('.',',')} kA (veld ${tf.toFixed(2).replace('.',',')} s, inkomend ${ti.toFixed(2).replace('.',',')} s). Stel de reserve-overstroom trager in (B) en zie de grafiek`,'crit'),200);
+  return true;}
+
+// ---------- storingsschrijver: registratie van stromen en spanningen rond elke storing
+const FREC=[];
+function fltRec(o){FREC.unshift({t:SIM.t,...o});if(FREC.length>12)FREC.pop();GAME.stats.frec=(GAME.stats.frec||0)+1;renderRec();
+  if(o.kind!=='overbelasting')setTimeout(()=>pushAlarm(`Storingsschrijver: nieuwe registratie van ${o.dev} (${o.kind}) – bekijk hem met R`,'info'),300);}
+// kortsluiting in een veld: foutstroom, veldtijd en (zo nodig) het inkomende veld vastleggen
+function shortCircuit(f,Ik){const tf=feederT(f,Ik),T=incOf(f),ti=incT(T,Ik),pre=Math.abs(f.P||0)*kA(f.bus);
+  const ns=protSelect(f,Ik);fltRec({dev:f.cb,name:f.name,kind:'kortsluiting',Ipre:pre,Ik,tTrip:Math.min(tf,ns?ti:tf)+0.06,phases:Math.random()<0.6?2:3,inc:ns?incCb(T):null,tInc:ti,kv:is20(f.bus)?20:10});}
