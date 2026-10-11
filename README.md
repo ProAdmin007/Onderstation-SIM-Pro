@@ -112,6 +112,17 @@ Bedoeld voor **bedrijfsvoerders en monteurs in opleiding**, studenten **elektrot
   - Met *▶ Herhaling*, of door op de tijdlijn of een leermoment te klikken, speel je de dienst opnieuw af. SCADA, de 3D-installatie en de tellers tonen dan de toestand van dat moment; met de schuifbalk spoel je door.
 - **Moeilijkheid:** Rustig, Normaal of Zwaar. Dit bepaalt hoe vaak storingen optreden en hoe vaak een fout blijvend is.
 - **Score:** je begint met 1.000 punten.
+  - **Cijfer:** geijkt op de scoreverdeling van goed gespeelde diensten en scenario's.
+
+    | Cijfer | Dienst (8 uur) | Scenario |
+    |---|---|---|
+    | A+ | ≥ 3.300 | ≥ 1.600 |
+    | A | ≥ 2.700 | ≥ 1.450 |
+    | B | ≥ 2.100 | ≥ 1.300 |
+    | C | ≥ 1.500 | ≥ 1.100 |
+    | D | ≥ 900 | ≥ 850 |
+
+    In de vrije dienst wordt de score omgerekend naar 8 uur. Een les afronden zonder veiligheidsincident is A+.
   - Erbij: snel herstel van een onverwachte onderbreking (+20 of +40), een behaald doel (+100), een voltooide werkopdracht (+150) en een dienst zonder incidenten (+200).
   - Eraf: klantminuten, het ziekenhuis zonder net, veiligheidsincidenten (−150), een gemist doel (−150), thermische trips (−100), inschakelen op een fout (−40), overbelasting (−30), spanningsafwijkingen en circulatiestroom (−20).
 - Tijdens een pauze kun je niet schakelen.

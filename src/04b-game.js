@@ -117,7 +117,13 @@ function gameTick(dm,dtReal){
   if(WX.cur.thunder>0.5&&Math.random()<dtReal/14)lightningAt(V3(rnd(-1500,1500),0,rnd(-1600,-300)),rnd(2500,5000));
   if(GAME.endT&&SIM.t>=GAME.endT)endGame();
 }
-function grade(s){return s>=1400?['A+',5]:s>=1250?['A',4]:s>=1100?['B',3]:s>=950?['C',2]:s>=750?['D',1]:['E',0];}
+// cijfer: geijkt op de scoreverdeling van goed gespeelde diensten en scenario's (balansruns van de bot)
+const GRADES={dienst:[3300,2700,2100,1500,900],scen:[1600,1450,1300,1100,850]};
+// vrije dienst: de score omgerekend naar een dienst van 8 uur
+const gradeBasis=s=>GAME.mode==='free'?Math.round(1000+(s-1000)*480/Math.max(60,SIM.t-GAME.t0)):s;
+function grade(s){const m=MODES[GAME.mode]||{};
+  if(m.les)return GAME.lesson?.done?(SIM.incidents?['B',3]:['A+',5]):['E',0];
+  const t=m.scen?GRADES.scen:GRADES.dienst,v=gradeBasis(s);return v>=t[0]?['A+',5]:v>=t[1]?['A',4]:v>=t[2]?['B',3]:v>=t[3]?['C',2]:v>=t[4]?['D',1]:['E',0];}
 function finalizeGame(){if(GAME.ended)return;GAME.ended=true;SIM.paused=true;
   GAME.obj.forEach(o=>{if(o.state)return;const ok=o.final?o.final():false;o.state=ok?'done':'fail';award(ok?100:-150,ok?'Doel behaald':'Doel gemist');});
   if(!SIM.incidents&&SIM.t-GAME.t0>=60)award(200,'Veilig gewerkt');}   // bonus pas na minimaal een uur dienst
@@ -140,7 +146,7 @@ function showReport(){
   $('#report').innerHTML=`<div class="card rep">
     <div class="eyebrow">${m.scen?'Scenario afgerond':'Dienstrapport'} · ${DIFFS[GAME.diff].label}</div><h2>${m.name}</h2>
     <div class="rep-top"><div class="grade g${g.replace('+','p')}">${g}</div><div><div class="rs">${s.toLocaleString('nl-NL')} <span>punten</span></div>
-      <div class="stars">${'★'.repeat(stars)}<span>${'★'.repeat(5-stars)}</span></div>${rec?'<div class="rec">Nieuw record!</div>':best?`<div class="prev">Beste score: ${best.toLocaleString('nl-NL')}</div>`:''}</div></div>
+      <div class="stars">${'★'.repeat(stars)}<span>${'★'.repeat(5-stars)}</span></div>${GAME.mode==='free'?`<div class="prev">cijfer omgerekend naar 8 uur: ${gradeBasis(s).toLocaleString('nl-NL')} punten</div>`:''}${rec?'<div class="rec">Nieuw record!</div>':best?`<div class="prev">Beste score: ${best.toLocaleString('nl-NL')}</div>`:''}</div></div>
     ${GAME.obj.length?`<div class="rep-h">Doelen</div>${GAME.obj.map(o=>`<div class="step ${o.state==='done'?'done':'fail'}"><span class="b">${o.state==='done'?'✓':'✕'}</span><span>${o.t}</span></div>`).join('')}`:''}
     <div class="rep-h">Statistieken</div><div class="rep-grid">${rows.map(r=>`<div class="row"><span>${r[0]}</span><b>${r[1]}</b></div>`).join('')}</div>
     ${timelineHTML()}
