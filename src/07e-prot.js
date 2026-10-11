@@ -3,8 +3,8 @@
 // ---------- venster
 let protPrev=false;
 const protOpen=()=>!$('#prot').classList.contains('hidden');
-function openProt(){if(protOpen())return;protPrev=SIM.paused;SIM.paused=true;syncSpeed();if(FP.on)unlockPointer();renderProt();$('#prot').classList.remove('hidden');}
-function closeProt(){$('#prot').classList.add('hidden');SIM.paused=protPrev;syncSpeed();}
+function openProt(){if(protOpen())return;modalOpen('prot');if(FP.on)unlockPointer();renderProt();$('#prot').classList.remove('hidden');}
+function closeProt(){$('#prot').classList.add('hidden');modalClose('prot');}
 function renderProt(){
   const sel=(kind,id,key)=>`<select data-p="${kind}:${id}:${key}">${PROT_OPT[key].vals.map(v=>`<option value="${v}"${PROT[kind][id][key]===v?' selected':''}>${protTxt(key,v)}</option>`).join('')}</select>`;
   const th=keys=>keys.map(k=>`<th title="${PROT_OPT[k].tip}">${PROT_OPT[k].label} <i>?</i></th>`).join('');

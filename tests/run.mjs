@@ -34,8 +34,13 @@ const PAGE_HELPERS = `
       O.operate(id,to); const r=document.querySelector('#radio'); if(!r.classList.contains('hidden')){ r.querySelector('[data-rd="meld"]').click(); await T.sleep(1700); } return d.state===to; },
   };`;
 
-async function openPage(browser, query) {
+// vaste seed voor Math.random in de pagina: standaard afgeleid van de testnaam (altijd herhaalbaar),
+// of zelf kiezen met TEST_SEED=123, of TEST_SEED=random voor een willekeurige
+const seedOf = name => { if (process.env.TEST_SEED === 'random') return Math.floor(Math.random() * 2 ** 31); if (process.env.TEST_SEED) return +process.env.TEST_SEED;
+  let h = 2166136261; for (const c of name) h = Math.imul(h ^ c.charCodeAt(0), 16777619); return h >>> 0; };
+async function openPage(browser, query, seed) {
   const page = await browser.newPage();
+  await page.evaluateOnNewDocument(seed => { let a = seed >>> 0; Math.random = () => { a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }, seed);
   const errors = [];
   page.on('pageerror', e => errors.push((e.stack || e.message).split('\n').slice(0, 3).join(' ← ')));
   page.on('console', m => { if (m.type() === 'error' && !/AudioContext/.test(m.text())) errors.push(m.text()); });
@@ -435,6 +440,41 @@ const TESTS = [
         return { open, ms4, tab, dicht: w.classList.contains('hidden') }; });
       for (const [k, v] of Object.entries(r)) assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
   } },
+  { name: 'vensters na elkaar: pauze komt goed terug', query: '?autostart&t=11', async run(p) {
+      const r = await p.evaluate(() => { const O = OS; O.SIM.paused = false;
+        O.openFlex(); O.openProt(); O.closeFlex(); const nogPauze = O.SIM.paused; O.closeProt(); const loopt = !O.SIM.paused;
+        O.SIM.paused = true; O.openKeys(); O.closeKeys(); const blijftPauze = O.SIM.paused; O.SIM.paused = false;
+        return { nogPauze, loopt, blijftPauze }; });
+      for (const [k, v] of Object.entries(r)) assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
+  } },
+  { name: 'opgeslagen spel van versie 1 wordt omgezet en hervat', query: '?play=free&t=11', async run(p) {
+      await p.evaluate(() => { const O = OS; O.closeHandover?.(); T.quiet(); O.SIM.paused = false; T.step(0.5); O.saveGame(true);
+        const d = JSON.parse(localStorage.getItem('osz-save')); d.v = 1; delete d.LS; d.D['V-F6'].stuck = true; delete d.D['V-F6'].refusals; localStorage.setItem('osz-save', JSON.stringify(d)); O.GAME.ended = true; });   // niet opnieuw opslaan bij het verlaten
+      await p.goto(pageUrl + '?resume&lite', { waitUntil: 'load', timeout: 180000 });
+      for (let i = 0; i < 120 && !(await p.evaluate(() => !!window.OS)); i++) await sleep(500);
+      const r = await p.evaluate(() => ({ hervat: OS.GAME.mode === 'free' && document.querySelector('#intro').classList.contains('hidden'), weigering: OS.D['V-F6'].refusals === 1 && !OS.D['V-F6'].stuck, ls: OS.GENSET.busy === 0 }));
+      for (const [k, v] of Object.entries(r)) assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
+  } },
+  { name: 'aardfout in de ring: U0 zonder uitval, rails splitsen, kabel vrijschakelen = gevonden', query: '?autostart&t=11', async run(p) {
+      const r = await p.evaluate(async () => { T.quiet(); const O = OS, D = O.D, EN = () => O.EN(); const ev = t => O.REC.events.some(e => JSON.stringify(e).includes(t)); O.SIM.paused = false; T.step(0.5);
+        const off0 = O.SIM.off; O.earthFault('K23'); T.step(0.5);
+        const geenUitval = O.SIM.off === off0 && EN().has('K23'), beide = O.efRails().join() === 'RA,RB', u0 = O.efU0() > 5;
+        const scada = /AARDFOUT/.test(document.querySelector('[data-m="ef10"]').textContent);
+        await T.op('V-K', 0); T.step(0.3); const alleenA = O.efRails().join() === 'RA';
+        await T.op('MS2-R', 0); await T.op('MS3-L', 0); T.step(0.5);
+        const s = O.RING.secs.find(x => x.id === 'K23');
+        return { geenUitval, beide, u0, scada, alleenA, gevonden: !O.EF.on && s.fault && s.located, punten: ev('Aardfout gevonden') }; });
+      for (const [k, v] of Object.entries(r)) assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
+  } },
+  { name: 'aardfout in een veldkabel en de dubbele aardfout', query: '?autostart&t=11', async run(p) {
+      const r = await p.evaluate(async () => { T.quiet(); const O = OS, D = O.D, EN = () => O.EN(); const ev = t => O.REC.events.some(e => JSON.stringify(e).includes(t)); O.SIM.paused = false; T.step(0.5);
+        O.earthFault('F6'); T.step(0.3); const actief = !!O.EF.on && O.efRails().length > 0;
+        await T.op('V-F6', 0); T.step(0.3); const gevonden = !O.EF.on && !!O.FD('F6').fault;
+        for (let k = 0; k < 60 && O.FD('F6').fault; k++) T.step(2); await T.op('V-F6', 1); T.step(0.5);
+        O.earthFault('K12'); O.EF.on.at = O.SIM.t - 55; for (let k = 0; k < 60 && O.EF.on; k++) T.step(1);
+        return { actief, gevonden, dubbel: !O.EF.on && ev('Dubbele aardfout') && O.RING.secs.find(x => x.id === 'K12').fault }; });
+      for (const [k, v] of Object.entries(r)) assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
+  } },
   { name: 'leven in de wijk: ramen per station, auto\'s en buren bij uitval', query: '?autostart&t=21&night&season=winter', async run(p) {
       const r = await p.evaluate(async () => { T.quiet(); const O = OS, s1 = O.RING.stations[0]; O.SIM.paused = false; T.step(0.2); O.updateWindows();
         const aan = s1.winMats.some(m => m.opacity > 0.3), autos = O.CARS.filter(c => c.g.visible).length;
@@ -543,15 +583,15 @@ await Promise.all(Array.from({ length: jobs }, async (_, w) => {
   await sleep(w * 4000);   // werkers na elkaar laten starten: het opbouwen van de 3D-wereld is het zwaarste moment
   const browser = await launch();
   while (next < todo.length) {
-    const t = todo[next++], t0 = Date.now();
+    const t = todo[next++], t0 = Date.now(), seed = seedOf(t.name);
     let page, errors = [];
     try {
-      ({ page, errors } = await openPage(browser, t.query));
+      ({ page, errors } = await openPage(browser, t.query, seed));
       await t.run(page);
       assert(errors.length === 0, 'paginafouten: ' + errors.join(' | '));
       console.log(`✓ ${t.name} (${((Date.now() - t0) / 1000).toFixed(0)} s)`);
     } catch (e) {
-      failed++; console.log(`✗ ${t.name}\n    ${e.message}`);
+      failed++; console.log(`✗ ${t.name}\n    ${e.message}\n    (seed ${seed} – herhalen: TEST_SEED=${seed} npm test -- "${t.name.slice(0, 30)}")`);
     } finally { if (page) await page.close().catch(() => {}); }
   }
   await browser.close();

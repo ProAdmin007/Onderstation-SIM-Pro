@@ -1,5 +1,9 @@
 
 // ============================================================ SCADA-eénlijnschema (tabbladen 10 kV en 20 kV)
+// vensters die de simulatie pauzeren: pas als het laatste venster sluit, komt de oude pauzestand terug
+const MODAL=new Set();let modalPrev=false;
+function modalOpen(k){if(!MODAL.size)modalPrev=SIM.paused;MODAL.add(k);SIM.paused=true;syncSpeed();}
+function modalClose(k){if(!MODAL.delete(k))return;if(!MODAL.size)SIM.paused=modalPrev;syncSpeed();}
 const SLD={nodes:[],devs:{},meas:{},devTab:{},tab:'10'};
 function buildSLD(){
   const out={10:[],20:[]};let o;
@@ -27,12 +31,13 @@ function buildSLD(){
     SDS(Tn+'-QA',x-8,386);W(x-8,392,x-8,RA_Y,'RA');SDS(Tn+'-QB',x+8,386);W(x+8,392,x+8,RB_Y,'RB');};
   const feeder=(f,x)=>{if(is20(f.bus))W(x,420,x,447,f.bus);else{const sn=f.sel;W(x-8,RA_Y,x-8,426,'RA');SDS(f.id+'-QA',x-8,432);W(x+8,RB_Y,x+8,426,'RB');SDS(f.id+'-QB',x+8,432);W(x-8,438,x+8,438,sn);W(x,438,x,447,sn);}CB(f.cb,x,455,null);W(x,463,x,494,f.node);W(x,474,x+15,474,f.node);ES(f.id+'-Q8',x+15,486,'');
     o.push(`<polygon class="w arrow" data-n="${f.node}" data-c="w arrow" points="${f.gen?`${x-6},506 ${x+6},506 ${x},494`:`${x-6},494 ${x+6},494 ${x},506`}"/>`);
-    T(x,522,f.short,'middle','dl fs');M('f'+f.id,x,535);M('fc'+f.id,x,548,'middle','');T(x,561,f.id,'middle','');};
+    M('efi'+f.id,x+13,500,'middle','bad');T(x,522,f.short,'middle','dl fs');M('f'+f.id,x,535);M('fc'+f.id,x,548,'middle','');T(x,561,f.id,'middle','');};
   const F=id=>FEEDERS.find(f=>f.id===id);
   // tabblad 10 kV
   o=out[10];top();bay('T1',160,-1,'V-T1','RAB');bay('T3',330,1,'V-T3','RAB');
   W(20,RA_Y,452,RA_Y,'RA','w bus');W(20,RB_Y,452,RB_Y,'RB','w bus');CB('V-K',230,412,null);T(240,400,'V-K','start','dl');
   T(14,RA_Y+3,'A','end','dl');T(14,RB_Y+3,'B','end','dl');T(20,398,'10 kV RAIL A','start','dl');M('RA',98,398,'start');T(452,398,'RAIL B','end','dl');M('RB',412,398,'end');
+  M('ef10',245,384,'middle','bad');
   W(196,RA_Y,196,426,'RA');ES('RA-Q8',196,438,'');W(264,RB_Y,264,426,'RB');ES('RB-Q8',264,438,'');
   [['F1',35],['F2',82],['F3',128],['F4',285],['F5',395],['F6',440]].forEach(([id,x])=>feeder(F(id),x));
   // tabblad 20 kV
@@ -66,7 +71,7 @@ function buildSLD(){
         o.push(`<g class="golink" data-goto="M"><rect class="hit" x="${x-300}" y="${by+18}" width="176" height="20" rx="4"/><text x="${x-124}" y="${by+31}" text-anchor="end" class="fs mh">⇄ OS Meppel · koppelkabel MP3 ›</text></g>`);M('lnk',x-124,by+16,'end','fs');}});
     RING.secs.filter(c=>c.ring===rg).forEach((sec,i)=>{const x1=i?XS[i-1]+35:14,x2=i<n?XS[i]-35:456;W(x1,RY,x2,RY,sec.node);M('flt'+sec.id,(x1+x2)/2,RY-8,'middle','bad');});};
   RINGS.forEach((rg,k)=>drawRing(rg,k*296));
-  T(235,568,'⚑ verklikker aangesproken · ⚡ kabelfout · klik op een station voor alle schakelaars','middle','fs dl');
+  M('efR',235,554,'middle','bad');T(235,568,'⚑ kortsluitverklikker · ⏚ aardfoutverklikker · ⚡ kabelfout · klik op een station','middle','fs dl');
   // tabblad OS Meppel: 110 kV en trafo van Netbeheer Noord (grijs, niet bedienbaar), onze uitgaande velden en de koppelkabel naar MS5
   out.M=[];o=out.M;
   T(235,22,'OS MEPPEL','middle','h');T(235,36,'110 kV en transformator: Netbeheer Noord','middle','fs dl');T(235,48,'de uitgaande velden zijn van ons','middle','fs dl');
@@ -92,6 +97,7 @@ function tabAlarms(){const out={'10':[],'20':[],R:[],M:[]},add=(t,why)=>out[t].p
   if(D.T3.blocked)both('T3 geblokkeerd');
   if(!SIM.meppel.avail)add('M','storing Netbeheer Noord');
   BUS_IDS.forEach(b=>{const t=b==='MP'?'M':is20(b)?'20':'10',nm=BUSES[b].nm;if(b==='MP'&&!SIM.meppel.avail)return;if(BUSF[b])add(t,`railfout rail ${nm}`);else if(!EN.has(b))add(t,`rail ${nm} spanningsloos`);});
+  if(efRails().length){add('10','aardfout (U0)');add('R','aardfout (U0)');}
   if(D.T1.blocked)add('10','T1 geblokkeerd');if(D.T2.blocked)add('20','T2 geblokkeerd');
   FEEDERS.forEach(f=>{const t=f.bus==='MP'?'M':is20(f.bus)?'20':'10';if(f.ring)return;if(f.fault)add(t,`kabelfout ${f.id}`);else if(f.unplanned&&!EN.has(f.node))add(t,`${f.id} spanningsloos`);});
   RING.secs.forEach(s=>{if(s.fault)add('R',`kabelfout ${secName(s)}`);else if(s.temp>CABLE.max)add('R',`kabel ${secName(s)} te warm`);});
@@ -116,10 +122,12 @@ function updateSLD(){
     setM('to'+Tn,t.blocked?'86 BLOKKADE':`${Math.round(t.oil)}°C · t${t.tap}${t.avr==='auto'?'A':'H'}`,t.blocked||t.oil>90?'bad':'m');});
   setM('rt'+RES,`stand ${D[RES].ratio} kV${D[RES].ratioBusy?'…':''}`);
   BUS_IDS.forEach(b=>setM(b,`${fx(FLOW.U[b],2)} kV`));
-  RING.stations.forEach(s=>{const on=EN.has(s.node),u=nodeU(s.node);setM('fi'+s.id,s.flag?'⚑':'');setM('stc'+s.id,`${s.cust>=1000?fx(s.cust/1000)+'k':s.cust} kl`);setM('stp'+s.id,on?`${fx(s.P,2)} MW`:'UIT',on?'m':'bad');setM('stu'+s.id,on?`${fx(u,2)} kV`:'',u<9.9?'bad':'');});
+  RING.stations.forEach(s=>{const on=EN.has(s.node),u=nodeU(s.node);setM('fi'+s.id,s.flag?'⚑':s.efFlag?'⏚':'');setM('stc'+s.id,`${s.cust>=1000?fx(s.cust/1000)+'k':s.cust} kl`);setM('stp'+s.id,on?`${fx(s.P,2)} MW`:'UIT',on?'m':'bad');setM('stu'+s.id,on?`${fx(u,2)} kV`:'',u<9.9?'bad':'');});
   RING.secs.forEach(s=>(SLD.byNode[s.node]||[]).forEach(el=>{el.classList.toggle('ovl',s.load>0.85&&s.load<=1);el.classList.toggle('ovl2',s.load>1);}));
   FEEDERS.filter(f=>f.ring).forEach(f=>setM('fa'+f.id,`V-${f.id} · rail ${BUS_BAND[railOf(f.sel)]?.[2]||'–'} · ${Math.round(D[f.cb].I)} A`));
   RING.secs.forEach(s=>setM('flt'+s.id,s.fault?'⚡':''));
+  const ef=efRails(),efTxt=ef.length?`⏚ AARDFOUT · U0 ${fx(efU0())} kV · rail ${ef.map(b=>BUSES[b].nm).join('+')} · ${Math.round(efAge())} min`:'';setM('ef10',efTxt);setM('efR',efTxt);
+  FEEDERS.forEach(f=>setM('efi'+f.id,EF.on&&EF.on.ind[f.id]&&EN.has(f.node)?'⏚':''));
   setM('mpst',SIM.meppel.avail?`in bedrijf · ${fx(FLOW.U.MP,2)} kV`:'STORING',SIM.meppel.avail?'mh':'bad');setM('lnk',D['MS5-K'].state&&EN.has('MP3')?`nu ${fx(FD('MP3').P)} MW`:'open','mh');
   updateTabAlarms();
   FEEDERS.forEach(f=>{const on=EN.has(f.node);setM('f'+f.id,on?`${fx(f.P)} MW`:'UIT',on?(f.gen?'mh':'m'):'bad');setM('fc'+f.id,f.ring?'ring':f.gen?'productie':f.cust>=1000?`${fx(f.cust/1000)}k kl`:`${f.cust} kl`);});

@@ -18,8 +18,8 @@ let fpsN=0,fpsT=0;function fpsTick(dt){fpsN++;fpsT+=dt;if(fpsT>=0.5){if(GFX.mete
 // ---- venster
 let setPrev=false;
 const setOpen=()=>!$('#settings').classList.contains('hidden');
-function openSettings(){if(setOpen())return;setPrev=SIM.paused;SIM.paused=true;syncSpeed();if(FP.on)unlockPointer();$('#settings').classList.remove('hidden');renderSettings();}
-function closeSettings(){$('#settings').classList.add('hidden');SIM.paused=setPrev;syncSpeed();}
+function openSettings(){if(setOpen())return;modalOpen('set');if(FP.on)unlockPointer();$('#settings').classList.remove('hidden');renderSettings();}
+function closeSettings(){$('#settings').classList.add('hidden');modalClose('set');}
 function renderSettings(){if(!setOpen())return;
   const seg=(k,opts)=>`<div class="seg">${opts.map(([v,l])=>`<button data-g="${k}:${v}" class="${String(GFX[k])===String(v)?'on':''}">${l}</button>`).join('')}</div>`;
   const tog=(k,l,tip)=>`<label class="st-tog" title="${tip||''}"><input type="checkbox" data-gt="${k}" ${GFX[k]?'checked':''}><span>${l}</span></label>`;

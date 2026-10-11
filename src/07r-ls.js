@@ -49,8 +49,8 @@ $('#sld').addEventListener('click',e=>{const c=e.target.closest('[data-ls]');if(
 let lsPrev=false,lsSt='MS1';
 const lsOpen=()=>!$('#lsWin').classList.contains('hidden');
 function openLS(stId){if(stId)lsSt=stId;else{const dead=RING.stations.find(s=>!stationLive(s));if(dead)lsSt=dead.id;}
-  if(!lsOpen()){lsPrev=SIM.paused;SIM.paused=true;syncSpeed();if(FP.on)unlockPointer();$('#lsWin').classList.remove('hidden');}renderLS();}
-function closeLS(){$('#lsWin').classList.add('hidden');SIM.paused=lsPrev;syncSpeed();}
+  if(!lsOpen()){modalOpen('ls');if(FP.on)unlockPointer();$('#lsWin').classList.remove('hidden');}renderLS();}
+function closeLS(){$('#lsWin').classList.add('hidden');modalClose('ls');}
 function renderLS(){renderLSTab();if(!lsOpen())return;const s=RING.stations.find(x=>x.id===lsSt),pend=o=>LS_ORDERS.find(o);
   const vcls=g=>!g.U?'dl':g.U>U_MAX||g.U<U_MIN?'bad':g.U>248||g.U<212?'warnc':'';
   const tabs=RING.stations.map(x=>`<button class="mini ${x.id===lsSt?'on':''} ${stationLive(x)?'':'off'}" data-lst="${x.id}">${x.id}${stationLive(x)?'':' ⚠'}${x.gs?' ◆':''}</button>`).join('');

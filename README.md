@@ -39,7 +39,7 @@ Bedoeld voor **bedrijfsvoerders en monteurs in opleiding**, studenten **elektrot
 | | |
 |---|---|
 | 🔌 **Echt schakelen** | 110/10/20 kV met lijnvelden, transformatoren, dubbelrail, railkoppelingen, aardschakelaars en **vergrendelingen**, synchrocheck, AVR en trappenschakelaars. |
-| ⚡ **Storingen** | Blikseminslag met AR, kabelfouten met kortsluitverklikkers, trafotrips (relais 86), railfouten, weigerende schakelaars (50BF) en grote incidenten zoals brand, kraan of black-out. |
+| ⚡ **Storingen** | Blikseminslag met AR, kabelfouten met kortsluitverklikkers, **aardfouten** (U0, zoeken door te schakelen), trafotrips (relais 86), railfouten, weigerende schakelaars (50BF) en grote incidenten zoals brand, kraan of black-out. |
 | 🏘️ **10 kV-ringen** | Negen MS-stations met normaal-open punten, terugvoeden, **kabeltemperatuur** per sectie en een koppelkabel naar **OS Meppel** van een andere netbeheerder. |
 | 🏠 **Laagspanning** | LS-velden per straat, **kabelkasten** tussen stations, **zonnepanelen** met overspanning, vaste trappen, **noodaggregaten**, alles lokaal of via een monteur. |
 | 👷 **Werkopdrachten** | Onderhoud met optionele **schakelbrief**, werk staken, monteurs met **portofoon**, revisies, **relaistest met testkoffer** en thermografie. |
@@ -365,6 +365,16 @@ Toets `B` of de knop *Beveiliging*.
 </details>
 
 <details>
+<summary><b>Aardfout in het 10 kV-net</b></summary>
+
+Het 10 kV-net is **gecompenseerd** (Petersenspoel in het sterpunt van T1 en T3). Een enkele aardsluiting schakelt daarom niet af. Je krijgt een **aardfoutmelding** met **nulpuntsspanning U0** (±5,9 kV) op de rails die galvanisch met de fout verbonden zijn. In SCADA staat dat bovenaan het 10 kV- en het ringtabblad, en beide tabbladen knipperen.
+  - **Aanwijzingen:** het richtingsgevoelige aardfoutrelais van het foutveld meldt meestal ⏚, maar soms meldt ook een gezond veld. MS-stations tussen voeding en fout hebben vaak een **aardfoutverklikker** ⏚. Geen van beide is honderd procent betrouwbaar.
+  - **Zoeken door te schakelen:** open V-K om de rails te splitsen (U0 blijft dan alleen op de rail met de fout), zet velden om, of knip de ring op. Verdwijnt U0 zodra je een deel spanningsloos maakt, dan heb je de fout. Hij wordt dan een gewone kabelfout die de storingsdienst repareert.
+  - **Punten:** gevonden binnen 15 min +60, binnen 30 min +35. Zolang de aardfout blijft staan kost hij punten, want de gezonde fasen staan op lijnspanning.
+  - **Dubbele aardfout:** staat de aardfout langer dan ±50 minuten, dan kan er elders een tweede ontstaan. Dat is een kortsluiting: de beveiliging schakelt dan twee velden af (−60).
+</details>
+
+<details>
 <summary><b>Realistische bedrijfsvoering (spanningsregeling, synchrocheck, AR, relais 86 …)</b></summary>
 
 - **Spanningsregeling:** de 110 kV-netspanning varieert over de dag. De trappenschakelaar (17 standen, 1,25 % per trap) houdt de 10 kV-rail op 10,50 kV ±1,2 %. AUTO of HAND kies je in het transformatorpaneel. Bij gekoppelde rails regelen de transformatoren als master-follower. Ongelijke trappen geven circulatiestroom en extra belasting.
@@ -454,6 +464,7 @@ De broncode staat in `src/`. `build.ps1` plakt de bestanden in strikte naamvolgo
 | `04-9-wear.js` | veroudering, weigering (50BF) en revisies |
 | `04-a-relay.js` | relaisafwijkingen, werkopdracht relaistest en de metingen van de testkoffer |
 | `04-b-ls.js` | laagspanning (spanning per straat, kabelkasten, monteurs), noodaggregaten, rotatie, herstelbonus en klantcommunicatie |
+| `04-c-aardfout.js` | aardfout in het gecompenseerde 10 kV-net: U0, aanwijzingen, zoeken, dubbele aardfout |
 | `04b`–`04g` | spelmodi en score, ring, lessen, dienstoverdracht, extra scenario's |
 | `05`–`06` | effecten, geluid, interieur, opbouw van de scène |
 | `07`–`07r` | SCADA en panelen, rondlopen, monteurs, schakelbrief, beveiligingsvenster, prognose, telefoon, tijdlijn/herhaling, modelcontrole, flex- en onderhoudsvenster, leven in de wijk, instellingen, tabblad Kabels, opslaan en hervatten, testkoffer, toetsenoverzicht, LS-venster en -tabblad |
@@ -493,6 +504,8 @@ npm run test:stress             # 10 min vrije dienst mét 3D-code, met storinge
 De stresstest draait zonder `?lite`, dus ook de code voor labels, panelen en het 3D-beeld. Hij faalt bij een paginafout, een fout in de hoofdlus of als de klok stilstaat.
 
 In het spel zelf vangt de hoofdlus fouten op. Een fout in één beeld zet het spel dus niet meer stil, maar verschijnt als melding *Interne fout*.
+
+De unittests draaien met een **vaste seed per test**, zodat een fout altijd herhaalbaar is. Bij een fout zie je de seed en het commando om de test precies zo te herhalen (`TEST_SEED=… npm test -- naam`). Met `TEST_SEED=random` test je met willekeurige seeds.
 
 Bij `test:scenarios` speelt een automatische operator het spel uit zoals een goede speler dat doet. Hij isoleert kabelfouten, zet T3 in als reserve, voert werkopdrachten uit (met schakelbrief) en meldt zich bij monteurs. Per run zie je de score, de klantminuten, de doelen en de langste uitval. Een afwijkend resultaat speel je opnieuw met dezelfde seed: `SEED=123456`. Met `FULLLOG=1` krijg je het volledige verloop.
 

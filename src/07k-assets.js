@@ -2,8 +2,8 @@
 // ============================================================ venster onderhoud: conditie van de vermogenschakelaars en revisies inplannen (toets O)
 let assPrev=false;
 const assOpen=()=>!$('#assets').classList.contains('hidden');
-function openAssets(){if(assOpen())return;assPrev=SIM.paused;SIM.paused=true;syncSpeed();if(FP.on)unlockPointer();$('#assets').classList.remove('hidden');renderAssets();}
-function closeAssets(){$('#assets').classList.add('hidden');SIM.paused=assPrev;syncSpeed();}
+function openAssets(){if(assOpen())return;modalOpen('ass');if(FP.on)unlockPointer();$('#assets').classList.remove('hidden');renderAssets();}
+function closeAssets(){$('#assets').classList.add('hidden');modalClose('ass');}
 function renderAssets(){if(!assOpen())return;const rows=CB_IDS.map(id=>D[id]).sort((a,b)=>((b.refusals||0)-(a.refusals||0))||cond(a)-cond(b)).map(d=>{const c=cond(d),cls=d.refusals||c<0.25?'bad':c<0.4?'warnc':'';
   const can=MAINT_CBS.includes(d.id),plan=GAME.planCb===d.id||(TASK&&TASK.cbm===d.id);
   return `<tr><td><b>${d.id}</b><span>${d.label}</span></td><td><div class="cg"><i><b class="${cls}" style="width:${Math.round(c*100)}%;background:${cls?'':'var(--green)'}"></b></i></div></td>

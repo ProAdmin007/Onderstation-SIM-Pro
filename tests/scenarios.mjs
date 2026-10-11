@@ -78,6 +78,11 @@ async function bot(process_full) {
     for (const f of O.FLEX) { if (need.has(f.id)) { f.botIdle = 0; if (f.req !== 1) { O.setFlex(f.id, 1); note('flex ' + f.id); } } else if (f.req) { f.botIdle = (f.botIdle || 0) + 0.5; if (f.botIdle > 15) O.setFlex(f.id, 0); } }
     // 1. lijnen: weer inschakelen zodra TenneT spanning geeft
     for (const L of ['L1', 'L2']) if (S.lines[L].avail && !mine(L + '-Q0') && D[L + '-Q0'].state === 0 && D[L + '-Q9'].state && D[L + '-Q1'].state) await op(L + '-Q0', 1);
+    // aardfout: de bot kijkt de foutplaats af en maakt die spanningsloos (dan wordt het een gewone kabelfout)
+    if (O.EF.on && !O.EF.on.bot) { const e = O.EF.on; e.bot = true;
+      if (e.secId) { const s = O.RING.secs.find(x => x.id === e.secId); for (const id of [s.a && s.a + '-R', s.b && s.b + '-L'].filter(Boolean)) await op(id, 0); }
+      else if (e.fId) await op(O.FD(e.fId).cb, 0);
+      note(`aardfout ${e.secId || e.fId} gezocht`); }
     // 2. ringen: fout isoleren, terugvoeden via normaal-open punt, na reparatie normaliseren
     for (const s of O.RING.secs) {
       const iso = [s.a && s.a + '-R', s.b && s.b + '-L'].filter(Boolean);
@@ -122,6 +127,7 @@ async function bot(process_full) {
     }
   }
   return { obj: G.obj.map(o => `${o.state === 'done' ? '✓' : '✗'} ${o.t}`), score: Math.round(G.score), cml: Math.round(S.cml), incidents: S.incidents,
+    st: { pv: G.stats.pvTrips || 0, zekering: G.stats.fuses || 0, kk: G.stats.kkFuse || 0, brand: G.stats.burn || 0, tel: O.PHONE.stats, bandje: O.PHONE.stats.tape || 0, flexEur: Math.round(G.stats.flexEur || 0), uitval: Math.round(S.cml / 7520) },
     tasks: S.tasksDone, report: !document.querySelector('#report').classList.contains('hidden'), log: process_full ? log : log.slice(-25), off: Object.entries(offMin).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([k, v]) => k + ' ' + v + ' min').join(', ') };
 }
 
@@ -159,6 +165,7 @@ async function play(browser, r) {
     say(`${ok ? '✓' : '✗'} ${r.name} (seed ${seed}) – score ${res.score}, CML ${res.cml}, incidenten ${res.incidents}, taken ${res.tasks} (${((Date.now() - t0) / 1000).toFixed(0)} s)`);
     res.obj.forEach(o => say('    ' + o));
     if (res.off) say('    langste uitval: ' + res.off);
+    if (process.env.BALANCE) say('      Σ ' + JSON.stringify(res.st));
     if (missed.length || !ok || res.score < 1000 || process.env.FULLLOG) res.log.forEach(l => say('      · ' + l));
     if (errors.length) say('    fouten: ' + errors.join(' | '));
   } catch (e) { failed++; say(`✗ ${r.name}: ${e.message}`); }

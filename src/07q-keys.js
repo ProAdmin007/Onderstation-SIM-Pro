@@ -7,12 +7,12 @@ const KEY_HELP=[
   ['Vensters',[['B','Beveiligingsinstellingen'],['C','Flex en netcongestie'],['O','Onderhoud: conditie van schakelaars en relaistests'],['K','Testkoffer (tijdens een relaistest)'],['N','Laagspanning: LS-velden, kabelkasten, noodaggregaten en klanten informeren'],['I','Instellingen: prestaties, weer en geluid']]]];
 let keysPrev=false;
 const keysOpen=()=>!$('#keys').classList.contains('hidden');
-function openKeys(){if(keysOpen())return;keysPrev=SIM.paused;SIM.paused=true;syncSpeed();if(FP.on)unlockPointer();
+function openKeys(){if(keysOpen())return;modalOpen('keys');if(FP.on)unlockPointer();
   $('#keys').innerHTML=`<div class="card pr"><div class="eyebrow">Hulp</div><h2>Toetsenoverzicht</h2><div class="keys-grid">${KEY_HELP.map(([h,rows])=>`<div><h4>${h}</h4><table>${rows.map(([k,t])=>`<tr><td class="kk">${k.split(' / ').map(x=>x.split(' of ').map(y=>`<kbd>${y}</kbd>`).join(' of ')).join(' / ')}</td><td>${t}</td></tr>`).join('')}</table></div>`).join('')}</div>
     <p class="bf-desc">Alle vensters openen ook met de knoppen bovenin. Klik op een schakelaar in het SCADA-schema of in 3D voor zijn paneel.</p>
     <div class="rep-btns"><button class="primary" data-kclose2>Sluiten <kbd>H</kbd></button></div></div>`;
   $('#keys').classList.remove('hidden');}
-function closeKeys(){$('#keys').classList.add('hidden');SIM.paused=keysPrev;syncSpeed();}
+function closeKeys(){$('#keys').classList.add('hidden');modalClose('keys');}
 $('#keys').addEventListener('click',e=>{if(e.target.closest('[data-kclose2]')||e.target.id==='keys')closeKeys();});
 $('#keysBtn').addEventListener('click',()=>keysOpen()?closeKeys():openKeys());
 addEventListener('keydown',e=>{if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT'||e.ctrlKey||e.metaKey)return;if((e.key==='h'||e.key==='H'||e.key==='?')&&$('#intro').classList.contains('hidden'))keysOpen()?closeKeys():openKeys();});

@@ -20,8 +20,8 @@ function briefCheck(t){const exp=taskActs(t),got=t.brief;let gi=0;
     if(have.length<want.length||!want.every(w=>have.includes(w)))return {ok:false,pos:gi+1,why:exp[i].why,next:want[0]};gi+=want.length;i=j;}
   if(got.length>gi)return {ok:false,pos:gi+1,why:'Deze handeling hoort niet in deze schakelbrief.'};return {ok:true};}
 let briefPrev=false;
-function briefOpen(){if(!TASK||!TASK.pool)return;TASK.briefMode=true;briefPrev=SIM.paused;SIM.paused=true;syncSpeed();if(FP.on)unlockPointer();briefRender();$('#brief').classList.remove('hidden');}
-function briefClose(){$('#brief').classList.add('hidden');SIM.paused=briefPrev;syncSpeed();}
+function briefOpen(){if(!TASK||!TASK.pool)return;TASK.briefMode=true;modalOpen('brief');if(FP.on)unlockPointer();briefRender();$('#brief').classList.remove('hidden');}
+function briefClose(){$('#brief').classList.add('hidden');modalClose('brief');}
 function briefRender(msg=''){const t=TASK;if(!t)return briefClose();
   const left=t.pool.filter(k=>!t.brief.includes(k));
   $('#brief').innerHTML=`<div class="card bf"><div class="eyebrow">Schakelbrief · ${t.code}</div><h2>${t.title}</h2><p class="bf-desc">${t.desc}</p>

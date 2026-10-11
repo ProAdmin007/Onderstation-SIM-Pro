@@ -2,8 +2,8 @@
 // ============================================================ venster netcongestie en flexibel vermogen (toets C)
 let flexPrev=false;
 const flexOpen=()=>!$('#flex').classList.contains('hidden');
-function openFlex(){if(flexOpen())return;flexPrev=SIM.paused;SIM.paused=true;syncSpeed();if(FP.on)unlockPointer();$('#flex').classList.remove('hidden');renderFlex();}
-function closeFlex(){$('#flex').classList.add('hidden');SIM.paused=flexPrev;syncSpeed();}
+function openFlex(){if(flexOpen())return;modalOpen('flex');if(FP.on)unlockPointer();$('#flex').classList.remove('hidden');renderFlex();}
+function closeFlex(){$('#flex').classList.add('hidden');modalClose('flex');}
 function renderFlex(){if(!flexOpen())return;const pct=v=>Math.round(v*100)+'%',cls=k=>k>1?'bad':k>0.9?'warnc':'';
   const rows=FLEX.map(f=>{const c=f.c,on=EN.has(c.node),now=Math.abs(c.demand||0),act=c.cut||0,pend=f.req*f.max!==act;
     return `<tr><td><b>${f.name}</b><span>${f.id} · ${f.how}</span></td><td class="pv">${on?fx1(now)+' MW':'<span class="bad">geen spanning</span>'}</td>

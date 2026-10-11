@@ -1727,8 +1727,8 @@ function trafoOverheat(T,t,dm){if(t.oil>105&&EN.has(T+'h')){t.gas=(t.gas||0)+dm;
 function meppelFault(){if(!SIM.meppel.avail)return feederFault();Object.assign(SIM.meppel,{avail:false,reason:'storing 110 kV-zijde (Netbeheer Noord)'});
   pushAlarm('Netbeheer Noord: storing in OS Meppel aan de 110 kV-kant – de velden MP1–MP3 zijn spanningsloos. Herstel door Netbeheer Noord','crit');
   addTimer(rnd(12,25),()=>{Object.assign(SIM.meppel,{avail:true,reason:''});readyNotice('Netbeheer Noord: OS Meppel weer onder spanning – controleer uw velden MP1–MP3',null);refreshAll();});refreshAll();}
-function randomEvent(){const r=Math.random();if(r>0.97)return meppelFault();if(r<(WX.cur.thunder>0.5?0.65:0.3))return lineFault();if(r<0.62)return feederFault();if(r<0.72)return lvFault();
-  if(r<0.8&&!GAME.flags.busf){GAME.flags.busf=true;return busFault(pick(['RC','RD','RB']));}return trafoFault();}
+function randomEvent(){const r=Math.random();if(r>0.97)return meppelFault();if(r<(WX.cur.thunder>0.5?0.65:0.3))return lineFault();if(r<0.62)return feederFault();if(r<0.72)return lvFault();if(r<0.78&&!EF.on)return earthFault();
+  if(r<0.84&&!GAME.flags.busf){GAME.flags.busf=true;return busFault(pick(['RC','RD','RB']));}return trafoFault();}
 function lineFault(forceL,forcePerm){const c=LINES.filter(L=>SIM.lines[L].avail&&!SIM.lines[L].maint&&D[L+'-Q0'].state===1&&(!forceL||L===forceL));if(!c.length)return forceL?null:feederFault();const L=pick(c),ln=SIM.lines[L];
   lightning(L);const perm=forcePerm??(Math.random()<DIFFS[GAME.diff].perm);
   setTimeout(()=>{tripBreaker(L+'-Q0');pushAlarm(`${L} ${ln.name}: blikseminslag – distantiebeveiliging zone 1, ${L}-Q0 UIT`,'crit');
@@ -1913,7 +1913,7 @@ function simStep(dtReal){
   const dm=dtReal*SIM.speed/60;SIM.t+=dm;
   SIM.timers.sort((a,b)=>a.at-b.at);while(SIM.timers.length&&SIM.timers[0].at<=SIM.t)SIM.timers.shift().fn();
   CONS.forEach(f=>{f.noise+=(-f.noise*0.08+(Math.random()-0.5)*0.03)*Math.min(1,dm);});
-  weatherTick(dm);computeFlows();thermal(dm);regulate(dm);feederTick(dm);flexTick(dm);lsTick(dm);
+  weatherTick(dm);computeFlows();thermal(dm);regulate(dm);feederTick(dm);flexTick(dm);lsTick(dm);efTick(dm);
   let off=0;CONS.forEach(c=>{off+=custOff(c);});
   FEEDERS.forEach(f=>{if(f.ring)return;const on=EN.has(f.node);
     if(on!==f.wasOn){f.wasOn=on;restoreTrack(f,on);if(on)pushAlarm(`${f.id} ${f.name}: spanning hersteld`,'ok');
@@ -2218,6 +2218,60 @@ function lsTick(dm){if(!dm)return;
     if(off&&!a.aOff){a.aOff=true;a.aOffAt=SIM.t;a.eta=null;}
     else if(!off&&a.aOff){a.aOff=false;if(a.eta){const n=Math.max(5,Math.round(a.cust/150));
       if(SIM.t<=a.eta+2)award(n,`Hersteltijd ${a.id} gehaald`);else{award(-n,`Hersteltijd ${a.id} niet gehaald`);pushAlarm(`${a.id} ${a.name}: later hersteld dan de doorgegeven tijd (${fmtClock(a.eta)})`,'warn');}}a.eta=null;}});}
+
+
+// ============================================================ aardfout (aardsluiting) in het 10 kV-net
+// Het 10 kV-net is gecompenseerd (Petersenspoel in het sterpunt van T1 en T3): een enkele aardsluiting schakelt niet af,
+// maar geeft nulpuntsspanning (U0) op de rails die galvanisch met de fout verbonden zijn. De bedrijfsvoerder zoekt de fout
+// door te schakelen: rails splitsen, velden omzetten of uitschakelen, de ring opknippen. Verdwijnt U0, dan is de fout gevonden.
+const EF={on:null};
+const efAge=()=>EF.on?SIM.t-EF.on.at:0;
+// rails die galvanisch met elkaar verbonden zijn: koppeling V-K of een veld dat op beide rails staat
+const railsCoupled=()=>D['V-K'].state===1||Object.keys(SEL_BAYS).some(b=>D[b+'-QA']?.state===1&&D[b+'-QB']?.state===1&&D[SEL_BAYS[b].cb]?.state===1);
+// welke 10 kV-rails zien de nulpuntsspanning?
+function efRails(){const n=EF.on?.node;if(!n||!EN.has(n))return [];const bus=FLOW.TAG[n]?.bus;if(bus!=='RA'&&bus!=='RB')return [];
+  return railsCoupled()&&EN.has('RA')&&EN.has('RB')?['RA','RB']:[bus];}
+const efU0=()=>efRails().length?5.9+0.15*Math.sin(SIM.t*0.7):0;   // ±U_fase bij een volledige aardsluiting
+// het veld dat de foutplaats voedt (via de voedingsboom)
+const efFeeder=n=>{const cb=FLOW.TAG[n]?.cb;return FEEDERS.find(f=>f.cb===cb)||null;};
+
+function earthFault(forceNode){if(EF.on)return null;computeFlows();
+  const secs=RING.secs.filter(s=>!s.fault&&EN.has(s.node)&&['RA','RB'].includes(FLOW.TAG[s.node]?.bus)).map(s=>({node:s.node,sec:s}));
+  const feeds=FEEDERS.filter(f=>!f.ring&&!f.fault&&EN.has(f.node)&&['RA','RB'].includes(railOf(f.sel))).map(f=>({node:f.node,f}));
+  const c=[...secs,...feeds].filter(x=>!forceNode||x.node===forceNode);if(!c.length)return null;const x=pick(c),fd=efFeeder(x.node);
+  // aanwijzingen: het richtingsgevoelige aardfoutrelais van het foutveld spreekt meestal aan, soms ook (onterecht) een ander veld;
+  // aardfoutverklikkers in de MS-stations tussen voeding en fout geven niet altijd een melding
+  const ind={};if(fd&&Math.random()<0.75)ind[fd.id]=true;
+  const others=FEEDERS.filter(f=>f!==fd&&['RA','RB'].includes(f.bus));if(Math.random()<0.15&&others.length)ind[pick(others).id]=true;
+  EF.on={node:x.node,secId:x.sec?.id||null,fId:x.f?.id||null,at:SIM.t,ind,warned:false};
+  if(fd?.ring)ringPathStations(fd.node,x.node).forEach(id=>{const s=RING.stations.find(y=>y.id===id);if(Math.random()<0.7)s.efFlag=true;});
+  GAME.stats.ef=(GAME.stats.ef||0)+1;
+  pushAlarm(`Aardfoutmelding 10 kV: nulpuntsspanning U0 ±${efU0().toFixed(1).replace('.',',')} kV op rail ${efRails().map(b=>BUSES[b].nm).join(' en ')}. Het net blijft in bedrijf (Petersenspoel) – zoek en isoleer de aardfout`,'crit');
+  pushAlarm(`Tip: kijk welk veld een aardfoutrichting meldt (⏚) en welke MS-stations een aardfoutverklikker hebben. Splits de rails (V-K open) of knip de ring op: verdwijnt U0 als je een deel spanningsloos maakt, dan zit de fout daar`,'info');
+  refreshAll();return EF.on;}
+
+// gevonden: de fout wordt een gewone kabelfout die de storingsdienst repareert
+function efFound(){const e=EF.on,dt=SIM.t-e.at;EF.on=null;RING.stations.forEach(s=>{s.efFlag=false;});
+  award(dt<=15?60:dt<=30?35:10,'Aardfout gevonden');GAME.stats.efFound=(GAME.stats.efFound||0)+1;
+  if(e.secId){const s=RING.secs.find(x=>x.id===e.secId);s.fault=true;s.located=true;
+    pushAlarm(`U0 verdwenen: de aardfout zit in kabel ${secName(s)}. Houd die kabel spanningsloos – de storingsdienst repareert hem`,'ok');
+    addTimer(rnd(40,70),()=>{s.fault=false;s.located=false;pushAlarm(`Storingsdienst: kabel ${secName(s)} gerepareerd – normaliseer de ring`,'ok');refreshAll();});}
+  else if(e.fId){const f=FD(e.fId);f.fault={stage:'search',frac:f.prio?0:rnd(0.15,0.35)};
+    pushAlarm(`U0 verdwenen na het uitschakelen van ${f.cb}: de aardfout zit in de kabel van ${f.id} ${f.name}. Storingsdienst onderweg`,'ok');
+    addTimer(rnd(10,18),()=>{if(!f.fault)return;f.fault.stage='isolated';f.outFrac=f.fault.frac;
+      readyNotice(`Storingsdienst: aardfout in ${f.id} weggeschakeld – ${f.cb} mag weer IN${f.outFrac?` (${Math.round(f.cust*f.outFrac)} klanten wachten op reparatie)`:''}`,f.cb,()=>!D[f.cb].state);
+      addTimer(rnd(40,70),()=>{f.fault=null;f.outFrac=0;pushAlarm(`Storingsdienst: kabel ${f.id} gerepareerd`,'ok');});});}
+  refreshAll();}
+
+function efTick(dm){const e=EF.on;if(!e)return;
+  if(!efRails().length)return efFound();
+  GAME.score-=dm*0.5;   // een aardfout die blijft staan: isolatie van de gezonde fasen staat op lijnspanning
+  if(efAge()>40&&!e.warned){e.warned=true;pushAlarm('Aardfout staat al 40 minuten: de gezonde fasen staan op lijnspanning – de kans op een dubbele aardfout (kortsluiting) neemt toe','warn');}
+  if(efAge()>50&&Math.random()<dm/20){   // dubbele aardfout: tweede aardsluiting elders, de beveiliging schakelt beide af
+    EF.on=null;RING.stations.forEach(s=>{s.efFlag=false;});GAME.stats.efDouble=(GAME.stats.efDouble||0)+1;award(-60,'Dubbele aardfout');
+    pushAlarm('Dubbele aardfout: een tweede aardsluiting elders in het net – dat is een kortsluiting, de beveiliging schakelt af','crit');
+    if(e.secId){const s=RING.secs.find(x=>x.id===e.secId),f=efFeeder(s.node);if(f)ringFault(f,s);}else if(e.fId)feederFault(e.fId);
+    feederFault();}}
 
 
 // ============================================================ spelmodi, score en scenario's
@@ -3107,6 +3161,10 @@ bakeStatic();
 
 
 // ============================================================ SCADA-eénlijnschema (tabbladen 10 kV en 20 kV)
+// vensters die de simulatie pauzeren: pas als het laatste venster sluit, komt de oude pauzestand terug
+const MODAL=new Set();let modalPrev=false;
+function modalOpen(k){if(!MODAL.size)modalPrev=SIM.paused;MODAL.add(k);SIM.paused=true;syncSpeed();}
+function modalClose(k){if(!MODAL.delete(k))return;if(!MODAL.size)SIM.paused=modalPrev;syncSpeed();}
 const SLD={nodes:[],devs:{},meas:{},devTab:{},tab:'10'};
 function buildSLD(){
   const out={10:[],20:[]};let o;
@@ -3134,12 +3192,13 @@ function buildSLD(){
     SDS(Tn+'-QA',x-8,386);W(x-8,392,x-8,RA_Y,'RA');SDS(Tn+'-QB',x+8,386);W(x+8,392,x+8,RB_Y,'RB');};
   const feeder=(f,x)=>{if(is20(f.bus))W(x,420,x,447,f.bus);else{const sn=f.sel;W(x-8,RA_Y,x-8,426,'RA');SDS(f.id+'-QA',x-8,432);W(x+8,RB_Y,x+8,426,'RB');SDS(f.id+'-QB',x+8,432);W(x-8,438,x+8,438,sn);W(x,438,x,447,sn);}CB(f.cb,x,455,null);W(x,463,x,494,f.node);W(x,474,x+15,474,f.node);ES(f.id+'-Q8',x+15,486,'');
     o.push(`<polygon class="w arrow" data-n="${f.node}" data-c="w arrow" points="${f.gen?`${x-6},506 ${x+6},506 ${x},494`:`${x-6},494 ${x+6},494 ${x},506`}"/>`);
-    T(x,522,f.short,'middle','dl fs');M('f'+f.id,x,535);M('fc'+f.id,x,548,'middle','');T(x,561,f.id,'middle','');};
+    M('efi'+f.id,x+13,500,'middle','bad');T(x,522,f.short,'middle','dl fs');M('f'+f.id,x,535);M('fc'+f.id,x,548,'middle','');T(x,561,f.id,'middle','');};
   const F=id=>FEEDERS.find(f=>f.id===id);
   // tabblad 10 kV
   o=out[10];top();bay('T1',160,-1,'V-T1','RAB');bay('T3',330,1,'V-T3','RAB');
   W(20,RA_Y,452,RA_Y,'RA','w bus');W(20,RB_Y,452,RB_Y,'RB','w bus');CB('V-K',230,412,null);T(240,400,'V-K','start','dl');
   T(14,RA_Y+3,'A','end','dl');T(14,RB_Y+3,'B','end','dl');T(20,398,'10 kV RAIL A','start','dl');M('RA',98,398,'start');T(452,398,'RAIL B','end','dl');M('RB',412,398,'end');
+  M('ef10',245,384,'middle','bad');
   W(196,RA_Y,196,426,'RA');ES('RA-Q8',196,438,'');W(264,RB_Y,264,426,'RB');ES('RB-Q8',264,438,'');
   [['F1',35],['F2',82],['F3',128],['F4',285],['F5',395],['F6',440]].forEach(([id,x])=>feeder(F(id),x));
   // tabblad 20 kV
@@ -3173,7 +3232,7 @@ function buildSLD(){
         o.push(`<g class="golink" data-goto="M"><rect class="hit" x="${x-300}" y="${by+18}" width="176" height="20" rx="4"/><text x="${x-124}" y="${by+31}" text-anchor="end" class="fs mh">⇄ OS Meppel · koppelkabel MP3 ›</text></g>`);M('lnk',x-124,by+16,'end','fs');}});
     RING.secs.filter(c=>c.ring===rg).forEach((sec,i)=>{const x1=i?XS[i-1]+35:14,x2=i<n?XS[i]-35:456;W(x1,RY,x2,RY,sec.node);M('flt'+sec.id,(x1+x2)/2,RY-8,'middle','bad');});};
   RINGS.forEach((rg,k)=>drawRing(rg,k*296));
-  T(235,568,'⚑ verklikker aangesproken · ⚡ kabelfout · klik op een station voor alle schakelaars','middle','fs dl');
+  M('efR',235,554,'middle','bad');T(235,568,'⚑ kortsluitverklikker · ⏚ aardfoutverklikker · ⚡ kabelfout · klik op een station','middle','fs dl');
   // tabblad OS Meppel: 110 kV en trafo van Netbeheer Noord (grijs, niet bedienbaar), onze uitgaande velden en de koppelkabel naar MS5
   out.M=[];o=out.M;
   T(235,22,'OS MEPPEL','middle','h');T(235,36,'110 kV en transformator: Netbeheer Noord','middle','fs dl');T(235,48,'de uitgaande velden zijn van ons','middle','fs dl');
@@ -3199,6 +3258,7 @@ function tabAlarms(){const out={'10':[],'20':[],R:[],M:[]},add=(t,why)=>out[t].p
   if(D.T3.blocked)both('T3 geblokkeerd');
   if(!SIM.meppel.avail)add('M','storing Netbeheer Noord');
   BUS_IDS.forEach(b=>{const t=b==='MP'?'M':is20(b)?'20':'10',nm=BUSES[b].nm;if(b==='MP'&&!SIM.meppel.avail)return;if(BUSF[b])add(t,`railfout rail ${nm}`);else if(!EN.has(b))add(t,`rail ${nm} spanningsloos`);});
+  if(efRails().length){add('10','aardfout (U0)');add('R','aardfout (U0)');}
   if(D.T1.blocked)add('10','T1 geblokkeerd');if(D.T2.blocked)add('20','T2 geblokkeerd');
   FEEDERS.forEach(f=>{const t=f.bus==='MP'?'M':is20(f.bus)?'20':'10';if(f.ring)return;if(f.fault)add(t,`kabelfout ${f.id}`);else if(f.unplanned&&!EN.has(f.node))add(t,`${f.id} spanningsloos`);});
   RING.secs.forEach(s=>{if(s.fault)add('R',`kabelfout ${secName(s)}`);else if(s.temp>CABLE.max)add('R',`kabel ${secName(s)} te warm`);});
@@ -3223,10 +3283,12 @@ function updateSLD(){
     setM('to'+Tn,t.blocked?'86 BLOKKADE':`${Math.round(t.oil)}°C · t${t.tap}${t.avr==='auto'?'A':'H'}`,t.blocked||t.oil>90?'bad':'m');});
   setM('rt'+RES,`stand ${D[RES].ratio} kV${D[RES].ratioBusy?'…':''}`);
   BUS_IDS.forEach(b=>setM(b,`${fx(FLOW.U[b],2)} kV`));
-  RING.stations.forEach(s=>{const on=EN.has(s.node),u=nodeU(s.node);setM('fi'+s.id,s.flag?'⚑':'');setM('stc'+s.id,`${s.cust>=1000?fx(s.cust/1000)+'k':s.cust} kl`);setM('stp'+s.id,on?`${fx(s.P,2)} MW`:'UIT',on?'m':'bad');setM('stu'+s.id,on?`${fx(u,2)} kV`:'',u<9.9?'bad':'');});
+  RING.stations.forEach(s=>{const on=EN.has(s.node),u=nodeU(s.node);setM('fi'+s.id,s.flag?'⚑':s.efFlag?'⏚':'');setM('stc'+s.id,`${s.cust>=1000?fx(s.cust/1000)+'k':s.cust} kl`);setM('stp'+s.id,on?`${fx(s.P,2)} MW`:'UIT',on?'m':'bad');setM('stu'+s.id,on?`${fx(u,2)} kV`:'',u<9.9?'bad':'');});
   RING.secs.forEach(s=>(SLD.byNode[s.node]||[]).forEach(el=>{el.classList.toggle('ovl',s.load>0.85&&s.load<=1);el.classList.toggle('ovl2',s.load>1);}));
   FEEDERS.filter(f=>f.ring).forEach(f=>setM('fa'+f.id,`V-${f.id} · rail ${BUS_BAND[railOf(f.sel)]?.[2]||'–'} · ${Math.round(D[f.cb].I)} A`));
   RING.secs.forEach(s=>setM('flt'+s.id,s.fault?'⚡':''));
+  const ef=efRails(),efTxt=ef.length?`⏚ AARDFOUT · U0 ${fx(efU0())} kV · rail ${ef.map(b=>BUSES[b].nm).join('+')} · ${Math.round(efAge())} min`:'';setM('ef10',efTxt);setM('efR',efTxt);
+  FEEDERS.forEach(f=>setM('efi'+f.id,EF.on&&EF.on.ind[f.id]&&EN.has(f.node)?'⏚':''));
   setM('mpst',SIM.meppel.avail?`in bedrijf · ${fx(FLOW.U.MP,2)} kV`:'STORING',SIM.meppel.avail?'mh':'bad');setM('lnk',D['MS5-K'].state&&EN.has('MP3')?`nu ${fx(FD('MP3').P)} MW`:'open','mh');
   updateTabAlarms();
   FEEDERS.forEach(f=>{const on=EN.has(f.node);setM('f'+f.id,on?`${fx(f.P)} MW`:'UIT',on?(f.gen?'mh':'m'):'bad');setM('fc'+f.id,f.ring?'ring':f.gen?'productie':f.cust>=1000?`${fx(f.cust/1000)}k kl`:`${f.cust} kl`);});
@@ -3639,8 +3701,8 @@ function briefCheck(t){const exp=taskActs(t),got=t.brief;let gi=0;
     if(have.length<want.length||!want.every(w=>have.includes(w)))return {ok:false,pos:gi+1,why:exp[i].why,next:want[0]};gi+=want.length;i=j;}
   if(got.length>gi)return {ok:false,pos:gi+1,why:'Deze handeling hoort niet in deze schakelbrief.'};return {ok:true};}
 let briefPrev=false;
-function briefOpen(){if(!TASK||!TASK.pool)return;TASK.briefMode=true;briefPrev=SIM.paused;SIM.paused=true;syncSpeed();if(FP.on)unlockPointer();briefRender();$('#brief').classList.remove('hidden');}
-function briefClose(){$('#brief').classList.add('hidden');SIM.paused=briefPrev;syncSpeed();}
+function briefOpen(){if(!TASK||!TASK.pool)return;TASK.briefMode=true;modalOpen('brief');if(FP.on)unlockPointer();briefRender();$('#brief').classList.remove('hidden');}
+function briefClose(){$('#brief').classList.add('hidden');modalClose('brief');}
 function briefRender(msg=''){const t=TASK;if(!t)return briefClose();
   const left=t.pool.filter(k=>!t.brief.includes(k));
   $('#brief').innerHTML=`<div class="card bf"><div class="eyebrow">Schakelbrief · ${t.code}</div><h2>${t.title}</h2><p class="bf-desc">${t.desc}</p>
@@ -3671,8 +3733,8 @@ $('#taskBody').addEventListener('click',e=>{if(e.target.closest('[data-brief]'))
 // ---------- venster
 let protPrev=false;
 const protOpen=()=>!$('#prot').classList.contains('hidden');
-function openProt(){if(protOpen())return;protPrev=SIM.paused;SIM.paused=true;syncSpeed();if(FP.on)unlockPointer();renderProt();$('#prot').classList.remove('hidden');}
-function closeProt(){$('#prot').classList.add('hidden');SIM.paused=protPrev;syncSpeed();}
+function openProt(){if(protOpen())return;modalOpen('prot');if(FP.on)unlockPointer();renderProt();$('#prot').classList.remove('hidden');}
+function closeProt(){$('#prot').classList.add('hidden');modalClose('prot');}
 function renderProt(){
   const sel=(kind,id,key)=>`<select data-p="${kind}:${id}:${key}">${PROT_OPT[key].vals.map(v=>`<option value="${v}"${PROT[kind][id][key]===v?' selected':''}>${protTxt(key,v)}</option>`).join('')}</select>`;
   const th=keys=>keys.map(k=>`<th title="${PROT_OPT[k].tip}">${PROT_OPT[k].label} <i>?</i></th>`).join('');
@@ -3904,8 +3966,8 @@ function checkModel(silent){const err=[],has=id=>!!D[id],SW=['cb','ds','es','lbs
 // ============================================================ venster netcongestie en flexibel vermogen (toets C)
 let flexPrev=false;
 const flexOpen=()=>!$('#flex').classList.contains('hidden');
-function openFlex(){if(flexOpen())return;flexPrev=SIM.paused;SIM.paused=true;syncSpeed();if(FP.on)unlockPointer();$('#flex').classList.remove('hidden');renderFlex();}
-function closeFlex(){$('#flex').classList.add('hidden');SIM.paused=flexPrev;syncSpeed();}
+function openFlex(){if(flexOpen())return;modalOpen('flex');if(FP.on)unlockPointer();$('#flex').classList.remove('hidden');renderFlex();}
+function closeFlex(){$('#flex').classList.add('hidden');modalClose('flex');}
 function renderFlex(){if(!flexOpen())return;const pct=v=>Math.round(v*100)+'%',cls=k=>k>1?'bad':k>0.9?'warnc':'';
   const rows=FLEX.map(f=>{const c=f.c,on=EN.has(c.node),now=Math.abs(c.demand||0),act=c.cut||0,pend=f.req*f.max!==act;
     return `<tr><td><b>${f.name}</b><span>${f.id} · ${f.how}</span></td><td class="pv">${on?fx1(now)+' MW':'<span class="bad">geen spanning</span>'}</td>
@@ -3928,8 +3990,8 @@ addEventListener('keydown',e=>{if(e.target.tagName==='INPUT'||e.target.tagName==
 // ============================================================ venster onderhoud: conditie van de vermogenschakelaars en revisies inplannen (toets O)
 let assPrev=false;
 const assOpen=()=>!$('#assets').classList.contains('hidden');
-function openAssets(){if(assOpen())return;assPrev=SIM.paused;SIM.paused=true;syncSpeed();if(FP.on)unlockPointer();$('#assets').classList.remove('hidden');renderAssets();}
-function closeAssets(){$('#assets').classList.add('hidden');SIM.paused=assPrev;syncSpeed();}
+function openAssets(){if(assOpen())return;modalOpen('ass');if(FP.on)unlockPointer();$('#assets').classList.remove('hidden');renderAssets();}
+function closeAssets(){$('#assets').classList.add('hidden');modalClose('ass');}
 function renderAssets(){if(!assOpen())return;const rows=CB_IDS.map(id=>D[id]).sort((a,b)=>((b.refusals||0)-(a.refusals||0))||cond(a)-cond(b)).map(d=>{const c=cond(d),cls=d.refusals||c<0.25?'bad':c<0.4?'warnc':'';
   const can=MAINT_CBS.includes(d.id),plan=GAME.planCb===d.id||(TASK&&TASK.cbm===d.id);
   return `<tr><td><b>${d.id}</b><span>${d.label}</span></td><td><div class="cg"><i><b class="${cls}" style="width:${Math.round(c*100)}%;background:${cls?'':'var(--green)'}"></b></i></div></td>
@@ -4026,8 +4088,8 @@ let fpsN=0,fpsT=0;function fpsTick(dt){fpsN++;fpsT+=dt;if(fpsT>=0.5){if(GFX.mete
 // ---- venster
 let setPrev=false;
 const setOpen=()=>!$('#settings').classList.contains('hidden');
-function openSettings(){if(setOpen())return;setPrev=SIM.paused;SIM.paused=true;syncSpeed();if(FP.on)unlockPointer();$('#settings').classList.remove('hidden');renderSettings();}
-function closeSettings(){$('#settings').classList.add('hidden');SIM.paused=setPrev;syncSpeed();}
+function openSettings(){if(setOpen())return;modalOpen('set');if(FP.on)unlockPointer();$('#settings').classList.remove('hidden');renderSettings();}
+function closeSettings(){$('#settings').classList.add('hidden');modalClose('set');}
 function renderSettings(){if(!setOpen())return;
   const seg=(k,opts)=>`<div class="seg">${opts.map(([v,l])=>`<button data-g="${k}:${v}" class="${String(GFX[k])===String(v)?'on':''}">${l}</button>`).join('')}</div>`;
   const tog=(k,l,tip)=>`<label class="st-tog" title="${tip||''}"><input type="checkbox" data-gt="${k}" ${GFX[k]?'checked':''}><span>${l}</span></label>`;
@@ -4090,12 +4152,14 @@ $('#sld').addEventListener('click',e=>{const c=e.target.closest('[data-cab]');if
 // De toestand van de installatie wordt bewaard; geplande gebeurtenissen (reparaties, TenneT, monteurs) worden bij het hervatten
 // opnieuw ingepland op basis van die toestand, want stukjes programma kun je niet opslaan.
 var RESUMING=false;
-const SAVE_KEY='osz-save',SAVE_V=1;
+const SAVE_KEY='osz-save',SAVE_V=2;
+// oudere opgeslagen spellen stap voor stap omzetten naar de huidige opbouw
+const SAVE_MIGRATE={1:d=>{for(const id in d.D||{}){const x=d.D[id];if(x.stuck){delete x.stuck;x.refusals=Math.max(1,x.refusals||0);}}d.LS??={busy:0,orders:[]};return d;}};
 const BASE0=new Map(CONS.map(c=>[c.id,c.base]));   // normale belasting per afnemer (voor het opruimen van een lopend incident)
 const KEYS={dev:['state','ops','wear','refusals','year','wearWarn','oil','tap','avr','fans','fanFail','blocked','resettable','blockText','blockKind','ratio','gas','hot'],
   feed:['eta','etaAt','aOff','aOffAt','lsOff','lsOffAt','lsManual','shed','called','relay','relayYear','relayKnown','fault','outFrac','clp','offSince','oc','temp','hotWarn','backfed','interruptible','base','unplanned','wait','wasOn'],
   lvg:['pvTrip','ovAt','lsOff','lsOffAt','lsManual','shed','called','outFrac','lvf','backfed','cut','base','offSince','clp'],sec:['fault','located','temp','ovl','hot'],
-  st:['tapLv','gs','eta','etaAt','aOff','aOffAt','ovFixed','flag','damaged','evac','fuse','genset','trOt','trWarn','unplanned','wait','wasOn']};
+  st:['efFlag','tapLv','gs','eta','etaAt','aOff','aOffAt','ovFixed','flag','damaged','evac','fuse','genset','trOt','trWarn','unplanned','wait','wasOn']};
 const grab=(o,keys)=>{const r={};keys.forEach(k=>{if(o[k]!==undefined)r[k]=o[k];});return r;};
 const canSave=()=>['free','day','eve'].includes(GAME.mode)&&!GAME.ended&&!RP.on&&$('#intro').classList.contains('hidden');
 // ---- werkopdracht: welk soort opdracht en met welke keuzes, zodat hij exact opnieuw te maken is
@@ -4125,12 +4189,13 @@ function saveGame(silent){if(!canSave())return false;
     LV:Object.fromEntries(LVG.map(g=>[g.id,grab(g,KEYS.lvg)])),SEC:Object.fromEntries(RING.secs.map(s=>[s.id,grab(s,KEYS.sec)])),
     ST:Object.fromEntries(RING.stations.map(s=>[s.id,grab(s,KEYS.st)])),BUSF:Object.keys(BUSF),
     WX:{type:WX.type,lock:WX.lock,next:WX.next,cur:{...WX.cur},cover:WX.cover},FLEX:FLEX.map(f=>({id:f.id,req:f.req,at:f.at})),PROT:JSON.parse(JSON.stringify(PROT)),
-    TASK:taskSave(),taskSeq,taskCycle,INC:{next:INC.next,done:INC.done,active:INC.active?.def.id||null},PHONE:{...PHONE.stats},LS:{busy:GENSET.busy,orders:LS_ORDERS.map(o=>({...o}))},
+    TASK:taskSave(),taskSeq,taskCycle,INC:{next:INC.next,done:INC.done,active:INC.active?.def.id||null},PHONE:{...PHONE.stats},EF:EF.on,LS:{busy:GENSET.busy,orders:LS_ORDERS.map(o=>({...o}))},
     REC:{samples:REC.samples.slice(-600),events:REC.events.slice(-1500)}};
   try{localStorage.setItem(SAVE_KEY,JSON.stringify(data));}catch(e){if(!silent)deny('Opslaan mislukt: niet genoeg ruimte in de browser');return false;}
   if(!silent){pushAlarm(`💾 Spel opgeslagen (${MODES[GAME.mode].name}, ${fmtClock(SIM.t)})`,'ok');toastSaved('Spel opgeslagen');}else toastSaved('Automatisch opgeslagen');return true;}
 function toastSaved(t){const el=$('#saved');el.textContent='💾 '+t;el.classList.remove('show');void el.offsetWidth;el.classList.add('show');}
-function readSave(){try{const d=JSON.parse(localStorage.getItem(SAVE_KEY)||'null');return d&&d.v===SAVE_V&&MODES[d.mode]?d:null;}catch(e){return null;}}
+function readSave(){try{let d=JSON.parse(localStorage.getItem(SAVE_KEY)||'null');if(!d||!MODES[d.mode]||!(d.v>=1&&d.v<=SAVE_V))return null;
+  while(d.v<SAVE_V){d=SAVE_MIGRATE[d.v](d);d.v++;}return d;}catch(e){return null;}}
 function deleteSave(){try{localStorage.removeItem(SAVE_KEY);}catch(e){}}
 // ---- hervatten
 function resumeGame(d){$('#intro').classList.add('hidden');AudioSys.init();controls.autoRotate=false;
@@ -4149,7 +4214,7 @@ function resumeGame(d){$('#intro').classList.add('hidden');AudioSys.init();contr
   d.FLEX.forEach(s=>{const f=FLEX.find(x=>x.id===s.id);if(f){f.req=s.req;f.at=s.at;}});
   for(const k of ['f','ln','tr'])for(const id in d.PROT[k])if(PROT[k][id])Object.assign(PROT[k][id],d.PROT[k][id]);
   TASK=null;taskSeq=d.taskSeq;taskCycle=d.taskCycle;taskLoad(d.TASK);
-  Object.assign(PHONE.stats,d.PHONE);if(d.LS){GENSET.busy=d.LS.busy;LS_ORDERS.splice(0,LS_ORDERS.length,...d.LS.orders);}REC.samples=d.REC.samples;REC.events=d.REC.events;REC.lastM=null;
+  Object.assign(PHONE.stats,d.PHONE);EF.on=d.EF||null;if(d.LS){GENSET.busy=d.LS.busy;LS_ORDERS.splice(0,LS_ORDERS.length,...d.LS.orders);}REC.samples=d.REC.samples;REC.events=d.REC.events;REC.lastM=null;
   INC.next=d.INC.next;INC.done=d.INC.done;INC.active=null;if(d.INC.active)clearIncident(d.INC.active);
   resumeTimers();computeFlows();FEEDERS.concat(RING.stations).forEach(f=>{f.wasOn=EN.has(f.node);});
   updateSky(hourOf());refreshAll();renderTasks();setSpeed(d.SIM.speed||60);
@@ -4184,8 +4249,8 @@ let kitPrev=false;
 const kitOpen=()=>!$('#kit').classList.contains('hidden');
 const kitReady=()=>!!TASK&&!!TASK.relayF&&!TASK.aborted&&!!TASK.steps[TASK.i]?.kit;
 function openKit(){if(kitOpen())return;if(!kitReady())return deny('De testkoffer is pas aangesloten tijdens de stap "Test het relais" van een relaistest');
-  kitPrev=SIM.paused;SIM.paused=true;syncSpeed();if(FP.on)unlockPointer();$('#kit').classList.remove('hidden');renderKit();}
-function closeKit(){$('#kit').classList.add('hidden');SIM.paused=kitPrev;syncSpeed();}
+  modalOpen('kit');if(FP.on)unlockPointer();$('#kit').classList.remove('hidden');renderKit();}
+function closeKit(){$('#kit').classList.add('hidden');modalClose('kit');}
 const fmtA=v=>v.toFixed(v<10?2:1).replace('.',',')+' A';
 const fmtS=v=>v.toFixed(2).replace('.',',')+' s';
 function kitRun(id){if(!kitReady())return;const f=FD(TASK.relayF),test=kitTests(f).find(x=>x.id===id);
@@ -4219,12 +4284,12 @@ const KEY_HELP=[
   ['Vensters',[['B','Beveiligingsinstellingen'],['C','Flex en netcongestie'],['O','Onderhoud: conditie van schakelaars en relaistests'],['K','Testkoffer (tijdens een relaistest)'],['N','Laagspanning: LS-velden, kabelkasten, noodaggregaten en klanten informeren'],['I','Instellingen: prestaties, weer en geluid']]]];
 let keysPrev=false;
 const keysOpen=()=>!$('#keys').classList.contains('hidden');
-function openKeys(){if(keysOpen())return;keysPrev=SIM.paused;SIM.paused=true;syncSpeed();if(FP.on)unlockPointer();
+function openKeys(){if(keysOpen())return;modalOpen('keys');if(FP.on)unlockPointer();
   $('#keys').innerHTML=`<div class="card pr"><div class="eyebrow">Hulp</div><h2>Toetsenoverzicht</h2><div class="keys-grid">${KEY_HELP.map(([h,rows])=>`<div><h4>${h}</h4><table>${rows.map(([k,t])=>`<tr><td class="kk">${k.split(' / ').map(x=>x.split(' of ').map(y=>`<kbd>${y}</kbd>`).join(' of ')).join(' / ')}</td><td>${t}</td></tr>`).join('')}</table></div>`).join('')}</div>
     <p class="bf-desc">Alle vensters openen ook met de knoppen bovenin. Klik op een schakelaar in het SCADA-schema of in 3D voor zijn paneel.</p>
     <div class="rep-btns"><button class="primary" data-kclose2>Sluiten <kbd>H</kbd></button></div></div>`;
   $('#keys').classList.remove('hidden');}
-function closeKeys(){$('#keys').classList.add('hidden');SIM.paused=keysPrev;syncSpeed();}
+function closeKeys(){$('#keys').classList.add('hidden');modalClose('keys');}
 $('#keys').addEventListener('click',e=>{if(e.target.closest('[data-kclose2]')||e.target.id==='keys')closeKeys();});
 $('#keysBtn').addEventListener('click',()=>keysOpen()?closeKeys():openKeys());
 addEventListener('keydown',e=>{if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT'||e.ctrlKey||e.metaKey)return;if((e.key==='h'||e.key==='H'||e.key==='?')&&$('#intro').classList.contains('hidden'))keysOpen()?closeKeys():openKeys();});
@@ -4283,8 +4348,8 @@ $('#sld').addEventListener('click',e=>{const c=e.target.closest('[data-ls]');if(
 let lsPrev=false,lsSt='MS1';
 const lsOpen=()=>!$('#lsWin').classList.contains('hidden');
 function openLS(stId){if(stId)lsSt=stId;else{const dead=RING.stations.find(s=>!stationLive(s));if(dead)lsSt=dead.id;}
-  if(!lsOpen()){lsPrev=SIM.paused;SIM.paused=true;syncSpeed();if(FP.on)unlockPointer();$('#lsWin').classList.remove('hidden');}renderLS();}
-function closeLS(){$('#lsWin').classList.add('hidden');SIM.paused=lsPrev;syncSpeed();}
+  if(!lsOpen()){modalOpen('ls');if(FP.on)unlockPointer();$('#lsWin').classList.remove('hidden');}renderLS();}
+function closeLS(){$('#lsWin').classList.add('hidden');modalClose('ls');}
 function renderLS(){renderLSTab();if(!lsOpen())return;const s=RING.stations.find(x=>x.id===lsSt),pend=o=>LS_ORDERS.find(o);
   const vcls=g=>!g.U?'dl':g.U>U_MAX||g.U<U_MIN?'bad':g.U>248||g.U<212?'warnc':'';
   const tabs=RING.stations.map(x=>`<button class="mini ${x.id===lsSt?'on':''} ${stationLive(x)?'':'off'}" data-lst="${x.id}">${x.id}${stationLive(x)?'':' ⚠'}${x.gs?' ◆':''}</button>`).join('');
@@ -4363,13 +4428,13 @@ setZoom(SLDZ);
 // ---------- pauzemenu (Esc)
 let menuPrev=false,menuAt=0;
 const menuOpen=()=>!$('#pauseMenu').classList.contains('hidden');
-function openMenu(){if(GAME.ended||menuOpen()||!$('#intro').classList.contains('hidden'))return;menuPrev=SIM.paused;menuAt=performance.now();SIM.paused=true;syncSpeed();unlockPointer();
+function openMenu(){if(GAME.ended||menuOpen()||!$('#intro').classList.contains('hidden'))return;menuAt=performance.now();modalOpen('menu');unlockPointer();
   const m=MODES[GAME.mode]||MODES.free;$('#pmMode').textContent=`${m.name} · ${DIFFS[GAME.diff].label}`;$('#pmScore').textContent=Math.round(GAME.score).toLocaleString('nl-NL');
   $('#pmBest').textContent=getBest(GAME.mode,GAME.diff)?`beste: ${getBest(GAME.mode,GAME.diff).toLocaleString('nl-NL')}`:'nog geen beste score';
   $('#pmSave').disabled=!canSave();$('#pmSave').title=canSave()?'':'Opslaan kan in de vrije dienst en in de dag- en avonddienst (niet in scenario\'s en lessen)';
   $('#pmMenu').textContent=canSave()?'Opslaan en naar hoofdmenu':'Score opslaan en naar hoofdmenu';
   $('#pauseMenu').classList.remove('hidden');document.body.classList.add('menu');}
-function closeMenu(){$('#pauseMenu').classList.add('hidden');document.body.classList.remove('menu');SIM.paused=menuPrev;syncSpeed();if(FP.on)canvasEl.requestPointerLock?.();}
+function closeMenu(){$('#pauseMenu').classList.add('hidden');document.body.classList.remove('menu');modalClose('menu');if(FP.on)canvasEl.requestPointerLock?.();}
 $('#pauseMenu').addEventListener('click',e=>{const b=e.target.closest('[data-pm]');if(!b)return;const a=b.dataset.pm;
   if(a==='resume')closeMenu();
   else if(a==='settings'){closeMenu();openSettings();}
@@ -4392,14 +4457,17 @@ document.querySelectorAll('#speed button').forEach(b=>b.classList.remove('on'));
 $('#loading').remove();
 if(DIFFS[params.get('diff')])GAME.diff=params.get('diff');if(SEASONS[params.get('season')])GAME.season=params.get('season');setSeason(GAME.season);
 if(params.get('weer')&&WX_TYPES[params.get('weer')])setWeather(params.get('weer'),true,true);
-if(params.has('resume')&&readSave())resumeGame(readSave());
+// hervatten; lukt dat niet (beschadigd of onbekend opgeslagen spel), dan een reservekopie bewaren en schoon beginnen
+if(params.has('resume')&&readSave()){try{resumeGame(readSave());}catch(e){console.error('Hervatten mislukt',e);
+  try{localStorage.setItem(SAVE_KEY+'-defect',localStorage.getItem(SAVE_KEY));}catch(_){}deleteSave();
+  alert('Het opgeslagen spel kon niet worden geladen (mogelijk van een oudere versie). Er is een reservekopie bewaard; je begint opnieuw.');location.search='';}}
 else if(params.has('play'))startGame(params.get('play'));
 else if(params.has('autostart')){$('#intro').classList.add('hidden');applyMode('free');setSpeed(60);}
 else{renderMenu();$('#intro').classList.remove('hidden');controls.autoRotate=true;controls.autoRotateSpeed=0.35;}
 if(params.has('night'))updateSky(22);
 if(params.has('view')){const v=VIEWPOS[+params.get('view')];camera.position.copy(v[0]);controls.target.copy(v[1]);controls.autoRotate=false;controls.update();}
 
-window.OS={controls,tripBreaker,CONS,LS_LINKS,LS_ORDERS,GENSET,lsTick,lsOrder,lsSwitchOrder,lsExec,gsSend,gsOff,gsRestart,tapOrder,setEta,callPrio,lsAreas,PRIO,openLS,closeLS,renderLS,lvVolt,stationLoads,shedFactor,failP,manualP,phoneTick,refreshDevPanel,updateSLD,openKeys,closeKeys,KEY_HELP,RELAY_BAYS,relayTask,relayDue,relayDefect,initRelays,kitTests,kitMeasure,kitVerdict,kitRun,openKit,closeKit,saveGame,readSave,deleteSave,resumeGame,canSave,specOf,CABLE,soilT,FD,meppelFault,linkTick,tabAlarms,updateTabAlarms,renderTasks,INC,INCIDENTS,startIncident,endIncident,incidentTick,setTab,renderCables,GFX,setGfx,applyGfx,openSettings,closeSettings,WX_TYPES,renderer,scene,FIRE,CARS,updateWindows,updateLife,stationLive,cbMaintTask,worstCb,cond,breakerFails,CB_IDS,FLEX,setFlex,flexTick,congestion,openFlex,closeFlex,checkModel,homeBus,BUSES,SEL_BAYS,TORCH,setTorch,HO_POOL,handoverTick,REC,RP,startReplay,stopReplay,analyse,stationDamage,closeHandover,deviations,PHONE,lvFault,callFrom,phoneAnswer,dispatchLV,LVG,forecast,progAdvice,PROG,startTask:(k,...a)=>{TASK={relayTask,cbMaintTask,railTask,railBTask,stationTask,thermoTask,ringTask,feederTask,lineTask,reserveTask}[k](...a);TASK.i=0;TASK.code='WV-TEST';briefInit(TASK);renderTasks();},SIM,D,LESSONS,lessonGo,selectDevice,abortTask,railTask,stationTask,thermoTask,nearDev,VIEWS,PROT,setProt,openProt,closeProt,busFault,BUSF,RINGS,task:()=>TASK,briefSubmit,briefCheck,briefWatch,actKey,taskActs,crewNear,boxOf:id=>VIEWS[id]&&VIEWS[id].box,AudioSys,updateAudio,WX,setWeather,setSeason,SEASONS,ambient,enterKiosk,ROOMS,blockedAt,RING,NPCS,crewDispatch,ringFault,FP,enterFP,exitFP,pickCenter,camera,camInside,setRatio,setTab,GAME,MODES,applyMode,endGame,EN:()=>EN,FLOW,operate,tapStep,setAVR,resetLockout,toggleAR,regulate,computeFlows,randomEvent,lineFault,feederFault,trafoFault,offerTask,simStep,FEEDERS};
+window.OS={EF,earthFault,efTick,efRails,efU0,railsCoupled,controls,tripBreaker,CONS,LS_LINKS,LS_ORDERS,GENSET,lsTick,lsOrder,lsSwitchOrder,lsExec,gsSend,gsOff,gsRestart,tapOrder,setEta,callPrio,lsAreas,PRIO,openLS,closeLS,renderLS,lvVolt,stationLoads,shedFactor,failP,manualP,phoneTick,refreshDevPanel,updateSLD,openKeys,closeKeys,KEY_HELP,RELAY_BAYS,relayTask,relayDue,relayDefect,initRelays,kitTests,kitMeasure,kitVerdict,kitRun,openKit,closeKit,saveGame,readSave,deleteSave,resumeGame,canSave,specOf,CABLE,soilT,FD,meppelFault,linkTick,tabAlarms,updateTabAlarms,renderTasks,INC,INCIDENTS,startIncident,endIncident,incidentTick,setTab,renderCables,GFX,setGfx,applyGfx,openSettings,closeSettings,WX_TYPES,renderer,scene,FIRE,CARS,updateWindows,updateLife,stationLive,cbMaintTask,worstCb,cond,breakerFails,CB_IDS,FLEX,setFlex,flexTick,congestion,openFlex,closeFlex,checkModel,homeBus,BUSES,SEL_BAYS,TORCH,setTorch,HO_POOL,handoverTick,REC,RP,startReplay,stopReplay,analyse,stationDamage,closeHandover,deviations,PHONE,lvFault,callFrom,phoneAnswer,dispatchLV,LVG,forecast,progAdvice,PROG,startTask:(k,...a)=>{TASK={relayTask,cbMaintTask,railTask,railBTask,stationTask,thermoTask,ringTask,feederTask,lineTask,reserveTask}[k](...a);TASK.i=0;TASK.code='WV-TEST';briefInit(TASK);renderTasks();},SIM,D,LESSONS,lessonGo,selectDevice,abortTask,railTask,stationTask,thermoTask,nearDev,VIEWS,PROT,setProt,openProt,closeProt,busFault,BUSF,RINGS,task:()=>TASK,briefSubmit,briefCheck,briefWatch,actKey,taskActs,crewNear,boxOf:id=>VIEWS[id]&&VIEWS[id].box,AudioSys,updateAudio,WX,setWeather,setSeason,SEASONS,ambient,enterKiosk,ROOMS,blockedAt,RING,NPCS,crewDispatch,ringFault,FP,enterFP,exitFP,pickCenter,camera,camInside,setRatio,setTab,GAME,MODES,applyMode,endGame,EN:()=>EN,FLOW,operate,tapStep,setAVR,resetLockout,toggleAR,regulate,computeFlows,randomEvent,lineFault,feederFault,trafoFault,offerTask,simStep,FEEDERS};
 const clock=new THREE.Clock();let hudT=0,skyT=0,progT=0;
 let liteAcc=0;
 function frame(){

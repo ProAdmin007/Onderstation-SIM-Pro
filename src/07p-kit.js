@@ -4,8 +4,8 @@ let kitPrev=false;
 const kitOpen=()=>!$('#kit').classList.contains('hidden');
 const kitReady=()=>!!TASK&&!!TASK.relayF&&!TASK.aborted&&!!TASK.steps[TASK.i]?.kit;
 function openKit(){if(kitOpen())return;if(!kitReady())return deny('De testkoffer is pas aangesloten tijdens de stap "Test het relais" van een relaistest');
-  kitPrev=SIM.paused;SIM.paused=true;syncSpeed();if(FP.on)unlockPointer();$('#kit').classList.remove('hidden');renderKit();}
-function closeKit(){$('#kit').classList.add('hidden');SIM.paused=kitPrev;syncSpeed();}
+  modalOpen('kit');if(FP.on)unlockPointer();$('#kit').classList.remove('hidden');renderKit();}
+function closeKit(){$('#kit').classList.add('hidden');modalClose('kit');}
 const fmtA=v=>v.toFixed(v<10?2:1).replace('.',',')+' A';
 const fmtS=v=>v.toFixed(2).replace('.',',')+' s';
 function kitRun(id){if(!kitReady())return;const f=FD(TASK.relayF),test=kitTests(f).find(x=>x.id===id);
