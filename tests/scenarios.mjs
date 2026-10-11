@@ -67,7 +67,7 @@ async function bot(process_full) {
     for (const c of O.FEEDERS.filter(f => !f.gen && !f.ring).concat(O.RING.stations)) if (!EN().has(c.node)) offMin[c.id] = (offMin[c.id] || 0) + 0.5;
     // 0. telefoon: opnemen en de juiste diagnose stellen
     if (O.PHONE.queue.length && !O.PHONE.cur) { const c = O.PHONE.cur = O.PHONE.queue[0], g = c.g;
-      if (g.lvf && EN().has(g.node)) { O.phoneAnswer('send', g.st.id); note(`telefoon: monteur naar ${g.st.id}`); } else O.phoneAnswer(!EN().has(g.node) ? 'known' : 'own'); }
+      if (g.lvf && EN().has(g.node)) { O.phoneAnswer('send', g.st.id); note(`telefoon: monteur naar ${g.st.id}`); } else O.phoneAnswer(c.kind === 'pv' || !EN().has(g.node) ? 'known' : 'own'); }
     // 0b. brandweer vraagt de installatie spanningsloos
     for (const id of G.flags.mustOpen || []) await op(id, 0);
     // 0c. congestie: flexibel vermogen inzetten bij overbelaste trafo's, kabels of een importgrens; na een kwartier rust weer vrijgeven
@@ -79,10 +79,10 @@ async function bot(process_full) {
     // 1. lijnen: weer inschakelen zodra TenneT spanning geeft
     for (const L of ['L1', 'L2']) if (S.lines[L].avail && !mine(L + '-Q0') && D[L + '-Q0'].state === 0 && D[L + '-Q9'].state && D[L + '-Q1'].state) await op(L + '-Q0', 1);
     // aardfout: de bot kijkt de foutplaats af en maakt die spanningsloos (dan wordt het een gewone kabelfout)
-    if (O.EF.on && !O.EF.on.bot) { const e = O.EF.on; e.bot = true;
+    if (O.EF.on) { const e = O.EF.on;   // elke ronde opnieuw proberen tot de foutplaats spanningsloos is
       if (e.secId) { const s = O.RING.secs.find(x => x.id === e.secId); for (const id of [s.a && s.a + '-R', s.b && s.b + '-L'].filter(Boolean)) await op(id, 0); }
       else if (e.fId) await op(O.FD(e.fId).cb, 0);
-      note(`aardfout ${e.secId || e.fId} gezocht`); }
+      if (!e.bot) note(`aardfout ${e.secId || e.fId} gezocht`); e.bot = true; }
     // 2. ringen: fout isoleren, terugvoeden via normaal-open punt, na reparatie normaliseren
     for (const s of O.RING.secs) {
       const iso = [s.a && s.a + '-R', s.b && s.b + '-L'].filter(Boolean);
@@ -95,6 +95,8 @@ async function bot(process_full) {
     for (const s of O.RING.stations) { const st = s.ring.stations, i = st.indexOf(s), L = st[i - 1], R = st[i + 1], iso = [L && L.id + '-R', R && R.id + '-L'].filter(Boolean);
       if ((s.damaged || s.evac) && !s.botIso) { if (!iso.includes(s.ring.nop)) await op(s.ring.nop, 1); for (const id of iso) await op(id, 0); if (i === 0) await op(cbOf(s.ring.from), 0); if (i === st.length - 1) await op(cbOf(s.ring.to), 0); s.botIso = true; note(`${s.id} geïsoleerd`); }
       if (!s.damaged && !s.evac && s.botIso) { s.botIso = false; for (const id of iso) await op(id, 1); if (i === 0) await op(cbOf(s.ring.from), 1); if (i === st.length - 1) await op(cbOf(s.ring.to), 1); await op(s.ring.nop, 0); note(`${s.id} weer in de ring`); } }
+    // vangnet: een station in een ring zonder kabelfout is spanningsloos (bv. werkopdracht en storing door elkaar) – sluit het normaal-open punt
+    for (const rg of O.RINGS) if (D[rg.nop].state === 0 && !O.RING.secs.some(x => x.ring === rg && x.fault) && rg.stations.some(st => !st.damaged && !st.evac && !EN().has(st.node)) && EN().has(O.FD(rg.from).node) && EN().has(O.FD(rg.to).node)) { await op(rg.nop, 1); note(`${rg.nop} gesloten: station in ${rg.name} zonder spanning`); }
     // 3. transformatoren: geblokkeerd → reserve inzetten; na reset weer terug
     await doTask();
     if (T3().blocked && T3().resettable) { O.resetLockout('T3'); note('T3 gereset'); }
@@ -127,6 +129,7 @@ async function bot(process_full) {
     }
   }
   return { obj: G.obj.map(o => `${o.state === 'done' ? '✓' : '✗'} ${o.t}`), score: Math.round(G.score), cml: Math.round(S.cml), incidents: S.incidents,
+    punten: (() => { const m = {}, kort = t => t.replace(/\b(?:[VWM]-\w+|MS\d|[FGT]\d|K\d+)\b/g, '#'); O.REC.events.forEach(e => { if (e.pts) m[kort(e.text)] = (m[kort(e.text)] || 0) + e.pts; }); m['klantminuten (geschat)'] = -Math.round(S.cml / 500); return Object.entries(m).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1])).slice(0, 10).map(([k, v]) => k + ' ' + Math.round(v)).join(' | '); })(),
     st: { pv: G.stats.pvTrips || 0, zekering: G.stats.fuses || 0, kk: G.stats.kkFuse || 0, brand: G.stats.burn || 0, tel: O.PHONE.stats, bandje: O.PHONE.stats.tape || 0, flexEur: Math.round(G.stats.flexEur || 0), uitval: Math.round(S.cml / 7520) },
     tasks: S.tasksDone, report: !document.querySelector('#report').classList.contains('hidden'), log: process_full ? log : log.slice(-25), off: Object.entries(offMin).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([k, v]) => k + ' ' + v + ' min').join(', ') };
 }
@@ -165,7 +168,7 @@ async function play(browser, r) {
     say(`${ok ? '✓' : '✗'} ${r.name} (seed ${seed}) – score ${res.score}, CML ${res.cml}, incidenten ${res.incidents}, taken ${res.tasks} (${((Date.now() - t0) / 1000).toFixed(0)} s)`);
     res.obj.forEach(o => say('    ' + o));
     if (res.off) say('    langste uitval: ' + res.off);
-    if (process.env.BALANCE) say('      Σ ' + JSON.stringify(res.st));
+    if (process.env.BALANCE) { say('      Σ ' + JSON.stringify(res.st)); say('      € ' + res.punten); say('      ⏱ ' + res.off); }
     if (missed.length || !ok || res.score < 1000 || process.env.FULLLOG) res.log.forEach(l => say('      · ' + l));
     if (errors.length) say('    fouten: ' + errors.join(' | '));
   } catch (e) { failed++; say(`✗ ${r.name}: ${e.message}`); }

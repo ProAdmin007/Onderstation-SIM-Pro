@@ -45,7 +45,7 @@ function renderPhone(){const el=$('#phone');const c=PHONE.cur,w=PHONE.queue.filt
 function phoneAnswer(choice,st){const c=PHONE.cur;if(!c)return;PHONE.queue=PHONE.queue.filter(x=>x!==c);PHONE.cur=null;
   const mvOut=!EN.has(c.g.node)&&!c.g.backfed,lv=!!c.g.lvf&&!mvOut,good=(p,t)=>{PHONE.stats.ok++;award(p,t);},bad=(p,t)=>{PHONE.stats.bad++;award(p,t);};
   pushAlarm(`☎ ${c.who} (${c.addr}): “${c.say}”`,'radio');
-  if(c.kind==='pv'){if(choice==='known')good(10,'Klant geïnformeerd over de spanning');else bad(-10,choice==='own'?'Spanningsprobleem ligt niet bij de klant':'Geen LS-storing: het is de spanning');}
+  if(c.kind==='pv'){if(choice==='known')good(3,'Klant geïnformeerd over de spanning');else bad(-10,choice==='own'?'Spanningsprobleem ligt niet bij de klant':'Geen LS-storing: het is de spanning');}
   else if(choice==='known'){if(mvOut)good(5,'Klant goed geïnformeerd');else bad(-10,'Klant verkeerd geïnformeerd');}
   else if(choice==='own'){if(c.kind==='house'&&!mvOut&&!lv)good(10,'Juist advies: eigen installatie');else bad(-15,'Klant ten onrechte doorverwezen');}
   else if(choice==='send'&&st){dispatchLV(st,c);}

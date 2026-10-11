@@ -22,6 +22,7 @@ const SM={
   bin:[0x2d5a2d,0x3a3f45,0x6a5a2a].map(c=>mat({color:c,roughness:0.6})),shedRoof:mat({color:0x232527,roughness:0.8}),
   balcony:mat({color:0xcfcac0,roughness:0.85}),rail:mat({color:0x9fb4c2,roughness:0.15,metalness:0.3,transparent:true,opacity:0.55}),
   dormer:mat({color:0xe9e6de,roughness:0.6}),glass:mat({color:0x2b3a47,roughness:0.15,metalness:0.5}),
+  frame:mat({color:0xf1efe8,roughness:0.6}),bike:mat({color:0x1d2124,roughness:0.5,metalness:0.4}),bikeCol:[0x2f6db3,0x8a1c1c,0x2d4a2d,0xd9d4c8].map(c=>mat({color:c,roughness:0.45,metalness:0.3})),
   car:[0xb8bec4,0x1c2a3a,0x8a1c1c,0xe8e8e4,0x2d4a2d,0x3a3f45,0x6a5232].map(c=>mat({color:c,roughness:0.35,metalness:0.55})),carGlass:mat({color:0x1a242c,roughness:0.15,metalness:0.6}),tyre:mat({color:0x111111,roughness:0.9})};
 
 // ---- stoep met stoeprand langs een straat (horizontaal: langs x, verticaal: langs z)
@@ -59,7 +60,24 @@ function houseExtras(x0,z,n,faceSouth,W,Dp,H,v){const f=faceSouth?1:-1,len=n*W,f
     if(dorm){const d=new THREE.Group();d.position.set(x,H+0.9,z+dorm*2.6);staticRoot.add(d);
       box(2.6,1.5,2.4,SM.dormer,d,0,0.75,0);box(2.9,0.12,2.7,SM.shedRoof,d,0,1.55,0);const w=mesh(new THREE.PlaneGeometry(2.0,0.9),SM.glass,d,0,0.8,dorm*1.21);w.rotation.y=dorm>0?0:Math.PI;w.castShadow=false;}}
   // ook een schutting aan het eind van de rij
-  box(0.06,1.8,7.6,SM.wood,staticRoot,x0+len,0.9,bz-f*3.8);}
+  box(0.06,1.8,7.6,SM.wood,staticRoot,x0+len,0.9,bz-f*3.8);
+  // achterpad van tegels langs de achterschuttingen
+  const tz=bz-f*7.6;groundQuad(x0,Math.min(tz,tz-f*1.3),x0+len,Math.max(tz,tz-f*1.3),0.05,SM.tiles,2);
+  // kopgevels: ramen op de begane grond, de verdieping en een zolderraampje in de punt
+  for(const [gx,ry] of[[x0-0.03,-Math.PI/2],[x0+len+0.03,Math.PI/2]])for(const [wz,wy,ww,wh] of[[z-1.6,1.5,1.3,1.3],[z+1.4,4.0,1.2,1.2],[z,H+1.3,0.8,0.8]]){
+    const fr=mesh(new THREE.PlaneGeometry(ww+0.16,wh+0.16),SM.frame,staticRoot,gx,wy,wz);fr.rotation.y=ry;fr.castShadow=false;
+    const gl=mesh(new THREE.PlaneGeometry(ww,wh),SM.glass,staticRoot,gx+(ry>0?0.01:-0.01),wy,wz);gl.rotation.y=ry;gl.castShadow=false;}
+  for(let i=0;i<n;i++){const x=x0+W/2+i*W,door=x+f*1.44;
+    // luifel boven de voordeur
+    box(1.6,0.08,0.7,SM.shedRoof,staticRoot,door,2.35,fz+f*0.35);
+    // hoekwoningen: erker op de begane grond
+    if(i===0||i===n-1){const ex=x-f*1.4;box(2.6,2.4,0.9,DM.brick[v],staticRoot,ex,1.2,fz+f*0.45);box(2.8,0.16,1.1,SM.shedRoof,staticRoot,ex,2.48,fz+f*0.5);
+      const g=mesh(new THREE.PlaneGeometry(2.2,1.3),SM.glass,staticRoot,ex,1.45,fz+f*0.915);g.rotation.y=f>0?0:Math.PI;g.castShadow=false;}
+    // fiets tegen de gevel (ongeveer een op de drie huizen)
+    if(R()<0.36){const bx=door+(door>x?0.95:-0.95),bzz=fz+f*0.55,c=SM.bikeCol[(i+v)%4];
+      for(const dx of[-0.5,0.5]){const w=mesh(new THREE.TorusGeometry(0.32,0.025,6,18),SM.bike,staticRoot,bx+dx,0.34,bzz);w.castShadow=false;}
+      box(1.0,0.05,0.05,c,staticRoot,bx,0.62,bzz);const st=box(0.05,0.5,0.05,c,staticRoot,bx-0.18,0.55,bzz);st.rotation.z=-0.35;
+      box(0.22,0.05,0.12,SM.bike,staticRoot,bx-0.26,0.84,bzz);box(0.05,0.05,0.5,SM.bike,staticRoot,bx+0.4,0.92,bzz);}}}
 
 // ---- straten aankleden
 function dressStreets(){

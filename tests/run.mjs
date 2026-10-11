@@ -471,7 +471,7 @@ const TESTS = [
         O.earthFault('F6'); T.step(0.3); const actief = !!O.EF.on && O.efRails().length > 0;
         await T.op('V-F6', 0); T.step(0.3); const gevonden = !O.EF.on && !!O.FD('F6').fault;
         for (let k = 0; k < 60 && O.FD('F6').fault; k++) T.step(2); await T.op('V-F6', 1); T.step(0.5);
-        O.earthFault('K12'); O.EF.on.at = O.SIM.t - 55; for (let k = 0; k < 60 && O.EF.on; k++) T.step(1);
+        O.earthFault('K12'); O.EF.on.at = O.SIM.t - 55; for (let k = 0; k < 150 && O.EF.on; k++) T.step(1);   // 5% kans per minuut
         return { actief, gevonden, dubbel: !O.EF.on && ev('Dubbele aardfout') && O.RING.secs.find(x => x.id === 'K12').fault }; });
       for (const [k, v] of Object.entries(r)) assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
   } },

@@ -37,7 +37,7 @@ function lsInterlock(d,to){if(to!==1)return null;
 const U_NOM=230,U_MAX=253,U_MIN=207;
 function lvVolt(g){if(g.backfed&&g.st.gs?.state==='aan')return 231;const src=lvSource(g);if(!src||!EN.has(g.node))return 0;
   const Ums=FLOW.UN?.[src.node]||10.5,ref=Math.max(g.base*1.2,g.cust*0.0011,0.02);   // referentie: de eigen belasting van de straat of het bedrijf
-  return U_NOM*1.052*(Ums/10.5)*(1+0.025*src.tapLv)*(1-g.kz*(g.Pc||0)/ref);}
+  return U_NOM*1.044*(Ums/10.5)*(1+0.025*src.tapLv)*(1-g.kz*(g.Pc||0)/ref);}
 
 // ---- noodaggregaten: drie mobiele aggregaten van 400 kVA
 const GENSET={units:3,kva:400,busy:0};
@@ -118,7 +118,7 @@ function lsTick(dm){if(!dm)return;
   LVG.forEach(g=>{const U=g.U=lvVolt(g);
     if(g.pv&&U>U_MAX&&!(g.pvTrip>SIM.t)){g.ovT=(g.ovT||0)+dm;if(g.ovT>1){g.ovT=0;g.pvTrip=SIM.t+10;g.ovAt=SIM.t;GAME.stats.pvTrips=(GAME.stats.pvTrips||0)+1;award(-3,'Omvormers uit door overspanning');
       if(!g.ovWarn||SIM.t-g.ovWarn>60){g.ovWarn=SIM.t;pushAlarm(`${g.st.id} ${g.name}: ${Math.round(U)} V (max. 253 V) – omvormers van zonnepanelen schakelen af. Verlaag de vaste trap van de distributietrafo (LS-venster, N)`,'warn');}
-      callFrom(g,'pv');}}else if(U<=U_MAX)g.ovT=0;
+      if(!g.pvCall||SIM.t-g.pvCall>60){g.pvCall=SIM.t;callFrom(g,'pv');}}}else if(U<=U_MAX)g.ovT=0;
     if(U>0&&U<U_MIN){GAME.score-=dm*0.4;g.uvT=(g.uvT||0)+dm;if(g.uvT>2&&(!g.uvWarn||SIM.t-g.uvWarn>60)){g.uvWarn=SIM.t;pushAlarm(`${g.st.id} ${g.name}: onderspanning ${Math.round(U)} V (min. 207 V) – verhoog de vaste trap of verlaag de belasting`,'warn');}}else g.uvT=0;});
   // herstelbonus, rotatie en hersteltijden
   let bonus=0,rot=0;const lang=[];
