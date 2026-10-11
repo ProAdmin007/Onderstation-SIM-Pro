@@ -497,7 +497,9 @@ const TESTS = [
         return { aan, uit: s1.winMats.every(m => m.opacity === 0), anderAan: O.RING.stations.filter(s => s.ring !== s1.ring).some(s => [...(s.winMats || []), ...(s.winApt || [])].some(m => m.opacity > 0.3)), autos, buren: (s1.crowd || []).length }; });
       for (const [k, v] of Object.entries(r)) assert(v, `${k} klopt niet: ${JSON.stringify(r)}`);
   } },
-  ...[['kraan', 'importgrens L2', () => { T.step(95); return OS.FLOW.P110 > OS.GAME.flags.lineLimit || (OS.GAME.flags.overMin || 0) > 5; }],
+  ...[['pinksteren', 'overspanning in de woonwijk', () => { for (let k = 0; k < 36; k++) T.step(5); return (OS.GAME.stats.pvTrips || 0) > 30 || !OS.LVG.every(g => !g.U || g.U <= 253); }],
+    ['aardonweer', 'een aardfout die niet vanzelf verdwijnt', () => { for (let k = 0; k < 12; k++) T.step(5); return OS.GAME.obj[0].state === 'fail' && !!OS.EF.on; }],
+    ['kraan', 'importgrens L2', () => { T.step(95); return OS.FLOW.P110 > OS.GAME.flags.lineLimit || (OS.GAME.flags.overMin || 0) > 5; }],
     ['evenement', 'MS6 overbelast', () => { T.step(80); const s = OS.RING.stations.find(x => x.id === 'MS6'); return OS.GAME.stats.fuses > 0 || s.trLoad > 1.2; }],
     ['laadpiek', 'congestie in de woonwijk', () => { T.step(110); return OS.GAME.stats.fuses > 0 || OS.RING.stations.some(s => s.trLoad > 1.2) || OS.RING.secs.some(s => s.load > 1); }]]
     .map(([id, wat, f]) => ({ name: `scenario ${id}: zonder ingrijpen ontstaat ${wat}`, query: `?play=${id}`, async run(p) {

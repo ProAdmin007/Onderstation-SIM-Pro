@@ -83,6 +83,11 @@ async function bot(process_full) {
       if (e.secId) { const s = O.RING.secs.find(x => x.id === e.secId); for (const id of [s.a && s.a + '-R', s.b && s.b + '-L'].filter(Boolean)) await op(id, 0); }
       else if (e.fId) await op(O.FD(e.fId).cb, 0);
       if (!e.bot) note(`aardfout ${e.secId || e.fId} gezocht`); e.bot = true; }
+    // LS-spanning: bij overspanning de vaste trap verlagen; de trafo pas vlak voor aankomst van de monteur spanningsloos
+    for (const s of O.RING.stations) { const o = O.LS_ORDERS.find(x => x.kind === 'tap' && x.st === s.id);
+      if (o) { if (o.at - S.t < 0.6 && D[s.id + '-T'].state === 1) await op(s.id + '-T', 0); }
+      else if (s.botTap) { if (D[s.id + '-T'].state === 0 && !s.fuse) await op(s.id + '-T', 1); s.botTap = false; note(`vaste trap ${s.id} → ${s.tapLv}`); }
+      else if (s.groups.some(g => g.U > 252) && s.tapLv > -2 && EN().has(s.node) && !s.gs) { O.tapOrder(s, -1); s.botTap = true; } }
     // 2. ringen: fout isoleren, terugvoeden via normaal-open punt, na reparatie normaliseren
     for (const s of O.RING.secs) {
       const iso = [s.a && s.a + '-R', s.b && s.b + '-L'].filter(Boolean);
@@ -139,7 +144,7 @@ const RUNS = [
   { name: 'blackout', query: '?play=blackout' }, { name: 'hitte', query: '?play=hitte' }, { name: 'winter', query: '?play=winter' },
   { name: 'dubbel', query: '?play=dubbel' }, { name: 'aanrijding', query: '?play=aanrijding' }, { name: 'cyber', query: '?play=cyber' },
   { name: 'overstroming', query: '?play=overstroming' }, { name: 'zonnepiek', query: '?play=zonnepiek' }, { name: 'kraan', query: '?play=kraan' }, { name: 'brand', query: '?play=brand' },
-  { name: 'evenement', query: '?play=evenement' }, { name: 'laadpiek', query: '?play=laadpiek' }, { name: 'dagdienst', query: '?play=day' }, { name: 'avonddienst', query: '?play=eve&diff=zwaar' },
+  { name: 'evenement', query: '?play=evenement' }, { name: 'laadpiek', query: '?play=laadpiek' }, { name: 'pinksteren', query: '?play=pinksteren' }, { name: 'aardonweer', query: '?play=aardonweer' }, { name: 'dagdienst', query: '?play=day' }, { name: 'avonddienst', query: '?play=eve&diff=zwaar' },
 ];
 // parallel: elke werker een eigen browser; de lange diensten eerst, zodat ze niet als laatste overblijven
 const todo = RUNS.filter(r => !only || r.name.includes(only)).sort((a, b) => /dienst/.test(b.name) - /dienst/.test(a.name));

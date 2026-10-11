@@ -164,7 +164,7 @@ function renderMenu(){
   const sv=readSave(),svHtml=sv?`<div class="mh">Verder spelen</div><div class="mgrid"><button class="mode resume" data-resume><span class="mt">💾 Opgeslagen spel</span><b>${MODES[sv.mode].name} · ${fmtClock(sv.SIM.t)}</b><span class="md">${DIFFS[sv.diff].label} · ${SEASONS[sv.season].name} · score ${Math.round(sv.GAME.score).toLocaleString('nl-NL')}<br>opgeslagen ${new Date(sv.at).toLocaleString('nl-NL',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</span></button><button class="mode delsave" data-delsave><span class="mt">Opgeslagen spel</span><b>Verwijderen</b><span class="md">Begin opnieuw zonder het opgeslagen spel.</span></button></div>`:'';
   $('#menu').innerHTML=svHtml+`<div class="mh">Dienst draaien</div><div class="mgrid">${['free','day','eve'].map(card).join('')}</div>
     <div class="mh">Leren · begeleide lessen</div><div class="mgrid">${Object.keys(LESSONS).map(card).join('')}</div>
-    <div class="mh">Scenario's</div><div class="mgrid">${['zkh','storm','piek','hitte','winter','blackout','dubbel','aanrijding','cyber','overstroming','zonnepiek','kraan','brand','evenement','laadpiek'].map(card).join('')}</div>`;
+    <div class="mh">Scenario's</div><div class="mgrid">${['zkh','storm','piek','hitte','winter','blackout','dubbel','aanrijding','cyber','overstroming','zonnepiek','pinksteren','aardonweer','kraan','brand','evenement','laadpiek'].map(card).join('')}</div>`;
   document.querySelectorAll('#diff button').forEach(b=>b.classList.toggle('on',b.dataset.d===GAME.diff));
   document.querySelectorAll('#season button').forEach(b=>b.classList.toggle('on',b.dataset.s===GAME.season));
 }

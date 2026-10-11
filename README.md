@@ -45,7 +45,7 @@ Bedoeld voor **bedrijfsvoerders en monteurs in opleiding**, studenten **elektrot
 | 👷 **Werkopdrachten** | Onderhoud met optionele **schakelbrief**, werk staken, monteurs met **portofoon**, revisies, **relaistest met testkoffer** en thermografie. |
 | 📞 **Klanten** | Telefoon met klantmeldingen, storingsbandje, **verwachte hersteltijd** doorgeven en prioriteitsklanten bellen. |
 | 📈 **Netbeheer** | **Netcongestie** en flexibel vermogen, belastingprognose, veroudering en preventief onderhoud, beveiligingsinstellingen. |
-| 🎓 **Leren en spelen** | 8 lessen, 15 scenario's, dag- en avonddiensten, vrij spelen met incidenten, score met cijfer, **tijdlijn en herhaling**, opslaan en verder spelen. |
+| 🎓 **Leren en spelen** | 8 lessen, 17 scenario's, dag- en avonddiensten, vrij spelen met incidenten, score met cijfer, **tijdlijn en herhaling**, opslaan en verder spelen. |
 | 🌦️ **Sfeer** | Dag en nacht, vier seizoenen, weer (onweer, sneeuw, mist, hittegolf), verkeer, buren op straat bij uitval, ramen die uitgaan als het station uitvalt. |
 
 <a id="screenshots"></a>
@@ -106,6 +106,8 @@ Bedoeld voor **bedrijfsvoerders en monteurs in opleiding**, studenten **elektrot
   - *Brand in het 10 kV-gebouw*: rook uit het dak. De brandweer wil de hele 10 kV spanningsloos voordat ze naar binnen gaat; het ziekenhuis draait op noodstroom. Daarna stap voor stap herstellen (V-F6 heeft rookschade).
   - *Concert op het Marktplein*: podium, lichtshow en foodtrucks overbelasten MS6; het podium heeft een flexcontract.
   - *Laadpiek op een winteravond*: een uitgebreid laadplein en thuisladers in de hele woonwijk; congestie in trafo's en kabels.
+  - *Zonnige pinksterzondag*: weinig afname en ±50% meer zonnepanelen: overspanning in de lange straten. Verlaag de vaste trappen. Dat kan alleen spanningsloos, dus open de trafo pas als de monteur er bijna is, of voed de straat via een kabelkast. Doelen: om 14:00 alle straten binnen 207–253 V, hooguit 30 keer omvormers uit, minder dan 10.000 klantminuten.
+  - *Aardfout tijdens onweer*: blikseminslagen op beide lijnen, een aardfout in de woonwijkring en later een kabelfout. Vind de aardfout binnen 30 minuten, voordat er een dubbele aardfout ontstaat.
   - *Zonnepiek*: een uitgebreid zonnepark (60 MWp) levert op een lentedag meer terug dan T2 aankan. Zet T3 op 20 kV parallel om T2 heel te houden zonder het zonnepark af te schakelen.
 - **Rapport met tijdlijn en herhaling:** na afloop zie je een tijdlijn met klanten zonder stroom, je score, storingen (rood), je handelingen en behaalde doelen.
   - *Leermomenten* noemen de langste onderbrekingen (met je reactietijd) en waar je punten liet liggen, met een tip per fout.
@@ -507,7 +509,7 @@ Voor het bouwen draait eerst `npm run lint` (`tests/lint.mjs`), die verborgen fo
 
 De lint draait ook op GitHub vóór de tests.
 
-URL-parameters om te testen: `?autostart`, `?t=18.5` (starttijd), `?view=0..6`, `?night`, `?play=zkh|storm|piek|blackout|hitte|winter|dubbel|aanrijding|cyber|overstroming|zonnepiek|kraan|brand|evenement|laadpiek|les1…les8|day|eve|free&diff=rustig|normaal|zwaar`.
+URL-parameters om te testen: `?autostart`, `?t=18.5` (starttijd), `?view=0..6`, `?night`, `?play=zkh|storm|piek|blackout|hitte|winter|dubbel|aanrijding|cyber|overstroming|zonnepiek|pinksteren|aardonweer|kraan|brand|evenement|laadpiek|les1…les8|day|eve|free&diff=rustig|normaal|zwaar`.
 
 ## 🧪 Tests
 
