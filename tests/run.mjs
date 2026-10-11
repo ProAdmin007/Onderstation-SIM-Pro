@@ -403,7 +403,7 @@ const TESTS = [
         let boven = 0; for (let k = 0; k < 24 && s.gs.state === 'aan'; k++) { T.step(0.25); boven = s.gs.load > 1.1 ? boven + 0.25 : 0; }
         const trip = s.gs.state === 'trip' || boven < 2.5;   // valt uit na ±2 min boven 110%
         O.SIM.localTest = true; for (const g of s.groups.slice(1)) await T.op(g.id, 0); O.SIM.localTest = false;
-        if (s.gs.state === 'trip') { O.gsRestart(s); for (let k = 0; k < 6; k++) T.step(1); }
+        for (let k = 0; k < 12 && !(s.gs.state === 'aan' && s.gs.load < 1.1); k++) { if (s.gs.state === 'trip' && !O.LS_ORDERS.length) O.gsRestart(s); T.step(1); }   // zo nodig herstarten
         const draait = s.gs.state === 'aan' && s.gs.load < 1.1 && s.groups[0].backfed && O.SIM.off >= 0;
         await T.op('V-F3', 1); T.step(0.5); const tSlot = await T.op('MS2-T', 1); const vergrendeld = D['MS2-T'].state === 0;
         O.gsOff(s); for (let k = 0; k < 6 && s.gs; k++) T.step(1);
@@ -485,6 +485,10 @@ const TESTS = [
         O.shortCircuit(O.FD('F5'), 12000); T.step(0.2); const railUit = D['V-T1'].state === 0 && !EN().has('RA') && O.FREC[0].inc === 'V-T1';
         return { standaard, railBlijft, reg, svg, nietSelectief: !!slecht, grafiek, railUit }; });
       for (const [k, v] of Object.entries(r)) assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
+  } },
+  { name: 'plaatsing: geen object in een ander object (auto in station, boom op de weg …)', query: '?autostart', async run(p) {
+      const r = await p.evaluate(() => ({ n: OS.LAYOUT.length, bad: OS.layoutCheck() }));
+      assert(r.n > 500 && r.bad.length === 0, `botsingen in de wijk (${r.bad.length}): ${r.bad.slice(0, 6).join(' | ')}`);
   } },
   { name: 'leven in de wijk: ramen per station, auto\'s en buren bij uitval', query: '?autostart&t=21&night&season=winter', async run(p) {
       const r = await p.evaluate(async () => { T.quiet(); const O = OS, s1 = O.RING.stations[0]; O.SIM.paused = false; T.step(0.2); O.updateWindows();

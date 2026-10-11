@@ -26,7 +26,7 @@ const SM={
   car:[0xb8bec4,0x1c2a3a,0x8a1c1c,0xe8e8e4,0x2d4a2d,0x3a3f45,0x6a5232].map(c=>mat({color:c,roughness:0.35,metalness:0.55})),carGlass:mat({color:0x1a242c,roughness:0.15,metalness:0.6}),tyre:mat({color:0x111111,roughness:0.9})};
 
 // ---- stoep met stoeprand langs een straat (horizontaal: langs x, verticaal: langs z)
-function sidewalk(x0,z0,x1,z1,curbSide){groundQuad(x0,z0,x1,z1,0.1,SM.tiles,2);const along=x1-x0>z1-z0;
+function sidewalk(x0,z0,x1,z1,curbSide){lay('stoep',x0,z0,x1,z1);groundQuad(x0,z0,x1,z1,0.1,SM.tiles,2);const along=x1-x0>z1-z0;
   const cz=curbSide==='-'?(along?z0:x0):(along?z1:x1);
   if(along)box(x1-x0,0.12,0.18,SM.curb,staticRoot,(x0+x1)/2,0.06,cz);else box(0.18,0.12,z1-z0,SM.curb,staticRoot,cz,0.06,(z0+z1)/2);}
 // stoepen aan beide kanten van een rechte straat, met onderbrekingen bij kruisingen
@@ -34,11 +34,16 @@ function streetSidewalks(a,b,c0,c1,horiz,gaps){const segs=[];let s=a;for(const [
   for(const [p,q] of segs){if(horiz){sidewalk(p,c0-2,q,c0,'+');sidewalk(p,c1,q,c1+2,'-');}else{sidewalk(c0-2,p,c0,q,'+');sidewalk(c1,p,c1+2,q,'-');}}}
 // onderbroken middenstreep
 function centerLine(a,b,c,horiz){for(let t=a+2;t<b-3;t+=9){const m=groundQuad(horiz?t:c-0.06,horiz?c-0.06:t,horiz?t+3:c+0.06,horiz?c+0.06:t+3,0.05,SM.line,1);m.receiveShadow=true;}}
+// MS-stations staan op vaste plekken: daar geen parkeerstrook of auto
+const kioskNear=(x,z,mx=4.6,mz=3.6)=>RING.stations.some(s=>Math.abs(s.pos[0]-x)<mx&&Math.abs(s.pos[1]-z)<mz);
+// strook langs x van a tot b, met openingen bij MS-stations
+function stripSegs(a,b,z0,z1){const cut=RING.stations.filter(s=>s.pos[1]>z0-3.5&&s.pos[1]<z1+3.5).map(s=>[s.pos[0]-3.4,s.pos[0]+3.4]).sort((p,q)=>p[0]-q[0]),out=[];let s=a;
+  for(const [c0,c1] of cut){if(c1<a||c0>b)continue;if(c0>s)out.push([s,c0]);s=Math.max(s,c1);}if(s<b)out.push([s,b]);return out;}
 // geparkeerde auto (statisch, kijkt langs de straat)
-function parkedCar(x,z,along,i){const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=along?Math.PI/2+(i%2?Math.PI:0):(i%2?Math.PI:0);staticRoot.add(g);
+function parkedCar(x,z,along,i){if(kioskNear(x,z))return;const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=along?Math.PI/2+(i%2?Math.PI:0):(i%2?Math.PI:0);staticRoot.add(g);
   box(1.8,0.7,4.2,SM.car[i%SM.car.length],g,0,0.6,0);box(1.6,0.6,2.2,SM.carGlass,g,0,1.2,-0.2);
   for(const [wx,wz] of[[-0.85,1.3],[0.85,1.3],[-0.85,-1.3],[0.85,-1.3]])cyl(0.33,0.33,0.25,SM.tyre,g,wx,0.33,wz,10).rotation.z=Math.PI/2;
-  DISTRICT_RECTS.push(along?[x-2.2,z-1,x+2.2,z+1]:[x-1,z-2.2,x+1,z+2.2]);}
+  DISTRICT_RECTS.push(along?[x-2.2,z-1,x+2.2,z+1]:[x-1,z-2.2,x+1,z+2.2]);lay('car',...(along?[x-2.2,z-1,x+2.2,z+1]:[x-1,z-2.2,x+1,z+2.2]));}
 
 // ---- per woning: voortuin met heg en tuinpad, kliko, schutting tussen de achtertuinen; dak: goten, zonnepanelen of dakkapel
 function houseExtras(x0,z,n,faceSouth,W,Dp,H,v){const f=faceSouth?1:-1,len=n*W,fz=z+f*Dp/2,bz=z-f*Dp/2,ang=Math.atan2(3.4,Dp/2+0.4);
@@ -47,7 +52,7 @@ function houseExtras(x0,z,n,faceSouth,W,Dp,H,v){const f=faceSouth?1:-1,len=n*W,f
   for(let i=0;i<n;i++){const x=x0+W/2+i*W,door=x+f*1.44,r=R();
     // voortuin: heg langs de straatkant (opening bij het pad), tuinpad van tegels, kliko naast de deur
     const gz=fz+f*4.2,hl=door-0.6-(x-W/2),hr=x+W/2-(door+0.6),free=(cx,l)=>!RING.stations.some(s=>Math.abs(s.pos[0]-cx)<l/2+3&&Math.abs(s.pos[1]-gz)<2.5);   // niet door een MS-station heen
-    if(free(x-W/2+hl/2,hl))box(hl,0.85,0.5,SM.hedge,staticRoot,x-W/2+hl/2,0.43,gz);if(free(door+0.6+hr/2,hr))box(hr,0.85,0.5,SM.hedge,staticRoot,door+0.6+hr/2,0.43,gz);
+    if(free(x-W/2+hl/2,hl)){box(hl,0.85,0.5,SM.hedge,staticRoot,x-W/2+hl/2,0.43,gz);lay('hedge',x-W/2,gz-0.25,x-W/2+hl,gz+0.25);}if(free(door+0.6+hr/2,hr)){box(hr,0.85,0.5,SM.hedge,staticRoot,door+0.6+hr/2,0.43,gz);lay('hedge',door+0.6,gz-0.25,door+0.6+hr,gz+0.25);}
     groundQuad(door-0.6,Math.min(fz,gz),door+0.6,Math.max(fz,gz),0.06,SM.tiles,2);
     box(0.6,1.0,0.7,SM.bin[(i+v)%3],staticRoot,door+(door>x?-1.1:1.1),0.5,fz+f*0.6);
     // achtertuin: schutting tussen de tuinen en achterlangs
@@ -87,7 +92,7 @@ function dressStreets(){
   centerLine(-150,165,101,true);centerLine(-150,165,239,true);
   // nieuwe woonstraat met klinkers tussen de rijen die met de voorkant naar elkaar toe staan (woonerf, geen stoep)
   // (z 157,5–165,5: MS2 staat ernaast aan de noordkant)
-  groundQuad(-94,157.5,36,165.5,0.045,SM.pavers,4);box(130,0.12,0.18,SM.curb,staticRoot,-29,0.06,157.5);box(130,0.12,0.18,SM.curb,staticRoot,-29,0.06,165.5);
+  groundQuad(-94,157.5,36,165.5,0.045,SM.pavers,4);lay('woonerf',-94,157.5,36,165.5);box(130,0.12,0.18,SM.curb,staticRoot,-29,0.06,157.5);box(130,0.12,0.18,SM.curb,staticRoot,-29,0.06,165.5);
   for(let x=-82,i=0;x<30;x+=7.5,i++)if(i%3!==1)parkedCar(x,i%2?159.4:163.6,true,i);
   for(let x=-80;x<34;x+=24)streetLight(x,157);
   for(let x=-70;x<34;x+=24)tree(x,166.6,0.75,false);
@@ -96,11 +101,12 @@ function dressStreets(){
   streetSidewalks(278,382,-64,-58,false,[]);streetSidewalks(278,382,106,112,false,[]);
   centerLine(-130,200,273,true);centerLine(-130,200,387,true);
   // winkelstraat: parkeerstrook en een brede stoep voor de winkels; tussen de flats een parkeerterrein, achter de flats een plein van tegels
-  for(const [a,b] of[[-125,-66],[-56,8]]){groundQuad(a,278,b,282.5,0.09,MAT.asphalt,6);groundQuad(a,282.5,b,291.5,0.085,SM.tiles,2);box(b-a,0.12,0.18,SM.curb,staticRoot,(a+b)/2,0.06,282.5);
-    groundQuad(a,312,b,328,0.06,SM.pavers,4);groundQuad(a,357,b,382,0.055,SM.tiles,2);}
+  for(const [a,b] of[[-125,-66],[-56,8]]){groundQuad(a,278,b,282.5,0.07,SM.tiles,2);   // tegels onder de strook: bij een MS-station blijft het bestraat
+    for(const [p,q] of stripSegs(a,b,278,282.5)){groundQuad(p,278,q,282.5,0.09,MAT.asphalt,6);lay('parkeer',p,278,q,282.5);box(q-p,0.12,0.18,SM.curb,staticRoot,(p+q)/2,0.06,282.5);}groundQuad(a,282.5,b,291.5,0.085,SM.tiles,2);
+    groundQuad(a,312,b,328,0.06,SM.pavers,4);lay('parkeer',a,312,b,328);groundQuad(a,357,b,382,0.055,SM.tiles,2);}
   for(let x=-122,i=0;x<4;x+=6.5,i++)if(i%4!==2&&Math.abs(x+61)>6)parkedCar(x,280.2,true,i+3);
   for(let x=-120,i=0;x<4;x+=6.5,i++)if(i%3!==0&&Math.abs(x+61)>6)parkedCar(x,i%2?316:324,false,i+5);
-  for(const x of[-110,-90,-40,-15])tree(x,358.5,0.8,false);}
+  for(const x of[-110,-90,-40,-15])tree(x,362.5,0.8,false);}
 
 // ---- balkons en entree aan de flats
 function aptExtras(x0,z0,x1,z1,floors){const W=x1-x0,Dz=z1-z0,cx=(x0+x1)/2,cz=(z0+z1)/2;

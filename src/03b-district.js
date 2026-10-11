@@ -33,7 +33,7 @@ const APT_GLOW=(()=>{const c=cnv(1024,1024),g=c.getContext('2d');for(let ty=0;ty
   const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.colorSpace=THREE.SRGBColorSpace;return t;})();
 const glowMat=map=>new THREE.MeshBasicMaterial({map,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending});
 function winGlow(s,variant){s.winMats??=[];return s.winMats[variant]??=glowMat(WIN_TEX[variant]);}
-function houseRow(x0,z,n,faceSouth){const W=6,Dp=9,H=5.6,len=n*W,cx=x0+len/2,v=Math.floor(R()*3);
+function houseRow(x0,z,n,faceSouth){const W=6,Dp=9,H=5.6,len=n*W,cx=x0+len/2,v=Math.floor(R()*3);lay('house',x0,z-Dp/2,x0+len,z+Dp/2);
   box(len,H,Dp,DM.brick[v],staticRoot,cx,H/2,z);
   for(let i=0;i<n;i++){const x=x0+W/2+i*W;for(const s of[-1,1]){const p=mesh(new THREE.PlaneGeometry(W-0.1,H),DM.facades[(v+i)%3],staticRoot,x,H/2,z+s*(Dp/2+0.02));p.rotation.y=s>0?0:Math.PI;p.castShadow=false;
     const gl=mesh(new THREE.PlaneGeometry(W-0.1,H),winGlow(nearestStation(x,z),(v+i+(s>0?0:1))%3),staticRoot,x,H/2,z+s*(Dp/2+0.05));gl.rotation.y=p.rotation.y;gl.castShadow=gl.receiveShadow=false;gl.renderOrder=1;}}
@@ -41,10 +41,10 @@ function houseRow(x0,z,n,faceSouth){const W=6,Dp=9,H=5.6,len=n*W,cx=x0+len/2,v=M
   const rg=new THREE.ExtrudeGeometry(sh,{depth:len+0.4,bevelEnabled:false});rg.rotateY(Math.PI/2);rg.translate(-len/2-0.2,0,0);mesh(rg,SM.roofs[v],staticRoot,cx,H,z);
   for(let i=1;i<n;i+=2)box(0.5,1.2,0.5,MAT.concreteDark,staticRoot,x0+i*W,H+2.6,z);   // schoorstenen
   // tuintjes met schuurtjes aan de achterkant
-  const back=faceSouth?-1:1;for(let i=0;i<n;i++){const sx=x0+W/2+i*W+(i%2?1:-1),sz=z+back*(Dp/2+6);box(2.2,2.1,2,i%3?SM.woodGrey:SM.wood,staticRoot,sx,1.05,sz);box(2.5,0.12,2.3,SM.shedRoof,staticRoot,sx,2.16,sz);}
+  const back=faceSouth?-1:1;for(let i=0;i<n;i++){const sx=x0+W/2+i*W+(i%2?1:-1),sz=z+back*(Dp/2+6);box(2.2,2.1,2,i%3?SM.woodGrey:SM.wood,staticRoot,sx,1.05,sz);lay('shed',sx-1.1,sz-1,sx+1.1,sz+1);box(2.5,0.12,2.3,SM.shedRoof,staticRoot,sx,2.16,sz);}
   houseExtras(x0,z,n,faceSouth,W,Dp,H,v);
   DISTRICT_RECTS.push([x0,z-Dp/2,x0+len,z+Dp/2]);}
-function hall(cx,cz,w,d,h,label,blue){box(w,h,d,blue?DM.hallBlue:DM.hall,staticRoot,cx,h/2,cz);box(w+0.6,0.4,d+0.6,MAT.roof,staticRoot,cx,h+0.2,cz);
+function hall(cx,cz,w,d,h,label,blue){lay('hall',cx-w/2,cz-d/2,cx+w/2,cz+d/2);box(w,h,d,blue?DM.hallBlue:DM.hall,staticRoot,cx,h/2,cz);box(w+0.6,0.4,d+0.6,MAT.roof,staticRoot,cx,h+0.2,cz);
   for(let i=0;i<3;i++){const p=mesh(new THREE.PlaneGeometry(4,4.5),MAT.louvre,staticRoot,cx-w/2+5+i*6,2.25,cz-d/2-0.02);p.rotation.y=Math.PI;p.castShadow=false;}
   const t=toTex(textCanvas(label,{w:1024,h:160,bg:'#ffffff',fg:'#1d2b45',font:'bold 92px Arial',border:false}));const sg=mesh(new THREE.PlaneGeometry(9,1.4),mat({map:t,roughness:0.5}),staticRoot,cx+w/2-7,h-1.4,cz-d/2-0.03);sg.rotation.y=Math.PI;sg.castShadow=false;
   DISTRICT_RECTS.push([cx-w/2,cz-d/2,cx+w/2,cz+d/2]);}
@@ -72,6 +72,7 @@ function kiosk(s){
   for(const sx of[-1,1]){const lv=mesh(new THREE.PlaneGeometry(1.2,0.5),MAT.louvre,root,sx*(hw+0.01),Y+2.1,0.6);lv.rotation.y=sx*Math.PI/2;lv.castShadow=false;}
   const flm=mat({color:0x331a00,emissive:0xff8a00,emissiveIntensity:0});const lamp=cyl(0.09,0.09,0.16,flm,root,2.1,Y+KH+0.26,1.2,12);lamp.userData.dyn=true;
   regView(s.id,root,()=>{flm.emissiveIntensity=s.flag&&(performance.now()%900<450)?4:0;},{box:(()=>{const a=L2W(-hw,-KD/2),b=L2W(hw,KD/2);return new THREE.Box3(V3(Math.min(a[0],b[0]),0,Math.min(a[1],b[1])),V3(Math.max(a[0],b[0]),Y+KH+0.3,Math.max(a[1],b[1])));})(),labelPos:V3(x,4,z)});
+  {const b=VIEWS[s.id].box;lay('kiosk',b.min.x,b.min.z,b.max.x,b.max.z);}
   // botsingsvlakken: muren met deuropening, inrichting
   wrect(-hw,-KD/2,hw,-KD/2+KT);wrect(-hw,-KD/2,-hw+KT,KD/2);wrect(hw-KT,-KD/2,hw,KD/2);wrect(-hw,KD/2-KT,-2.05,KD/2);wrect(-0.75,KD/2-KT,hw,KD/2);
   const idx=ROOMS.length+1,ri=L2W(-hw+KT,-KD/2+KT),rj=L2W(hw-KT,KD/2-KT);
@@ -146,7 +147,7 @@ function shopCanvas(){const c=cnv(512,128),g=c.getContext('2d');g.fillStyle='#3a
   const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.colorSpace=THREE.SRGBColorSpace;return t;}
 const APT={tex:aptCanvas(),shop:shopCanvas()};
 const APT_TINT=[0xffffff,0xead9c0,0xc99a82,0xd9e2e6];let aptN=0;   // gevelkleur per flat
-function aptBlock(x0,z0,x1,z1,floors){const W=x1-x0,Dz=z1-z0,H=floors*3+3.6,cx=(x0+x1)/2,cz=(z0+z1)/2,tint=APT_TINT[aptN++%APT_TINT.length];
+function aptBlock(x0,z0,x1,z1,floors){const W=x1-x0,Dz=z1-z0,H=floors*3+3.6,cx=(x0+x1)/2,cz=(z0+z1)/2,tint=APT_TINT[aptN++%APT_TINT.length];lay('apt',x0,z0,x1,z1);
   const facade=(len)=>{const t=APT.tex.clone();t.repeat.set(len/8,floors);t.needsUpdate=true;return mat({map:t,roughness:0.85,color:tint});};
   const shop=(len)=>{const t=APT.shop.clone();t.repeat.set(len/16,1);t.needsUpdate=true;return mat({map:t,roughness:0.6});};
   box(W,H,Dz,DM.kiosk,staticRoot,cx,H/2,cz);
@@ -161,7 +162,7 @@ function aptBlock(x0,z0,x1,z1,floors){const W=x1-x0,Dz=z1-z0,H=floors*3+3.6,cx=(
   DISTRICT_RECTS.push([x0,z0-1.7,x1,z1+1.7]);}
 // straatlantaarn, gevoed uit het LS-veld openbare verlichting van het dichtstbijzijnde MS-station
 const poolTex=(()=>{const c=cnv(128),g=c.getContext('2d'),gr=g.createRadialGradient(64,64,0,64,64,64);gr.addColorStop(0,'rgba(255,214,150,0.9)');gr.addColorStop(0.45,'rgba(255,190,110,0.35)');gr.addColorStop(1,'rgba(255,170,90,0)');g.fillStyle=gr;g.fillRect(0,0,128,128);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t;})();
-function streetLight(x,z){
+function streetLight(x,z){lay('lamp',x-0.15,z-0.15,x+0.15,z+0.15);
   const s=RING.stations.reduce((a,b)=>Math.hypot(b.pos[0]-x,b.pos[1]-z)<Math.hypot(a.pos[0]-x,a.pos[1]-z)?b:a);
   if(!s.lampMat){s.lampMat=mat({color:0x2a2c2e,emissive:0xffd9a0,emissiveIntensity:0});s.poolMat=new THREE.MeshBasicMaterial({map:poolTex,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false,fog:false});s.lamps=0;}
   s.lamps++;cyl(0.06,0.09,7,MAT.galv,staticRoot,x,3.5,z,8);box(0.7,0.12,0.25,s.lampMat,staticRoot,x+0.3,7,z);
@@ -171,6 +172,7 @@ function buildDistrict(){
   // straten
   groundQuad(-150,98,165,104,0.04,MAT.asphalt,6);groundQuad(-150,236,165,242,0.04,MAT.asphalt,6);
   groundQuad(-100,104,-94,236,0.04,MAT.asphalt,6);groundQuad(60,104,66,236,0.04,MAT.asphalt,6);
+  [[-150,98,165,104],[-150,236,165,242],[-100,104,-94,236],[60,104,66,236],[-130,270,200,276],[-130,384,200,390],[-64,276,-58,384],[106,276,112,384]].forEach(r=>lay('road',...r));lay('plein',-125,364,-70,380);
   for(let x=-140;x<160;x+=30){streetLight(x,96.5);streetLight(x+15,243.5);}
   for(let z=120;z<236;z+=30){streetLight(-101.5,z);streetLight(67.5,z);}
   // woningen
@@ -179,7 +181,7 @@ function buildDistrict(){
   // bedrijventerrein bij MS5
   hall(100,140,30,20,8,'TRANSPORT');hall(145,140,30,22,9,'KOELHUIS',true);hall(130,175,40,18,7,'GARAGE · KANTOREN');
   // LS-verdeelkasten in de straat
-  [[-62,112],[-18,112],[-104,165],[-36,228],[52,124],[96,226],[150,114]].forEach(([x,z])=>{box(0.9,1.15,0.35,DM.green,staticRoot,x,0.6,z);});
+  [[-62,112],[-18,112],[-104,165],[-36,228],[52,124],[96,226],[150,114]].forEach(([x,z])=>{box(0.9,1.15,0.35,DM.green,staticRoot,x,0.6,z);lay('kast',x-0.45,z-0.18,x+0.45,z+0.18);});
   // ---- Centrum en bedrijventerrein De Vaart (ring 2)
   groundQuad(-130,270,200,276,0.04,MAT.asphalt,6);groundQuad(-130,384,200,390,0.04,MAT.asphalt,6);
   groundQuad(-64,276,-58,384,0.04,MAT.asphalt,6);groundQuad(106,276,112,384,0.04,MAT.asphalt,6);

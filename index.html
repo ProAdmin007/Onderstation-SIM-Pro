@@ -866,6 +866,12 @@ function buildGantry(L,bx,z){const root=grp(bx,z);mesh(gantryGeo(),MAT.lattice,r
 
 
 // ============================================================ omgeving
+// register van voetafdrukken (x0,z0,x1,z1) voor de plaatsingscontrole (layoutCheck): niets mag in een ander object staan
+const LAYOUT=[];
+function lay(kind,x0,z0,x1,z1){LAYOUT.push({kind,r:[Math.min(x0,x1),Math.min(z0,z1),Math.max(x0,x1),Math.max(z0,z1)]});}
+const rectsOverlap=(a,b,m=0)=>Math.min(a[2],b[2])-Math.max(a[0],b[0])>-m&&Math.min(a[3],b[3])-Math.max(a[1],b[1])>-m;
+// is deze plek vrij van objecten van deze soorten? (m = extra marge in meters)
+const layFree=(r,kinds,m=0)=>!LAYOUT.some(o=>kinds.includes(o.kind)&&rectsOverlap(o.r,r,m));
 const FENCE = {x0:-48,x1:92,z0:-44,z1:68,gate:[20,30]};
 function buildGround(){
   groundQuad(-10000,-10000,10000,10000,-0.5,MAT.water,20);
@@ -949,13 +955,13 @@ function buildBuilding({id,x0,x1,z0,z1,doors,label}){
 const crownGeos=[0,1,2].map(i=>{let g=new THREE.IcosahedronGeometry(1,2);g.deleteAttribute('normal');g.deleteAttribute('uv');g=mergeVertices(g);
   const p=g.attributes.position;for(let k=0;k<p.count;k++){const v=V3(p.getX(k),p.getY(k),p.getZ(k));const n=1+Math.sin(v.x*3.1+i)*Math.cos(v.y*2.7+i)*Math.sin(v.z*3.7+i*2)*0.22;v.multiplyScalar(n);p.setXYZ(k,v.x,v.y,v.z);}
   g.computeVertexNormals();g.setAttribute('uv',new THREE.BufferAttribute(new Float32Array(p.count*2),2));return g;});
-function tree(x,z,s=1,cast=false){const h=rr(4,6)*s;const t=cyl(0.18*s,0.28*s,h,MAT.bark,staticRoot,x,h/2,z,7);t.castShadow=cast;
+function tree(x,z,s=1,cast=false){lay('tree',x-0.35*s,z-0.35*s,x+0.35*s,z+0.35*s);const h=rr(4,6)*s;const t=cyl(0.18*s,0.28*s,h,MAT.bark,staticRoot,x,h/2,z,7);t.castShadow=cast;
   const n=3+Math.floor(R()*3),lm=MAT.leaf[Math.floor(R()*3)];
   for(let i=0;i<n;i++){const r=rr(1.8,3.0)*s;const c=mesh(crownGeos[i%3],lm,staticRoot,x+rr(-1.5,1.5)*s,h+rr(-0.5,2.5)*s,z+rr(-1.5,1.5)*s);c.scale.set(r,r*rr(0.8,1.1),r);c.rotation.y=R()*6;c.castShadow=cast;}}
-function poplar(x,z){const h=rr(14,18);cyl(0.2,0.3,h*0.5,MAT.bark,staticRoot,x,h*0.25,z,7).castShadow=false;const c=mesh(crownGeos[Math.floor(R()*3)],MAT.leaf[0],staticRoot,x,h*0.58,z);c.scale.set(rr(1.3,1.8),h*0.42,rr(1.3,1.8));c.castShadow=Math.abs(x)<200&&Math.abs(z)<200;}
+function poplar(x,z){lay('tree',x-0.4,z-0.4,x+0.4,z+0.4);const h=rr(14,18);cyl(0.2,0.3,h*0.5,MAT.bark,staticRoot,x,h*0.25,z,7).castShadow=false;const c=mesh(crownGeos[Math.floor(R()*3)],MAT.leaf[0],staticRoot,x,h*0.58,z);c.scale.set(rr(1.3,1.8),h*0.42,rr(1.3,1.8));c.castShadow=Math.abs(x)<200&&Math.abs(z)<200;}
 function buildTrees(){
   for(let z=78;z<1200;z+=rr(9,13)){if(Math.abs(z-101)<7||Math.abs(z-239)<7||Math.abs(z-161.5)<6||Math.abs(z-273)<7||Math.abs(z-387)<7)continue;tree(17+rr(-0.5,0.5),z,rr(0.9,1.1),z<160);tree(33+rr(-0.5,0.5),z,rr(0.9,1.1),z<160);}
-  for(let z=-70;z<110;z+=rr(8,11)){poplar(-64+rr(-1,1),z);poplar(108+rr(-1,1),z);}
+  for(let z=-70;z<110;z+=rr(8,11)){if(Math.abs(z-101)<5)continue;poplar(-64+rr(-1,1),z);poplar(108+rr(-1,1),z);}   // niet op de weg naar de wijk
   for(let x=-64;x<110;x+=rr(8,11))poplar(x,-62+rr(-1,1));
   for(let k=0;k<26;k++){const cx=rr(-2200,2200),cz=rr(-2200,2200);if(Math.abs(cx)<350&&cz>-400&&cz<500)continue;const n=4+Math.floor(R()*10);for(let i=0;i<n;i++)tree(cx+rr(-30,30),cz+rr(-30,30),rr(1.2,1.8));}
   for(let x=-2000;x<2000;x+=rr(10,16))tree(x,-1300+rr(-3,3),1.5);
@@ -1073,7 +1079,7 @@ const APT_GLOW=(()=>{const c=cnv(1024,1024),g=c.getContext('2d');for(let ty=0;ty
   const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.colorSpace=THREE.SRGBColorSpace;return t;})();
 const glowMat=map=>new THREE.MeshBasicMaterial({map,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending});
 function winGlow(s,variant){s.winMats??=[];return s.winMats[variant]??=glowMat(WIN_TEX[variant]);}
-function houseRow(x0,z,n,faceSouth){const W=6,Dp=9,H=5.6,len=n*W,cx=x0+len/2,v=Math.floor(R()*3);
+function houseRow(x0,z,n,faceSouth){const W=6,Dp=9,H=5.6,len=n*W,cx=x0+len/2,v=Math.floor(R()*3);lay('house',x0,z-Dp/2,x0+len,z+Dp/2);
   box(len,H,Dp,DM.brick[v],staticRoot,cx,H/2,z);
   for(let i=0;i<n;i++){const x=x0+W/2+i*W;for(const s of[-1,1]){const p=mesh(new THREE.PlaneGeometry(W-0.1,H),DM.facades[(v+i)%3],staticRoot,x,H/2,z+s*(Dp/2+0.02));p.rotation.y=s>0?0:Math.PI;p.castShadow=false;
     const gl=mesh(new THREE.PlaneGeometry(W-0.1,H),winGlow(nearestStation(x,z),(v+i+(s>0?0:1))%3),staticRoot,x,H/2,z+s*(Dp/2+0.05));gl.rotation.y=p.rotation.y;gl.castShadow=gl.receiveShadow=false;gl.renderOrder=1;}}
@@ -1081,10 +1087,10 @@ function houseRow(x0,z,n,faceSouth){const W=6,Dp=9,H=5.6,len=n*W,cx=x0+len/2,v=M
   const rg=new THREE.ExtrudeGeometry(sh,{depth:len+0.4,bevelEnabled:false});rg.rotateY(Math.PI/2);rg.translate(-len/2-0.2,0,0);mesh(rg,SM.roofs[v],staticRoot,cx,H,z);
   for(let i=1;i<n;i+=2)box(0.5,1.2,0.5,MAT.concreteDark,staticRoot,x0+i*W,H+2.6,z);   // schoorstenen
   // tuintjes met schuurtjes aan de achterkant
-  const back=faceSouth?-1:1;for(let i=0;i<n;i++){const sx=x0+W/2+i*W+(i%2?1:-1),sz=z+back*(Dp/2+6);box(2.2,2.1,2,i%3?SM.woodGrey:SM.wood,staticRoot,sx,1.05,sz);box(2.5,0.12,2.3,SM.shedRoof,staticRoot,sx,2.16,sz);}
+  const back=faceSouth?-1:1;for(let i=0;i<n;i++){const sx=x0+W/2+i*W+(i%2?1:-1),sz=z+back*(Dp/2+6);box(2.2,2.1,2,i%3?SM.woodGrey:SM.wood,staticRoot,sx,1.05,sz);lay('shed',sx-1.1,sz-1,sx+1.1,sz+1);box(2.5,0.12,2.3,SM.shedRoof,staticRoot,sx,2.16,sz);}
   houseExtras(x0,z,n,faceSouth,W,Dp,H,v);
   DISTRICT_RECTS.push([x0,z-Dp/2,x0+len,z+Dp/2]);}
-function hall(cx,cz,w,d,h,label,blue){box(w,h,d,blue?DM.hallBlue:DM.hall,staticRoot,cx,h/2,cz);box(w+0.6,0.4,d+0.6,MAT.roof,staticRoot,cx,h+0.2,cz);
+function hall(cx,cz,w,d,h,label,blue){lay('hall',cx-w/2,cz-d/2,cx+w/2,cz+d/2);box(w,h,d,blue?DM.hallBlue:DM.hall,staticRoot,cx,h/2,cz);box(w+0.6,0.4,d+0.6,MAT.roof,staticRoot,cx,h+0.2,cz);
   for(let i=0;i<3;i++){const p=mesh(new THREE.PlaneGeometry(4,4.5),MAT.louvre,staticRoot,cx-w/2+5+i*6,2.25,cz-d/2-0.02);p.rotation.y=Math.PI;p.castShadow=false;}
   const t=toTex(textCanvas(label,{w:1024,h:160,bg:'#ffffff',fg:'#1d2b45',font:'bold 92px Arial',border:false}));const sg=mesh(new THREE.PlaneGeometry(9,1.4),mat({map:t,roughness:0.5}),staticRoot,cx+w/2-7,h-1.4,cz-d/2-0.03);sg.rotation.y=Math.PI;sg.castShadow=false;
   DISTRICT_RECTS.push([cx-w/2,cz-d/2,cx+w/2,cz+d/2]);}
@@ -1112,6 +1118,7 @@ function kiosk(s){
   for(const sx of[-1,1]){const lv=mesh(new THREE.PlaneGeometry(1.2,0.5),MAT.louvre,root,sx*(hw+0.01),Y+2.1,0.6);lv.rotation.y=sx*Math.PI/2;lv.castShadow=false;}
   const flm=mat({color:0x331a00,emissive:0xff8a00,emissiveIntensity:0});const lamp=cyl(0.09,0.09,0.16,flm,root,2.1,Y+KH+0.26,1.2,12);lamp.userData.dyn=true;
   regView(s.id,root,()=>{flm.emissiveIntensity=s.flag&&(performance.now()%900<450)?4:0;},{box:(()=>{const a=L2W(-hw,-KD/2),b=L2W(hw,KD/2);return new THREE.Box3(V3(Math.min(a[0],b[0]),0,Math.min(a[1],b[1])),V3(Math.max(a[0],b[0]),Y+KH+0.3,Math.max(a[1],b[1])));})(),labelPos:V3(x,4,z)});
+  {const b=VIEWS[s.id].box;lay('kiosk',b.min.x,b.min.z,b.max.x,b.max.z);}
   // botsingsvlakken: muren met deuropening, inrichting
   wrect(-hw,-KD/2,hw,-KD/2+KT);wrect(-hw,-KD/2,-hw+KT,KD/2);wrect(hw-KT,-KD/2,hw,KD/2);wrect(-hw,KD/2-KT,-2.05,KD/2);wrect(-0.75,KD/2-KT,hw,KD/2);
   const idx=ROOMS.length+1,ri=L2W(-hw+KT,-KD/2+KT),rj=L2W(hw-KT,KD/2-KT);
@@ -1186,7 +1193,7 @@ function shopCanvas(){const c=cnv(512,128),g=c.getContext('2d');g.fillStyle='#3a
   const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.colorSpace=THREE.SRGBColorSpace;return t;}
 const APT={tex:aptCanvas(),shop:shopCanvas()};
 const APT_TINT=[0xffffff,0xead9c0,0xc99a82,0xd9e2e6];let aptN=0;   // gevelkleur per flat
-function aptBlock(x0,z0,x1,z1,floors){const W=x1-x0,Dz=z1-z0,H=floors*3+3.6,cx=(x0+x1)/2,cz=(z0+z1)/2,tint=APT_TINT[aptN++%APT_TINT.length];
+function aptBlock(x0,z0,x1,z1,floors){const W=x1-x0,Dz=z1-z0,H=floors*3+3.6,cx=(x0+x1)/2,cz=(z0+z1)/2,tint=APT_TINT[aptN++%APT_TINT.length];lay('apt',x0,z0,x1,z1);
   const facade=(len)=>{const t=APT.tex.clone();t.repeat.set(len/8,floors);t.needsUpdate=true;return mat({map:t,roughness:0.85,color:tint});};
   const shop=(len)=>{const t=APT.shop.clone();t.repeat.set(len/16,1);t.needsUpdate=true;return mat({map:t,roughness:0.6});};
   box(W,H,Dz,DM.kiosk,staticRoot,cx,H/2,cz);
@@ -1201,7 +1208,7 @@ function aptBlock(x0,z0,x1,z1,floors){const W=x1-x0,Dz=z1-z0,H=floors*3+3.6,cx=(
   DISTRICT_RECTS.push([x0,z0-1.7,x1,z1+1.7]);}
 // straatlantaarn, gevoed uit het LS-veld openbare verlichting van het dichtstbijzijnde MS-station
 const poolTex=(()=>{const c=cnv(128),g=c.getContext('2d'),gr=g.createRadialGradient(64,64,0,64,64,64);gr.addColorStop(0,'rgba(255,214,150,0.9)');gr.addColorStop(0.45,'rgba(255,190,110,0.35)');gr.addColorStop(1,'rgba(255,170,90,0)');g.fillStyle=gr;g.fillRect(0,0,128,128);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t;})();
-function streetLight(x,z){
+function streetLight(x,z){lay('lamp',x-0.15,z-0.15,x+0.15,z+0.15);
   const s=RING.stations.reduce((a,b)=>Math.hypot(b.pos[0]-x,b.pos[1]-z)<Math.hypot(a.pos[0]-x,a.pos[1]-z)?b:a);
   if(!s.lampMat){s.lampMat=mat({color:0x2a2c2e,emissive:0xffd9a0,emissiveIntensity:0});s.poolMat=new THREE.MeshBasicMaterial({map:poolTex,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false,fog:false});s.lamps=0;}
   s.lamps++;cyl(0.06,0.09,7,MAT.galv,staticRoot,x,3.5,z,8);box(0.7,0.12,0.25,s.lampMat,staticRoot,x+0.3,7,z);
@@ -1211,6 +1218,7 @@ function buildDistrict(){
   // straten
   groundQuad(-150,98,165,104,0.04,MAT.asphalt,6);groundQuad(-150,236,165,242,0.04,MAT.asphalt,6);
   groundQuad(-100,104,-94,236,0.04,MAT.asphalt,6);groundQuad(60,104,66,236,0.04,MAT.asphalt,6);
+  [[-150,98,165,104],[-150,236,165,242],[-100,104,-94,236],[60,104,66,236],[-130,270,200,276],[-130,384,200,390],[-64,276,-58,384],[106,276,112,384]].forEach(r=>lay('road',...r));lay('plein',-125,364,-70,380);
   for(let x=-140;x<160;x+=30){streetLight(x,96.5);streetLight(x+15,243.5);}
   for(let z=120;z<236;z+=30){streetLight(-101.5,z);streetLight(67.5,z);}
   // woningen
@@ -1219,7 +1227,7 @@ function buildDistrict(){
   // bedrijventerrein bij MS5
   hall(100,140,30,20,8,'TRANSPORT');hall(145,140,30,22,9,'KOELHUIS',true);hall(130,175,40,18,7,'GARAGE · KANTOREN');
   // LS-verdeelkasten in de straat
-  [[-62,112],[-18,112],[-104,165],[-36,228],[52,124],[96,226],[150,114]].forEach(([x,z])=>{box(0.9,1.15,0.35,DM.green,staticRoot,x,0.6,z);});
+  [[-62,112],[-18,112],[-104,165],[-36,228],[52,124],[96,226],[150,114]].forEach(([x,z])=>{box(0.9,1.15,0.35,DM.green,staticRoot,x,0.6,z);lay('kast',x-0.45,z-0.18,x+0.45,z+0.18);});
   // ---- Centrum en bedrijventerrein De Vaart (ring 2)
   groundQuad(-130,270,200,276,0.04,MAT.asphalt,6);groundQuad(-130,384,200,390,0.04,MAT.asphalt,6);
   groundQuad(-64,276,-58,384,0.04,MAT.asphalt,6);groundQuad(106,276,112,384,0.04,MAT.asphalt,6);
@@ -1307,7 +1315,7 @@ const SM={
   car:[0xb8bec4,0x1c2a3a,0x8a1c1c,0xe8e8e4,0x2d4a2d,0x3a3f45,0x6a5232].map(c=>mat({color:c,roughness:0.35,metalness:0.55})),carGlass:mat({color:0x1a242c,roughness:0.15,metalness:0.6}),tyre:mat({color:0x111111,roughness:0.9})};
 
 // ---- stoep met stoeprand langs een straat (horizontaal: langs x, verticaal: langs z)
-function sidewalk(x0,z0,x1,z1,curbSide){groundQuad(x0,z0,x1,z1,0.1,SM.tiles,2);const along=x1-x0>z1-z0;
+function sidewalk(x0,z0,x1,z1,curbSide){lay('stoep',x0,z0,x1,z1);groundQuad(x0,z0,x1,z1,0.1,SM.tiles,2);const along=x1-x0>z1-z0;
   const cz=curbSide==='-'?(along?z0:x0):(along?z1:x1);
   if(along)box(x1-x0,0.12,0.18,SM.curb,staticRoot,(x0+x1)/2,0.06,cz);else box(0.18,0.12,z1-z0,SM.curb,staticRoot,cz,0.06,(z0+z1)/2);}
 // stoepen aan beide kanten van een rechte straat, met onderbrekingen bij kruisingen
@@ -1315,11 +1323,16 @@ function streetSidewalks(a,b,c0,c1,horiz,gaps){const segs=[];let s=a;for(const [
   for(const [p,q] of segs){if(horiz){sidewalk(p,c0-2,q,c0,'+');sidewalk(p,c1,q,c1+2,'-');}else{sidewalk(c0-2,p,c0,q,'+');sidewalk(c1,p,c1+2,q,'-');}}}
 // onderbroken middenstreep
 function centerLine(a,b,c,horiz){for(let t=a+2;t<b-3;t+=9){const m=groundQuad(horiz?t:c-0.06,horiz?c-0.06:t,horiz?t+3:c+0.06,horiz?c+0.06:t+3,0.05,SM.line,1);m.receiveShadow=true;}}
+// MS-stations staan op vaste plekken: daar geen parkeerstrook of auto
+const kioskNear=(x,z,mx=4.6,mz=3.6)=>RING.stations.some(s=>Math.abs(s.pos[0]-x)<mx&&Math.abs(s.pos[1]-z)<mz);
+// strook langs x van a tot b, met openingen bij MS-stations
+function stripSegs(a,b,z0,z1){const cut=RING.stations.filter(s=>s.pos[1]>z0-3.5&&s.pos[1]<z1+3.5).map(s=>[s.pos[0]-3.4,s.pos[0]+3.4]).sort((p,q)=>p[0]-q[0]),out=[];let s=a;
+  for(const [c0,c1] of cut){if(c1<a||c0>b)continue;if(c0>s)out.push([s,c0]);s=Math.max(s,c1);}if(s<b)out.push([s,b]);return out;}
 // geparkeerde auto (statisch, kijkt langs de straat)
-function parkedCar(x,z,along,i){const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=along?Math.PI/2+(i%2?Math.PI:0):(i%2?Math.PI:0);staticRoot.add(g);
+function parkedCar(x,z,along,i){if(kioskNear(x,z))return;const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=along?Math.PI/2+(i%2?Math.PI:0):(i%2?Math.PI:0);staticRoot.add(g);
   box(1.8,0.7,4.2,SM.car[i%SM.car.length],g,0,0.6,0);box(1.6,0.6,2.2,SM.carGlass,g,0,1.2,-0.2);
   for(const [wx,wz] of[[-0.85,1.3],[0.85,1.3],[-0.85,-1.3],[0.85,-1.3]])cyl(0.33,0.33,0.25,SM.tyre,g,wx,0.33,wz,10).rotation.z=Math.PI/2;
-  DISTRICT_RECTS.push(along?[x-2.2,z-1,x+2.2,z+1]:[x-1,z-2.2,x+1,z+2.2]);}
+  DISTRICT_RECTS.push(along?[x-2.2,z-1,x+2.2,z+1]:[x-1,z-2.2,x+1,z+2.2]);lay('car',...(along?[x-2.2,z-1,x+2.2,z+1]:[x-1,z-2.2,x+1,z+2.2]));}
 
 // ---- per woning: voortuin met heg en tuinpad, kliko, schutting tussen de achtertuinen; dak: goten, zonnepanelen of dakkapel
 function houseExtras(x0,z,n,faceSouth,W,Dp,H,v){const f=faceSouth?1:-1,len=n*W,fz=z+f*Dp/2,bz=z-f*Dp/2,ang=Math.atan2(3.4,Dp/2+0.4);
@@ -1328,7 +1341,7 @@ function houseExtras(x0,z,n,faceSouth,W,Dp,H,v){const f=faceSouth?1:-1,len=n*W,f
   for(let i=0;i<n;i++){const x=x0+W/2+i*W,door=x+f*1.44,r=R();
     // voortuin: heg langs de straatkant (opening bij het pad), tuinpad van tegels, kliko naast de deur
     const gz=fz+f*4.2,hl=door-0.6-(x-W/2),hr=x+W/2-(door+0.6),free=(cx,l)=>!RING.stations.some(s=>Math.abs(s.pos[0]-cx)<l/2+3&&Math.abs(s.pos[1]-gz)<2.5);   // niet door een MS-station heen
-    if(free(x-W/2+hl/2,hl))box(hl,0.85,0.5,SM.hedge,staticRoot,x-W/2+hl/2,0.43,gz);if(free(door+0.6+hr/2,hr))box(hr,0.85,0.5,SM.hedge,staticRoot,door+0.6+hr/2,0.43,gz);
+    if(free(x-W/2+hl/2,hl)){box(hl,0.85,0.5,SM.hedge,staticRoot,x-W/2+hl/2,0.43,gz);lay('hedge',x-W/2,gz-0.25,x-W/2+hl,gz+0.25);}if(free(door+0.6+hr/2,hr)){box(hr,0.85,0.5,SM.hedge,staticRoot,door+0.6+hr/2,0.43,gz);lay('hedge',door+0.6,gz-0.25,door+0.6+hr,gz+0.25);}
     groundQuad(door-0.6,Math.min(fz,gz),door+0.6,Math.max(fz,gz),0.06,SM.tiles,2);
     box(0.6,1.0,0.7,SM.bin[(i+v)%3],staticRoot,door+(door>x?-1.1:1.1),0.5,fz+f*0.6);
     // achtertuin: schutting tussen de tuinen en achterlangs
@@ -1368,7 +1381,7 @@ function dressStreets(){
   centerLine(-150,165,101,true);centerLine(-150,165,239,true);
   // nieuwe woonstraat met klinkers tussen de rijen die met de voorkant naar elkaar toe staan (woonerf, geen stoep)
   // (z 157,5–165,5: MS2 staat ernaast aan de noordkant)
-  groundQuad(-94,157.5,36,165.5,0.045,SM.pavers,4);box(130,0.12,0.18,SM.curb,staticRoot,-29,0.06,157.5);box(130,0.12,0.18,SM.curb,staticRoot,-29,0.06,165.5);
+  groundQuad(-94,157.5,36,165.5,0.045,SM.pavers,4);lay('woonerf',-94,157.5,36,165.5);box(130,0.12,0.18,SM.curb,staticRoot,-29,0.06,157.5);box(130,0.12,0.18,SM.curb,staticRoot,-29,0.06,165.5);
   for(let x=-82,i=0;x<30;x+=7.5,i++)if(i%3!==1)parkedCar(x,i%2?159.4:163.6,true,i);
   for(let x=-80;x<34;x+=24)streetLight(x,157);
   for(let x=-70;x<34;x+=24)tree(x,166.6,0.75,false);
@@ -1377,11 +1390,12 @@ function dressStreets(){
   streetSidewalks(278,382,-64,-58,false,[]);streetSidewalks(278,382,106,112,false,[]);
   centerLine(-130,200,273,true);centerLine(-130,200,387,true);
   // winkelstraat: parkeerstrook en een brede stoep voor de winkels; tussen de flats een parkeerterrein, achter de flats een plein van tegels
-  for(const [a,b] of[[-125,-66],[-56,8]]){groundQuad(a,278,b,282.5,0.09,MAT.asphalt,6);groundQuad(a,282.5,b,291.5,0.085,SM.tiles,2);box(b-a,0.12,0.18,SM.curb,staticRoot,(a+b)/2,0.06,282.5);
-    groundQuad(a,312,b,328,0.06,SM.pavers,4);groundQuad(a,357,b,382,0.055,SM.tiles,2);}
+  for(const [a,b] of[[-125,-66],[-56,8]]){groundQuad(a,278,b,282.5,0.07,SM.tiles,2);   // tegels onder de strook: bij een MS-station blijft het bestraat
+    for(const [p,q] of stripSegs(a,b,278,282.5)){groundQuad(p,278,q,282.5,0.09,MAT.asphalt,6);lay('parkeer',p,278,q,282.5);box(q-p,0.12,0.18,SM.curb,staticRoot,(p+q)/2,0.06,282.5);}groundQuad(a,282.5,b,291.5,0.085,SM.tiles,2);
+    groundQuad(a,312,b,328,0.06,SM.pavers,4);lay('parkeer',a,312,b,328);groundQuad(a,357,b,382,0.055,SM.tiles,2);}
   for(let x=-122,i=0;x<4;x+=6.5,i++)if(i%4!==2&&Math.abs(x+61)>6)parkedCar(x,280.2,true,i+3);
   for(let x=-120,i=0;x<4;x+=6.5,i++)if(i%3!==0&&Math.abs(x+61)>6)parkedCar(x,i%2?316:324,false,i+5);
-  for(const x of[-110,-90,-40,-15])tree(x,358.5,0.8,false);}
+  for(const x of[-110,-90,-40,-15])tree(x,362.5,0.8,false);}
 
 // ---- balkons en entree aan de flats
 function aptExtras(x0,z0,x1,z1,floors){const W=x1-x0,Dz=z1-z0,cx=(x0+x1)/2,cz=(z0+z1)/2;
@@ -4034,6 +4048,16 @@ function checkModel(silent){const err=[],has=id=>!!D[id],SW=['cb','ds','es','lbs
   computeFlows();BUS_IDS.forEach(b=>EN.has(b)||err.push(`rail ${b} is in de normale toestand spanningsloos`));
   CONS.forEach(c=>{if(!EN.has(c.node))err.push(`${c.id} heeft in de normale toestand geen spanning`);});
   if(err.length&&!silent)console.error(`Modelcontrole: ${err.length} probleem/problemen\n`+err.join('\n'));return err;}
+// ---- plaatsingscontrole: staat er ergens een object in een ander object (auto in een station, boom op de weg …)?
+const LAYOUT_BAD={kiosk:['car','house','apt','hall','tree','road','woonerf','lamp','kk','kast','hedge','shed','parkeer'],
+  car:['house','apt','hall','tree','lamp','kk','kast','hedge','shed','road','stoep'],tree:['road','woonerf','house','apt','hall','kk','kast','shed','lamp','parkeer'],
+  kk:['road','woonerf','house','apt','hall','kast','shed','hedge','parkeer'],lamp:['road','woonerf','house','apt','hall','kast','shed','parkeer','hedge'],
+  house:['road','woonerf','apt','hall','parkeer','stoep'],apt:['road','woonerf','parkeer','stoep','hall'],hall:['road','woonerf','stoep'],kast:['road','woonerf','parkeer'],hedge:['road','woonerf','stoep']};
+function layoutCheck(){const inWijk=o=>o.r[2]>-210&&o.r[0]<260&&o.r[3]>60&&o.r[1]<450,L=LAYOUT.filter(inWijk),out=[];
+  const ov=(a,b)=>rectsOverlap(a,b,-0.05);
+  for(let i=0;i<L.length;i++)for(let j=i+1;j<L.length;j++){const a=L[i],b=L[j];if(!(LAYOUT_BAD[a.kind]?.includes(b.kind)||LAYOUT_BAD[b.kind]?.includes(a.kind)))continue;
+    if(ov(a.r,b.r))out.push(`${a.kind} [${a.r.map(v=>v.toFixed(1)).join(',')}] ↔ ${b.kind} [${b.r.map(v=>v.toFixed(1)).join(',')}]`);}
+  return out;}
 
 
 // ============================================================ venster netcongestie en flexibel vermogen (toets C)
@@ -4376,10 +4400,12 @@ function keysHint(){let seen=false;try{seen=!!localStorage.getItem('osz-keyhint'
 const KK_MAT=mat({color:0x2f5a3c,roughness:0.7}),KK_ON=mat({color:0x111111,emissive:0x30ff60,emissiveIntensity:0});
 LS_LINKS.forEach(d=>{const sa=RING.stations.find(s=>s.id===D[d.a].bay),sb=RING.stations.find(s=>s.id===D[d.b].bay);
   let x=sa.pos[0]+(sb.pos[0]-sa.pos[0])*0.5,z=sa.pos[1]+(sb.pos[1]-sa.pos[1])*0.5;
-  for(let r=0;r<30&&blockedAt(x,z);r++){const a=r*2.4;x+=Math.cos(a)*1.5;z+=Math.sin(a)*1.5;}
+  // vrije plek zoeken: niet op de weg, niet in een gebouw, auto, boom of lantaarn
+  const KK_AVOID=['road','woonerf','parkeer','house','apt','hall','kiosk','car','tree','lamp','kast','shed','hedge'],bad=(x,z)=>blockedAt(x,z)||!layFree([x-0.6,z-0.4,x+0.6,z+0.4],KK_AVOID,0.3);
+  for(let r=0;r<60&&bad(x,z);r++){const a=r*2.4,d=1.5+r*0.15;x+=Math.cos(a)*d;z+=Math.sin(a)*d;}
   const root=grp(x,z),ind=mat({color:0x111111,emissive:0x30ff60,emissiveIntensity:0});root.userData.dyn=true;
   box(0.9,1.15,0.38,KK_MAT,root,0,0.6,0);box(0.92,0.05,0.4,MAT.galvDark,root,0,1.2,0);box(0.06,0.06,0.02,ind,root,0.3,1.0,0.2);
-  plate(d.id,root,0,0.95,0.2,0,0.34);d.pos=[x,z];
+  plate(d.id,root,0,0.95,0.2,0,0.34);d.pos=[x,z];lay('kk',x-0.45,z-0.2,x+0.45,z+0.2);
   regView(d.id,root,()=>{ind.emissiveIntensity=d.state?2.5:0;},{labelPos:V3(x,1.9,z)});});
 
 // ---- SCADA-tabblad LS (overzicht; klik op een station voor het LS-venster)
@@ -4579,7 +4605,7 @@ else{renderMenu();$('#intro').classList.remove('hidden');controls.autoRotate=tru
 if(params.has('night'))updateSky(22);
 if(params.has('view')){const v=VIEWPOS[+params.get('view')];camera.position.copy(v[0]);controls.target.copy(v[1]);controls.autoRotate=false;controls.update();}
 
-window.OS={FREC,fltRec,openRec,closeRec,renderRec,selectivity,protSelect,feederT,incT,incOf,shortCircuit,EF,earthFault,efTick,efRails,efU0,railsCoupled,controls,tripBreaker,CONS,LS_LINKS,LS_ORDERS,GENSET,lsTick,lsOrder,lsSwitchOrder,lsExec,gsSend,gsOff,gsRestart,tapOrder,setEta,callPrio,lsAreas,PRIO,openLS,closeLS,renderLS,lvVolt,stationLoads,shedFactor,failP,manualP,phoneTick,refreshDevPanel,updateSLD,openKeys,closeKeys,KEY_HELP,RELAY_BAYS,relayTask,relayDue,relayDefect,initRelays,kitTests,kitMeasure,kitVerdict,kitRun,openKit,closeKit,saveGame,readSave,deleteSave,resumeGame,canSave,specOf,CABLE,soilT,FD,meppelFault,linkTick,tabAlarms,updateTabAlarms,renderTasks,INC,INCIDENTS,startIncident,endIncident,incidentTick,setTab,renderCables,GFX,setGfx,applyGfx,openSettings,closeSettings,WX_TYPES,renderer,scene,FIRE,CARS,updateWindows,updateLife,stationLive,cbMaintTask,worstCb,cond,breakerFails,CB_IDS,FLEX,setFlex,flexTick,congestion,openFlex,closeFlex,checkModel,homeBus,BUSES,SEL_BAYS,TORCH,setTorch,HO_POOL,handoverTick,REC,RP,startReplay,stopReplay,analyse,stationDamage,closeHandover,deviations,PHONE,lvFault,callFrom,phoneAnswer,dispatchLV,LVG,forecast,progAdvice,PROG,startTask:(k,...a)=>{TASK={relayTask,cbMaintTask,railTask,railBTask,stationTask,thermoTask,ringTask,feederTask,lineTask,reserveTask}[k](...a);TASK.i=0;TASK.code='WV-TEST';briefInit(TASK);renderTasks();},SIM,D,LESSONS,lessonGo,selectDevice,abortTask,railTask,stationTask,thermoTask,nearDev,VIEWS,PROT,setProt,openProt,closeProt,busFault,BUSF,RINGS,task:()=>TASK,briefSubmit,briefCheck,briefWatch,actKey,taskActs,crewNear,boxOf:id=>VIEWS[id]&&VIEWS[id].box,AudioSys,updateAudio,WX,setWeather,setSeason,SEASONS,ambient,enterKiosk,ROOMS,blockedAt,RING,NPCS,crewDispatch,ringFault,FP,enterFP,exitFP,pickCenter,camera,camInside,setRatio,setTab,GAME,MODES,applyMode,endGame,EN:()=>EN,FLOW,operate,tapStep,setAVR,resetLockout,toggleAR,regulate,computeFlows,randomEvent,lineFault,feederFault,trafoFault,offerTask,simStep,FEEDERS};
+window.OS={layoutCheck,LAYOUT,FREC,fltRec,openRec,closeRec,renderRec,selectivity,protSelect,feederT,incT,incOf,shortCircuit,EF,earthFault,efTick,efRails,efU0,railsCoupled,controls,tripBreaker,CONS,LS_LINKS,LS_ORDERS,GENSET,lsTick,lsOrder,lsSwitchOrder,lsExec,gsSend,gsOff,gsRestart,tapOrder,setEta,callPrio,lsAreas,PRIO,openLS,closeLS,renderLS,lvVolt,stationLoads,shedFactor,failP,manualP,phoneTick,refreshDevPanel,updateSLD,openKeys,closeKeys,KEY_HELP,RELAY_BAYS,relayTask,relayDue,relayDefect,initRelays,kitTests,kitMeasure,kitVerdict,kitRun,openKit,closeKit,saveGame,readSave,deleteSave,resumeGame,canSave,specOf,CABLE,soilT,FD,meppelFault,linkTick,tabAlarms,updateTabAlarms,renderTasks,INC,INCIDENTS,startIncident,endIncident,incidentTick,setTab,renderCables,GFX,setGfx,applyGfx,openSettings,closeSettings,WX_TYPES,renderer,scene,FIRE,CARS,updateWindows,updateLife,stationLive,cbMaintTask,worstCb,cond,breakerFails,CB_IDS,FLEX,setFlex,flexTick,congestion,openFlex,closeFlex,checkModel,homeBus,BUSES,SEL_BAYS,TORCH,setTorch,HO_POOL,handoverTick,REC,RP,startReplay,stopReplay,analyse,stationDamage,closeHandover,deviations,PHONE,lvFault,callFrom,phoneAnswer,dispatchLV,LVG,forecast,progAdvice,PROG,startTask:(k,...a)=>{TASK={relayTask,cbMaintTask,railTask,railBTask,stationTask,thermoTask,ringTask,feederTask,lineTask,reserveTask}[k](...a);TASK.i=0;TASK.code='WV-TEST';briefInit(TASK);renderTasks();},SIM,D,LESSONS,lessonGo,selectDevice,abortTask,railTask,stationTask,thermoTask,nearDev,VIEWS,PROT,setProt,openProt,closeProt,busFault,BUSF,RINGS,task:()=>TASK,briefSubmit,briefCheck,briefWatch,actKey,taskActs,crewNear,boxOf:id=>VIEWS[id]&&VIEWS[id].box,AudioSys,updateAudio,WX,setWeather,setSeason,SEASONS,ambient,enterKiosk,ROOMS,blockedAt,RING,NPCS,crewDispatch,ringFault,FP,enterFP,exitFP,pickCenter,camera,camInside,setRatio,setTab,GAME,MODES,applyMode,endGame,EN:()=>EN,FLOW,operate,tapStep,setAVR,resetLockout,toggleAR,regulate,computeFlows,randomEvent,lineFault,feederFault,trafoFault,offerTask,simStep,FEEDERS};
 const clock=new THREE.Clock();let hudT=0,skyT=0,progT=0;
 let liteAcc=0;
 function frame(){

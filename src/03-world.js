@@ -1,5 +1,11 @@
 
 // ============================================================ omgeving
+// register van voetafdrukken (x0,z0,x1,z1) voor de plaatsingscontrole (layoutCheck): niets mag in een ander object staan
+const LAYOUT=[];
+function lay(kind,x0,z0,x1,z1){LAYOUT.push({kind,r:[Math.min(x0,x1),Math.min(z0,z1),Math.max(x0,x1),Math.max(z0,z1)]});}
+const rectsOverlap=(a,b,m=0)=>Math.min(a[2],b[2])-Math.max(a[0],b[0])>-m&&Math.min(a[3],b[3])-Math.max(a[1],b[1])>-m;
+// is deze plek vrij van objecten van deze soorten? (m = extra marge in meters)
+const layFree=(r,kinds,m=0)=>!LAYOUT.some(o=>kinds.includes(o.kind)&&rectsOverlap(o.r,r,m));
 const FENCE = {x0:-48,x1:92,z0:-44,z1:68,gate:[20,30]};
 function buildGround(){
   groundQuad(-10000,-10000,10000,10000,-0.5,MAT.water,20);
@@ -83,13 +89,13 @@ function buildBuilding({id,x0,x1,z0,z1,doors,label}){
 const crownGeos=[0,1,2].map(i=>{let g=new THREE.IcosahedronGeometry(1,2);g.deleteAttribute('normal');g.deleteAttribute('uv');g=mergeVertices(g);
   const p=g.attributes.position;for(let k=0;k<p.count;k++){const v=V3(p.getX(k),p.getY(k),p.getZ(k));const n=1+Math.sin(v.x*3.1+i)*Math.cos(v.y*2.7+i)*Math.sin(v.z*3.7+i*2)*0.22;v.multiplyScalar(n);p.setXYZ(k,v.x,v.y,v.z);}
   g.computeVertexNormals();g.setAttribute('uv',new THREE.BufferAttribute(new Float32Array(p.count*2),2));return g;});
-function tree(x,z,s=1,cast=false){const h=rr(4,6)*s;const t=cyl(0.18*s,0.28*s,h,MAT.bark,staticRoot,x,h/2,z,7);t.castShadow=cast;
+function tree(x,z,s=1,cast=false){lay('tree',x-0.35*s,z-0.35*s,x+0.35*s,z+0.35*s);const h=rr(4,6)*s;const t=cyl(0.18*s,0.28*s,h,MAT.bark,staticRoot,x,h/2,z,7);t.castShadow=cast;
   const n=3+Math.floor(R()*3),lm=MAT.leaf[Math.floor(R()*3)];
   for(let i=0;i<n;i++){const r=rr(1.8,3.0)*s;const c=mesh(crownGeos[i%3],lm,staticRoot,x+rr(-1.5,1.5)*s,h+rr(-0.5,2.5)*s,z+rr(-1.5,1.5)*s);c.scale.set(r,r*rr(0.8,1.1),r);c.rotation.y=R()*6;c.castShadow=cast;}}
-function poplar(x,z){const h=rr(14,18);cyl(0.2,0.3,h*0.5,MAT.bark,staticRoot,x,h*0.25,z,7).castShadow=false;const c=mesh(crownGeos[Math.floor(R()*3)],MAT.leaf[0],staticRoot,x,h*0.58,z);c.scale.set(rr(1.3,1.8),h*0.42,rr(1.3,1.8));c.castShadow=Math.abs(x)<200&&Math.abs(z)<200;}
+function poplar(x,z){lay('tree',x-0.4,z-0.4,x+0.4,z+0.4);const h=rr(14,18);cyl(0.2,0.3,h*0.5,MAT.bark,staticRoot,x,h*0.25,z,7).castShadow=false;const c=mesh(crownGeos[Math.floor(R()*3)],MAT.leaf[0],staticRoot,x,h*0.58,z);c.scale.set(rr(1.3,1.8),h*0.42,rr(1.3,1.8));c.castShadow=Math.abs(x)<200&&Math.abs(z)<200;}
 function buildTrees(){
   for(let z=78;z<1200;z+=rr(9,13)){if(Math.abs(z-101)<7||Math.abs(z-239)<7||Math.abs(z-161.5)<6||Math.abs(z-273)<7||Math.abs(z-387)<7)continue;tree(17+rr(-0.5,0.5),z,rr(0.9,1.1),z<160);tree(33+rr(-0.5,0.5),z,rr(0.9,1.1),z<160);}
-  for(let z=-70;z<110;z+=rr(8,11)){poplar(-64+rr(-1,1),z);poplar(108+rr(-1,1),z);}
+  for(let z=-70;z<110;z+=rr(8,11)){if(Math.abs(z-101)<5)continue;poplar(-64+rr(-1,1),z);poplar(108+rr(-1,1),z);}   // niet op de weg naar de wijk
   for(let x=-64;x<110;x+=rr(8,11))poplar(x,-62+rr(-1,1));
   for(let k=0;k<26;k++){const cx=rr(-2200,2200),cz=rr(-2200,2200);if(Math.abs(cx)<350&&cz>-400&&cz<500)continue;const n=4+Math.floor(R()*10);for(let i=0;i<n;i++)tree(cx+rr(-30,30),cz+rr(-30,30),rr(1.2,1.8));}
   for(let x=-2000;x<2000;x+=rr(10,16))tree(x,-1300+rr(-3,3),1.5);
