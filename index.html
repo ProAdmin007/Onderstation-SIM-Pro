@@ -88,8 +88,8 @@ button:disabled{opacity:.35;cursor:not-allowed}
 #sld{display:block;width:calc(456px * var(--sldz,1));height:auto;padding:4px 6px 0}
 .zoom{display:flex;align-items:center;gap:3px;margin-left:auto}
 .zoom span{font-family:var(--mono);font-size:10.5px;color:var(--text);min-width:38px;text-align:center}
-#scada .tabs{margin-left:8px}
-.legend{display:flex;flex-wrap:wrap;gap:12px;padding:8px 14px 12px;font-size:11px;color:var(--muted)}
+#scada .tabs{margin-left:6px}#scada .ph{padding:8px 8px;letter-spacing:.4px}#scada .zoom span{display:none}#scada .zoom{gap:2px}
+.legend{display:flex;flex-wrap:wrap;gap:3px 8px;padding:8px 10px 10px;font-size:10px;color:var(--muted)}
 .legend span{display:flex;align-items:center;gap:5px}
 .legend i{width:14px;height:3px;border-radius:2px;display:inline-block}
 .legend i.sq{width:10px;height:10px;border-radius:2px}
@@ -119,8 +119,9 @@ body.lite #labels,body.lite #tooltip{display:none}body.lite *{animation:none!imp
 #sld text{fill:var(--muted);font:10px 'JetBrains Mono',monospace}
 #sld text.dl{fill:#c3ccd5;font-weight:500}
 #sld text.fs{font-size:9px}
-.tabs{display:flex;gap:3px;margin-left:auto;margin-right:8px}
-.tabs button{padding:2px 9px;font-size:11px;letter-spacing:.3px}
+.tabs{display:flex;gap:2px;margin-left:auto;margin-right:6px}
+.tabs button{padding:2px 5px;font-size:10px;letter-spacing:0}
+#sld .golink{cursor:pointer}#sld .golink rect{fill:transparent;stroke:none}#sld .golink:hover text{text-decoration:underline}
 #sld text.h{fill:var(--text);font-weight:700;font-size:11px}
 #sld text.m{fill:#9fd0ff}
 #sld text.mh{fill:#ffb59c}
@@ -3164,11 +3165,15 @@ function buildSLD(){
       W(x,Y+67,x,Y+74,n2+'v');W(x-32,Y+74,x+32,Y+74,n2+'v','w bus2');
       s.groups.forEach((g,j)=>{const gx=x-32+(j+0.5)*64/s.groups.length;W(gx,Y+74,gx,Y+84,n2+'v');
         o.push(`<g class="dev cb lvs" data-id="${g.id}" transform="translate(${gx} ${Y+90})"><title>${g.id} · ${g.name}</title>${hit(14,18)}<rect class="body" x="-4.5" y="-4.5" width="9" height="9" rx="1.5"/></g>`);
-        W(gx,Y+95,gx,Y+104,g.node);o.push(`<polygon class="w arrow" data-n="${g.node}" data-c="w arrow" points="${gx-4},${Y+104} ${gx+4},${Y+104} ${gx},${Y+111}"/>`);T(gx,Y+121,'G'+(j+1),'middle','fs');});
+        W(gx,Y+95,gx,Y+104,g.node);o.push(`<polygon class="w arrow" data-n="${g.node}" data-c="w arrow" points="${gx-4},${Y+104} ${gx+4},${Y+104} ${gx},${Y+111}"/>`);T(gx,Y+121,s.groups.length>5?String(j+1):'G'+(j+1),'middle','fs');});
       M('stc'+s.id,x,Y+133);M('stp'+s.id,x,Y+144);M('stu'+s.id,x,Y+155,'middle','');
-      if(s.id+'-R'===rg.nop)T(x+24,Y+20,'NOP','middle','mh fs');});
+      if(s.id+'-R'===rg.nop)T(x+24,Y+20,'NOP','middle','mh fs');
+      // koppelveld naar OS Meppel (MS5-K): vanaf de stationsrail rechts in het kader omlaag, onder het kader naar Meppel
+      if(D[s.id+'-K']){const kx=x+35,by=oy+262;W(x+13,Y,x+13,Y+16,n2);W(x+13,Y+16,kx,Y+16,n2);W(kx,Y+16,kx,by,n2);DS(s.id+'-K',kx,by+11,s.id+'-K',-1);W(kx,by+22,kx,by+28,'MP3');W(kx,by+28,x-120,by+28,'MP3');
+        o.push(`<g class="golink" data-goto="M"><rect class="hit" x="${x-300}" y="${by+18}" width="176" height="20" rx="4"/><text x="${x-124}" y="${by+31}" text-anchor="end" class="fs mh">⇄ OS Meppel · koppelkabel MP3 ›</text></g>`);M('lnk',x-124,by+16,'end','fs');}});
     RING.secs.filter(c=>c.ring===rg).forEach((sec,i)=>{const x1=i?XS[i-1]+35:14,x2=i<n?XS[i]-35:456;W(x1,RY,x2,RY,sec.node);M('flt'+sec.id,(x1+x2)/2,RY-8,'middle','bad');});};
-  RINGS.forEach((rg,k)=>drawRing(rg,k*262));
+  RINGS.forEach((rg,k)=>drawRing(rg,k*296));
+  T(235,568,'⚑ verklikker aangesproken · ⚡ kabelfout · klik op een station voor alle schakelaars','middle','fs dl');
   // tabblad OS Meppel: 110 kV en trafo van Netbeheer Noord (grijs, niet bedienbaar), onze uitgaande velden en de koppelkabel naar MS5
   out.M=[];o=out.M;
   T(235,22,'OS MEPPEL','middle','h');T(235,36,'110 kV en transformator: Netbeheer Noord','middle','fs dl');T(235,48,'de uitgaande velden zijn van ons','middle','fs dl');
@@ -3179,9 +3184,8 @@ function buildSLD(){
   [['MP1',120],['MP2',235],['MP3',350]].forEach(([id,x])=>{const f=F(id);W(x,250,x,277,'MP');CB(f.cb,x,285,f.cb,-1);W(x,293,x,324,f.node);W(x,304,x+15,304,f.node);ES(f.id+'-Q8',x+15,316,'');
     if(!f.link){o.push(`<polygon class="w arrow" data-n="${f.node}" data-c="w arrow" points="${x-6},324 ${x+6},324 ${x},336"/>`);T(x,352,f.short,'middle','dl fs');M('f'+f.id,x,365);M('fc'+f.id,x,378,'middle','');}});
   W(350,324,350,420,'MP3');DS('MS5-K',350,432,'MS5-K',1);W(350,443,350,470,'M5');W(350,470,60,470,'M5');
-  T(60,486,'naar MS5 Bedrijvenpark Zuid (ring woonwijk)','start','fs');T(338,384,'koppelkabel','end','fs dl');T(338,397,'max. 4 MW','end','fs dl');M('lnk',338,410,'end','mh');
+  o.push(`<g class="golink" data-goto="R"><rect class="hit" x="56" y="474" width="250" height="18" rx="4"/><text x="60" y="486" class="fs mh">⇄ naar MS5 Bedrijvenpark Zuid (ring woonwijk) ›</text></g>`);T(338,384,'koppelkabel','end','fs dl');T(338,397,'max. 4 MW','end','fs dl');M('lnk',338,410,'end','mh');
   T(235,516,'MS5-K is normaal open. Sluiten mag alleen als de','middle','fs dl');T(235,529,'ringkant spanningsloos is: dan voedt Meppel MS5 terug.','middle','fs dl');T(235,542,'Parallel met Netbeheer Noord is niet toegestaan.','middle','fs dl');
-  T(235,540,'⚑ verklikker aangesproken · ⚡ kabelfout','middle','fs');T(235,553,'klik op een station voor alle schakelaars','middle','fs');
   const svg=$('#sld');svg.innerHTML=`<g data-tab="10">${out[10].join('')}</g><g data-tab="20" style="display:none">${out[20].join('')}</g><g data-tab="R" style="display:none">${out.R.join('')}</g><g data-tab="P" style="display:none"><g id="progG"></g></g><g data-tab="K" style="display:none"><g id="cabG"></g></g><g data-tab="L" style="display:none"><g id="lsG"></g></g><g data-tab="M" style="display:none">${out.M.join('')}</g>`;
   SLD.nodes=[...svg.querySelectorAll('[data-n]')];SLD.byNode={};SLD.nodes.forEach(el=>(SLD.byNode[el.dataset.n]??=[]).push(el));
   svg.querySelectorAll('.dev').forEach(el=>{const id=el.dataset.id,tab=el.closest('[data-tab]').dataset.tab;(SLD.devs[id]??=[]).push(el);(SLD.devTab[id]??=new Set()).add(tab);
@@ -4241,23 +4245,39 @@ LS_LINKS.forEach(d=>{const sa=RING.stations.find(s=>s.id===D[d.a].bay),sb=RING.s
   regView(d.id,root,()=>{ind.emissiveIntensity=d.state?2.5:0;},{labelPos:V3(x,1.9,z)});});
 
 // ---- SCADA-tabblad LS (overzicht; klik op een station voor het LS-venster)
-function renderLSTab(){const g=$('#lsG');if(!g||SLD.tab!=='L')return;const o=[];let y=20;
-  const col=g=>!g.U?'var(--muted)':g.U>U_MAX||g.U<U_MIN?'var(--red)':g.U>248||g.U<212?'var(--accent)':'var(--green)';
-  o.push(`<text x="235" y="${y-4}" text-anchor="middle" class="h">LAAGSPANNING PER MS-STATION</text>`,`<text x="235" y="${y+9}" text-anchor="middle" class="fs dl">spanning per straat (207–253 V) · ◆ aggregaat · klik voor het LS-venster (N)</text>`);y+=28;
-  RINGS.forEach(rg=>{o.push(`<text x="10" y="${y}" class="h">${rg.name.toUpperCase()}</text>`);y+=14;
-    rg.stations.forEach(s=>{const live=stationLive(s),tl=Math.round(Math.abs(s.trLoad||0)*100);
-      o.push(`<g class="cab" data-ls="${s.id}"><rect x="6" y="${y-11}" width="458" height="${30}" rx="4" fill="rgba(255,255,255,.03)"/>`,
-        `<text x="12" y="${y}" class="fs" style="fill:#d6dde4"><tspan style="font-weight:600">${s.id}</tspan> ${s.short}</text>`,
-        `<text x="458" y="${y}" text-anchor="end" class="fs ${live?'':'dl'}">${s.gs?`<tspan style="fill:var(--accent)">◆ aggregaat ${s.gs.state==='aan'?Math.round((s.gs.load||0)*100)+'%':'UIT'}</tspan> · `:''}${EN.has(s.node+'v')?`trafo ${tl}% · trap ${s.tapLv>0?'+':''}${s.tapLv}`:live?'':'spanningsloos'}${s.eta&&s.aOff?` · herstel ${fmtClock(s.eta)}`:''}</text>`);
-      s.groups.filter(g=>g.kind!=='ovl').forEach((g,j)=>{const x=12+j*90,on=D[g.id].state===1;
-        o.push(`<rect x="${x}" y="${y+5}" width="84" height="11" rx="2" fill="${on?'rgba(255,255,255,.06)':'transparent'}" stroke="${col(g)}" stroke-width="${on?1:0.6}" ${on?'':'stroke-dasharray="2 2"'}/>`,
-          `<text x="${x+3}" y="${y+13.5}" class="fs" style="font-size:8px;fill:${col(g)}">G${j+1} ${on?(g.U?Math.round(g.U)+' V':'0 V'):'UIT'}${g.pvTrip>SIM.t?' ☀✕':''}${g.backfed&&s.gs?' ◆':''}</text>`);});
-      o.push('</g>');y+=34;});y+=4;});
-  o.push(`<text x="10" y="${y}" class="h">KABELKASTEN (LS-KOPPELINGEN, MAX. 280 kW)</text>`);y+=14;
-  LS_LINKS.forEach(d=>{o.push(`<g class="cab" data-ls="${d.bay}"><text x="12" y="${y}" class="fs" style="fill:#d6dde4">${d.id}</text><text x="52" y="${y}" class="fs dl">${d.a} ↔ ${d.b}</text>`,
-    `<text x="458" y="${y}" text-anchor="end" class="fs" style="fill:${d.state?(d.load>1?'var(--red)':'var(--green)'):'var(--muted)'}">${d.state?`dicht · ${Math.round((d.load||0)*280)} kW`:'open'}</text></g>`);y+=14;});
+// eenlijnschema per MS-station (alleen kijken: schakelen gaat lokaal of via een monteur in het LS-venster)
+function renderLSTab(){const g=$('#lsG');if(!g||SLD.tab!=='L')return;const o=[],CW=152,CH=176;
+  const vcol=g=>!g.U?'var(--muted)':g.U>U_MAX||g.U<U_MIN?'var(--red)':g.U>248||g.U<212?'var(--accent)':'#9be15d';
+  const ln=(x1,y1,x2,y2,cls,extra='')=>o.push(`<line class="w ${cls}" style="stroke-width:2" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" ${extra}/>`);
+  o.push('<text x="235" y="12" text-anchor="middle" class="h">LAAGSPANNING · EENLIJNSCHEMA PER MS-STATION</text>',
+    '<text x="235" y="24" text-anchor="middle" class="fs dl">spanning per straat 207–253 V · ◆ aggregaat · ⇄ kabelkast · klik = LS-venster</text>');
+  RING.stations.forEach((s,k)=>{const x0=6+(k%3)*(CW+4),y0=32+Math.floor(k/3)*(CH+5),cx=x0+CW/2,M=s.node,live=stationLive(s),gs=s.gs?.state==='aan';
+    const busCls=gs?'lv':nodeClass(M+'v'),n=s.groups.length;
+    o.push(`<g class="cab" data-ls="${s.id}"><title>${s.id} ${s.name} – klik voor het LS-venster</title><rect x="${x0}" y="${y0}" width="${CW}" height="${CH}" rx="6" fill="rgba(255,255,255,0.025)" stroke="${live?'rgba(255,255,255,0.09)':'rgba(229,72,77,0.55)'}"/>`,
+      `<text x="${x0+6}" y="${y0+13}" class="fs" style="fill:#d6dde4"><tspan style="font-weight:700">${s.id}</tspan> ${s.short}</text>`,
+      `<text x="${x0+6}" y="${y0+25}" class="fs dl" style="font-size:8.5px">${EN.has(M+'v')?`${Math.round(Math.abs(s.trLoad||0)*100)}% · trap ${s.tapLv>0?'+':''}${s.tapLv}`:gs?'aggregaat':'uit'}</text>`);
+    // MS-voeding en distributietrafo
+    ln(cx,y0+18,cx,y0+24,nodeClass(M+'t'));
+    o.push(`<circle class="w ${nodeClass(M+'t')}" style="stroke-width:2" cx="${cx}" cy="${y0+30}" r="6"/><circle class="w ${busCls}" style="stroke-width:2" cx="${cx}" cy="${y0+40}" r="6"/>`);
+    o.push(`<text x="${cx+10}" y="${y0+34}" class="fs dl" style="font-size:8px">${s.kva} kVA</text>`);
+    ln(cx,y0+46,cx,y0+54,busCls);ln(x0+10,y0+54,x0+CW-10,y0+54,busCls,'stroke-linecap="butt"');
+    if(s.gs)o.push(`<text x="${x0+8}" y="${y0+47}" class="fs" style="fill:var(--accent);font-size:9px">◆ ${gs?Math.round((s.gs.load||0)*100)+'%':'UIT'}</text>`);
+    // LS-afgangen met NH-lastscheider, spanning en kabelkast
+    s.groups.forEach((gr,j)=>{const gx=x0+10+(j+0.5)*(CW-20)/n,on=D[gr.id].state===1,fed=gr.backfed&&gs,cls=fed?'lv':nodeClass(gr.node),kk=LS_LINKS.find(d=>d.a===gr.id||d.b===gr.id);
+      ln(gx,y0+54,gx,y0+62,busCls);
+      o.push(`<rect x="${gx-3.5}" y="${y0+62}" width="7" height="11" rx="1" style="fill:${on?'#e5484d':'transparent'};stroke:${on?'#e5484d':'#3fcf72'};stroke-width:1.4"/>`);
+      ln(gx,y0+73,gx,y0+98,cls,fed?'stroke-dasharray="3 2"':'');
+      o.push(`<polygon class="w arrow ${cls}" points="${gx-3.5},${y0+98} ${gx+3.5},${y0+98} ${gx},${y0+104}"/>`);
+      if(kk){const st=kk.state===1;o.push(`<circle cx="${gx}" cy="${y0+86}" r="3" style="fill:${st?'#9be15d':'#0f1418'};stroke:${st?'#9be15d':'#9aa5b1'};stroke-width:1.2"/>`);}
+      o.push(`<text x="${gx}" y="${y0+114}" text-anchor="middle" class="fs" style="font-size:8px">${gr.kind==='ovl'?'OVL':(n>5?'':'G')+(j+1)}</text>`,
+        `<text x="${gx}" y="${y0+124}" text-anchor="middle" class="fs" style="font-size:8px;fill:${vcol(gr)}">${gr.U?Math.round(gr.U):'—'}</text>`);
+      if(gr.pvTrip>SIM.t)o.push(`<text x="${gx}" y="${y0+134}" text-anchor="middle" style="font-size:8px;fill:var(--red)">☀✕</text>`);});
+    // kabelkasten van dit station
+    LS_LINKS.filter(d=>D[d.a].bay===s.id||D[d.b].bay===s.id).forEach((d,i)=>{const other=D[d.a].bay===s.id?D[d.b].bay:D[d.a].bay,st=d.state===1;
+      o.push(`<text x="${x0+6}" y="${y0+150+i*11}" class="fs" style="font-size:8.5px;fill:${st?(d.load>1?'var(--red)':'#9be15d'):'var(--muted)'}">⇄ ${d.id} → ${other} · ${st?Math.round((d.load||0)*280)+' kW':'open'}</text>`);});
+    o.push('</g>');});
   g.innerHTML=o.join('');}
-$('#sld').addEventListener('click',e=>{const c=e.target.closest('[data-ls]');if(c)openLS(c.dataset.ls);});
+$('#sld').addEventListener('click',e=>{const c=e.target.closest('[data-ls]');if(c)return openLS(c.dataset.ls);const g=e.target.closest('[data-goto]');if(g)setTab(g.dataset.goto);});
 
 // ---- LS-venster
 let lsPrev=false,lsSt='MS1';
@@ -4335,7 +4355,7 @@ addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;
   else if(e.key==='Escape'){if(GAME.handover?.open)closeHandover();else if(setOpen())closeSettings();else if(flexOpen())closeFlex();else if(assOpen())closeAssets();else if(kitOpen())closeKit();else if(keysOpen())closeKeys();else if(lsOpen())closeLS();else if(protOpen())closeProt();else if(menuOpen()){if(performance.now()-menuAt>350)closeMenu();}else if(SEL&&!document.pointerLockElement)selectDevice(null);else openMenu();}});
 // ---------- SCADA-zoom
 let SLDZ=1;try{SLDZ=+localStorage.getItem('osz-sldz')||1;}catch(e){}
-function setZoom(z){SLDZ=clamp(Math.round(z*4)/4,0.75,2.5);document.documentElement.style.setProperty('--sldz',SLDZ);$('#zVal').textContent=Math.round(SLDZ*100)+'%';try{localStorage.setItem('osz-sldz',SLDZ);}catch(e){}}
+function setZoom(z){SLDZ=clamp(Math.round(z*4)/4,0.75,2.5);document.documentElement.style.setProperty('--sldz',SLDZ);$('#zVal').textContent=Math.round(SLDZ*100)+'%';$('#scada .zoom').title='Zoom '+Math.round(SLDZ*100)+'% – Ctrl + scrollwiel of + / −';try{localStorage.setItem('osz-sldz',SLDZ);}catch(e){}}
 $('#zIn').addEventListener('click',()=>setZoom(SLDZ+0.25));$('#zOut').addEventListener('click',()=>setZoom(SLDZ-0.25));
 $('#scada').addEventListener('wheel',e=>{if(!e.ctrlKey)return;e.preventDefault();setZoom(SLDZ+(e.deltaY<0?0.25:-0.25));},{passive:false});
 addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;if(e.key==='+'||e.key==='=')setZoom(SLDZ+0.25);else if(e.key==='-'||e.key==='_')setZoom(SLDZ-0.25);});

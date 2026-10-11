@@ -11,23 +11,39 @@ LS_LINKS.forEach(d=>{const sa=RING.stations.find(s=>s.id===D[d.a].bay),sb=RING.s
   regView(d.id,root,()=>{ind.emissiveIntensity=d.state?2.5:0;},{labelPos:V3(x,1.9,z)});});
 
 // ---- SCADA-tabblad LS (overzicht; klik op een station voor het LS-venster)
-function renderLSTab(){const g=$('#lsG');if(!g||SLD.tab!=='L')return;const o=[];let y=20;
-  const col=g=>!g.U?'var(--muted)':g.U>U_MAX||g.U<U_MIN?'var(--red)':g.U>248||g.U<212?'var(--accent)':'var(--green)';
-  o.push(`<text x="235" y="${y-4}" text-anchor="middle" class="h">LAAGSPANNING PER MS-STATION</text>`,`<text x="235" y="${y+9}" text-anchor="middle" class="fs dl">spanning per straat (207–253 V) · ◆ aggregaat · klik voor het LS-venster (N)</text>`);y+=28;
-  RINGS.forEach(rg=>{o.push(`<text x="10" y="${y}" class="h">${rg.name.toUpperCase()}</text>`);y+=14;
-    rg.stations.forEach(s=>{const live=stationLive(s),tl=Math.round(Math.abs(s.trLoad||0)*100);
-      o.push(`<g class="cab" data-ls="${s.id}"><rect x="6" y="${y-11}" width="458" height="${30}" rx="4" fill="rgba(255,255,255,.03)"/>`,
-        `<text x="12" y="${y}" class="fs" style="fill:#d6dde4"><tspan style="font-weight:600">${s.id}</tspan> ${s.short}</text>`,
-        `<text x="458" y="${y}" text-anchor="end" class="fs ${live?'':'dl'}">${s.gs?`<tspan style="fill:var(--accent)">◆ aggregaat ${s.gs.state==='aan'?Math.round((s.gs.load||0)*100)+'%':'UIT'}</tspan> · `:''}${EN.has(s.node+'v')?`trafo ${tl}% · trap ${s.tapLv>0?'+':''}${s.tapLv}`:live?'':'spanningsloos'}${s.eta&&s.aOff?` · herstel ${fmtClock(s.eta)}`:''}</text>`);
-      s.groups.filter(g=>g.kind!=='ovl').forEach((g,j)=>{const x=12+j*90,on=D[g.id].state===1;
-        o.push(`<rect x="${x}" y="${y+5}" width="84" height="11" rx="2" fill="${on?'rgba(255,255,255,.06)':'transparent'}" stroke="${col(g)}" stroke-width="${on?1:0.6}" ${on?'':'stroke-dasharray="2 2"'}/>`,
-          `<text x="${x+3}" y="${y+13.5}" class="fs" style="font-size:8px;fill:${col(g)}">G${j+1} ${on?(g.U?Math.round(g.U)+' V':'0 V'):'UIT'}${g.pvTrip>SIM.t?' ☀✕':''}${g.backfed&&s.gs?' ◆':''}</text>`);});
-      o.push('</g>');y+=34;});y+=4;});
-  o.push(`<text x="10" y="${y}" class="h">KABELKASTEN (LS-KOPPELINGEN, MAX. 280 kW)</text>`);y+=14;
-  LS_LINKS.forEach(d=>{o.push(`<g class="cab" data-ls="${d.bay}"><text x="12" y="${y}" class="fs" style="fill:#d6dde4">${d.id}</text><text x="52" y="${y}" class="fs dl">${d.a} ↔ ${d.b}</text>`,
-    `<text x="458" y="${y}" text-anchor="end" class="fs" style="fill:${d.state?(d.load>1?'var(--red)':'var(--green)'):'var(--muted)'}">${d.state?`dicht · ${Math.round((d.load||0)*280)} kW`:'open'}</text></g>`);y+=14;});
+// eenlijnschema per MS-station (alleen kijken: schakelen gaat lokaal of via een monteur in het LS-venster)
+function renderLSTab(){const g=$('#lsG');if(!g||SLD.tab!=='L')return;const o=[],CW=152,CH=176;
+  const vcol=g=>!g.U?'var(--muted)':g.U>U_MAX||g.U<U_MIN?'var(--red)':g.U>248||g.U<212?'var(--accent)':'#9be15d';
+  const ln=(x1,y1,x2,y2,cls,extra='')=>o.push(`<line class="w ${cls}" style="stroke-width:2" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" ${extra}/>`);
+  o.push('<text x="235" y="12" text-anchor="middle" class="h">LAAGSPANNING · EENLIJNSCHEMA PER MS-STATION</text>',
+    '<text x="235" y="24" text-anchor="middle" class="fs dl">spanning per straat 207–253 V · ◆ aggregaat · ⇄ kabelkast · klik = LS-venster</text>');
+  RING.stations.forEach((s,k)=>{const x0=6+(k%3)*(CW+4),y0=32+Math.floor(k/3)*(CH+5),cx=x0+CW/2,M=s.node,live=stationLive(s),gs=s.gs?.state==='aan';
+    const busCls=gs?'lv':nodeClass(M+'v'),n=s.groups.length;
+    o.push(`<g class="cab" data-ls="${s.id}"><title>${s.id} ${s.name} – klik voor het LS-venster</title><rect x="${x0}" y="${y0}" width="${CW}" height="${CH}" rx="6" fill="rgba(255,255,255,0.025)" stroke="${live?'rgba(255,255,255,0.09)':'rgba(229,72,77,0.55)'}"/>`,
+      `<text x="${x0+6}" y="${y0+13}" class="fs" style="fill:#d6dde4"><tspan style="font-weight:700">${s.id}</tspan> ${s.short}</text>`,
+      `<text x="${x0+6}" y="${y0+25}" class="fs dl" style="font-size:8.5px">${EN.has(M+'v')?`${Math.round(Math.abs(s.trLoad||0)*100)}% · trap ${s.tapLv>0?'+':''}${s.tapLv}`:gs?'aggregaat':'uit'}</text>`);
+    // MS-voeding en distributietrafo
+    ln(cx,y0+18,cx,y0+24,nodeClass(M+'t'));
+    o.push(`<circle class="w ${nodeClass(M+'t')}" style="stroke-width:2" cx="${cx}" cy="${y0+30}" r="6"/><circle class="w ${busCls}" style="stroke-width:2" cx="${cx}" cy="${y0+40}" r="6"/>`);
+    o.push(`<text x="${cx+10}" y="${y0+34}" class="fs dl" style="font-size:8px">${s.kva} kVA</text>`);
+    ln(cx,y0+46,cx,y0+54,busCls);ln(x0+10,y0+54,x0+CW-10,y0+54,busCls,'stroke-linecap="butt"');
+    if(s.gs)o.push(`<text x="${x0+8}" y="${y0+47}" class="fs" style="fill:var(--accent);font-size:9px">◆ ${gs?Math.round((s.gs.load||0)*100)+'%':'UIT'}</text>`);
+    // LS-afgangen met NH-lastscheider, spanning en kabelkast
+    s.groups.forEach((gr,j)=>{const gx=x0+10+(j+0.5)*(CW-20)/n,on=D[gr.id].state===1,fed=gr.backfed&&gs,cls=fed?'lv':nodeClass(gr.node),kk=LS_LINKS.find(d=>d.a===gr.id||d.b===gr.id);
+      ln(gx,y0+54,gx,y0+62,busCls);
+      o.push(`<rect x="${gx-3.5}" y="${y0+62}" width="7" height="11" rx="1" style="fill:${on?'#e5484d':'transparent'};stroke:${on?'#e5484d':'#3fcf72'};stroke-width:1.4"/>`);
+      ln(gx,y0+73,gx,y0+98,cls,fed?'stroke-dasharray="3 2"':'');
+      o.push(`<polygon class="w arrow ${cls}" points="${gx-3.5},${y0+98} ${gx+3.5},${y0+98} ${gx},${y0+104}"/>`);
+      if(kk){const st=kk.state===1;o.push(`<circle cx="${gx}" cy="${y0+86}" r="3" style="fill:${st?'#9be15d':'#0f1418'};stroke:${st?'#9be15d':'#9aa5b1'};stroke-width:1.2"/>`);}
+      o.push(`<text x="${gx}" y="${y0+114}" text-anchor="middle" class="fs" style="font-size:8px">${gr.kind==='ovl'?'OVL':(n>5?'':'G')+(j+1)}</text>`,
+        `<text x="${gx}" y="${y0+124}" text-anchor="middle" class="fs" style="font-size:8px;fill:${vcol(gr)}">${gr.U?Math.round(gr.U):'—'}</text>`);
+      if(gr.pvTrip>SIM.t)o.push(`<text x="${gx}" y="${y0+134}" text-anchor="middle" style="font-size:8px;fill:var(--red)">☀✕</text>`);});
+    // kabelkasten van dit station
+    LS_LINKS.filter(d=>D[d.a].bay===s.id||D[d.b].bay===s.id).forEach((d,i)=>{const other=D[d.a].bay===s.id?D[d.b].bay:D[d.a].bay,st=d.state===1;
+      o.push(`<text x="${x0+6}" y="${y0+150+i*11}" class="fs" style="font-size:8.5px;fill:${st?(d.load>1?'var(--red)':'#9be15d'):'var(--muted)'}">⇄ ${d.id} → ${other} · ${st?Math.round((d.load||0)*280)+' kW':'open'}</text>`);});
+    o.push('</g>');});
   g.innerHTML=o.join('');}
-$('#sld').addEventListener('click',e=>{const c=e.target.closest('[data-ls]');if(c)openLS(c.dataset.ls);});
+$('#sld').addEventListener('click',e=>{const c=e.target.closest('[data-ls]');if(c)return openLS(c.dataset.ls);const g=e.target.closest('[data-goto]');if(g)setTab(g.dataset.goto);});
 
 // ---- LS-venster
 let lsPrev=false,lsSt='MS1';

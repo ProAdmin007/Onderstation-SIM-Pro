@@ -58,11 +58,15 @@ function buildSLD(){
       W(x,Y+67,x,Y+74,n2+'v');W(x-32,Y+74,x+32,Y+74,n2+'v','w bus2');
       s.groups.forEach((g,j)=>{const gx=x-32+(j+0.5)*64/s.groups.length;W(gx,Y+74,gx,Y+84,n2+'v');
         o.push(`<g class="dev cb lvs" data-id="${g.id}" transform="translate(${gx} ${Y+90})"><title>${g.id} · ${g.name}</title>${hit(14,18)}<rect class="body" x="-4.5" y="-4.5" width="9" height="9" rx="1.5"/></g>`);
-        W(gx,Y+95,gx,Y+104,g.node);o.push(`<polygon class="w arrow" data-n="${g.node}" data-c="w arrow" points="${gx-4},${Y+104} ${gx+4},${Y+104} ${gx},${Y+111}"/>`);T(gx,Y+121,'G'+(j+1),'middle','fs');});
+        W(gx,Y+95,gx,Y+104,g.node);o.push(`<polygon class="w arrow" data-n="${g.node}" data-c="w arrow" points="${gx-4},${Y+104} ${gx+4},${Y+104} ${gx},${Y+111}"/>`);T(gx,Y+121,s.groups.length>5?String(j+1):'G'+(j+1),'middle','fs');});
       M('stc'+s.id,x,Y+133);M('stp'+s.id,x,Y+144);M('stu'+s.id,x,Y+155,'middle','');
-      if(s.id+'-R'===rg.nop)T(x+24,Y+20,'NOP','middle','mh fs');});
+      if(s.id+'-R'===rg.nop)T(x+24,Y+20,'NOP','middle','mh fs');
+      // koppelveld naar OS Meppel (MS5-K): vanaf de stationsrail rechts in het kader omlaag, onder het kader naar Meppel
+      if(D[s.id+'-K']){const kx=x+35,by=oy+262;W(x+13,Y,x+13,Y+16,n2);W(x+13,Y+16,kx,Y+16,n2);W(kx,Y+16,kx,by,n2);DS(s.id+'-K',kx,by+11,s.id+'-K',-1);W(kx,by+22,kx,by+28,'MP3');W(kx,by+28,x-120,by+28,'MP3');
+        o.push(`<g class="golink" data-goto="M"><rect class="hit" x="${x-300}" y="${by+18}" width="176" height="20" rx="4"/><text x="${x-124}" y="${by+31}" text-anchor="end" class="fs mh">⇄ OS Meppel · koppelkabel MP3 ›</text></g>`);M('lnk',x-124,by+16,'end','fs');}});
     RING.secs.filter(c=>c.ring===rg).forEach((sec,i)=>{const x1=i?XS[i-1]+35:14,x2=i<n?XS[i]-35:456;W(x1,RY,x2,RY,sec.node);M('flt'+sec.id,(x1+x2)/2,RY-8,'middle','bad');});};
-  RINGS.forEach((rg,k)=>drawRing(rg,k*262));
+  RINGS.forEach((rg,k)=>drawRing(rg,k*296));
+  T(235,568,'⚑ verklikker aangesproken · ⚡ kabelfout · klik op een station voor alle schakelaars','middle','fs dl');
   // tabblad OS Meppel: 110 kV en trafo van Netbeheer Noord (grijs, niet bedienbaar), onze uitgaande velden en de koppelkabel naar MS5
   out.M=[];o=out.M;
   T(235,22,'OS MEPPEL','middle','h');T(235,36,'110 kV en transformator: Netbeheer Noord','middle','fs dl');T(235,48,'de uitgaande velden zijn van ons','middle','fs dl');
@@ -73,9 +77,8 @@ function buildSLD(){
   [['MP1',120],['MP2',235],['MP3',350]].forEach(([id,x])=>{const f=F(id);W(x,250,x,277,'MP');CB(f.cb,x,285,f.cb,-1);W(x,293,x,324,f.node);W(x,304,x+15,304,f.node);ES(f.id+'-Q8',x+15,316,'');
     if(!f.link){o.push(`<polygon class="w arrow" data-n="${f.node}" data-c="w arrow" points="${x-6},324 ${x+6},324 ${x},336"/>`);T(x,352,f.short,'middle','dl fs');M('f'+f.id,x,365);M('fc'+f.id,x,378,'middle','');}});
   W(350,324,350,420,'MP3');DS('MS5-K',350,432,'MS5-K',1);W(350,443,350,470,'M5');W(350,470,60,470,'M5');
-  T(60,486,'naar MS5 Bedrijvenpark Zuid (ring woonwijk)','start','fs');T(338,384,'koppelkabel','end','fs dl');T(338,397,'max. 4 MW','end','fs dl');M('lnk',338,410,'end','mh');
+  o.push(`<g class="golink" data-goto="R"><rect class="hit" x="56" y="474" width="250" height="18" rx="4"/><text x="60" y="486" class="fs mh">⇄ naar MS5 Bedrijvenpark Zuid (ring woonwijk) ›</text></g>`);T(338,384,'koppelkabel','end','fs dl');T(338,397,'max. 4 MW','end','fs dl');M('lnk',338,410,'end','mh');
   T(235,516,'MS5-K is normaal open. Sluiten mag alleen als de','middle','fs dl');T(235,529,'ringkant spanningsloos is: dan voedt Meppel MS5 terug.','middle','fs dl');T(235,542,'Parallel met Netbeheer Noord is niet toegestaan.','middle','fs dl');
-  T(235,540,'⚑ verklikker aangesproken · ⚡ kabelfout','middle','fs');T(235,553,'klik op een station voor alle schakelaars','middle','fs');
   const svg=$('#sld');svg.innerHTML=`<g data-tab="10">${out[10].join('')}</g><g data-tab="20" style="display:none">${out[20].join('')}</g><g data-tab="R" style="display:none">${out.R.join('')}</g><g data-tab="P" style="display:none"><g id="progG"></g></g><g data-tab="K" style="display:none"><g id="cabG"></g></g><g data-tab="L" style="display:none"><g id="lsG"></g></g><g data-tab="M" style="display:none">${out.M.join('')}</g>`;
   SLD.nodes=[...svg.querySelectorAll('[data-n]')];SLD.byNode={};SLD.nodes.forEach(el=>(SLD.byNode[el.dataset.n]??=[]).push(el));
   svg.querySelectorAll('.dev').forEach(el=>{const id=el.dataset.id,tab=el.closest('[data-tab]').dataset.tab;(SLD.devs[id]??=[]).push(el);(SLD.devTab[id]??=new Set()).add(tab);

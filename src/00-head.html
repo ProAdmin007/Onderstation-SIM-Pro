@@ -88,8 +88,8 @@ button:disabled{opacity:.35;cursor:not-allowed}
 #sld{display:block;width:calc(456px * var(--sldz,1));height:auto;padding:4px 6px 0}
 .zoom{display:flex;align-items:center;gap:3px;margin-left:auto}
 .zoom span{font-family:var(--mono);font-size:10.5px;color:var(--text);min-width:38px;text-align:center}
-#scada .tabs{margin-left:8px}
-.legend{display:flex;flex-wrap:wrap;gap:12px;padding:8px 14px 12px;font-size:11px;color:var(--muted)}
+#scada .tabs{margin-left:6px}#scada .ph{padding:8px 8px;letter-spacing:.4px}#scada .zoom span{display:none}#scada .zoom{gap:2px}
+.legend{display:flex;flex-wrap:wrap;gap:3px 8px;padding:8px 10px 10px;font-size:10px;color:var(--muted)}
 .legend span{display:flex;align-items:center;gap:5px}
 .legend i{width:14px;height:3px;border-radius:2px;display:inline-block}
 .legend i.sq{width:10px;height:10px;border-radius:2px}
@@ -119,8 +119,9 @@ body.lite #labels,body.lite #tooltip{display:none}body.lite *{animation:none!imp
 #sld text{fill:var(--muted);font:10px 'JetBrains Mono',monospace}
 #sld text.dl{fill:#c3ccd5;font-weight:500}
 #sld text.fs{font-size:9px}
-.tabs{display:flex;gap:3px;margin-left:auto;margin-right:8px}
-.tabs button{padding:2px 9px;font-size:11px;letter-spacing:.3px}
+.tabs{display:flex;gap:2px;margin-left:auto;margin-right:6px}
+.tabs button{padding:2px 5px;font-size:10px;letter-spacing:0}
+#sld .golink{cursor:pointer}#sld .golink rect{fill:transparent;stroke:none}#sld .golink:hover text{text-decoration:underline}
 #sld text.h{fill:var(--text);font-weight:700;font-size:11px}
 #sld text.m{fill:#9fd0ff}
 #sld text.mh{fill:#ffb59c}
