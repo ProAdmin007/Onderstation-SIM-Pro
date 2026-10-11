@@ -305,6 +305,9 @@ body.fp #torch.on{display:block}
 .mode.resume{border-color:var(--green)}.mode.resume .mt{color:var(--green)}.mode.delsave{opacity:.75}
 #fps{display:none;position:fixed;right:14px;bottom:14px;z-index:8;font:600 12px var(--mono);color:#9fe39a;background:rgba(13,17,22,.7);padding:3px 8px;border-radius:6px;pointer-events:none}#fps.on{display:block}
 .selc{width:100%;height:auto;background:rgba(255,255,255,.02);border:1px solid var(--line);border-radius:8px}.selc .ax{font:9px var(--mono);fill:var(--muted)}.sel-btns{display:flex;flex-wrap:wrap;gap:3px;margin:4px 0 6px}.sel-btns .on{background:var(--accent);color:#1a1206;border-color:var(--accent)}.pr .bad{color:var(--red)}
+#slotWin{position:fixed;inset:0;display:grid;place-items:center;background:rgba(6,9,12,.66);z-index:40}#slotWin.hidden{display:none}
+.slot{display:flex;align-items:center;gap:12px;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line)}.slot b{display:block}.slot span{font-size:12px;color:var(--muted)}.slot i{font-size:11px}
+.savecard{display:flex;flex-direction:column;gap:4px}.savecard .delsave{align-self:flex-end;opacity:.75}
 #recWin{position:fixed;inset:0;display:grid;place-items:center;background:rgba(6,9,12,.66);z-index:12;overflow:auto;padding:20px 0}#recWin.hidden{display:none}
 .rec-grid{display:grid;grid-template-columns:190px 1fr;gap:12px}.rec-list{display:flex;flex-direction:column;gap:3px;max-height:420px;overflow:auto}.rec-it{text-align:left;padding:5px 8px}.rec-it b{display:block;font-size:12px}.rec-it span{font-size:11px;color:var(--muted)}.rec-it.on{border-color:var(--accent)}
 #lsWin{position:fixed;inset:0;display:grid;place-items:center;background:rgba(6,9,12,.66);z-index:12;overflow:auto;padding:20px 0}#lsWin.hidden{display:none}
@@ -403,6 +406,7 @@ body.fp #torch.on{display:block}
 <div id="keys" class="hidden"></div>
 <div id="lsWin" class="hidden"></div>
 <div id="recWin" class="hidden"></div>
+<div id="slotWin" class="hidden"></div>
 <div id="settings" class="hidden"></div>
 <div id="fps"></div>
 <div id="saved"></div>

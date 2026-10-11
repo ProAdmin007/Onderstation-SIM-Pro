@@ -169,11 +169,11 @@ Bedoeld voor **bedrijfsvoerders en monteurs in opleiding**, studenten **elektrot
   - **Geluid:** hoofdvolume plus vier kanalen: omgeving (brom, verkeer, vogels, regen), schakelen (vermogenschakelaars, motoren, vlambogen), meldingen en alarmen, en telefoon.
   - Alles wordt in de browser bewaard.
 - **Opslaan en verder spelen** (vrije dienst, dag- en avonddienst):
-  - Opslaan kan met *💾 Spel opslaan* in het pauzemenu of met `Ctrl+S`. Het spel slaat ook elke 2 minuten en bij het sluiten van de pagina automatisch op. *Opslaan en naar hoofdmenu* bewaart je spel.
-  - In het hoofdmenu staat dan bovenaan *Verder spelen*, met de dienst, de tijd, het seizoen, de score en wanneer je opsloeg.
+  - Er zijn **vier opslagplekken**: *Automatisch* (elke 2 minuten en bij het sluiten van de pagina) en **opslagplek 1–3**. Met *💾 Spel opslaan* in het pauzemenu kies je de plek; `Ctrl+S` slaat snel op in de plek waaruit je hervatte of waar je het laatst handmatig opsloeg. *Opslaan en naar hoofdmenu* bewaart je spel in *Automatisch*.
+  - In het hoofdmenu staan onder *Verder spelen* alle opgeslagen spellen, met de dienst, de tijd, het seizoen, de score en wanneer je opsloeg. Elk kun je apart verwijderen.
   - Bewaard worden: de stand van alle schakelaars, storingen, slijtage, temperaturen, de lopende werkopdracht (met je schakelbrief), weer, flex, beveiligingsinstellingen, score, statistieken en de tijdlijn.
   - Reparaties en andere geplande gebeurtenissen worden bij het hervatten opnieuw ingepland. Een groot incident dat liep, wordt netjes afgerond.
-  - Speel je een dienst tot het einde, dan verdwijnt het opgeslagen spel.
+  - Speel je een dienst tot het einde, dan verdwijnt het automatisch opgeslagen spel. Je eigen opslagplekken blijven bewaard.
 - **Pauzemenu (`Esc`):** hervatten, de dienst beëindigen met rapport, of de score opslaan en terug naar het hoofdmenu.
 - **Klaar om te schakelen:** als de storingsdienst of TenneT klaar is, of een transformator weer gereset mag worden, hoor je een oplopend klokgeluid en verschijnt een groene banner. Het betreffende veld knippert groen in SCADA en in 3D tot je het schakelt. · `spatie` pauze · `L` labels · `M` geluid · `Esc` deselecteren
 </details>

@@ -305,6 +305,9 @@ body.fp #torch.on{display:block}
 .mode.resume{border-color:var(--green)}.mode.resume .mt{color:var(--green)}.mode.delsave{opacity:.75}
 #fps{display:none;position:fixed;right:14px;bottom:14px;z-index:8;font:600 12px var(--mono);color:#9fe39a;background:rgba(13,17,22,.7);padding:3px 8px;border-radius:6px;pointer-events:none}#fps.on{display:block}
 .selc{width:100%;height:auto;background:rgba(255,255,255,.02);border:1px solid var(--line);border-radius:8px}.selc .ax{font:9px var(--mono);fill:var(--muted)}.sel-btns{display:flex;flex-wrap:wrap;gap:3px;margin:4px 0 6px}.sel-btns .on{background:var(--accent);color:#1a1206;border-color:var(--accent)}.pr .bad{color:var(--red)}
+#slotWin{position:fixed;inset:0;display:grid;place-items:center;background:rgba(6,9,12,.66);z-index:40}#slotWin.hidden{display:none}
+.slot{display:flex;align-items:center;gap:12px;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line)}.slot b{display:block}.slot span{font-size:12px;color:var(--muted)}.slot i{font-size:11px}
+.savecard{display:flex;flex-direction:column;gap:4px}.savecard .delsave{align-self:flex-end;opacity:.75}
 #recWin{position:fixed;inset:0;display:grid;place-items:center;background:rgba(6,9,12,.66);z-index:12;overflow:auto;padding:20px 0}#recWin.hidden{display:none}
 .rec-grid{display:grid;grid-template-columns:190px 1fr;gap:12px}.rec-list{display:flex;flex-direction:column;gap:3px;max-height:420px;overflow:auto}.rec-it{text-align:left;padding:5px 8px}.rec-it b{display:block;font-size:12px}.rec-it span{font-size:11px;color:var(--muted)}.rec-it.on{border-color:var(--accent)}
 #lsWin{position:fixed;inset:0;display:grid;place-items:center;background:rgba(6,9,12,.66);z-index:12;overflow:auto;padding:20px 0}#lsWin.hidden{display:none}
@@ -403,6 +406,7 @@ body.fp #torch.on{display:block}
 <div id="keys" class="hidden"></div>
 <div id="lsWin" class="hidden"></div>
 <div id="recWin" class="hidden"></div>
+<div id="slotWin" class="hidden"></div>
 <div id="settings" class="hidden"></div>
 <div id="fps"></div>
 <div id="saved"></div>
@@ -2471,7 +2475,7 @@ function finalizeGame(){if(GAME.ended)return;GAME.ended=true;SIM.paused=true;
   GAME.obj.forEach(o=>{if(o.state)return;const ok=o.final?o.final():false;o.state=ok?'done':'fail';award(ok?100:-150,ok?'Doel behaald':'Doel gemist');});
   if(!SIM.incidents&&SIM.t-GAME.t0>=60)award(200,'Veilig gewerkt');}   // bonus pas na minimaal een uur dienst
 function saveBest(){const s=Math.round(GAME.score),best=getBest(GAME.mode,GAME.diff),rec=s>best;if(rec){try{localStorage.setItem(bestKey(GAME.mode,GAME.diff),s);}catch(e){}}return {s,best,rec};}
-function endGame(){finalizeGame();syncSpeed();showReport();if(['free','day','eve'].includes(GAME.mode))deleteSave();}   // gespeeld tot het einde: opgeslagen spel is niet meer nodig
+function endGame(){finalizeGame();syncSpeed();showReport();if(['free','day','eve'].includes(GAME.mode))deleteSave('auto');}   // gespeeld tot het einde: opgeslagen spel is niet meer nodig
 function bestKey(id,diff){return `osz-best-${id}-${diff}`;}
 function getBest(id,diff){try{return +localStorage.getItem(bestKey(id,diff))||0;}catch(e){return 0;}}
 function showReport(){
@@ -2504,7 +2508,7 @@ $('#report').addEventListener('click',e=>{const b=e.target.closest('[data-r]');i
   else{$('#report').classList.add('hidden');GAME.endT=null;GAME.ended=false;GAME.events=true;GAME.tasks=true;GAME.countdown=null;SIM.nextTaskAt=SIM.t+5;setSpeed(60);}});
 function renderMenu(){
   const card=id=>{const m=MODES[id],b=getBest(id,GAME.diff);return `<button class="mode" data-mode="${id}"><span class="mt">${m.tag}</span><b>${m.name}</b><span class="md">${m.desc}</span>${b?`<span class="mb">Beste: ${b.toLocaleString('nl-NL')} (${grade(b)[0]})</span>`:''}</button>`;};
-  const sv=readSave(),svHtml=sv?`<div class="mh">Verder spelen</div><div class="mgrid"><button class="mode resume" data-resume><span class="mt">💾 Opgeslagen spel</span><b>${MODES[sv.mode].name} · ${fmtClock(sv.SIM.t)}</b><span class="md">${DIFFS[sv.diff].label} · ${SEASONS[sv.season].name} · score ${Math.round(sv.GAME.score).toLocaleString('nl-NL')}<br>opgeslagen ${new Date(sv.at).toLocaleString('nl-NL',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</span></button><button class="mode delsave" data-delsave><span class="mt">Opgeslagen spel</span><b>Verwijderen</b><span class="md">Begin opnieuw zonder het opgeslagen spel.</span></button></div>`:'';
+  const svs=listSaves(),svHtml=svs.length?`<div class="mh">Verder spelen</div><div class="mgrid">${svs.map(({k,d})=>`<div class="savecard"><button class="mode resume" data-resume="${k}"><span class="mt">💾 ${slotName(k)}</span><b>${MODES[d.mode].name} · ${fmtClock(d.SIM.t)}</b><span class="md">${DIFFS[d.diff].label} · ${SEASONS[d.season].name} · score ${Math.round(d.GAME.score).toLocaleString('nl-NL')}<br>opgeslagen ${new Date(d.at).toLocaleString('nl-NL',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</span></button><button class="mini delsave" data-delsave="${k}" title="Dit opgeslagen spel verwijderen">✕ verwijderen</button></div>`).join('')}</div>`:'';
   $('#menu').innerHTML=svHtml+`<div class="mh">Dienst draaien</div><div class="mgrid">${['free','day','eve'].map(card).join('')}</div>
     <div class="mh">Leren · begeleide lessen</div><div class="mgrid">${Object.keys(LESSONS).map(card).join('')}</div>
     <div class="mh">Scenario's</div><div class="mgrid">${['zkh','storm','piek','hitte','winter','blackout','dubbel','aanrijding','cyber','overstroming','zonnepiek','pinksteren','aardonweer','kraan','brand','evenement','laadpiek'].map(card).join('')}</div>`;
@@ -4312,6 +4316,9 @@ $('#sld').addEventListener('click',e=>{const c=e.target.closest('[data-cab]');if
 // opnieuw ingepland op basis van die toestand, want stukjes programma kun je niet opslaan.
 var RESUMING=false;
 const SAVE_KEY='osz-save',SAVE_V=2;
+// opslagplekken: 'auto' (elke 2 min en bij afsluiten; dit is ook de plek van oudere opgeslagen spellen) en drie vaste plekken
+const SAVE_SLOTS=['auto','1','2','3'],slotKey=k=>k==='auto'?SAVE_KEY:SAVE_KEY+'-'+k,slotName=k=>k==='auto'?'Automatisch':'Opslagplek '+k;
+let SAVE_SLOT='auto';   // waar Ctrl+S naartoe schrijft: de plek waaruit je hervatte of laatst handmatig opsloeg
 // oudere opgeslagen spellen stap voor stap omzetten naar de huidige opbouw
 const SAVE_MIGRATE={1:d=>{for(const id in d.D||{}){const x=d.D[id];if(x.stuck){delete x.stuck;x.refusals=Math.max(1,x.refusals||0);}}d.LS??={busy:0,orders:[]};return d;}};
 const BASE0=new Map(CONS.map(c=>[c.id,c.base]));   // normale belasting per afnemer (voor het opruimen van een lopend incident)
@@ -4339,8 +4346,8 @@ function taskLoad(s){if(!s)return;
   t.steps.forEach((st,k)=>{if(s.until[k]!=null)st.until=s.until[k];});TASK=t;
   const st=t.steps[t.i];if(st&&st.wait!=null&&st.until!=null&&t.crew){const c=t.crew();if(c)crewDispatch({...c,until:()=>!TASK||TASK.steps[TASK.i]!==st});}}
 // ---- opslaan
-function saveGame(silent){if(!canSave())return false;
-  const data={v:SAVE_V,at:Date.now(),mode:GAME.mode,diff:GAME.diff,season:Object.keys(SEASONS).find(k=>SEASONS[k]===SEASON),
+function saveGame(silent,slot){if(!canSave())return false;slot=slot||(silent?'auto':SAVE_SLOT);
+  const data={v:SAVE_V,slot,at:Date.now(),mode:GAME.mode,diff:GAME.diff,season:Object.keys(SEASONS).find(k=>SEASONS[k]===SEASON),
     SIM:{...grab(SIM,['t','speed','cml','incidents','tasksDone','nextEvent','nextTaskAt','interlock']),lines:JSON.parse(JSON.stringify(SIM.lines)),meppel:{...SIM.meppel}},
     GAME:{...grab(GAME,['score','stats','flags','endT','t0','countdown','planCb','hold']),obj:GAME.obj.map(o=>o.state)},
     ho:GAME.handover?GAME.handover.items.map(i=>({id:i.id,done:!!i.done,f:grab(i,['L','until'])})):null,hoOp:GAME.handover?.op,
@@ -4350,14 +4357,24 @@ function saveGame(silent){if(!canSave())return false;
     WX:{type:WX.type,lock:WX.lock,next:WX.next,cur:{...WX.cur},cover:WX.cover},FLEX:FLEX.map(f=>({id:f.id,req:f.req,at:f.at})),PROT:JSON.parse(JSON.stringify(PROT)),
     TASK:taskSave(),taskSeq,taskCycle,INC:{next:INC.next,done:INC.done,active:INC.active?.def.id||null},PHONE:{...PHONE.stats},EF:EF.on,LS:{busy:GENSET.busy,orders:LS_ORDERS.map(o=>({...o}))},
     REC:{samples:REC.samples.slice(-600),events:REC.events.slice(-1500)}};
-  try{localStorage.setItem(SAVE_KEY,JSON.stringify(data));}catch(e){if(!silent)deny('Opslaan mislukt: niet genoeg ruimte in de browser');return false;}
-  if(!silent){pushAlarm(`💾 Spel opgeslagen (${MODES[GAME.mode].name}, ${fmtClock(SIM.t)})`,'ok');toastSaved('Spel opgeslagen');}else toastSaved('Automatisch opgeslagen');return true;}
+  try{localStorage.setItem(slotKey(slot),JSON.stringify(data));}catch(e){if(!silent)deny('Opslaan mislukt: niet genoeg ruimte in de browser');return false;}
+  if(!silent){SAVE_SLOT=slot;pushAlarm(`💾 Spel opgeslagen in ${slotName(slot).toLowerCase()} (${MODES[GAME.mode].name}, ${fmtClock(SIM.t)})`,'ok');toastSaved(`Opgeslagen · ${slotName(slot)}`);}else toastSaved('Automatisch opgeslagen');return true;}
 function toastSaved(t){const el=$('#saved');el.textContent='💾 '+t;el.classList.remove('show');void el.offsetWidth;el.classList.add('show');}
-function readSave(){try{let d=JSON.parse(localStorage.getItem(SAVE_KEY)||'null');if(!d||!MODES[d.mode]||!(d.v>=1&&d.v<=SAVE_V))return null;
+function readSave(slot='auto'){try{let d=JSON.parse(localStorage.getItem(slotKey(slot))||'null');if(!d||!MODES[d.mode]||!(d.v>=1&&d.v<=SAVE_V))return null;
   while(d.v<SAVE_V){d=SAVE_MIGRATE[d.v](d);d.v++;}return d;}catch(e){return null;}}
-function deleteSave(){try{localStorage.removeItem(SAVE_KEY);}catch(e){}}
+function deleteSave(slot='auto'){try{localStorage.removeItem(slotKey(slot));}catch(e){}}
+const listSaves=()=>SAVE_SLOTS.map(k=>({k,d:readSave(k)})).filter(x=>x.d);
+const saveInfo=d=>`${MODES[d.mode].name} · ${fmtClock(d.SIM.t)} · ${DIFFS[d.diff].label} · ${SEASONS[d.season].name} · score ${Math.round(d.GAME.score).toLocaleString('nl-NL')} · ${new Date(d.at).toLocaleString('nl-NL',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}`;
+// keuzevenster: in welke plek opslaan?
+function openSlots(){if(!canSave())return deny('Opslaan kan in de vrije dienst en in de dag- en avonddienst');
+  $('#slotWin').innerHTML=`<div class="card pm"><div class="eyebrow">Spel opslaan</div><h2>Kies een opslagplek</h2>${SAVE_SLOTS.map(k=>{const d=readSave(k);return `<div class="slot"><div><b>${slotName(k)}</b><span>${d?saveInfo(d):'leeg'}${k==='auto'?'<br><i>wordt ook elke 2 minuten automatisch overschreven</i>':''}</span></div><button class="${k===SAVE_SLOT?'primary':''}" data-slot="${k}">${d?'Overschrijven':'Opslaan'}</button></div>`;}).join('')}<div class="rep-btns"><button data-slotclose>Annuleren</button></div></div>`;
+  $('#slotWin').classList.remove('hidden');}
+const slotsOpen=()=>!$('#slotWin').classList.contains('hidden');
+function closeSlots(){$('#slotWin').classList.add('hidden');}
+$('#slotWin').addEventListener('click',e=>{if(e.target.closest('[data-slotclose]')||e.target.id==='slotWin')return closeSlots();const b=e.target.closest('[data-slot]');if(!b)return;
+  if(saveGame(false,b.dataset.slot)){closeSlots();closeMenu();}});
 // ---- hervatten
-function resumeGame(d){$('#intro').classList.add('hidden');AudioSys.init();controls.autoRotate=false;
+function resumeGame(d){$('#intro').classList.add('hidden');SAVE_SLOT=d.slot||'auto';AudioSys.init();controls.autoRotate=false;
   GAME.diff=d.diff;GAME.season=d.season;RESUMING=true;try{applyMode(d.mode);}finally{RESUMING=false;}
   Object.assign(SIM,d.SIM);LINES.forEach(L=>Object.assign(SIM.lines[L],d.SIM.lines[L]));
   Object.assign(GAME,d.GAME,{obj:GAME.obj,ended:false});GAME.obj.forEach((o,k)=>{o.state=d.GAME.obj[k]??null;});
@@ -4617,7 +4634,7 @@ addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;
   else if(e.code==='KeyP'){if($('#intro').classList.contains('hidden'))setSpeed(0);}
   else if(e.key==='l'||e.key==='L')document.body.classList.toggle('nolabels');
   else if(e.key==='m'||e.key==='M')$('#mute').click();
-  else if(e.key==='Escape'){if(GAME.handover?.open)closeHandover();else if(setOpen())closeSettings();else if(flexOpen())closeFlex();else if(assOpen())closeAssets();else if(kitOpen())closeKit();else if(keysOpen())closeKeys();else if(lsOpen())closeLS();else if(recOpen())closeRec();else if(protOpen())closeProt();else if(menuOpen()){if(performance.now()-menuAt>350)closeMenu();}else if(SEL&&!document.pointerLockElement)selectDevice(null);else openMenu();}});
+  else if(e.key==='Escape'){if(GAME.handover?.open)closeHandover();else if(setOpen())closeSettings();else if(flexOpen())closeFlex();else if(assOpen())closeAssets();else if(kitOpen())closeKit();else if(keysOpen())closeKeys();else if(lsOpen())closeLS();else if(recOpen())closeRec();else if(protOpen())closeProt();else if(slotsOpen())closeSlots();else if(menuOpen()){if(performance.now()-menuAt>350)closeMenu();}else if(SEL&&!document.pointerLockElement)selectDevice(null);else openMenu();}});
 // ---------- SCADA-zoom
 let SLDZ=1;try{SLDZ=+localStorage.getItem('osz-sldz')||1;}catch(e){}
 function setZoom(z){SLDZ=clamp(Math.round(z*4)/4,0.75,2.5);document.documentElement.style.setProperty('--sldz',SLDZ);$('#zVal').textContent=Math.round(SLDZ*100)+'%';$('#scada .zoom').title='Zoom '+Math.round(SLDZ*100)+'% – Ctrl + scrollwiel of + / −';try{localStorage.setItem('osz-sldz',SLDZ);}catch(e){}}
@@ -4639,14 +4656,14 @@ $('#pauseMenu').addEventListener('click',e=>{const b=e.target.closest('[data-pm]
   if(a==='resume')closeMenu();
   else if(a==='settings'){closeMenu();openSettings();}
   else if(a==='keys'){closeMenu();openKeys();}
-  else if(a==='save'){if(saveGame())closeMenu();else deny('Opslaan kan in de vrije dienst en in de dag- en avonddienst');}
+  else if(a==='save')openSlots();
   else if(a==='end'){$('#pauseMenu').classList.add('hidden');document.body.classList.remove('menu');if(FP.on)exitFP();endGame();}
   else if(a==='menu'){if(canSave())saveGame(true);else{finalizeGame();saveBest();}location.search='';}});
 addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
 function startGame(id){$('#intro').classList.add('hidden');AudioSys.init();controls.autoRotate=false;
   applyMode(id);pushAlarm(`${MODES[id]?.name||'Vrije dienst'} gestart (${DIFFS[GAME.diff].label})`,'ok');setSpeed(60);if(GAME.handover)openHandover();
   const v=VIEWPOS[0];flyTo(v[0].clone(),v[1].clone(),2);}
-$('#menu').addEventListener('click',e=>{if(e.target.closest('[data-resume]'))return void(location.search='?resume');if(e.target.closest('[data-delsave]')){deleteSave();return renderMenu();}const b=e.target.closest('[data-mode]');if(b)startGame(b.dataset.mode);});
+$('#menu').addEventListener('click',e=>{const rs=e.target.closest('[data-resume]');if(rs)return void(location.search='?resume='+rs.dataset.resume);const ds=e.target.closest('[data-delsave]');if(ds){deleteSave(ds.dataset.delsave);return renderMenu();}const b=e.target.closest('[data-mode]');if(b)startGame(b.dataset.mode);});
 $('#diff').addEventListener('click',e=>{const b=e.target.closest('[data-d]');if(b){GAME.diff=b.dataset.d;renderMenu();}});
 $('#season').addEventListener('click',e=>{const b=e.target.closest('[data-s]');if(b){GAME.season=b.dataset.s;setSeason(GAME.season);updateSky(hourOf());renderMenu();}});
 addEventListener('pointerdown',()=>AudioSys.init(),{once:true});
@@ -4658,8 +4675,9 @@ $('#loading').remove();
 if(DIFFS[params.get('diff')])GAME.diff=params.get('diff');if(SEASONS[params.get('season')])GAME.season=params.get('season');setSeason(GAME.season);
 if(params.get('weer')&&WX_TYPES[params.get('weer')])setWeather(params.get('weer'),true,true);
 // hervatten; lukt dat niet (beschadigd of onbekend opgeslagen spel), dan een reservekopie bewaren en schoon beginnen
-if(params.has('resume')&&readSave()){try{resumeGame(readSave());}catch(e){console.error('Hervatten mislukt',e);
-  try{localStorage.setItem(SAVE_KEY+'-defect',localStorage.getItem(SAVE_KEY));}catch(_){}deleteSave();
+const RESUME_SLOT=SAVE_SLOTS.includes(params.get('resume'))?params.get('resume'):'auto';
+if(params.has('resume')&&readSave(RESUME_SLOT)){try{resumeGame(readSave(RESUME_SLOT));}catch(e){console.error('Hervatten mislukt',e);
+  try{localStorage.setItem(slotKey(RESUME_SLOT)+'-defect',localStorage.getItem(slotKey(RESUME_SLOT)));}catch(_){}deleteSave(RESUME_SLOT);
   alert('Het opgeslagen spel kon niet worden geladen (mogelijk van een oudere versie). Er is een reservekopie bewaard; je begint opnieuw.');location.search='';}}
 else if(params.has('play'))startGame(params.get('play'));
 else if(params.has('autostart')){$('#intro').classList.add('hidden');applyMode('free');setSpeed(60);}
@@ -4667,7 +4685,7 @@ else{renderMenu();$('#intro').classList.remove('hidden');controls.autoRotate=tru
 if(params.has('night'))updateSky(22);
 if(params.has('view')){const v=VIEWPOS[+params.get('view')];camera.position.copy(v[0]);controls.target.copy(v[1]);controls.autoRotate=false;controls.update();}
 
-window.OS={layoutCheck,LAYOUT,FREC,fltRec,openRec,closeRec,renderRec,selectivity,protSelect,feederT,incT,incOf,shortCircuit,EF,earthFault,efTick,efRails,efU0,railsCoupled,controls,tripBreaker,CONS,LS_LINKS,LS_ORDERS,GENSET,lsTick,lsOrder,lsSwitchOrder,lsExec,gsSend,gsOff,gsRestart,tapOrder,setEta,callPrio,lsAreas,PRIO,openLS,closeLS,renderLS,lvVolt,stationLoads,shedFactor,failP,manualP,phoneTick,refreshDevPanel,updateSLD,openKeys,closeKeys,KEY_HELP,RELAY_BAYS,relayTask,relayDue,relayDefect,initRelays,kitTests,kitMeasure,kitVerdict,kitRun,openKit,closeKit,saveGame,readSave,deleteSave,resumeGame,canSave,specOf,CABLE,soilT,FD,meppelFault,linkTick,tabAlarms,updateTabAlarms,renderTasks,INC,INCIDENTS,startIncident,endIncident,incidentTick,setTab,renderCables,GFX,setGfx,applyGfx,openSettings,closeSettings,WX_TYPES,renderer,scene,FIRE,CARS,updateWindows,updateLife,stationLive,cbMaintTask,worstCb,cond,breakerFails,CB_IDS,FLEX,setFlex,flexTick,congestion,openFlex,closeFlex,checkModel,homeBus,BUSES,SEL_BAYS,TORCH,setTorch,HO_POOL,handoverTick,REC,RP,startReplay,stopReplay,analyse,stationDamage,closeHandover,deviations,PHONE,lvFault,callFrom,phoneAnswer,dispatchLV,LVG,forecast,progAdvice,PROG,startTask:(k,...a)=>{TASK={relayTask,cbMaintTask,railTask,railBTask,stationTask,thermoTask,ringTask,feederTask,lineTask,reserveTask}[k](...a);TASK.i=0;TASK.code='WV-TEST';briefInit(TASK);renderTasks();},SIM,D,LESSONS,lessonGo,selectDevice,abortTask,railTask,stationTask,thermoTask,nearDev,VIEWS,PROT,setProt,openProt,closeProt,busFault,BUSF,RINGS,task:()=>TASK,briefSubmit,briefCheck,briefWatch,actKey,taskActs,crewNear,boxOf:id=>VIEWS[id]&&VIEWS[id].box,AudioSys,updateAudio,WX,setWeather,setSeason,SEASONS,ambient,enterKiosk,ROOMS,blockedAt,RING,NPCS,crewDispatch,ringFault,FP,enterFP,exitFP,pickCenter,camera,camInside,setRatio,setTab,GAME,MODES,applyMode,endGame,EN:()=>EN,FLOW,operate,tapStep,setAVR,resetLockout,toggleAR,regulate,computeFlows,randomEvent,lineFault,feederFault,trafoFault,offerTask,simStep,FEEDERS};
+window.OS={listSaves,openSlots,closeSlots,SAVE_SLOTS,layoutCheck,LAYOUT,FREC,fltRec,openRec,closeRec,renderRec,selectivity,protSelect,feederT,incT,incOf,shortCircuit,EF,earthFault,efTick,efRails,efU0,railsCoupled,controls,tripBreaker,CONS,LS_LINKS,LS_ORDERS,GENSET,lsTick,lsOrder,lsSwitchOrder,lsExec,gsSend,gsOff,gsRestart,tapOrder,setEta,callPrio,lsAreas,PRIO,openLS,closeLS,renderLS,lvVolt,stationLoads,shedFactor,failP,manualP,phoneTick,refreshDevPanel,updateSLD,openKeys,closeKeys,KEY_HELP,RELAY_BAYS,relayTask,relayDue,relayDefect,initRelays,kitTests,kitMeasure,kitVerdict,kitRun,openKit,closeKit,saveGame,readSave,deleteSave,resumeGame,canSave,specOf,CABLE,soilT,FD,meppelFault,linkTick,tabAlarms,updateTabAlarms,renderTasks,INC,INCIDENTS,startIncident,endIncident,incidentTick,setTab,renderCables,GFX,setGfx,applyGfx,openSettings,closeSettings,WX_TYPES,renderer,scene,FIRE,CARS,updateWindows,updateLife,stationLive,cbMaintTask,worstCb,cond,breakerFails,CB_IDS,FLEX,setFlex,flexTick,congestion,openFlex,closeFlex,checkModel,homeBus,BUSES,SEL_BAYS,TORCH,setTorch,HO_POOL,handoverTick,REC,RP,startReplay,stopReplay,analyse,stationDamage,closeHandover,deviations,PHONE,lvFault,callFrom,phoneAnswer,dispatchLV,LVG,forecast,progAdvice,PROG,startTask:(k,...a)=>{TASK={relayTask,cbMaintTask,railTask,railBTask,stationTask,thermoTask,ringTask,feederTask,lineTask,reserveTask}[k](...a);TASK.i=0;TASK.code='WV-TEST';briefInit(TASK);renderTasks();},SIM,D,LESSONS,lessonGo,selectDevice,abortTask,railTask,stationTask,thermoTask,nearDev,VIEWS,PROT,setProt,openProt,closeProt,busFault,BUSF,RINGS,task:()=>TASK,briefSubmit,briefCheck,briefWatch,actKey,taskActs,crewNear,boxOf:id=>VIEWS[id]&&VIEWS[id].box,AudioSys,updateAudio,WX,setWeather,setSeason,SEASONS,ambient,enterKiosk,ROOMS,blockedAt,RING,NPCS,crewDispatch,ringFault,FP,enterFP,exitFP,pickCenter,camera,camInside,setRatio,setTab,GAME,MODES,applyMode,endGame,EN:()=>EN,FLOW,operate,tapStep,setAVR,resetLockout,toggleAR,regulate,computeFlows,randomEvent,lineFault,feederFault,trafoFault,offerTask,simStep,FEEDERS};
 const clock=new THREE.Clock();let hudT=0,skyT=0,progT=0;
 let liteAcc=0;
 function frame(){

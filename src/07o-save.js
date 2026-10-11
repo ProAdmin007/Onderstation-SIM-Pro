@@ -4,6 +4,9 @@
 // opnieuw ingepland op basis van die toestand, want stukjes programma kun je niet opslaan.
 var RESUMING=false;
 const SAVE_KEY='osz-save',SAVE_V=2;
+// opslagplekken: 'auto' (elke 2 min en bij afsluiten; dit is ook de plek van oudere opgeslagen spellen) en drie vaste plekken
+const SAVE_SLOTS=['auto','1','2','3'],slotKey=k=>k==='auto'?SAVE_KEY:SAVE_KEY+'-'+k,slotName=k=>k==='auto'?'Automatisch':'Opslagplek '+k;
+let SAVE_SLOT='auto';   // waar Ctrl+S naartoe schrijft: de plek waaruit je hervatte of laatst handmatig opsloeg
 // oudere opgeslagen spellen stap voor stap omzetten naar de huidige opbouw
 const SAVE_MIGRATE={1:d=>{for(const id in d.D||{}){const x=d.D[id];if(x.stuck){delete x.stuck;x.refusals=Math.max(1,x.refusals||0);}}d.LS??={busy:0,orders:[]};return d;}};
 const BASE0=new Map(CONS.map(c=>[c.id,c.base]));   // normale belasting per afnemer (voor het opruimen van een lopend incident)
@@ -31,8 +34,8 @@ function taskLoad(s){if(!s)return;
   t.steps.forEach((st,k)=>{if(s.until[k]!=null)st.until=s.until[k];});TASK=t;
   const st=t.steps[t.i];if(st&&st.wait!=null&&st.until!=null&&t.crew){const c=t.crew();if(c)crewDispatch({...c,until:()=>!TASK||TASK.steps[TASK.i]!==st});}}
 // ---- opslaan
-function saveGame(silent){if(!canSave())return false;
-  const data={v:SAVE_V,at:Date.now(),mode:GAME.mode,diff:GAME.diff,season:Object.keys(SEASONS).find(k=>SEASONS[k]===SEASON),
+function saveGame(silent,slot){if(!canSave())return false;slot=slot||(silent?'auto':SAVE_SLOT);
+  const data={v:SAVE_V,slot,at:Date.now(),mode:GAME.mode,diff:GAME.diff,season:Object.keys(SEASONS).find(k=>SEASONS[k]===SEASON),
     SIM:{...grab(SIM,['t','speed','cml','incidents','tasksDone','nextEvent','nextTaskAt','interlock']),lines:JSON.parse(JSON.stringify(SIM.lines)),meppel:{...SIM.meppel}},
     GAME:{...grab(GAME,['score','stats','flags','endT','t0','countdown','planCb','hold']),obj:GAME.obj.map(o=>o.state)},
     ho:GAME.handover?GAME.handover.items.map(i=>({id:i.id,done:!!i.done,f:grab(i,['L','until'])})):null,hoOp:GAME.handover?.op,
@@ -42,14 +45,24 @@ function saveGame(silent){if(!canSave())return false;
     WX:{type:WX.type,lock:WX.lock,next:WX.next,cur:{...WX.cur},cover:WX.cover},FLEX:FLEX.map(f=>({id:f.id,req:f.req,at:f.at})),PROT:JSON.parse(JSON.stringify(PROT)),
     TASK:taskSave(),taskSeq,taskCycle,INC:{next:INC.next,done:INC.done,active:INC.active?.def.id||null},PHONE:{...PHONE.stats},EF:EF.on,LS:{busy:GENSET.busy,orders:LS_ORDERS.map(o=>({...o}))},
     REC:{samples:REC.samples.slice(-600),events:REC.events.slice(-1500)}};
-  try{localStorage.setItem(SAVE_KEY,JSON.stringify(data));}catch(e){if(!silent)deny('Opslaan mislukt: niet genoeg ruimte in de browser');return false;}
-  if(!silent){pushAlarm(`💾 Spel opgeslagen (${MODES[GAME.mode].name}, ${fmtClock(SIM.t)})`,'ok');toastSaved('Spel opgeslagen');}else toastSaved('Automatisch opgeslagen');return true;}
+  try{localStorage.setItem(slotKey(slot),JSON.stringify(data));}catch(e){if(!silent)deny('Opslaan mislukt: niet genoeg ruimte in de browser');return false;}
+  if(!silent){SAVE_SLOT=slot;pushAlarm(`💾 Spel opgeslagen in ${slotName(slot).toLowerCase()} (${MODES[GAME.mode].name}, ${fmtClock(SIM.t)})`,'ok');toastSaved(`Opgeslagen · ${slotName(slot)}`);}else toastSaved('Automatisch opgeslagen');return true;}
 function toastSaved(t){const el=$('#saved');el.textContent='💾 '+t;el.classList.remove('show');void el.offsetWidth;el.classList.add('show');}
-function readSave(){try{let d=JSON.parse(localStorage.getItem(SAVE_KEY)||'null');if(!d||!MODES[d.mode]||!(d.v>=1&&d.v<=SAVE_V))return null;
+function readSave(slot='auto'){try{let d=JSON.parse(localStorage.getItem(slotKey(slot))||'null');if(!d||!MODES[d.mode]||!(d.v>=1&&d.v<=SAVE_V))return null;
   while(d.v<SAVE_V){d=SAVE_MIGRATE[d.v](d);d.v++;}return d;}catch(e){return null;}}
-function deleteSave(){try{localStorage.removeItem(SAVE_KEY);}catch(e){}}
+function deleteSave(slot='auto'){try{localStorage.removeItem(slotKey(slot));}catch(e){}}
+const listSaves=()=>SAVE_SLOTS.map(k=>({k,d:readSave(k)})).filter(x=>x.d);
+const saveInfo=d=>`${MODES[d.mode].name} · ${fmtClock(d.SIM.t)} · ${DIFFS[d.diff].label} · ${SEASONS[d.season].name} · score ${Math.round(d.GAME.score).toLocaleString('nl-NL')} · ${new Date(d.at).toLocaleString('nl-NL',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}`;
+// keuzevenster: in welke plek opslaan?
+function openSlots(){if(!canSave())return deny('Opslaan kan in de vrije dienst en in de dag- en avonddienst');
+  $('#slotWin').innerHTML=`<div class="card pm"><div class="eyebrow">Spel opslaan</div><h2>Kies een opslagplek</h2>${SAVE_SLOTS.map(k=>{const d=readSave(k);return `<div class="slot"><div><b>${slotName(k)}</b><span>${d?saveInfo(d):'leeg'}${k==='auto'?'<br><i>wordt ook elke 2 minuten automatisch overschreven</i>':''}</span></div><button class="${k===SAVE_SLOT?'primary':''}" data-slot="${k}">${d?'Overschrijven':'Opslaan'}</button></div>`;}).join('')}<div class="rep-btns"><button data-slotclose>Annuleren</button></div></div>`;
+  $('#slotWin').classList.remove('hidden');}
+const slotsOpen=()=>!$('#slotWin').classList.contains('hidden');
+function closeSlots(){$('#slotWin').classList.add('hidden');}
+$('#slotWin').addEventListener('click',e=>{if(e.target.closest('[data-slotclose]')||e.target.id==='slotWin')return closeSlots();const b=e.target.closest('[data-slot]');if(!b)return;
+  if(saveGame(false,b.dataset.slot)){closeSlots();closeMenu();}});
 // ---- hervatten
-function resumeGame(d){$('#intro').classList.add('hidden');AudioSys.init();controls.autoRotate=false;
+function resumeGame(d){$('#intro').classList.add('hidden');SAVE_SLOT=d.slot||'auto';AudioSys.init();controls.autoRotate=false;
   GAME.diff=d.diff;GAME.season=d.season;RESUMING=true;try{applyMode(d.mode);}finally{RESUMING=false;}
   Object.assign(SIM,d.SIM);LINES.forEach(L=>Object.assign(SIM.lines[L],d.SIM.lines[L]));
   Object.assign(GAME,d.GAME,{obj:GAME.obj,ended:false});GAME.obj.forEach((o,k)=>{o.state=d.GAME.obj[k]??null;});

@@ -490,6 +490,24 @@ const TESTS = [
       const r = await p.evaluate(() => ({ n: OS.LAYOUT.length, bad: OS.layoutCheck() }));
       assert(r.n > 500 && r.bad.length === 0, `botsingen in de wijk (${r.bad.length}): ${r.bad.slice(0, 6).join(' | ')}`);
   } },
+  { name: 'meerdere opslagplekken: kiezen, hervatten uit een plek, verwijderen', query: '?play=free&t=11', async run(p) {
+      const voor = await p.evaluate(async () => { const O = OS; O.closeHandover?.(); T.quiet(); O.SIM.paused = false; T.step(0.5);
+        localStorage.removeItem('osz-save-2'); await T.op('V-F6', 0); O.GAME.score = 4321;
+        O.openSlots(); document.querySelector('#slotWin [data-slot="2"]').click();
+        O.GAME.score = 1111; O.saveGame(true); O.GAME.ended = true;   // automatisch opslaan (andere stand), daarna niet nog eens bij het verlaten
+        return { plekken: O.listSaves().map(x => x.k).join(), dicht: document.querySelector('#slotWin').classList.contains('hidden') }; });
+      assert(voor.plekken.includes('auto') && voor.plekken.includes('2') && voor.dicht, `opslaan in plek mislukt: ${JSON.stringify(voor)}`);
+      await p.goto(pageUrl + '?lite', { waitUntil: 'load', timeout: 180000 });
+      for (let i = 0; i < 120 && !(await p.evaluate(() => !!window.OS)); i++) await sleep(500);
+      const menu = await p.evaluate(() => [...document.querySelectorAll('#menu [data-resume]')].map(b => b.dataset.resume).join());
+      await p.goto(pageUrl + '?resume=2&lite', { waitUntil: 'load', timeout: 180000 });
+      for (let i = 0; i < 120 && !(await p.evaluate(() => !!window.OS)); i++) await sleep(500);
+      const na = await p.evaluate(() => { const O = OS, r = { score: Math.round(O.GAME.score), f6: O.D['V-F6'].state };
+        O.SIM.paused = false; document.dispatchEvent(new KeyboardEvent('keydown', { key: 's', ctrlKey: true, bubbles: true }));
+        r.ctrlS = JSON.parse(localStorage.getItem('osz-save-2')).at > Date.now() - 5000; O.deleteSave('2'); r.weg = !O.readSave('2') && !!O.readSave('auto'); O.GAME.ended = true; return r; });
+      assert(menu.includes('auto') && menu.includes('2'), `hoofdmenu toont de plekken niet: ${menu}`);
+      assert(na.score === 4321 && na.f6 === 0 && na.ctrlS && na.weg, `hervatten uit plek 2 klopt niet: ${JSON.stringify(na)}`);
+  } },
   { name: 'leven in de wijk: ramen per station, auto\'s en buren bij uitval', query: '?autostart&t=21&night&season=winter', async run(p) {
       const r = await p.evaluate(async () => { T.quiet(); const O = OS, s1 = O.RING.stations[0]; O.SIM.paused = false; T.step(0.2); O.updateWindows();
         const aan = s1.winMats.some(m => m.opacity > 0.3), autos = O.CARS.filter(c => c.g.visible).length;
