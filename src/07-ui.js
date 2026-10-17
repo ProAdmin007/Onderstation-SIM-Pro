@@ -37,7 +37,7 @@ function buildSLD(){
   o=out[10];top();bay('T1',160,-1,'V-T1','RAB');bay('T3',330,1,'V-T3','RAB');
   W(20,RA_Y,452,RA_Y,'RA','w bus');W(20,RB_Y,452,RB_Y,'RB','w bus');CB('V-K',230,412,null);T(240,400,'V-K','start','dl');
   T(14,RA_Y+3,'A','end','dl');T(14,RB_Y+3,'B','end','dl');T(20,398,'10 kV RAIL A','start','dl');M('RA',98,398,'start');T(452,398,'RAIL B','end','dl');M('RB',412,398,'end');
-  M('ef10',245,384,'middle','bad');
+  M('ef10',237,104,'middle','bad');
   W(196,RA_Y,196,426,'RA');ES('RA-Q8',196,438,'');W(264,RB_Y,264,426,'RB');ES('RB-Q8',264,438,'');
   [['F1',35],['F2',82],['F3',128],['F4',285],['F5',395],['F6',440]].forEach(([id,x])=>feeder(F(id),x));
   // tabblad 20 kV

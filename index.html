@@ -27,7 +27,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
-:root{--alarmH:clamp(300px,46vh,460px);--bg:#0b0f14;--panel:rgba(13,17,22,.80);--line:rgba(255,255,255,.09);--line2:rgba(255,255,255,.18);--text:#e7ecf1;--muted:#8d99a6;--dim:#5d6873;--accent:#f0a43a;--red:#e5484d;--green:#3fcf72;--hv:#ff6b3d;--mv:#4aa3ff;--earth:#e8c547;--mv20:#c07cff;--dead:#56616b;--mono:'JetBrains Mono',ui-monospace,monospace}
+:root{--alarmH:clamp(300px,46vh,460px);--faultH:0px;--alarmHe:max(170px,calc(var(--alarmH) - var(--faultH) * 0.5));--bg:#0b0f14;--panel:rgba(13,17,22,.80);--line:rgba(255,255,255,.09);--line2:rgba(255,255,255,.18);--text:#e7ecf1;--muted:#8d99a6;--dim:#5d6873;--accent:#f0a43a;--red:#e5484d;--green:#3fcf72;--hv:#ff6b3d;--mv:#4aa3ff;--earth:#e8c547;--mv20:#c07cff;--dead:#56616b;--mono:'JetBrains Mono',ui-monospace,monospace}
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font:13px/1.35 Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
 #scene{position:fixed;inset:0}
@@ -62,7 +62,7 @@ button:disabled{opacity:.35;cursor:not-allowed}
 .icon{width:36px;height:36px;padding:0;display:grid;place-items:center}
 .ph{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--line);font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);font-weight:600}
 .tag{font-family:var(--mono);font-size:10px;color:var(--accent);letter-spacing:.3px}
-#tasks{top:82px;left:12px;width:330px;max-height:calc(100% - 118px - var(--alarmH));overflow:auto}
+#tasks{top:82px;left:12px;width:330px;max-height:calc(100% - 118px - var(--alarmHe) - var(--faultH));overflow:auto}
 #taskBody{padding:12px 14px 14px}
 #taskBody h3{margin:0 0 4px;font-size:14px}
 #taskBody p{margin:0 0 10px;color:var(--muted);font-size:12px}
@@ -73,7 +73,11 @@ button:disabled{opacity:.35;cursor:not-allowed}
 .step.cur{color:var(--text);font-weight:600}
 .step.cur .b{border-color:var(--accent);box-shadow:0 0 0 3px rgba(240,164,58,.2)}
 .idle{color:var(--muted);font-size:12px}
-#alarms{left:12px;bottom:12px;width:410px;height:var(--alarmH);display:flex;flex-direction:column}
+#alarms{left:12px;bottom:12px;width:410px;height:var(--alarmHe);display:flex;flex-direction:column}
+#faults{left:12px;bottom:calc(20px + var(--alarmHe));width:410px;max-height:min(34vh,290px);display:flex;flex-direction:column;transition:border-color .3s}#faults.has-crit{border-color:rgba(229,72,77,.55)}
+#faultList{overflow:auto;padding:2px 0}.fl{display:grid;grid-template-columns:44px 8px 1fr;gap:8px;padding:5px 14px;font-size:12px;align-items:start}.fl.go{cursor:pointer}.fl.go:hover{background:rgba(255,255,255,.04)}
+.fl .tm{font-family:var(--mono);color:var(--dim);font-size:11px}.fl .lv{width:8px;height:8px;border-radius:2px;margin-top:4px;background:var(--accent)}.fl.crit .lv{background:var(--red);animation:flpulse 1.2s infinite}.fl.crit b{color:#ffd0d1}
+.fl i{font-style:normal;color:var(--muted);font-size:11px}.fl small{color:var(--muted);font-size:11px}.fl-none{padding:6px 14px;font-size:12px;color:var(--green)}#faultCnt.bad{background:var(--red);color:#fff}@keyframes flpulse{50%{opacity:.35}}
 #alarmList{overflow:auto;flex:1;padding:4px 0}
 .al{display:grid;grid-template-columns:44px 8px 1fr;gap:8px;padding:5px 14px;font-size:12px;align-items:start}
 .al .tm{font-family:var(--mono);color:var(--dim);font-size:11px}
@@ -330,7 +334,7 @@ body.fp #torch.on{display:block}
 .pr .pv{font-variant-numeric:tabular-nums}.pr .pv.bad{color:var(--red)}
 #loading{position:fixed;inset:0;display:grid;place-items:center;color:var(--muted);font-family:var(--mono);z-index:20;background:var(--bg)}
 @media (max-width:1250px){#tasks{width:290px}#devpanel{left:314px}#scada{width:min(calc(400px * var(--sldz,1)),64vw)}.kpi{min-width:90px;padding:3px 9px}}
-@media (max-width:1050px){.kpis .kpi:nth-child(n+3){display:none}#views{left:12px;bottom:calc(var(--alarmH) + 24px)}}
+@media (max-width:1050px){.kpis .kpi:nth-child(n+3){display:none}#views{left:12px;bottom:calc(var(--alarmHe) + var(--faultH) + 24px)}}
 </style>
 </head>
 <body>
@@ -361,6 +365,7 @@ body.fp #torch.on{display:block}
   <button id="mute" class="icon" title="Geluid (M)"><svg id="muteIco" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/></svg></button>
 </header>
 <aside id="tasks" class="panel"><div class="ph"><span id="taskTitle">Werkopdracht</span><span id="taskCode" class="tag"></span></div><div id="taskBody"><div class="idle">Geen actieve opdracht.</div></div></aside>
+<aside id="faults" class="panel"><div class="ph"><span>Lopende storingen</span><span class="cnt" id="faultCnt">0</span></div><div id="faultList"></div></aside>
 <aside id="alarms" class="panel"><div class="ph"><span>Meldingen &amp; gebeurtenissen</span><span class="cnt" id="alarmCnt">0</span></div><div id="alarmList"></div></aside>
 <aside id="scada" class="panel">
   <div class="ph"><span>SCADA</span><div class="zoom" title="Zoomen: Ctrl + scrollwiel of + / −"><button id="zOut" class="mini">−</button><span id="zVal">100%</span><button id="zIn" class="mini">+</button></div><div class="tabs" id="sldTabs"><button data-t="10" class="on">10 kV</button><button data-t="20">20 kV</button><button data-t="R">Ring</button><button data-t="M" title="OS Meppel: onze uitgaande velden en de koppelkabel naar MS5">Meppel</button><button data-t="K" title="Belasting per kabel en per distributietrafo">Kabels</button><button data-t="L" title="Laagspanning: LS-velden, spanning per straat, kabelkasten en aggregaten">LS</button><button data-t="P" title="Belastingprognose komende 8 uur">Prognose</button></div><button id="scadaToggle" class="mini" title="In-/uitklappen">–</button></div>
@@ -3334,7 +3339,7 @@ function buildSLD(){
   o=out[10];top();bay('T1',160,-1,'V-T1','RAB');bay('T3',330,1,'V-T3','RAB');
   W(20,RA_Y,452,RA_Y,'RA','w bus');W(20,RB_Y,452,RB_Y,'RB','w bus');CB('V-K',230,412,null);T(240,400,'V-K','start','dl');
   T(14,RA_Y+3,'A','end','dl');T(14,RB_Y+3,'B','end','dl');T(20,398,'10 kV RAIL A','start','dl');M('RA',98,398,'start');T(452,398,'RAIL B','end','dl');M('RB',412,398,'end');
-  M('ef10',245,384,'middle','bad');
+  M('ef10',237,104,'middle','bad');
   W(196,RA_Y,196,426,'RA');ES('RA-Q8',196,438,'');W(264,RB_Y,264,426,'RB');ES('RB-Q8',264,438,'');
   [['F1',35],['F2',82],['F3',128],['F4',285],['F5',395],['F6',440]].forEach(([id,x])=>feeder(F(id),x));
   // tabblad 20 kV
@@ -4666,6 +4671,49 @@ $('#report').addEventListener('click',e=>{const b=e.target.closest('[data-r="pdf
   reportPDF().catch(err=>deny(err.message)).finally(()=>{b.disabled=false;b.textContent=t;});});
 
 
+// ============================================================ paneel Lopende storingen: wat er nu speelt (uit de toestand van de installatie, niet uit het logboek)
+const FSEEN={};   // sleutel → eerste keer gezien (SIM.t), voor 'sinds' en de duur
+const tabOfFeeder=f=>f.bus==='MP'?'M':is20(f.bus)?'20':'10';
+const offOf=cs=>cs.reduce((n,c)=>n+custOff(c),0);
+function activeFaults(){const o=[],add=(key,sev,title,detail,go,cust=0)=>o.push({key,sev,title,detail,go,cust});
+  if(INC.active)add('inc','warn',`Groot incident: ${INC.active.def.name}`,`nog ±${Math.max(0,Math.round(INC.active.until-SIM.t))} min`,null);
+  LINES.forEach(L=>{const ln=SIM.lines[L];if(!ln.avail&&!ln.maint)add('ln'+L,'crit',`Lijn ${L} ${ln.name} spanningsloos`,ln.reason||'TenneT herstelt',{tab:'10',dev:L+'-Q0'});});
+  TR.forEach(T=>{const t=D[T];if(t.blocked)add('tr'+T,'crit',`${T} geblokkeerd (relais 86)`,`${t.blockText||'beveiliging'}${t.resettable?' · reset mogelijk':' · inspectie loopt'}`,{tab:T==='T2'?'20':'10',dev:T});
+    else if(t.oil>95&&EN.has(T+'h'))add('to'+T,'warn',`${T} warm`,`olie ${Math.round(t.oil)} °C – verlaag de belasting`,{tab:T==='T2'?'20':'10',dev:T});});
+  BUS_IDS.forEach(b=>{if(b==='MP')return;const nm=BUSES[b].nm,tab=is20(b)?'20':'10';
+    if(BUSF[b])add('bf'+b,'crit',`Railfout rail ${nm}`,'rail spanningsloos tot de monteur klaar is',{tab});else if(!EN.has(b))add('bd'+b,'crit',`Rail ${nm} spanningsloos`,'',{tab});});
+  if(EF.on){const r=efRails();add('ef','crit',`Aardfout 10 kV · U0 ${efU0().toFixed(1).replace('.',',')} kV`,r.length?`op rail ${r.map(b=>BUSES[b].nm).join(' en ')} – zoek door te schakelen`:'',{tab:'10'});}
+  if(!SIM.meppel.avail)add('mp','warn','OS Meppel: storing Netbeheer Noord',SIM.meppel.reason||'herstel door Netbeheer Noord',{tab:'M'},offOf(FEEDERS.filter(f=>f.bus==='MP')));
+  FEEDERS.forEach(f=>{if(f.ring)return;const go={tab:tabOfFeeder(f),dev:f.cb};
+    if(f.fault)add('ff'+f.id,'crit',`Kabelfout ${f.id} ${f.name}`,f.fault.stage==='search'?'storingsdienst zoekt – veld nog niet inschakelen':'weggeschakeld – veld mag weer in, wacht op reparatie',go,custOff(f));
+    else if(f.cust>0&&!f.backfed&&!EN.has(f.node)&&f.unplanned)add('fd'+f.id,'warn',`${f.id} ${f.name} spanningsloos`,'',go,f.cust);
+    if((f.temp||0)>CABLE.max)add('ft'+f.id,'warn',`Kabel ${f.cb} te warm`,`${Math.round(f.temp)} °C (max. ${CABLE.max} °C)`,{tab:'K'});});
+  // stations die door een kabelfout in hun ring spanningsloos zijn, staan bij die kabelfout (oorzaak, niet elk gevolg apart)
+  const ringDead=rg=>rg.stations.filter(st=>!st.damaged&&!st.fuse&&!stationLive(st)),told=new Set();
+  RING.secs.forEach(s=>{if(s.fault){let det=s.located?'gevonden – isoleer de kabel en voed terug':'storingsdienst zoekt – kijk naar de verklikkers ⚑',cust=0;
+      if(!told.has(s.ring)){told.add(s.ring);const dd=ringDead(s.ring);if(dd.length){det+=` · zonder stroom: ${dd.map(x=>x.id).join(', ')}`;cust=offOf(dd.flatMap(x=>x.groups));}}
+      add('rs'+s.id,'crit',`Kabelfout ${secName(s)}`,det,{tab:'R'},cust);}
+    else if((s.temp||0)>CABLE.max)add('rt'+s.id,'warn',`Kabel ${secName(s)} te warm`,`${Math.round(s.temp)} °C – verleg het normaal-open punt of zet flex in`,{tab:'K'});});
+  RING.stations.forEach(s=>{const go={tab:'R',dev:s.id},off=offOf(s.groups);
+    if(s.damaged)add('sd'+s.id,'crit',`${s.id} ${s.name} beschadigd`,s.damaged,go,off);
+    else if(s.fuse)add('sf'+s.id,'warn',`${s.id}: zekeringen doorgeslagen`,'monteur onderweg met nieuwe zekeringen',go,off);
+    else if(!stationLive(s)&&s.unplanned&&!told.has(s.ring))add('sx'+s.id,'warn',`${s.id} ${s.name} spanningsloos`,'',go,off);
+    const hi=s.groups.filter(g=>g.U>U_MAX).length,lo=s.groups.filter(g=>g.U>0&&g.U<U_MIN).length;
+    if(hi)add('lh'+s.id,'warn',`${s.id}: overspanning`,`${hi} straat${hi>1?'en':''} boven 253 V – verlaag de vaste trap (N)`,{tab:'L'});
+    if(lo)add('ll'+s.id,'warn',`${s.id}: onderspanning`,`${lo} straat${lo>1?'en':''} onder 207 V`,{tab:'L'});
+    if(s.gs?.state==='trip')add('gs'+s.id,'crit',`Noodaggregaat ${s.id} uitgevallen`,'overbelast – schakel straten af en herstart (N)',{tab:'L'});});
+  const now=new Set(o.map(x=>x.key));for(const k in FSEEN)if(!now.has(k))delete FSEEN[k];o.forEach(x=>{FSEEN[x.key]??=SIM.t;x.since=FSEEN[x.key];});
+  return o.sort((a,b)=>(a.sev==='crit'?0:1)-(b.sev==='crit'?0:1)||a.since-b.since);}
+function renderFaults(){const el=$('#faultList');if(!el)return;const fs=activeFaults(),crit=fs.filter(f=>f.sev==='crit').length;
+  const html=fs.length?fs.map(f=>`<div class="fl ${f.sev}${f.go?' go':''}" ${f.go?`data-fgo="${f.go.tab}|${f.go.dev||''}"`:''} title="${f.go?'Klik om in SCADA te tonen':''}"><span class="tm">${fmtClock(f.since)}</span><span class="lv"></span>
+      <span><b>${f.title}</b> <i>· ${Math.max(0,Math.round(SIM.t-f.since))} min</i>${f.detail||f.cust?`<br><small>${f.detail||''}${f.cust?`${f.detail?' · ':''}${f.cust.toLocaleString('nl-NL')} klant${f.cust>1?'en':''} zonder stroom`:''}</small>`:''}</span></div>`).join('')
+    :'<div class="fl-none">✓ Geen lopende storingen</div>';
+  if(el._h!==html){el._h=html;el.innerHTML=html;}
+  const c=$('#faultCnt');c.textContent=fs.length;c.classList.toggle('bad',crit>0);$('#faults').classList.toggle('has-crit',crit>0);
+  const h=$('#faults').offsetHeight;if(h!==renderFaults.h){renderFaults.h=h;document.documentElement.style.setProperty('--faultH',(h?h+8:0)+'px');}}
+$('#faultList').addEventListener('click',e=>{const f=e.target.closest('[data-fgo]');if(!f)return;const [tab,dev]=f.dataset.fgo.split('|');setTab(tab);$('#scada').classList.remove('min');if(dev&&D[dev])selectDevice(dev);});
+
+
 // ============================================================ HUD + bediening
 function updateHUD(){
   $('#clock').textContent=fmtClock(SIM.t);
@@ -4740,7 +4788,7 @@ else{renderMenu();$('#intro').classList.remove('hidden');controls.autoRotate=tru
 if(params.has('night'))updateSky(22);
 if(params.has('view')){const v=VIEWPOS[+params.get('view')];camera.position.copy(v[0]);controls.target.copy(v[1]);controls.autoRotate=false;controls.update();}
 
-window.OS={reportPDF,listSaves,openSlots,closeSlots,SAVE_SLOTS,layoutCheck,LAYOUT,FREC,fltRec,openRec,closeRec,renderRec,selectivity,protSelect,feederT,incT,incOf,shortCircuit,EF,earthFault,efTick,efRails,efU0,railsCoupled,controls,tripBreaker,CONS,LS_LINKS,LS_ORDERS,GENSET,lsTick,lsOrder,lsSwitchOrder,lsExec,gsSend,gsOff,gsRestart,tapOrder,setEta,callPrio,lsAreas,PRIO,openLS,closeLS,renderLS,lvVolt,stationLoads,shedFactor,failP,manualP,phoneTick,refreshDevPanel,updateSLD,openKeys,closeKeys,KEY_HELP,RELAY_BAYS,relayTask,relayDue,relayDefect,initRelays,kitTests,kitMeasure,kitVerdict,kitRun,openKit,closeKit,saveGame,readSave,deleteSave,resumeGame,canSave,specOf,CABLE,soilT,FD,meppelFault,linkTick,tabAlarms,updateTabAlarms,renderTasks,INC,INCIDENTS,startIncident,endIncident,incidentTick,setTab,renderCables,GFX,setGfx,applyGfx,openSettings,closeSettings,WX_TYPES,renderer,scene,FIRE,CARS,updateWindows,updateLife,stationLive,cbMaintTask,worstCb,cond,breakerFails,CB_IDS,FLEX,setFlex,flexTick,congestion,openFlex,closeFlex,checkModel,homeBus,BUSES,SEL_BAYS,TORCH,setTorch,HO_POOL,handoverTick,REC,RP,startReplay,stopReplay,analyse,stationDamage,closeHandover,deviations,PHONE,lvFault,callFrom,phoneAnswer,dispatchLV,LVG,forecast,progAdvice,PROG,startTask:(k,...a)=>{TASK={relayTask,cbMaintTask,railTask,railBTask,stationTask,thermoTask,ringTask,feederTask,lineTask,reserveTask}[k](...a);TASK.i=0;TASK.code='WV-TEST';briefInit(TASK);renderTasks();},SIM,D,LESSONS,lessonGo,selectDevice,abortTask,railTask,stationTask,thermoTask,nearDev,VIEWS,PROT,setProt,openProt,closeProt,busFault,BUSF,RINGS,task:()=>TASK,briefSubmit,briefCheck,briefWatch,actKey,taskActs,crewNear,boxOf:id=>VIEWS[id]&&VIEWS[id].box,AudioSys,updateAudio,WX,setWeather,setSeason,SEASONS,ambient,enterKiosk,ROOMS,blockedAt,RING,NPCS,crewDispatch,ringFault,FP,enterFP,exitFP,pickCenter,camera,camInside,setRatio,setTab,GAME,MODES,applyMode,endGame,EN:()=>EN,FLOW,operate,tapStep,setAVR,resetLockout,toggleAR,regulate,computeFlows,randomEvent,lineFault,feederFault,trafoFault,offerTask,simStep,FEEDERS};
+window.OS={SLD,activeFaults,renderFaults,reportPDF,listSaves,openSlots,closeSlots,SAVE_SLOTS,layoutCheck,LAYOUT,FREC,fltRec,openRec,closeRec,renderRec,selectivity,protSelect,feederT,incT,incOf,shortCircuit,EF,earthFault,efTick,efRails,efU0,railsCoupled,controls,tripBreaker,CONS,LS_LINKS,LS_ORDERS,GENSET,lsTick,lsOrder,lsSwitchOrder,lsExec,gsSend,gsOff,gsRestart,tapOrder,setEta,callPrio,lsAreas,PRIO,openLS,closeLS,renderLS,lvVolt,stationLoads,shedFactor,failP,manualP,phoneTick,refreshDevPanel,updateSLD,openKeys,closeKeys,KEY_HELP,RELAY_BAYS,relayTask,relayDue,relayDefect,initRelays,kitTests,kitMeasure,kitVerdict,kitRun,openKit,closeKit,saveGame,readSave,deleteSave,resumeGame,canSave,specOf,CABLE,soilT,FD,meppelFault,linkTick,tabAlarms,updateTabAlarms,renderTasks,INC,INCIDENTS,startIncident,endIncident,incidentTick,setTab,renderCables,GFX,setGfx,applyGfx,openSettings,closeSettings,WX_TYPES,renderer,scene,FIRE,CARS,updateWindows,updateLife,stationLive,cbMaintTask,worstCb,cond,breakerFails,CB_IDS,FLEX,setFlex,flexTick,congestion,openFlex,closeFlex,checkModel,homeBus,BUSES,SEL_BAYS,TORCH,setTorch,HO_POOL,handoverTick,REC,RP,startReplay,stopReplay,analyse,stationDamage,closeHandover,deviations,PHONE,lvFault,callFrom,phoneAnswer,dispatchLV,LVG,forecast,progAdvice,PROG,startTask:(k,...a)=>{TASK={relayTask,cbMaintTask,railTask,railBTask,stationTask,thermoTask,ringTask,feederTask,lineTask,reserveTask}[k](...a);TASK.i=0;TASK.code='WV-TEST';briefInit(TASK);renderTasks();},SIM,D,LESSONS,lessonGo,selectDevice,abortTask,railTask,stationTask,thermoTask,nearDev,VIEWS,PROT,setProt,openProt,closeProt,busFault,BUSF,RINGS,task:()=>TASK,briefSubmit,briefCheck,briefWatch,actKey,taskActs,crewNear,boxOf:id=>VIEWS[id]&&VIEWS[id].box,AudioSys,updateAudio,WX,setWeather,setSeason,SEASONS,ambient,enterKiosk,ROOMS,blockedAt,RING,NPCS,crewDispatch,ringFault,FP,enterFP,exitFP,pickCenter,camera,camInside,setRatio,setTab,GAME,MODES,applyMode,endGame,EN:()=>EN,FLOW,operate,tapStep,setAVR,resetLockout,toggleAR,regulate,computeFlows,randomEvent,lineFault,feederFault,trafoFault,offerTask,simStep,FEEDERS};
 const clock=new THREE.Clock();let hudT=0,skyT=0,progT=0;
 let liteAcc=0;
 function frame(){
@@ -4757,7 +4805,7 @@ function frame(){
   else{if(fly){fly.t+=dt;const k=easeIO(clamp(fly.t/fly.dur,0,1));camera.position.lerpVectors(fly.p0,fly.p1,k);controls.target.lerpVectors(fly.t0,fly.t1,k);if(fly.t>=fly.dur)fly=null;}
   controls.minDistance=camInside()?1.2:4;controls.update();}
   if((skyT+=dt)>0.25){skyT=0;if(!params.has('night'))updateSky(hourOf());}
-  if((hudT+=dt)>0.25){hudT=0;if(!RP.on)updateHUD();updateSLD();refreshDevPanel();updateAudio();if(!LITE)drawPanelScreens();renderTasks();updateStreetLights();updateWindows();progTick();if((progT+=1)%4===0)renderProg();if(progT%2===0){renderCables();renderLSTab();if(lsOpen()&&progT%4===0)renderLS();}}
+  if((hudT+=dt)>0.25){hudT=0;if(!RP.on)updateHUD();updateSLD();refreshDevPanel();updateAudio();if(!LITE)drawPanelScreens();renderTasks();updateStreetLights();updateWindows();renderFaults();progTick();if((progT+=1)%4===0)renderProg();if(progT%2===0){renderCables();renderLSTab();if(lsOpen()&&progT%4===0)renderLS();}}
   if(!LITE){updateHover();updateLabels();}if(GFX.particles)updateRain(dt);else RAIN.ls.visible=SNOW.p.visible=false;updateNPCs(dt);updateKioskLight();updateHotspot();phoneTick(dt);replayTick(dt);updateLife(dt);fireTick(dt);
   let off=null;if(shake>0.01){off=V3((Math.random()-0.5)*shake,(Math.random()-0.5)*shake,(Math.random()-0.5)*shake);camera.position.add(off);shake*=Math.pow(0.02,dt);}
   // en het 3D-beeld helemaal niet tekenen: zonder grafische kaart kost één beeld ±2 kernseconden software-grafiek,

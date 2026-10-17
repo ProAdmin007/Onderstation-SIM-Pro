@@ -176,6 +176,10 @@ Bedoeld voor **bedrijfsvoerders en monteurs in opleiding**, studenten **elektrot
   - Reparaties en andere geplande gebeurtenissen worden bij het hervatten opnieuw ingepland. Een groot incident dat liep, wordt netjes afgerond.
   - Speel je een dienst tot het einde, dan verdwijnt het automatisch opgeslagen spel. Je eigen opslagplekken blijven bewaard.
 - **Pauzemenu (`Esc`):** hervatten, de dienst beëindigen met rapport, of de score opslaan en terug naar het hoofdmenu.
+- **Lopende storingen** (paneel boven *Meldingen & gebeurtenissen*): wat er **nu** speelt, opgebouwd uit de toestand van de installatie en niet uit het logboek. Per storing zie je sinds wanneer en hoe lang al, de status (bijvoorbeeld *fout zoeken*, *weggeschakeld – wacht op reparatie*, *reset mogelijk*) en hoeveel klanten zonder stroom zitten.
+  - Kritieke storingen staan bovenaan en knipperen rood.
+  - Gevolgen staan bij de oorzaak: MS-stations die door een kabelfout in hun ring zonder stroom zitten, worden bij die kabelfout genoemd.
+  - Klik op een storing om er in SCADA naartoe te gaan. Is hij opgelost, dan verdwijnt hij vanzelf. Zonder storingen staat er *✓ Geen lopende storingen*.
 - **Klaar om te schakelen:** als de storingsdienst of TenneT klaar is, of een transformator weer gereset mag worden, hoor je een oplopend klokgeluid en verschijnt een groene banner. Het betreffende veld knippert groen in SCADA en in 3D tot je het schakelt. · `spatie` pauze · `L` labels · `M` geluid · `Esc` deselecteren
 </details>
 
@@ -494,7 +498,7 @@ De broncode staat in `src/`. `build.ps1` plakt de bestanden in strikte naamvolgo
 | `04-c-aardfout.js` | aardfout in het gecompenseerde 10 kV-net: U0, aanwijzingen, zoeken, dubbele aardfout |
 | `04b`–`04i` | spelmodi en score, ring, lessen, dienstoverdracht, extra scenario's, scenario's pinksterzondag en aardfout tijdens onweer |
 | `05`–`06` | effecten, geluid, interieur, opbouw van de scène |
-| `07`–`07t` | SCADA en panelen, rondlopen, monteurs, schakelbrief, beveiligingsvenster, prognose, telefoon, tijdlijn/herhaling, modelcontrole, flex- en onderhoudsvenster, leven in de wijk, instellingen, tabblad Kabels, opslaan en hervatten, testkoffer, toetsenoverzicht, LS-venster en -tabblad, storingsschrijver, dienstrapport als PDF |
+| `07`–`07u` | SCADA en panelen, rondlopen, monteurs, schakelbrief, beveiligingsvenster, prognose, telefoon, tijdlijn/herhaling, modelcontrole, flex- en onderhoudsvenster, leven in de wijk, instellingen, tabblad Kabels, opslaan en hervatten, testkoffer, toetsenoverzicht, LS-venster en -tabblad, storingsschrijver, dienstrapport als PDF, paneel lopende storingen |
 | `08-main.js` | HUD, menu's, start en hoofdlus |
 
 **Rails, lijnen en railkeuzevelden** staan op één plek (`BUSES`, `LINES` en het register `SEL_BAYS` in `04-1-net.js`); de koppelingen, spanningsbanden, SCADA-metingen en werkopdrachten worden daarvan afgeleid. Bij het opstarten controleert `checkModel()` of alle verwijzingen naar apparaten kloppen, of elke schakelaar ergens te bedienen is en of alles in de normale toestand spanning heeft. Een fout verschijnt als consolefout, en de tests vallen er dan direct over.

@@ -514,6 +514,18 @@ const TESTS = [
         const bytes = await O.reportPDF(true); return { rapport, knop, bytes, tijdlijn: !!document.querySelector('#report svg.tl') }; });
       assert(r.rapport && r.knop && r.tijdlijn && r.bytes > 20000 && r.bytes < 400000, `PDF klopt niet: ${JSON.stringify(r)}`);
   } },
+  { name: 'paneel lopende storingen: oorzaken, gevolgen samengevoegd, klikken, opgelost = weg', query: '?autostart&t=11', async run(p) {
+      const r = await p.evaluate(async () => { T.quiet(); const O = OS; O.SIM.paused = false; T.step(0.3);
+        O.renderFaults(); const leeg = /Geen lopende storingen/.test(document.querySelector('#faultList').textContent);
+        O.feederFault('F6', 5); O.ringFault(O.FEEDERS.find(f => f.id === 'F3'), O.RING.secs.find(s => s.id === 'K23'), 20); T.step(0.5); O.renderFaults();
+        const ks = O.activeFaults().map(f => f.key), ring = O.activeFaults().find(f => f.key === 'rsK23');
+        const samen = ks.includes('ffF6') && ks.includes('rsK23') && !ks.some(k => k.startsWith('sxMS')) && ring.cust > 1000 && /MS1/.test(ring.detail);
+        document.querySelector('#faultList [data-fgo^="R"]').click(); const klik = O.SLD.tab === 'R';
+        for (let k = 0; k < 80 && O.RING.secs.find(s => s.id === 'K23').fault; k++) T.step(2);
+        await T.op('V-F3', 1); for (let k = 0; k < 80 && O.FD('F6').fault; k++) T.step(2); await T.op('V-F6', 1); T.step(0.5); O.renderFaults();
+        return { leeg, samen, klik, weg: !O.activeFaults().some(f => f.key === 'rsK23' || f.key === 'ffF6'), teller: document.querySelector('#faultCnt').textContent }; });
+      for (const [k, v] of Object.entries(r)) if (k !== 'teller') assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
+  } },
   { name: 'leven in de wijk: ramen per station, auto\'s en buren bij uitval', query: '?autostart&t=21&night&season=winter', async run(p) {
       const r = await p.evaluate(async () => { T.quiet(); const O = OS, s1 = O.RING.stations[0]; O.SIM.paused = false; T.step(0.2); O.updateWindows();
         const aan = s1.winMats.some(m => m.opacity > 0.3), autos = O.CARS.filter(c => c.g.visible).length;
