@@ -32,13 +32,14 @@ function renderSettings(){if(!setOpen())return;
     <div class="st-row"><span>Max. beelden per seconde</span>${seg('fps',[[30,'30'],[60,'60'],[0,'onbeperkt']])}</div>
     <div class="st-tgs">${tog('env','Omgevingslicht volgt de zon','Herberekent de lichtreflecties als de zon beweegt (zwaar op trage computers)')}${tog('life','Verkeer en buren in de wijk')}${tog('particles','Regen en sneeuw')}${tog('meter','Toon beelden per seconde')}</div>
     <div class="mh">Weer en seizoen</div>
+    <div class="st-row"><span>Bekijken</span><div class="seg"><button data-pvopen title="Klok schuiven en weer kiezen om te kijken, zonder dat de simulatie meeloopt">🌤 Weer en tijd bekijken <kbd>T</kbd></button></div></div>
     <div class="st-row"><span>Weer</span><div class="seg">${Object.entries(WX_TYPES).map(([k,t])=>`<button data-wx="${k}" class="${WX.lock&&WX.type===k?'on':''}" title="${t.name}">${t.icon} ${t.name}</button>`).join('')}<button data-wx="auto" class="${WX.lock?'':'on'}">🔄 Automatisch</button></div></div>
     <div class="st-row"><span>Seizoen</span><div class="seg">${Object.entries(SEASONS).map(([k,s])=>`<button data-season="${k}" class="${SEASON===s?'on':''}">${s.name}</button>`).join('')}</div></div>
     <p class="bf-desc">Het weer verandert geleidelijk (direct: dubbelklik). Automatisch laat het weer vanzelf wisselen. Een ander seizoen verandert ook de datum, de zon, de temperatuur en de belasting.${MODES[GAME.mode]?.scen?' <b class="warnc">Let op: in een scenario kan dit de opgave makkelijker of moeilijker maken.</b>':''}</p>
     <div class="mh">Geluid</div>${['master',...AUDIO_BUSES].map(vol).join('')}
     <div class="st-tgs"><label class="st-tog"><input type="checkbox" data-mute ${AudioSys.muted?'checked':''}><span>Geluid uit (M)</span></label></div>
     <div class="rep-btns"><button class="primary" data-sclose>Sluiten <kbd>I</kbd></button><button data-sreset>Standaardwaarden</button></div></div>`;}
-$('#settings').addEventListener('click',e=>{if(e.target.closest('[data-sclose]')||e.target.id==='settings')return closeSettings();
+$('#settings').addEventListener('click',e=>{if(e.target.closest('[data-pvopen]')){closeSettings();return openPreview();}if(e.target.closest('[data-sclose]')||e.target.id==='settings')return closeSettings();
   const g=e.target.closest('[data-g]');if(g){const [k,v]=g.dataset.g.split(':');return setGfx(k,k==='fps'?+v:v);}
   const w=e.target.closest('[data-wx]');if(w){const k=w.dataset.wx;if(k==='auto'){WX.lock=false;WX.next=SIM.t;pushAlarm('Weer: weer automatisch wisselen','op');}else{setWeather(k,true,e.detail>1);pushAlarm(`Weer ingesteld: ${WX_TYPES[k].icon} ${WX_TYPES[k].name}`,'op');}updateSky(hourOf());renderSettings();return;}
   const s=e.target.closest('[data-season]');if(s){setSeason(s.dataset.season);GAME.season=s.dataset.season;applySnowCover?.();updateSky(hourOf());refreshAll();updateHUD();pushAlarm(`Seizoen: ${SEASON.name}`,'op');renderSettings();return;}

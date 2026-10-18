@@ -144,7 +144,7 @@ Bedoeld voor **bedrijfsvoerders en monteurs in opleiding**, studenten **elektrot
 | `B` | beveiliging | `C` | flex en congestie |
 | `O` | onderhoud | `K` | testkoffer |
 | `N` | laagspanning | `I` | instellingen |
-| `R` | storingsschrijver | `E` | cursor vrij tijdens rondlopen |
+| `R` | storingsschrijver | `T` | weer en tijd bekijken |
 | `Ctrl+S` | opslaan | `L` / `M` | labels / geluid |
 
 <details>
@@ -155,6 +155,7 @@ Bedoeld voor **bedrijfsvoerders en monteurs in opleiding**, studenten **elektrot
 - Linker muisknop draaien, rechter muisknop schuiven, scrollen om te zoomen.
 - `1`–`9` camerastandpunten (6 = binnen 10 kV, 7 = binnen 20 kV, 8 = woonwijk, 9 = centrum en De Vaart)
 - `K` opent de **testkoffer** tijdens een relaistest
+- `T` opent **weer en tijd bekijken**
 - `R` opent de **storingsschrijver**
 - `N` opent het **LS-venster**: LS-velden, kabelkasten, noodaggregaten en klanten informeren
 - **Rondlopen (first person):** druk op `V` of op de knop *Rondlopen*.
@@ -166,6 +167,7 @@ Bedoeld voor **bedrijfsvoerders en monteurs in opleiding**, studenten **elektrot
   - Met `Z` zet je je **zaklamp** aan of uit. Handig 's nachts op het terrein, in een donker MS-station of bij een storing in het gebouw.
 - **Instellingen (`I`, de knop *Instellingen* of het pauzemenu):**
   - **Prestaties:** voorinstelling Laag / Midden / Hoog, of zelf: resolutie (40–100%), schaduwen (uit/laag/hoog), maximaal 30, 60 of onbeperkt beelden per seconde, omgevingslicht dat de zon volgt, verkeer en buren, regen en sneeuw, en een beeldenteller. Op een trage computer of laptop: kies *Laag*.
+  - **Weer en tijd bekijken** (toets `T`, de knop *Weer & tijd*, of in de instellingen): schuif de klok over het hele etmaal, laat de tijd versneld lopen (▶) en kies weer en seizoen, om te zien hoe de wereld eruitziet. Alleen kijken: de simulatie staat stil en rekent op de echte tijd, en SCADA blijft de echte situatie tonen. Met *Terug naar de dienst* (of `T`/`Esc`) staan klok, weer en seizoen weer zoals ze waren.
   - **Weer en seizoen:** zet het weer zelf op helder, bewolkt, regen, onweer, sneeuw, mist of hittegolf (geleidelijk; dubbelklik = direct), of laat het automatisch wisselen. Ook het seizoen kun je tijdens het spelen veranderen.
   - **Geluid:** hoofdvolume plus vier kanalen: omgeving (brom, verkeer, vogels, regen), schakelen (vermogenschakelaars, motoren, vlambogen), meldingen en alarmen, en telefoon.
   - Alles wordt in de browser bewaard.
@@ -503,7 +505,7 @@ De broncode staat in `src/`. `build.ps1` plakt de bestanden in strikte naamvolgo
 | `04-c-aardfout.js` | aardfout in het gecompenseerde 10 kV-net: U0, aanwijzingen, zoeken, dubbele aardfout |
 | `04b`–`04i` | spelmodi en score, ring, lessen, dienstoverdracht, extra scenario's, scenario's pinksterzondag en aardfout tijdens onweer |
 | `05`–`06` | effecten, geluid, interieur, opbouw van de scène |
-| `07`–`07u` | SCADA en panelen, rondlopen, monteurs, schakelbrief, beveiligingsvenster, prognose, telefoon, tijdlijn/herhaling, modelcontrole, flex- en onderhoudsvenster, leven in de wijk, instellingen, tabblad Kabels, opslaan en hervatten, testkoffer, toetsenoverzicht, LS-venster en -tabblad, storingsschrijver, dienstrapport als PDF, paneel lopende storingen |
+| `07`–`07v` | SCADA en panelen, rondlopen, monteurs, schakelbrief, beveiligingsvenster, prognose, telefoon, tijdlijn/herhaling, modelcontrole, flex- en onderhoudsvenster, leven in de wijk, instellingen, tabblad Kabels, opslaan en hervatten, testkoffer, toetsenoverzicht, LS-venster en -tabblad, storingsschrijver, dienstrapport als PDF, paneel lopende storingen, weer en tijd bekijken |
 | `08-main.js` | HUD, menu's, start en hoofdlus |
 
 **Rails, lijnen en railkeuzevelden** staan op één plek (`BUSES`, `LINES` en het register `SEL_BAYS` in `04-1-net.js`); de koppelingen, spanningsbanden, SCADA-metingen en werkopdrachten worden daarvan afgeleid. Bij het opstarten controleert `checkModel()` of alle verwijzingen naar apparaten kloppen, of elke schakelaar ergens te bedienen is en of alles in de normale toestand spanning heeft. Een fout verschijnt als consolefout, en de tests vallen er dan direct over.

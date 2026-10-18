@@ -309,6 +309,10 @@ body.fp #torch.on{display:block}
 .mode.resume{border-color:var(--green)}.mode.resume .mt{color:var(--green)}.mode.delsave{opacity:.75}
 #fps{display:none;position:fixed;right:14px;bottom:14px;z-index:8;font:600 12px var(--mono);color:#9fe39a;background:rgba(13,17,22,.7);padding:3px 8px;border-radius:6px;pointer-events:none}#fps.on{display:block}
 .selc{width:100%;height:auto;background:rgba(255,255,255,.02);border:1px solid var(--line);border-radius:8px}.selc .ax{font:9px var(--mono);fill:var(--muted)}.sel-btns{display:flex;flex-wrap:wrap;gap:3px;margin:4px 0 6px}.sel-btns .on{background:var(--accent);color:#1a1206;border-color:var(--accent)}.pr .bad{color:var(--red)}
+#pvBar{position:fixed;left:434px;bottom:96px;z-index:14;display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;padding:10px 14px;width:min(480px,calc(100vw - 446px))}#pvBar.hidden{display:none}
+.pv-t b{display:block;font-size:13px}.pv-t span{font-size:11px;color:var(--muted)}.pv-time{display:flex;align-items:center;gap:8px}.pv-time input{width:230px;accent-color:var(--accent)}.pv-time b{font-family:var(--mono);font-size:14px;min-width:44px}
+.pv-wx{display:flex;gap:3px}.pv-wx .on{background:var(--accent);color:#1a1206;border-color:var(--accent)}#pvBar select{background:#0b0f14;color:var(--text);border:1px solid var(--line);border-radius:6px;padding:3px 6px;font:inherit}
+body.previewing #tasks,body.previewing #alarms,body.previewing #faults{opacity:.35;pointer-events:none}
 #slotWin{position:fixed;inset:0;display:grid;place-items:center;background:rgba(6,9,12,.66);z-index:40}#slotWin.hidden{display:none}
 .slot{display:flex;align-items:center;gap:12px;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line)}.slot b{display:block}.slot span{font-size:12px;color:var(--muted)}.slot i{font-size:11px}
 .savecard{display:flex;flex-direction:column;gap:4px}.savecard .delsave{align-self:flex-end;opacity:.75}
@@ -389,6 +393,7 @@ body.fp #torch.on{display:block}
   <button data-v="9" title="F5 Ziekenhuis (±500 m westelijk)">Ziekenhuis</button>
   <button data-v="10" title="F6 Glastuinbouw Oost (±500 m oostelijk)">Kassen</button>
   <button data-v="11" title="G4 Waterzuivering (±700 m noordwestelijk)">RWZI</button>
+  <button id="pvBtn" class="tool" title="Weer en tijd bekijken: klok schuiven, weer en seizoen kiezen (alleen kijken)"><kbd>T</kbd>Weer &amp; tijd</button>
   <button id="recBtn" class="tool" title="Storingsschrijver: stroom en spanning rond elke storing"><kbd>R</kbd>Schrijver</button>
   <button id="lsBtn" class="tool" title="Laagspanning, noodaggregaten en klanten informeren"><kbd>N</kbd>LS</button>
   <button id="keysBtn" class="tool" title="Overzicht van alle toetsen"><kbd>H</kbd>Toetsen</button>
@@ -415,6 +420,7 @@ body.fp #torch.on{display:block}
 <div id="lsWin" class="hidden"></div>
 <div id="recWin" class="hidden"></div>
 <div id="slotWin" class="hidden"></div>
+<div id="pvBar" class="panel hidden"></div>
 <div id="settings" class="hidden"></div>
 <div id="fps"></div>
 <div id="saved"></div>

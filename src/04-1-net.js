@@ -122,6 +122,9 @@ function earthed(){const er=new Set(),q=[];Object.values(D).forEach(d=>{if(d.typ
 function shortNode(){const en=energized(),er=earthed();for(const n of er)if(en.has(n))return n;return null;}
 
 const hourOf=()=>((SIM.t/60)%24+24)%24;
+// bekijkmodus (07v-preview.js): de weergave gebruikt een eigen klok, de simulatie blijft op de echte tijd
+let PREVIEW=null;
+const viewHour=()=>PREVIEW?PREVIEW.h:hourOf();
 function profile(k,h){const g=(m,s)=>Math.exp(-(((h-m)/s)**2));
   switch(k){case 'res':return 0.36+0.22*g(7.8,1.3)+0.12*g(12.5,2.5)+0.64*g(18.8,2.0)+0.1*g(21.5,1.5);
     case 'city':return 0.42+0.35*g(10.5,3)+0.25*g(15,3)+0.35*g(18.5,2);

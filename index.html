@@ -309,6 +309,10 @@ body.fp #torch.on{display:block}
 .mode.resume{border-color:var(--green)}.mode.resume .mt{color:var(--green)}.mode.delsave{opacity:.75}
 #fps{display:none;position:fixed;right:14px;bottom:14px;z-index:8;font:600 12px var(--mono);color:#9fe39a;background:rgba(13,17,22,.7);padding:3px 8px;border-radius:6px;pointer-events:none}#fps.on{display:block}
 .selc{width:100%;height:auto;background:rgba(255,255,255,.02);border:1px solid var(--line);border-radius:8px}.selc .ax{font:9px var(--mono);fill:var(--muted)}.sel-btns{display:flex;flex-wrap:wrap;gap:3px;margin:4px 0 6px}.sel-btns .on{background:var(--accent);color:#1a1206;border-color:var(--accent)}.pr .bad{color:var(--red)}
+#pvBar{position:fixed;left:434px;bottom:96px;z-index:14;display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;padding:10px 14px;width:min(480px,calc(100vw - 446px))}#pvBar.hidden{display:none}
+.pv-t b{display:block;font-size:13px}.pv-t span{font-size:11px;color:var(--muted)}.pv-time{display:flex;align-items:center;gap:8px}.pv-time input{width:230px;accent-color:var(--accent)}.pv-time b{font-family:var(--mono);font-size:14px;min-width:44px}
+.pv-wx{display:flex;gap:3px}.pv-wx .on{background:var(--accent);color:#1a1206;border-color:var(--accent)}#pvBar select{background:#0b0f14;color:var(--text);border:1px solid var(--line);border-radius:6px;padding:3px 6px;font:inherit}
+body.previewing #tasks,body.previewing #alarms,body.previewing #faults{opacity:.35;pointer-events:none}
 #slotWin{position:fixed;inset:0;display:grid;place-items:center;background:rgba(6,9,12,.66);z-index:40}#slotWin.hidden{display:none}
 .slot{display:flex;align-items:center;gap:12px;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line)}.slot b{display:block}.slot span{font-size:12px;color:var(--muted)}.slot i{font-size:11px}
 .savecard{display:flex;flex-direction:column;gap:4px}.savecard .delsave{align-self:flex-end;opacity:.75}
@@ -389,6 +393,7 @@ body.fp #torch.on{display:block}
   <button data-v="9" title="F5 Ziekenhuis (±500 m westelijk)">Ziekenhuis</button>
   <button data-v="10" title="F6 Glastuinbouw Oost (±500 m oostelijk)">Kassen</button>
   <button data-v="11" title="G4 Waterzuivering (±700 m noordwestelijk)">RWZI</button>
+  <button id="pvBtn" class="tool" title="Weer en tijd bekijken: klok schuiven, weer en seizoen kiezen (alleen kijken)"><kbd>T</kbd>Weer &amp; tijd</button>
   <button id="recBtn" class="tool" title="Storingsschrijver: stroom en spanning rond elke storing"><kbd>R</kbd>Schrijver</button>
   <button id="lsBtn" class="tool" title="Laagspanning, noodaggregaten en klanten informeren"><kbd>N</kbd>LS</button>
   <button id="keysBtn" class="tool" title="Overzicht van alle toetsen"><kbd>H</kbd>Toetsen</button>
@@ -415,6 +420,7 @@ body.fp #torch.on{display:block}
 <div id="lsWin" class="hidden"></div>
 <div id="recWin" class="hidden"></div>
 <div id="slotWin" class="hidden"></div>
+<div id="pvBar" class="panel hidden"></div>
 <div id="settings" class="hidden"></div>
 <div id="fps"></div>
 <div id="saved"></div>
@@ -1516,7 +1522,7 @@ function buildSites(){buildHospital();buildGreenhouses();buildRWZI();}
 
 // ---- elke frame: stroom aan of uit zichtbaar maken (goedkoop: alleen materialen en een paar objecten)
 let siteSmoke=0;
-function updateSites(dt){const h=hourOf(),night=clamp((NIGHT-0.15)*1.5,0,1),cam=camera.position;siteSmoke+=dt;
+function updateSites(dt){const h=viewHour(),night=clamp((NIGHT-0.15)*1.5,0,1),cam=camera.position;siteSmoke+=dt;
   const z=SITE.zkh;z.on=siteLive(z);const win=night*(z.on?0.95:0.06);z.glow.forEach(m=>m.opacity=win);z.sign.color.setScalar(z.on?1:0.12);
   for(const S of[SITE.zkh,SITE.kassen,SITE.rwzi]){if(!S.lampMat)continue;const on=siteLive(S)&&NIGHT>0.3;S.lampMat.emissiveIntensity=on?5:0;S.poolMat.opacity=on?0.55*NIGHT:0;}
   z.genLamp.emissiveIntensity=z.on?0:(performance.now()%900<450?4:0.5);
@@ -1651,6 +1657,9 @@ function earthed(){const er=new Set(),q=[];Object.values(D).forEach(d=>{if(d.typ
 function shortNode(){const en=energized(),er=earthed();for(const n of er)if(en.has(n))return n;return null;}
 
 const hourOf=()=>((SIM.t/60)%24+24)%24;
+// bekijkmodus (07v-preview.js): de weergave gebruikt een eigen klok, de simulatie blijft op de echte tijd
+let PREVIEW=null;
+const viewHour=()=>PREVIEW?PREVIEW.h:hourOf();
 function profile(k,h){const g=(m,s)=>Math.exp(-(((h-m)/s)**2));
   switch(k){case 'res':return 0.36+0.22*g(7.8,1.3)+0.12*g(12.5,2.5)+0.64*g(18.8,2.0)+0.1*g(21.5,1.5);
     case 'city':return 0.42+0.35*g(10.5,3)+0.25*g(15,3)+0.35*g(18.5,2);
@@ -4306,7 +4315,7 @@ const gs=(h,m,s)=>Math.exp(-(((h-m)/s)**2));
 const stationLive=s=>EN.has(s.node+'v')||!!s.genset;   // laagspanning aanwezig (of noodaggregaat)
 // ---- ramen: 's avonds vol, 's nachts maar een paar; donker als het station geen spanning heeft
 function occupancy(h){return h>=17&&h<23.5?1:h>=23.5||h<0.5?0.55:h<6?0.12:h<8.5?0.7:0.25;}
-function updateWindows(){const h=hourOf(),base=clamp((NIGHT-0.15)*1.5,0,1)*occupancy(h);
+function updateWindows(){const h=viewHour(),base=clamp((NIGHT-0.15)*1.5,0,1)*occupancy(h);
   RING.stations.forEach(s=>{const o=stationLive(s)?base*0.95:0;(s.winMats||[]).forEach(m=>m.opacity=o);(s.winApt||[]).forEach(m=>m.opacity=o*0.9);});}
 
 // ---- auto's: rondjes over de straten van beide wijken, rechts rijden, koplampen in het donker
@@ -4328,7 +4337,7 @@ function makeCar(i){const g=new THREE.Group(),body=mat({color:CAR_COL[i%CAR_COL.
 const CARS=Array.from({length:12},(_,i)=>{const loop=LOOPS[i%2],dir=i%4<2?1:-1,lane=laneOf(loop,dir),segs=lane.map((p,k)=>{const q=lane[(k+1)%4];return {p,q,len:Math.hypot(q[0]-p[0],q[1]-p[1])};});
   const total=segs.reduce((a,s)=>a+s.len,0);return {g:makeCar(i),segs,total,d:(i*0.37%1)*total,v:rnd(7,11),k:i/12};});
 function trafficLevel(h){return clamp(0.12+0.8*Math.max(gs(h,8,1.2),gs(h,17.5,1.6))+0.35*(h>7&&h<22?1:0),0,1);}
-function updateCars(dt){if(!GFX.life){CARS.forEach(c=>c.g.visible=false);return;}const lvl=trafficLevel(hourOf()),night=NIGHT;CMAT.head.emissiveIntensity=night>0.2?4:0.3;CMAT.tail.emissiveIntensity=night>0.2?3:0.4;beamMat.opacity=night*0.45;
+function updateCars(dt){if(!GFX.life){CARS.forEach(c=>c.g.visible=false);return;}const lvl=trafficLevel(viewHour()),night=NIGHT;CMAT.head.emissiveIntensity=night>0.2?4:0.3;CMAT.tail.emissiveIntensity=night>0.2?3:0.4;beamMat.opacity=night*0.45;
   const run=!SIM.paused&&!GAME.ended;
   CARS.forEach(c=>{const on=c.k<lvl;c.g.visible=on;if(!on)return;if(run)c.d=(c.d+c.v*dt)%c.total;let d=c.d;
     for(const s of c.segs){if(d<=s.len){const f=d/s.len,x=s.p[0]+(s.q[0]-s.p[0])*f,z=s.p[1]+(s.q[1]-s.p[1])*f;c.g.position.set(x,0,z);c.g.rotation.y=Math.atan2(s.q[0]-s.p[0],s.q[1]-s.p[1]);break;}d-=s.len;}});}
@@ -4389,13 +4398,14 @@ function renderSettings(){if(!setOpen())return;
     <div class="st-row"><span>Max. beelden per seconde</span>${seg('fps',[[30,'30'],[60,'60'],[0,'onbeperkt']])}</div>
     <div class="st-tgs">${tog('env','Omgevingslicht volgt de zon','Herberekent de lichtreflecties als de zon beweegt (zwaar op trage computers)')}${tog('life','Verkeer en buren in de wijk')}${tog('particles','Regen en sneeuw')}${tog('meter','Toon beelden per seconde')}</div>
     <div class="mh">Weer en seizoen</div>
+    <div class="st-row"><span>Bekijken</span><div class="seg"><button data-pvopen title="Klok schuiven en weer kiezen om te kijken, zonder dat de simulatie meeloopt">🌤 Weer en tijd bekijken <kbd>T</kbd></button></div></div>
     <div class="st-row"><span>Weer</span><div class="seg">${Object.entries(WX_TYPES).map(([k,t])=>`<button data-wx="${k}" class="${WX.lock&&WX.type===k?'on':''}" title="${t.name}">${t.icon} ${t.name}</button>`).join('')}<button data-wx="auto" class="${WX.lock?'':'on'}">🔄 Automatisch</button></div></div>
     <div class="st-row"><span>Seizoen</span><div class="seg">${Object.entries(SEASONS).map(([k,s])=>`<button data-season="${k}" class="${SEASON===s?'on':''}">${s.name}</button>`).join('')}</div></div>
     <p class="bf-desc">Het weer verandert geleidelijk (direct: dubbelklik). Automatisch laat het weer vanzelf wisselen. Een ander seizoen verandert ook de datum, de zon, de temperatuur en de belasting.${MODES[GAME.mode]?.scen?' <b class="warnc">Let op: in een scenario kan dit de opgave makkelijker of moeilijker maken.</b>':''}</p>
     <div class="mh">Geluid</div>${['master',...AUDIO_BUSES].map(vol).join('')}
     <div class="st-tgs"><label class="st-tog"><input type="checkbox" data-mute ${AudioSys.muted?'checked':''}><span>Geluid uit (M)</span></label></div>
     <div class="rep-btns"><button class="primary" data-sclose>Sluiten <kbd>I</kbd></button><button data-sreset>Standaardwaarden</button></div></div>`;}
-$('#settings').addEventListener('click',e=>{if(e.target.closest('[data-sclose]')||e.target.id==='settings')return closeSettings();
+$('#settings').addEventListener('click',e=>{if(e.target.closest('[data-pvopen]')){closeSettings();return openPreview();}if(e.target.closest('[data-sclose]')||e.target.id==='settings')return closeSettings();
   const g=e.target.closest('[data-g]');if(g){const [k,v]=g.dataset.g.split(':');return setGfx(k,k==='fps'?+v:v);}
   const w=e.target.closest('[data-wx]');if(w){const k=w.dataset.wx;if(k==='auto'){WX.lock=false;WX.next=SIM.t;pushAlarm('Weer: weer automatisch wisselen','op');}else{setWeather(k,true,e.detail>1);pushAlarm(`Weer ingesteld: ${WX_TYPES[k].icon} ${WX_TYPES[k].name}`,'op');}updateSky(hourOf());renderSettings();return;}
   const s=e.target.closest('[data-season]');if(s){setSeason(s.dataset.season);GAME.season=s.dataset.season;applySnowCover?.();updateSky(hourOf());refreshAll();updateHUD();pushAlarm(`Seizoen: ${SEASON.name}`,'op');renderSettings();return;}
@@ -4581,7 +4591,7 @@ const KEY_HELP=[
   ['Spel',[['Spatie','Pauze aan/uit (ook P)'],['Esc','Venster of paneel sluiten, anders het pauzemenu'],['Ctrl+S','Spel opslaan (vrije dienst, dag- en avonddienst)'],['M','Geluid aan/uit'],['H of ?','Dit overzicht']]],
   ['Camera en kijken',[['1 – 9','Camerastandpunten (6 = binnen 10 kV, 7 = binnen 20 kV, 8 = woonwijk, 9 = centrum)'],['L','Labels aan/uit'],['+ / −','SCADA in- en uitzoomen (ook Ctrl + scrollwiel op het schema)']]],
   ['Rondlopen',[['V','Rondlopen starten of stoppen'],['W A S D','Lopen'],['Shift / Q','Rennen / sprinten'],['Spatie','Springen'],['F','Schakelaar in het vizier direct bedienen'],['E','Cursor vrij (paneel open van wat je ziet); nog eens E = verder lopen'],['Z','Zaklamp aan/uit']]],
-  ['Vensters',[['B','Beveiligingsinstellingen'],['C','Flex en netcongestie'],['O','Onderhoud: conditie van schakelaars en relaistests'],['K','Testkoffer (tijdens een relaistest)'],['N','Laagspanning: LS-velden, kabelkasten, noodaggregaten en klanten informeren'],['R','Storingsschrijver: stroom en spanning rond elke storing'],['I','Instellingen: prestaties, weer en geluid']]]];
+  ['Vensters',[['B','Beveiligingsinstellingen'],['C','Flex en netcongestie'],['O','Onderhoud: conditie van schakelaars en relaistests'],['K','Testkoffer (tijdens een relaistest)'],['N','Laagspanning: LS-velden, kabelkasten, noodaggregaten en klanten informeren'],['R','Storingsschrijver: stroom en spanning rond elke storing'],['T','Weer en tijd bekijken: klok schuiven, weer en seizoen kiezen (alleen kijken)'],['I','Instellingen: prestaties, weer en geluid']]]];
 let keysPrev=false;
 const keysOpen=()=>!$('#keys').classList.contains('hidden');
 function openKeys(){if(keysOpen())return;modalOpen('keys');if(FP.on)unlockPointer();
@@ -4833,6 +4843,35 @@ function renderFaults(){const el=$('#faultList');if(!el)return;const fs=activeFa
 $('#faultList').addEventListener('click',e=>{const v=e.target.closest('[data-fview]');if(v){const p=VIEWPOS[+v.dataset.fview];return flyTo(p[0].clone(),p[1].clone(),2.5);}const f=e.target.closest('[data-fgo]');if(!f)return;const [tab,dev]=f.dataset.fgo.split('|');setTab(tab);$('#scada').classList.remove('min');if(dev&&D[dev])selectDevice(dev);});
 
 
+// ============================================================ weer en tijd bekijken (toets T): klok schuiven, weer en seizoen kiezen – alleen visueel
+// De simulatie staat stil en rekent door op de echte tijd; bij terugkeren staan weer en seizoen weer zoals ze waren.
+let PV_LAPSE=false;
+const pvOpen=()=>!!PREVIEW;
+function openPreview(){if(PREVIEW)return;if(!$('#intro').classList.contains('hidden'))return;
+  PREVIEW={h:hourOf(),wx:JSON.parse(JSON.stringify({type:WX.type,lock:WX.lock,next:WX.next,cur:WX.cur,cover:WX.cover})),season:Object.keys(SEASONS).find(k=>SEASONS[k]===SEASON)};
+  modalOpen('preview');if(FP.on)unlockPointer();PV_LAPSE=false;renderPreview();$('#pvBar').classList.remove('hidden');document.body.classList.add('previewing');}
+function closePreview(){if(!PREVIEW)return;const p=PREVIEW;PREVIEW=null;PV_LAPSE=false;
+  Object.assign(WX,{type:p.wx.type,lock:p.wx.lock,next:p.wx.next,cover:p.wx.cover});Object.assign(WX.cur,p.wx.cur);
+  if(SEASONS[p.season]!==SEASON){setSeason(p.season);applySnowCover?.();}
+  lastEnvElev=-999;updateSky(hourOf());computeFlows();refreshAll();
+  $('#pvBar').classList.add('hidden');document.body.classList.remove('previewing');modalClose('preview');}
+const pvClock=h=>`${String(Math.floor(h)).padStart(2,'0')}:${String(Math.floor((h%1)*60)).padStart(2,'0')}`;
+function renderPreview(){if(!PREVIEW)return;const cur=Object.keys(SEASONS).find(k=>SEASONS[k]===SEASON);
+  $('#pvBar').innerHTML=`<div class="pv-t"><b>🌤 Weer en tijd bekijken</b><span>alleen kijken · de simulatie staat stil</span></div>
+    <div class="pv-time"><button class="mini" data-pv="lapse" title="Tijd versneld laten lopen">${PV_LAPSE?'⏸':'▶'}</button><input type="range" min="0" max="24" step="0.0833" value="${PREVIEW.h.toFixed(3)}" data-pvh><b id="pvClock">${pvClock(PREVIEW.h)}</b></div>
+    <div class="pv-wx">${Object.entries(WX_TYPES).map(([k,t])=>`<button class="mini ${WX.type===k?'on':''}" data-pvwx="${k}" title="${t.name}">${t.icon}</button>`).join('')}</div>
+    <select data-pvs>${Object.entries(SEASONS).map(([k,s])=>`<option value="${k}" ${k===cur?'selected':''}>${s.name}</option>`).join('')}</select>
+    <button class="primary" data-pv="close">Terug naar de dienst <kbd>T</kbd></button>`;}
+function previewTick(dt){if(!PREVIEW||!PV_LAPSE)return;PREVIEW.h=(PREVIEW.h+dt*1.5)%24;const r=$('#pvBar [data-pvh]');if(r)r.value=PREVIEW.h.toFixed(3);$('#pvClock').textContent=pvClock(PREVIEW.h);}
+$('#pvBar').addEventListener('input',e=>{if(!PREVIEW)return;if(e.target.matches('[data-pvh]')){PREVIEW.h=+e.target.value;$('#pvClock').textContent=pvClock(PREVIEW.h);updateSky(PREVIEW.h);}});
+$('#pvBar').addEventListener('change',e=>{if(!PREVIEW)return;const s=e.target.closest('[data-pvs]');if(s){setSeason(s.value);applySnowCover?.();updateSky(PREVIEW.h);}});
+$('#pvBar').addEventListener('click',e=>{if(!PREVIEW)return;const b=e.target.closest('[data-pv]');
+  if(b?.dataset.pv==='close')return closePreview();if(b?.dataset.pv==='lapse'){PV_LAPSE=!PV_LAPSE;return renderPreview();}
+  const w=e.target.closest('[data-pvwx]');if(w){setWeather(w.dataset.pvwx,true,true);applySnowCover?.();updateSky(PREVIEW.h);renderPreview();}});
+$('#pvBtn').addEventListener('click',()=>PREVIEW?closePreview():openPreview());
+addEventListener('keydown',e=>{if(e.target.tagName==='INPUT'&&e.target.type!=='range'||e.target.tagName==='SELECT'||e.ctrlKey||e.metaKey)return;if((e.key==='t'||e.key==='T')&&$('#intro').classList.contains('hidden'))PREVIEW?closePreview():openPreview();});
+
+
 // ============================================================ HUD + bediening
 function updateHUD(){
   $('#clock').textContent=fmtClock(SIM.t);
@@ -4856,7 +4895,7 @@ addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;
   else if(e.code==='KeyP'){if($('#intro').classList.contains('hidden'))setSpeed(0);}
   else if(e.key==='l'||e.key==='L')document.body.classList.toggle('nolabels');
   else if(e.key==='m'||e.key==='M')$('#mute').click();
-  else if(e.key==='Escape'){if(GAME.handover?.open)closeHandover();else if(setOpen())closeSettings();else if(flexOpen())closeFlex();else if(assOpen())closeAssets();else if(kitOpen())closeKit();else if(keysOpen())closeKeys();else if(lsOpen())closeLS();else if(recOpen())closeRec();else if(protOpen())closeProt();else if(slotsOpen())closeSlots();else if(menuOpen()){if(performance.now()-menuAt>350)closeMenu();}else if(SEL&&!document.pointerLockElement)selectDevice(null);else openMenu();}});
+  else if(e.key==='Escape'){if(GAME.handover?.open)closeHandover();else if(setOpen())closeSettings();else if(flexOpen())closeFlex();else if(assOpen())closeAssets();else if(kitOpen())closeKit();else if(keysOpen())closeKeys();else if(lsOpen())closeLS();else if(recOpen())closeRec();else if(protOpen())closeProt();else if(slotsOpen())closeSlots();else if(pvOpen())closePreview();else if(menuOpen()){if(performance.now()-menuAt>350)closeMenu();}else if(SEL&&!document.pointerLockElement)selectDevice(null);else openMenu();}});
 // ---------- SCADA-zoom
 let SLDZ=1;try{SLDZ=+localStorage.getItem('osz-sldz')||1;}catch(e){}
 function setZoom(z){SLDZ=clamp(Math.round(z*4)/4,0.75,2.5);document.documentElement.style.setProperty('--sldz',SLDZ);$('#zVal').textContent=Math.round(SLDZ*100)+'%';$('#scada .zoom').title='Zoom '+Math.round(SLDZ*100)+'% – Ctrl + scrollwiel of + / −';try{localStorage.setItem('osz-sldz',SLDZ);}catch(e){}}
@@ -4907,7 +4946,7 @@ else{renderMenu();$('#intro').classList.remove('hidden');controls.autoRotate=tru
 if(params.has('night'))updateSky(22);
 if(params.has('view')){const v=VIEWPOS[+params.get('view')];camera.position.copy(v[0]);controls.target.copy(v[1]);controls.autoRotate=false;controls.update();}
 
-window.OS={VIEWPOS,SITE,updateSites,SLD,activeFaults,renderFaults,reportPDF,listSaves,openSlots,closeSlots,SAVE_SLOTS,layoutCheck,LAYOUT,FREC,fltRec,openRec,closeRec,renderRec,selectivity,protSelect,feederT,incT,incOf,shortCircuit,EF,earthFault,efTick,efRails,efU0,railsCoupled,controls,tripBreaker,CONS,LS_LINKS,LS_ORDERS,GENSET,lsTick,lsOrder,lsSwitchOrder,lsExec,gsSend,gsOff,gsRestart,tapOrder,setEta,callPrio,lsAreas,PRIO,openLS,closeLS,renderLS,lvVolt,stationLoads,shedFactor,failP,manualP,phoneTick,refreshDevPanel,updateSLD,openKeys,closeKeys,KEY_HELP,RELAY_BAYS,relayTask,relayDue,relayDefect,initRelays,kitTests,kitMeasure,kitVerdict,kitRun,openKit,closeKit,saveGame,readSave,deleteSave,resumeGame,canSave,specOf,CABLE,soilT,FD,meppelFault,linkTick,tabAlarms,updateTabAlarms,renderTasks,INC,INCIDENTS,startIncident,endIncident,incidentTick,setTab,renderCables,GFX,setGfx,applyGfx,openSettings,closeSettings,WX_TYPES,renderer,scene,FIRE,CARS,updateWindows,updateLife,stationLive,cbMaintTask,worstCb,cond,breakerFails,CB_IDS,FLEX,setFlex,flexTick,congestion,openFlex,closeFlex,checkModel,homeBus,BUSES,SEL_BAYS,TORCH,setTorch,HO_POOL,handoverTick,REC,RP,startReplay,stopReplay,analyse,stationDamage,closeHandover,deviations,PHONE,lvFault,callFrom,phoneAnswer,dispatchLV,LVG,forecast,progAdvice,PROG,startTask:(k,...a)=>{TASK={relayTask,cbMaintTask,railTask,railBTask,stationTask,thermoTask,ringTask,feederTask,lineTask,reserveTask}[k](...a);TASK.i=0;TASK.code='WV-TEST';briefInit(TASK);renderTasks();},SIM,D,LESSONS,lessonGo,selectDevice,abortTask,railTask,stationTask,thermoTask,nearDev,VIEWS,PROT,setProt,openProt,closeProt,busFault,BUSF,RINGS,task:()=>TASK,briefSubmit,briefCheck,briefWatch,actKey,taskActs,crewNear,boxOf:id=>VIEWS[id]&&VIEWS[id].box,AudioSys,updateAudio,WX,setWeather,setSeason,SEASONS,ambient,enterKiosk,ROOMS,blockedAt,RING,NPCS,crewDispatch,ringFault,FP,enterFP,exitFP,pickCenter,camera,camInside,setRatio,setTab,GAME,MODES,applyMode,endGame,EN:()=>EN,FLOW,operate,tapStep,setAVR,resetLockout,toggleAR,regulate,computeFlows,randomEvent,lineFault,feederFault,trafoFault,offerTask,simStep,FEEDERS};
+window.OS={openPreview,closePreview,viewHour,getPreview:()=>PREVIEW,VIEWPOS,SITE,updateSites,SLD,activeFaults,renderFaults,reportPDF,listSaves,openSlots,closeSlots,SAVE_SLOTS,layoutCheck,LAYOUT,FREC,fltRec,openRec,closeRec,renderRec,selectivity,protSelect,feederT,incT,incOf,shortCircuit,EF,earthFault,efTick,efRails,efU0,railsCoupled,controls,tripBreaker,CONS,LS_LINKS,LS_ORDERS,GENSET,lsTick,lsOrder,lsSwitchOrder,lsExec,gsSend,gsOff,gsRestart,tapOrder,setEta,callPrio,lsAreas,PRIO,openLS,closeLS,renderLS,lvVolt,stationLoads,shedFactor,failP,manualP,phoneTick,refreshDevPanel,updateSLD,openKeys,closeKeys,KEY_HELP,RELAY_BAYS,relayTask,relayDue,relayDefect,initRelays,kitTests,kitMeasure,kitVerdict,kitRun,openKit,closeKit,saveGame,readSave,deleteSave,resumeGame,canSave,specOf,CABLE,soilT,FD,meppelFault,linkTick,tabAlarms,updateTabAlarms,renderTasks,INC,INCIDENTS,startIncident,endIncident,incidentTick,setTab,renderCables,GFX,setGfx,applyGfx,openSettings,closeSettings,WX_TYPES,renderer,scene,FIRE,CARS,updateWindows,updateLife,stationLive,cbMaintTask,worstCb,cond,breakerFails,CB_IDS,FLEX,setFlex,flexTick,congestion,openFlex,closeFlex,checkModel,homeBus,BUSES,SEL_BAYS,TORCH,setTorch,HO_POOL,handoverTick,REC,RP,startReplay,stopReplay,analyse,stationDamage,closeHandover,deviations,PHONE,lvFault,callFrom,phoneAnswer,dispatchLV,LVG,forecast,progAdvice,PROG,startTask:(k,...a)=>{TASK={relayTask,cbMaintTask,railTask,railBTask,stationTask,thermoTask,ringTask,feederTask,lineTask,reserveTask}[k](...a);TASK.i=0;TASK.code='WV-TEST';briefInit(TASK);renderTasks();},SIM,D,LESSONS,lessonGo,selectDevice,abortTask,railTask,stationTask,thermoTask,nearDev,VIEWS,PROT,setProt,openProt,closeProt,busFault,BUSF,RINGS,task:()=>TASK,briefSubmit,briefCheck,briefWatch,actKey,taskActs,crewNear,boxOf:id=>VIEWS[id]&&VIEWS[id].box,AudioSys,updateAudio,WX,setWeather,setSeason,SEASONS,ambient,enterKiosk,ROOMS,blockedAt,RING,NPCS,crewDispatch,ringFault,FP,enterFP,exitFP,pickCenter,camera,camInside,setRatio,setTab,GAME,MODES,applyMode,endGame,EN:()=>EN,FLOW,operate,tapStep,setAVR,resetLockout,toggleAR,regulate,computeFlows,randomEvent,lineFault,feederFault,trafoFault,offerTask,simStep,FEEDERS};
 const clock=new THREE.Clock();let hudT=0,skyT=0,progT=0;
 let liteAcc=0;
 function frame(){
@@ -4923,7 +4962,7 @@ function frame(){
   if(FP.on)updateFP(dt);
   else{if(fly){fly.t+=dt;const k=easeIO(clamp(fly.t/fly.dur,0,1));camera.position.lerpVectors(fly.p0,fly.p1,k);controls.target.lerpVectors(fly.t0,fly.t1,k);if(fly.t>=fly.dur)fly=null;}
   controls.minDistance=camInside()?1.2:4;controls.update();}
-  if((skyT+=dt)>0.25){skyT=0;if(!params.has('night'))updateSky(hourOf());}
+  if((skyT+=dt)>0.25){skyT=0;if(!params.has('night'))updateSky(viewHour());}previewTick(dt);
   if((hudT+=dt)>0.25){hudT=0;if(!RP.on)updateHUD();updateSLD();refreshDevPanel();updateAudio();if(!LITE)drawPanelScreens();renderTasks();updateStreetLights();updateWindows();renderFaults();progTick();if((progT+=1)%4===0)renderProg();if(progT%2===0){renderCables();renderLSTab();if(lsOpen()&&progT%4===0)renderLS();}}
   if(!LITE){updateHover();updateLabels();}if(GFX.particles)updateRain(dt);else RAIN.ls.visible=SNOW.p.visible=false;updateNPCs(dt);updateKioskLight();updateHotspot();phoneTick(dt);replayTick(dt);updateLife(dt);fireTick(dt);updateSites(dt);
   let off=null;if(shake>0.01){off=V3((Math.random()-0.5)*shake,(Math.random()-0.5)*shake,(Math.random()-0.5)*shake);camera.position.add(off);shake*=Math.pow(0.02,dt);}

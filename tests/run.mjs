@@ -534,6 +534,17 @@ const TESTS = [
         return { aan, uit }; });
       assert(Object.values(r.aan).every(Boolean) && Object.values(r.uit).every(Boolean), `afnemers tonen hun toestand niet: ${JSON.stringify(r)}`);
   } },
+  { name: 'weer en tijd bekijken: klok schuiven en weer kiezen zonder de simulatie te raken', query: '?autostart&t=11&season=zomer', async run(p) {
+      await p.keyboard.press('t');
+      const r = await p.evaluate(() => { const O = OS, t0 = O.SIM.t, wx0 = O.WX.type, load0 = O.FLOW.load, open = !!O.getPreview() && O.SIM.paused && !document.querySelector('#pvBar').classList.contains('hidden');
+        const sl = document.querySelector('#pvBar [data-pvh]'); sl.value = '22'; sl.dispatchEvent(new Event('input', { bubbles: true }));
+        document.querySelector('#pvBar [data-pvwx="sneeuw"]').click(); const se = document.querySelector('#pvBar [data-pvs]'); se.value = 'winter'; se.dispatchEvent(new Event('change', { bubbles: true }));
+        const kijk = Math.abs(O.viewHour() - 22) < 0.1 && Math.abs(O.SIM.t - t0) < 0.01 && O.WX.type === 'sneeuw';
+        O.computeFlows(); const simEcht = Math.abs((O.SIM.t / 60) % 24 - 11) < 0.1;
+        O.closePreview();
+        return { open, kijk, simEcht, terug: O.WX.type === wx0 && Math.abs(O.viewHour() - O.SIM.t / 60 % 24) < 0.01 && !O.getPreview(), seizoen: O.GAME.season === 'zomer', loopt: !O.SIM.paused, dicht: document.querySelector('#pvBar').classList.contains('hidden') }; });
+      for (const [k, v] of Object.entries(r)) assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
+  } },
   { name: 'leven in de wijk: ramen per station, auto\'s en buren bij uitval', query: '?autostart&t=21&night&season=winter', async run(p) {
       const r = await p.evaluate(async () => { T.quiet(); const O = OS, s1 = O.RING.stations[0]; O.SIM.paused = false; T.step(0.2); O.updateWindows();
         const aan = s1.winMats.some(m => m.opacity > 0.3), autos = O.CARS.filter(c => c.g.visible).length;

@@ -96,7 +96,7 @@ function buildSites(){buildHospital();buildGreenhouses();buildRWZI();}
 
 // ---- elke frame: stroom aan of uit zichtbaar maken (goedkoop: alleen materialen en een paar objecten)
 let siteSmoke=0;
-function updateSites(dt){const h=hourOf(),night=clamp((NIGHT-0.15)*1.5,0,1),cam=camera.position;siteSmoke+=dt;
+function updateSites(dt){const h=viewHour(),night=clamp((NIGHT-0.15)*1.5,0,1),cam=camera.position;siteSmoke+=dt;
   const z=SITE.zkh;z.on=siteLive(z);const win=night*(z.on?0.95:0.06);z.glow.forEach(m=>m.opacity=win);z.sign.color.setScalar(z.on?1:0.12);
   for(const S of[SITE.zkh,SITE.kassen,SITE.rwzi]){if(!S.lampMat)continue;const on=siteLive(S)&&NIGHT>0.3;S.lampMat.emissiveIntensity=on?5:0;S.poolMat.opacity=on?0.55*NIGHT:0;}
   z.genLamp.emissiveIntensity=z.on?0:(performance.now()%900<450?4:0.5);

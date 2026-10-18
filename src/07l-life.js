@@ -4,7 +4,7 @@ const gs=(h,m,s)=>Math.exp(-(((h-m)/s)**2));
 const stationLive=s=>EN.has(s.node+'v')||!!s.genset;   // laagspanning aanwezig (of noodaggregaat)
 // ---- ramen: 's avonds vol, 's nachts maar een paar; donker als het station geen spanning heeft
 function occupancy(h){return h>=17&&h<23.5?1:h>=23.5||h<0.5?0.55:h<6?0.12:h<8.5?0.7:0.25;}
-function updateWindows(){const h=hourOf(),base=clamp((NIGHT-0.15)*1.5,0,1)*occupancy(h);
+function updateWindows(){const h=viewHour(),base=clamp((NIGHT-0.15)*1.5,0,1)*occupancy(h);
   RING.stations.forEach(s=>{const o=stationLive(s)?base*0.95:0;(s.winMats||[]).forEach(m=>m.opacity=o);(s.winApt||[]).forEach(m=>m.opacity=o*0.9);});}
 
 // ---- auto's: rondjes over de straten van beide wijken, rechts rijden, koplampen in het donker
@@ -26,7 +26,7 @@ function makeCar(i){const g=new THREE.Group(),body=mat({color:CAR_COL[i%CAR_COL.
 const CARS=Array.from({length:12},(_,i)=>{const loop=LOOPS[i%2],dir=i%4<2?1:-1,lane=laneOf(loop,dir),segs=lane.map((p,k)=>{const q=lane[(k+1)%4];return {p,q,len:Math.hypot(q[0]-p[0],q[1]-p[1])};});
   const total=segs.reduce((a,s)=>a+s.len,0);return {g:makeCar(i),segs,total,d:(i*0.37%1)*total,v:rnd(7,11),k:i/12};});
 function trafficLevel(h){return clamp(0.12+0.8*Math.max(gs(h,8,1.2),gs(h,17.5,1.6))+0.35*(h>7&&h<22?1:0),0,1);}
-function updateCars(dt){if(!GFX.life){CARS.forEach(c=>c.g.visible=false);return;}const lvl=trafficLevel(hourOf()),night=NIGHT;CMAT.head.emissiveIntensity=night>0.2?4:0.3;CMAT.tail.emissiveIntensity=night>0.2?3:0.4;beamMat.opacity=night*0.45;
+function updateCars(dt){if(!GFX.life){CARS.forEach(c=>c.g.visible=false);return;}const lvl=trafficLevel(viewHour()),night=NIGHT;CMAT.head.emissiveIntensity=night>0.2?4:0.3;CMAT.tail.emissiveIntensity=night>0.2?3:0.4;beamMat.opacity=night*0.45;
   const run=!SIM.paused&&!GAME.ended;
   CARS.forEach(c=>{const on=c.k<lvl;c.g.visible=on;if(!on)return;if(run)c.d=(c.d+c.v*dt)%c.total;let d=c.d;
     for(const s of c.segs){if(d<=s.len){const f=d/s.len,x=s.p[0]+(s.q[0]-s.p[0])*f,z=s.p[1]+(s.q[1]-s.p[1])*f;c.g.position.set(x,0,z);c.g.rotation.y=Math.atan2(s.q[0]-s.p[0],s.q[1]-s.p[1]);break;}d-=s.len;}});}
