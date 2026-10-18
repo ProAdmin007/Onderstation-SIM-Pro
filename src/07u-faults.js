@@ -12,7 +12,9 @@ function activeFaults(){const o=[],add=(key,sev,title,detail,go,cust=0)=>o.push(
     if(BUSF[b])add('bf'+b,'crit',`Railfout rail ${nm}`,'rail spanningsloos tot de monteur klaar is',{tab});else if(!EN.has(b))add('bd'+b,'crit',`Rail ${nm} spanningsloos`,'',{tab});});
   if(EF.on){const r=efRails();add('ef','crit',`Aardfout 10 kV · U0 ${efU0().toFixed(1).replace('.',',')} kV`,r.length?`op rail ${r.map(b=>BUSES[b].nm).join(' en ')} – zoek door te schakelen`:'',{tab:'10'});}
   if(!SIM.meppel.avail)add('mp','warn','OS Meppel: storing Netbeheer Noord',SIM.meppel.reason||'herstel door Netbeheer Noord',{tab:'M'},offOf(FEEDERS.filter(f=>f.bus==='MP')));
-  FEEDERS.forEach(f=>{if(f.ring)return;const go={tab:tabOfFeeder(f),dev:f.cb};
+  // afnemers met een eigen plek in de wereld: knop 'bekijk' (camerastandpunt)
+  const SITE_VIEW={F5:9,F6:10,G4:11};
+  FEEDERS.forEach(f=>{if(f.ring)return;const go={tab:tabOfFeeder(f),dev:f.cb,view:SITE_VIEW[f.id]};
     if(f.fault)add('ff'+f.id,'crit',`Kabelfout ${f.id} ${f.name}`,f.fault.stage==='search'?'storingsdienst zoekt – veld nog niet inschakelen':'weggeschakeld – veld mag weer in, wacht op reparatie',go,custOff(f));
     else if(f.cust>0&&!f.backfed&&!EN.has(f.node)&&f.unplanned)add('fd'+f.id,'warn',`${f.id} ${f.name} spanningsloos`,'',go,f.cust);
     if((f.temp||0)>CABLE.max)add('ft'+f.id,'warn',`Kabel ${f.cb} te warm`,`${Math.round(f.temp)} °C (max. ${CABLE.max} °C)`,{tab:'K'});});
@@ -34,9 +36,9 @@ function activeFaults(){const o=[],add=(key,sev,title,detail,go,cust=0)=>o.push(
   return o.sort((a,b)=>(a.sev==='crit'?0:1)-(b.sev==='crit'?0:1)||a.since-b.since);}
 function renderFaults(){const el=$('#faultList');if(!el)return;const fs=activeFaults(),crit=fs.filter(f=>f.sev==='crit').length;
   const html=fs.length?fs.map(f=>`<div class="fl ${f.sev}${f.go?' go':''}" ${f.go?`data-fgo="${f.go.tab}|${f.go.dev||''}"`:''} title="${f.go?'Klik om in SCADA te tonen':''}"><span class="tm">${fmtClock(f.since)}</span><span class="lv"></span>
-      <span><b>${f.title}</b> <i>· ${Math.max(0,Math.round(SIM.t-f.since))} min</i>${f.detail||f.cust?`<br><small>${f.detail||''}${f.cust?`${f.detail?' · ':''}${f.cust.toLocaleString('nl-NL')} klant${f.cust>1?'en':''} zonder stroom`:''}</small>`:''}</span></div>`).join('')
+      <span><b>${f.title}</b> <i>· ${Math.max(0,Math.round(SIM.t-f.since))} min</i>${f.go?.view!=null?` <button class="mini fl-view" data-fview="${f.go.view}" title="Bekijk ter plaatse">👁 bekijk</button>`:''}${f.detail||f.cust?`<br><small>${f.detail||''}${f.cust?`${f.detail?' · ':''}${f.cust.toLocaleString('nl-NL')} klant${f.cust>1?'en':''} zonder stroom`:''}</small>`:''}</span></div>`).join('')
     :'<div class="fl-none">✓ Geen lopende storingen</div>';
   if(el._h!==html){el._h=html;el.innerHTML=html;}
   const c=$('#faultCnt');c.textContent=fs.length;c.classList.toggle('bad',crit>0);$('#faults').classList.toggle('has-crit',crit>0);
   const h=$('#faults').offsetHeight;if(h!==renderFaults.h){renderFaults.h=h;document.documentElement.style.setProperty('--faultH',(h?h+8:0)+'px');}}
-$('#faultList').addEventListener('click',e=>{const f=e.target.closest('[data-fgo]');if(!f)return;const [tab,dev]=f.dataset.fgo.split('|');setTab(tab);$('#scada').classList.remove('min');if(dev&&D[dev])selectDevice(dev);});
+$('#faultList').addEventListener('click',e=>{const v=e.target.closest('[data-fview]');if(v){const p=VIEWPOS[+v.dataset.fview];return flyTo(p[0].clone(),p[1].clone(),2.5);}const f=e.target.closest('[data-fgo]');if(!f)return;const [tab,dev]=f.dataset.fgo.split('|');setTab(tab);$('#scada').classList.remove('min');if(dev&&D[dev])selectDevice(dev);});

@@ -441,6 +441,11 @@ Het 10 kV-net is **gecompenseerd** (Petersenspoel in het sterpunt van T1 en T3).
 <summary><b>Leven in de wijk</b></summary>
 
 - **Straatbeeld:** stoepen van tegels met stoepranden, belijning op de doorgaande wegen en een woonerf met klinkers, bomen en geparkeerde auto's. De rijtjeshuizen hebben voortuinen met een heg en tuinpad, kliko's, fietsen en een luifel bij de voordeur, schuttingen en schuurtjes in de achtertuin met een achterpad, ramen in de kopgevels, erkers aan de hoekwoningen, pannendaken met dakgoten, dakkapellen en op ongeveer een derde van de huizen **zonnepanelen** (op het zuiden). De flats hebben balkons en elk een eigen gevelkleur; in het centrum zijn er parkeerstroken, een winkelstoep en een parkeerterrein. Alles is procedureel en wordt per materiaal samengevoegd, dus het kost nauwelijks extra rekenkracht.
+- **Grote afnemers in de wereld** (camerastandpunten *Ziekenhuis*, *Kassen* en *RWZI*, of *👁 bekijk* in het paneel Lopende storingen). Ze liggen realistisch ver van het station, en je ziet direct of ze stroom hebben:
+  - **Ziekenhuis** (F5, ±500 m westelijk): verlichte afdelingen, verlicht bord, helikopterplatform, ambulances en terreinverlichting. Bij uitval brandt alleen nog wat noodverlichting en draait het **noodstroomaggregaat**, met rook en een knipperlamp.
+  - **Kassen Glastuinbouw Oost** (F6, ±500 m oostelijk): vier glazen kassen met gewas. Buiten daglicht gaat de **oranje assimilatiebelichting** aan, met een gloed die je van ver ziet. Bij uitval wordt het in één klap donker. Het ketelhuis rookt zolang er stroom is.
+  - **Waterzuivering** (G4, ±700 m noordwestelijk): nabezinktanks met een **draaiende brug**, bruisende beluchtingstanks, gistingstanks en terreinverlichting. Zonder stroom staat alles stil.
+  - Alles is statisch en samengevoegd; licht loopt via oplichtende materialen in plaats van echte lampen. De drie locaties kosten ±5% extra draw calls.
 - **Verlichte ramen:** 's avonds gaat het licht aan in de woningen en appartementen; laat in de nacht nog maar een paar. Elk huis hangt aan het dichtstbijzijnde MS-station: valt dat station uit, dan gaan de lichten in die buurt uit. Bij een noodaggregaat blijven ze branden.
 - **Verkeer:** een dozijn auto's rijdt rechts over de straten van beide wijken, met koplampen en een lichtbundel in het donker. In de spits rijden er meer.
 - **Buren:** zit een station een paar minuten zonder stroom, dan komen de buren naar buiten; 's avonds met de zaklamp van hun telefoon.
@@ -483,7 +488,7 @@ De broncode staat in `src/`. `build.ps1` plakt de bestanden in strikte naamvolgo
 | Bestanden | Inhoud |
 |---|---|
 | `00-head.html` | opmaak (CSS) en de HTML van alle panelen |
-| `01`–`03d` | Three.js-basis, apparatuur, terrein, wijk, weer en seizoenen, straatbeeld |
+| `01`–`03e` | Three.js-basis, apparatuur, terrein, wijk, weer en seizoenen, straatbeeld, grote afnemers (ziekenhuis, kassen, waterzuivering) |
 | `04-1-net.js` | **centrale definities** (`BUSES`, `LINES`), velden, apparaten, ringen, netgraaf en belastingstromen |
 | `04-2-bediening.js` | vergrendelingen, schakelen, synchrocheck, trips, 110 kV-lijnen |
 | `04-3-trafo.js` | blokkeerrelais, omschakelaar T3, spanningsregeling, thermiek |

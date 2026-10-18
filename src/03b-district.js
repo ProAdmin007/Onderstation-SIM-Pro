@@ -193,4 +193,5 @@ function buildDistrict(){
   for(let x=-120;x<190;x+=30){streetLight(x,268.5);streetLight(x+15,391.5);}
   dressStreets();
   RING.stations.forEach(kiosk);
+  buildSites();
 }

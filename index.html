@@ -77,7 +77,7 @@ button:disabled{opacity:.35;cursor:not-allowed}
 #faults{left:12px;bottom:calc(20px + var(--alarmHe));width:410px;max-height:min(34vh,290px);display:flex;flex-direction:column;transition:border-color .3s}#faults.has-crit{border-color:rgba(229,72,77,.55)}
 #faultList{overflow:auto;padding:2px 0}.fl{display:grid;grid-template-columns:44px 8px 1fr;gap:8px;padding:5px 14px;font-size:12px;align-items:start}.fl.go{cursor:pointer}.fl.go:hover{background:rgba(255,255,255,.04)}
 .fl .tm{font-family:var(--mono);color:var(--dim);font-size:11px}.fl .lv{width:8px;height:8px;border-radius:2px;margin-top:4px;background:var(--accent)}.fl.crit .lv{background:var(--red);animation:flpulse 1.2s infinite}.fl.crit b{color:#ffd0d1}
-.fl i{font-style:normal;color:var(--muted);font-size:11px}.fl small{color:var(--muted);font-size:11px}.fl-none{padding:6px 14px;font-size:12px;color:var(--green)}#faultCnt.bad{background:var(--red);color:#fff}@keyframes flpulse{50%{opacity:.35}}
+.fl i{font-style:normal;color:var(--muted);font-size:11px}.fl small{color:var(--muted);font-size:11px}.fl-view{padding:0 6px;font-size:10.5px;margin-left:4px}.fl-none{padding:6px 14px;font-size:12px;color:var(--green)}#faultCnt.bad{background:var(--red);color:#fff}@keyframes flpulse{50%{opacity:.35}}
 #alarmList{overflow:auto;flex:1;padding:4px 0}
 .al{display:grid;grid-template-columns:44px 8px 1fr;gap:8px;padding:5px 14px;font-size:12px;align-items:start}
 .al .tm{font-family:var(--mono);color:var(--dim);font-size:11px}
@@ -386,6 +386,9 @@ body.fp #torch.on{display:block}
   <button data-v="6"><kbd>7</kbd>Binnen 20 kV</button>
   <button data-v="7"><kbd>8</kbd>Woonwijk</button>
   <button data-v="8"><kbd>9</kbd>Centrum &amp; Vaart</button>
+  <button data-v="9" title="F5 Ziekenhuis (±500 m westelijk)">Ziekenhuis</button>
+  <button data-v="10" title="F6 Glastuinbouw Oost (±500 m oostelijk)">Kassen</button>
+  <button data-v="11" title="G4 Waterzuivering (±700 m noordwestelijk)">RWZI</button>
   <button id="recBtn" class="tool" title="Storingsschrijver: stroom en spanning rond elke storing"><kbd>R</kbd>Schrijver</button>
   <button id="lsBtn" class="tool" title="Laagspanning, noodaggregaten en klanten informeren"><kbd>N</kbd>LS</button>
   <button id="keysBtn" class="tool" title="Overzicht van alle toetsen"><kbd>H</kbd>Toetsen</button>
@@ -877,6 +880,9 @@ function buildGantry(L,bx,z){const root=grp(bx,z);mesh(gantryGeo(),MAT.lattice,r
 // ============================================================ omgeving
 // register van voetafdrukken (x0,z0,x1,z1) voor de plaatsingscontrole (layoutCheck): niets mag in een ander object staan
 const LAYOUT=[];
+// terreinen van de grote afnemers (03e-sites.js): daar geen bomen uit de verre boomgroepen
+const SITE_RECTS=[[-680,210,-440,400],[400,30,860,360],[-800,-350,-560,-170]];
+const inSite=(x,z)=>SITE_RECTS.some(r=>x>r[0]&&x<r[2]&&z>r[1]&&z<r[3]);
 function lay(kind,x0,z0,x1,z1){LAYOUT.push({kind,r:[Math.min(x0,x1),Math.min(z0,z1),Math.max(x0,x1),Math.max(z0,z1)]});}
 const rectsOverlap=(a,b,m=0)=>Math.min(a[2],b[2])-Math.max(a[0],b[0])>-m&&Math.min(a[3],b[3])-Math.max(a[1],b[1])>-m;
 // is deze plek vrij van objecten van deze soorten? (m = extra marge in meters)
@@ -964,10 +970,10 @@ function buildBuilding({id,x0,x1,z0,z1,doors,label}){
 const crownGeos=[0,1,2].map(i=>{let g=new THREE.IcosahedronGeometry(1,2);g.deleteAttribute('normal');g.deleteAttribute('uv');g=mergeVertices(g);
   const p=g.attributes.position;for(let k=0;k<p.count;k++){const v=V3(p.getX(k),p.getY(k),p.getZ(k));const n=1+Math.sin(v.x*3.1+i)*Math.cos(v.y*2.7+i)*Math.sin(v.z*3.7+i*2)*0.22;v.multiplyScalar(n);p.setXYZ(k,v.x,v.y,v.z);}
   g.computeVertexNormals();g.setAttribute('uv',new THREE.BufferAttribute(new Float32Array(p.count*2),2));return g;});
-function tree(x,z,s=1,cast=false){lay('tree',x-0.35*s,z-0.35*s,x+0.35*s,z+0.35*s);const h=rr(4,6)*s;const t=cyl(0.18*s,0.28*s,h,MAT.bark,staticRoot,x,h/2,z,7);t.castShadow=cast;
+function tree(x,z,s=1,cast=false,force=false){if(!force&&inSite(x,z))return;lay('tree',x-0.35*s,z-0.35*s,x+0.35*s,z+0.35*s);const h=rr(4,6)*s;const t=cyl(0.18*s,0.28*s,h,MAT.bark,staticRoot,x,h/2,z,7);t.castShadow=cast;
   const n=3+Math.floor(R()*3),lm=MAT.leaf[Math.floor(R()*3)];
   for(let i=0;i<n;i++){const r=rr(1.8,3.0)*s;const c=mesh(crownGeos[i%3],lm,staticRoot,x+rr(-1.5,1.5)*s,h+rr(-0.5,2.5)*s,z+rr(-1.5,1.5)*s);c.scale.set(r,r*rr(0.8,1.1),r);c.rotation.y=R()*6;c.castShadow=cast;}}
-function poplar(x,z){lay('tree',x-0.4,z-0.4,x+0.4,z+0.4);const h=rr(14,18);cyl(0.2,0.3,h*0.5,MAT.bark,staticRoot,x,h*0.25,z,7).castShadow=false;const c=mesh(crownGeos[Math.floor(R()*3)],MAT.leaf[0],staticRoot,x,h*0.58,z);c.scale.set(rr(1.3,1.8),h*0.42,rr(1.3,1.8));c.castShadow=Math.abs(x)<200&&Math.abs(z)<200;}
+function poplar(x,z){if(inSite(x,z))return;lay('tree',x-0.4,z-0.4,x+0.4,z+0.4);const h=rr(14,18);cyl(0.2,0.3,h*0.5,MAT.bark,staticRoot,x,h*0.25,z,7).castShadow=false;const c=mesh(crownGeos[Math.floor(R()*3)],MAT.leaf[0],staticRoot,x,h*0.58,z);c.scale.set(rr(1.3,1.8),h*0.42,rr(1.3,1.8));c.castShadow=Math.abs(x)<200&&Math.abs(z)<200;}
 function buildTrees(){
   for(let z=78;z<1200;z+=rr(9,13)){if(Math.abs(z-101)<7||Math.abs(z-239)<7||Math.abs(z-161.5)<6||Math.abs(z-273)<7||Math.abs(z-387)<7)continue;tree(17+rr(-0.5,0.5),z,rr(0.9,1.1),z<160);tree(33+rr(-0.5,0.5),z,rr(0.9,1.1),z<160);}
   for(let z=-70;z<110;z+=rr(8,11)){if(Math.abs(z-101)<5)continue;poplar(-64+rr(-1,1),z);poplar(108+rr(-1,1),z);}   // niet op de weg naar de wijk
@@ -1248,6 +1254,7 @@ function buildDistrict(){
   for(let x=-120;x<190;x+=30){streetLight(x,268.5);streetLight(x+15,391.5);}
   dressStreets();
   RING.stations.forEach(kiosk);
+  buildSites();
 }
 
 
@@ -1410,6 +1417,115 @@ function dressStreets(){
 function aptExtras(x0,z0,x1,z1,floors){const W=x1-x0,Dz=z1-z0,cx=(x0+x1)/2,cz=(z0+z1)/2;
   for(const s of[-1,1])for(let f=1;f<floors;f++)for(let bx=x0+4;bx<x1-2;bx+=8){const z=cz+s*(Dz/2+0.6),y=3.6+f*3;
     box(3.2,0.16,1.2,SM.balcony,staticRoot,bx+2,y,z);box(3.2,1.0,0.05,SM.rail,staticRoot,bx+2,y+0.58,cz+s*(Dz/2+1.18));}}
+
+
+// ============================================================ grote afnemers in de wereld: ziekenhuis (F5), kassen (F6) en waterzuivering (G4)
+// Alleen visueel: je ziet of ze stroom hebben. Ver van het station (zoals in het echt); statisch en samengevoegd, licht via oplichtende materialen.
+const SITE={zkh:{f:'F5',x:-560,z:300,glow:[],on:true},kassen:{f:'F6',x0:430,z0:60,x1:830,z1:330,glow:[],halo:[],on:true},rwzi:{f:'G4',x:-680,z:-260,on:true}};
+const siteLive=s=>{const f=FEEDERS.find(x=>x.id===s.f);return !!f&&EN.has(f.node);};
+// terreinverlichting die aan het veld van de afnemer hangt (gaat uit bij uitval)
+function siteLamp(S,x,z){if(!S.lampMat){S.lampMat=mat({color:0x2a2c2e,emissive:0xffd9a0,emissiveIntensity:0});S.poolMat=new THREE.MeshBasicMaterial({map:poolTex,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false,fog:false});}
+  cyl(0.08,0.12,8,MAT.galv,staticRoot,x,4,z,8);box(0.8,0.14,0.3,S.lampMat,staticRoot,x+0.35,8,z);
+  const pool=new THREE.Mesh(new THREE.PlaneGeometry(16,16),S.poolMat);pool.rotation.x=-Math.PI/2;pool.position.set(x+0.35,0.08,z);pool.renderOrder=2;staticRoot.add(pool);}
+function signTex(t,bg,fg,w=512,h=128,font='bold 64px Arial'){return toTex(textCanvas(t,{w,h,bg,fg,font,border:false}));}
+
+// ---- ziekenhuis: hoofdgebouw met verpleegafdelingen, poliklinieken, helikopterplatform, ambulances en noodstroomaggregaat
+function buildHospital(){const S=SITE.zkh,{x,z}=S,W=96,Dz=34,F=6,H=F*3.4+2;
+  groundQuad(x-110,z-80,x+110,z+90,0.03,MAT.asphalt,6);groundQuad(x-104,z-74,x+104,z-46,0.035,SM.tiles,2);
+  lay('site',x-110,z-80,x+110,z+90);
+  const wall=mat({color:0xeef0ee,roughness:0.85});box(W,H,Dz,wall,staticRoot,x,H/2,z);
+  const fac=(len,fl)=>{const t=APT.tex.clone();t.repeat.set(len/8,fl);t.needsUpdate=true;return mat({map:t,roughness:0.8,color:0xffffff});};
+  const glow=(len,fl,px,py,pz,ry)=>{const t=APT_GLOW.clone();t.repeat.set(len/32,fl/4);t.needsUpdate=true;const m=glowMat(t);S.glow.push(m);
+    const g=mesh(new THREE.PlaneGeometry(len,fl*3),m,staticRoot,px,py,pz);g.rotation.y=ry;g.castShadow=g.receiveShadow=false;g.renderOrder=1;};
+  for(const s of[-1,1]){const p=mesh(new THREE.PlaneGeometry(W,F*3),fac(W,F),staticRoot,x,2+F*1.5,z+s*(Dz/2+0.03));p.rotation.y=s>0?0:Math.PI;p.castShadow=false;glow(W,F,x,2+F*1.5,z+s*(Dz/2+0.06),p.rotation.y);
+    const q=mesh(new THREE.PlaneGeometry(Dz,F*3),fac(Dz,F),staticRoot,x+s*(W/2+0.03),2+F*1.5,z);q.rotation.y=s*Math.PI/2;q.castShadow=false;glow(Dz,F,x+s*(W/2+0.06),2+F*1.5,z,q.rotation.y);}
+  box(W+0.6,0.6,Dz+0.6,MAT.concreteDark,staticRoot,x,H+0.3,z);
+  // poliklinieken: lage vleugel aan de voorkant, entree met luifel
+  const wx=x-24,wz=z-Dz/2-14;box(46,8,28,wall,staticRoot,wx,4,wz);box(48,0.5,30,MAT.concreteDark,staticRoot,wx,8.25,wz);
+  {const p=mesh(new THREE.PlaneGeometry(46,4),fac(46,1),staticRoot,wx,5.5,wz-14.04);p.rotation.y=Math.PI;p.castShadow=false;glow(46,1,wx,5,wz-14.07,Math.PI);}
+  box(16,0.4,8,MAT.trim,staticRoot,wx,3.4,wz-18);for(const dx of[-7,7])cyl(0.2,0.2,3.4,MAT.galv,staticRoot,wx+dx,1.7,wz-21.6,8);
+  // helikopterplatform op het dak
+  cyl(10,10,0.4,MAT.concreteDark,staticRoot,x+26,H+0.8,z,32);
+  const hp=mesh(new THREE.CircleGeometry(8.5,32),mat({map:signTex('H','#2b5d3c','#ffffff',256,256,'bold 200px Arial'),roughness:0.7}),staticRoot,x+26,H+1.02,z);hp.rotation.x=-Math.PI/2;
+  // naambord met rood kruis (licht op zolang er stroom is)
+  S.sign=new THREE.MeshBasicMaterial({map:signTex('✚ ZIEKENHUIS','#ffffff','#c8102e',1024,160,'bold 110px Arial'),color:0xffffff});
+  const sg=mesh(new THREE.PlaneGeometry(26,4),S.sign,staticRoot,x-10,H-2.2,z-Dz/2-0.12);sg.rotation.y=Math.PI;sg.castShadow=false;
+  // ambulances bij de spoedeisende hulp
+  const amb=mat({color:0xf2f0e6,roughness:0.5}),ambS=mat({color:0x1d63c9,roughness:0.5}),ambY=mat({color:0xe0c020,roughness:0.5});
+  for(const [ax,az] of[[x+30,z-Dz/2-8],[x+38,z-Dz/2-8]]){box(2.4,2.6,6.2,amb,staticRoot,ax,1.6,az);box(2.42,0.35,6.22,ambS,staticRoot,ax,1.4,az);box(2.42,0.3,6.22,ambY,staticRoot,ax,0.9,az);}
+  box(14,0.3,12,MAT.trim,staticRoot,x+34,4.2,z-Dz/2-8);   // overkapping SEH
+  // parkeerplaats
+  for(let i=0;i<16;i++)parkedCar(x-96+i*6.2,z+62+(i%2)*6.4,false,i);
+  // noodstroomaggregaat in een container; bij uitval draait hij en komt er rook uit de uitlaat
+  const gx=x+W/2+10,gz=z+20;box(12,3,2.6,mat({color:0x2f5a3c,roughness:0.7}),staticRoot,gx,1.5,gz);cyl(0.25,0.25,2.2,MAT.galv,staticRoot,gx+4,4.1,gz,8);
+  S.genLamp=mat({color:0x331a00,emissive:0xff8a00,emissiveIntensity:0});const lp=box(0.3,0.3,0.3,S.genLamp,staticRoot,gx-5,3.2,gz);lp.userData.dyn=true;S.exhaust=V3(gx+4,5.3,gz);
+  plate('NOODSTROOM',staticRoot,gx-1,2.2,gz-1.32,Math.PI,1.6);
+  for(const [lx,lz] of[[-95,62],[-55,62],[-15,62],[25,62],[65,62],[-40,-60],[0,-60],[40,-60],[95,0]])siteLamp(S,x+lx,z+lz);
+  tree(x-100,z-60,1.1,false,true);tree(x+100,z-60,1.1,false,true);tree(x-100,z+80,1,false,true);tree(x+102,z+80,1,false,true);}
+
+// ---- kassen: vier glazen Venlo-kassen met assimilatiebelichting, waterbassin en ketelhuis
+function buildGreenhouses(){const S=SITE.kassen,{x0,z0,x1,z1}=S;
+  groundQuad(x0-20,z0-20,x1+20,z1+20,0.03,MAT.concrete,4);lay('site',x0-20,z0-20,x1+20,z1+20);
+  const glass=mat({color:0xd4ecf3,roughness:0.08,metalness:0.1,transparent:true,opacity:0.32,depthWrite:false,side:THREE.DoubleSide}),frame=mat({color:0xb9bfc2,roughness:0.5,metalness:0.6});
+  const crop=mat({map:toTex(C.grass,4,4),color:0x5f9a3c,roughness:1});
+  const kap=(()=>{const sh=new THREE.Shape();sh.moveTo(-2,0);sh.lineTo(0,0.95);sh.lineTo(2,0);sh.closePath();return sh;})();
+  const blocks=[[x0,z0,(x0+x1)/2-6,(z0+z1)/2-6],[(x0+x1)/2+6,z0,x1,(z0+z1)/2-6],[x0,(z0+z1)/2+6,(x0+x1)/2-6,z1],[(x0+x1)/2+6,(z0+z1)/2+6,x1,z1]];
+  blocks.forEach(([a,b,c,d])=>{const L=c-a,Wd=d-b,cx=(a+c)/2,cz=(b+d)/2,H=6;
+    groundQuad(a,b,c,d,0.06,crop,6);
+    for(const s of[-1,1]){const p=mesh(new THREE.PlaneGeometry(L,H),glass,staticRoot,cx,H/2,cz+s*Wd/2);p.castShadow=false;const q=mesh(new THREE.PlaneGeometry(Wd,H),glass,staticRoot,cx+s*L/2,H/2,cz);q.rotation.y=Math.PI/2;q.castShadow=false;}
+    const geo=new THREE.ExtrudeGeometry(kap,{depth:L,bevelEnabled:false});geo.rotateY(Math.PI/2);geo.translate(-L/2,0,0);
+    for(let zz=b+2;zz<d-1;zz+=4){const r=mesh(geo,glass,staticRoot,cx,H,zz);r.castShadow=false;box(L,0.08,0.08,frame,staticRoot,cx,H,zz-2);}
+    for(let xx=a;xx<=c;xx+=12)box(0.12,H,Wd,frame,staticRoot,xx,H/2,cz);
+    // assimilatiebelichting: lichtvlak onder het dak en een gloed boven de kas (van ver te zien)
+    const lm=new THREE.MeshBasicMaterial({color:0xffa040,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false});S.glow.push(lm);
+    const lp=mesh(new THREE.PlaneGeometry(L-1,Wd-1),lm,staticRoot,cx,H-0.3,cz);lp.rotation.x=-Math.PI/2;lp.castShadow=lp.receiveShadow=false;lp.userData.noBake=true;lp.renderOrder=3;
+    const hm=new THREE.SpriteMaterial({map:glowTex,color:0xff9a3a,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending});S.halo.push(hm);
+    const halo=new THREE.Sprite(hm);halo.position.set(cx,26,cz);halo.scale.set(L*1.6,60,1);scene.add(halo);});
+  // ketelhuis met schoorsteen, waterbassin
+  const kx=x0-6,kz=z1+10;box(24,9,14,mat({color:0x8b9196,roughness:0.6,metalness:0.3}),staticRoot,kx+20,4.5,kz);cyl(0.9,1.1,26,MAT.concreteDark,staticRoot,kx+30,13,kz,14);
+  S.chimney=V3(kx+30,26.5,kz);
+  const bw=groundQuad(x1-60,z1+4,x1,z1+18,0.08,MAT.water,4);bw.receiveShadow=false;
+  for(let lx=x0;lx<=x1;lx+=100)siteLamp(S,lx,z0-14);
+  plate('GLASTUINBOUW OOST',staticRoot,kx+20,7,kz-7.05,Math.PI,6);}
+
+// ---- waterzuivering: twee nabezinktanks met draaiende brug, beluchtingstanks, gistingstank en bedrijfsgebouw
+function buildRWZI(){const S=SITE.rwzi,{x,z}=S;
+  groundQuad(x-110,z-80,x+110,z+80,0.03,MAT.concrete,4);lay('site',x-110,z-80,x+110,z+80);
+  const wallM=mat({map:toTex(C.conc),color:0xb8b6ae,roughness:0.9,side:THREE.DoubleSide});
+  const waterM=mat({color:0x3d4f4a,roughness:0.15,metalness:0.2});
+  S.bridges=[];
+  for(const [cx,cz] of[[x-55,z-25],[x-55,z+38]]){const ring=mesh(new THREE.CylinderGeometry(22,22,3,48,1,true),wallM,staticRoot,cx,1.5,cz);ring.castShadow=false;
+    const wd=mesh(new THREE.CircleGeometry(21.8,48),waterM,staticRoot,cx,2.6,cz);wd.rotation.x=-Math.PI/2;wd.receiveShadow=false;
+    cyl(1.2,1.2,3.6,MAT.concreteDark,staticRoot,cx,1.8,cz,12);
+    const br=new THREE.Group();br.position.set(cx,3.6,cz);br.userData.dyn=true;scene.add(br);
+    box(22,0.6,1.6,MAT.trim,br,11,0,0);box(22,0.9,0.05,MAT.galv,br,11,0.75,0.8);box(22,0.9,0.05,MAT.galv,br,11,0.75,-0.8);box(1.4,1.2,2,MAT.cabinet,br,21.6,0.4,0);
+    S.bridges.push(br);}
+  // beluchtingstanks: het water bruist zolang de beluchting draait
+  const foam=(()=>{const c=cnv(256),g=c.getContext('2d');g.fillStyle='#4e6560';g.fillRect(0,0,256,256);for(let i=0;i<420;i++){g.fillStyle=`rgba(235,240,235,${0.25+R()*0.5})`;g.beginPath();g.arc(R()*256,R()*256,1+R()*3.5,0,7);g.fill();}return toTex(c,6,2);})();
+  S.foam=mat({map:foam,roughness:0.6});
+  for(let i=0;i<3;i++){const tz=z-45+i*22,tx=x+40;box(64,3,1,wallM,staticRoot,tx,1.5,tz-8);box(64,3,1,wallM,staticRoot,tx,1.5,tz+8);box(1,3,16,wallM,staticRoot,tx-32,1.5,tz);box(1,3,16,wallM,staticRoot,tx+32,1.5,tz);
+    const w=mesh(new THREE.PlaneGeometry(63,15),S.foam,staticRoot,tx,2.5,tz);w.rotation.x=-Math.PI/2;w.receiveShadow=false;w.userData.noBake=true;}
+  // gistingstanks en bedrijfsgebouw
+  for(const dx of[0,18]){cyl(7,7,14,mat({color:0x6d7a5a,roughness:0.6,metalness:0.3}),staticRoot,x+20+dx,7,z+52,24);const d=mesh(new THREE.SphereGeometry(7,24,12,0,Math.PI*2,0,Math.PI/2),MAT.concreteDark,staticRoot,x+20+dx,14,z+52);d.castShadow=false;}
+  box(30,8,16,mat({color:0xd8d4c8,roughness:0.8}),staticRoot,x+75,4,z+55);box(31,0.5,17,MAT.concreteDark,staticRoot,x+75,8.25,z+55);
+  for(const [lx,lz] of[[-100,-70],[-100,10],[-100,70],[0,-70],[0,70],[100,-70],[100,10],[60,40]])siteLamp(S,x+lx,z+lz);
+  plate('RWZI · WATERSCHAP',staticRoot,x+75,6,z+46.95,Math.PI,8);
+  S.lamp=mat({color:0x111111,emissive:0x30ff60,emissiveIntensity:0});const l=box(0.5,0.5,0.5,S.lamp,staticRoot,x+62,7.5,z+46.8);l.userData.dyn=true;}
+
+function buildSites(){buildHospital();buildGreenhouses();buildRWZI();}
+
+// ---- elke frame: stroom aan of uit zichtbaar maken (goedkoop: alleen materialen en een paar objecten)
+let siteSmoke=0;
+function updateSites(dt){const h=hourOf(),night=clamp((NIGHT-0.15)*1.5,0,1),cam=camera.position;siteSmoke+=dt;
+  const z=SITE.zkh;z.on=siteLive(z);const win=night*(z.on?0.95:0.06);z.glow.forEach(m=>m.opacity=win);z.sign.color.setScalar(z.on?1:0.12);
+  for(const S of[SITE.zkh,SITE.kassen,SITE.rwzi]){if(!S.lampMat)continue;const on=siteLive(S)&&NIGHT>0.3;S.lampMat.emissiveIntensity=on?5:0;S.poolMat.opacity=on?0.55*NIGHT:0;}
+  z.genLamp.emissiveIntensity=z.on?0:(performance.now()%900<450?4:0.5);
+  const k=SITE.kassen;k.on=siteLive(k);const lightsOn=k.on&&(h<SEASON.rise+1||h>SEASON.set-1);k.glow.forEach(m=>m.opacity=lightsOn?0.55:0);k.halo.forEach(m=>m.opacity=lightsOn?0.4*clamp(NIGHT*1.4,0.2,1):0);
+  const r=SITE.rwzi;r.on=siteLive(r);if(r.on&&!SIM.paused)r.bridges.forEach((b,i)=>{b.rotation.y+=dt*(i?0.035:0.03)*Math.min(SIM.speed,60)/30;});
+  if(r.on&&!SIM.paused){r.foam.map.offset.x+=dt*0.02;r.foam.map.offset.y+=dt*0.013;}r.foam.color.setScalar(r.on?1:0.6);r.lamp.emissiveIntensity=r.on?2.5:0;
+  // rook: alleen als de camera in de buurt is
+  if(siteSmoke>0.45){siteSmoke=0;if(!z.on&&cam.distanceTo(z.exhaust)<1400)smokePuff(z.exhaust.x,z.exhaust.y,z.exhaust.z,0.7);
+    if(k.on&&cam.distanceTo(k.chimney)<1600)smokePuff(k.chimney.x,k.chimney.y,k.chimney.z,1.4);}}
 
 
 // Net: toestand, velden en apparaten, 10 kV-ringen, netgraaf (spanning/aarding) en belastingstromen
@@ -3596,7 +3712,8 @@ function updateHover(){if(FP.on||!moveEv)return;const e=moveEv;moveEv=null;const
 
 // ============================================================ camera
 const VIEWPOS=[[V3(100,52,118),V3(22,3,8)],[V3(-4,13,-2),V3(-30,5,-22)],[V3(88,17,14),V3(32,3,32)],[V3(64,11,32),V3(30,3,50)],[V3(22.1,215,34),V3(22,0,10)],
-  [V3(-2.2,2.5,47.6),V3(0.4,1.6,54.2)],[V3(58.8,2.5,47.6),V3(61.4,1.6,54.2)],[V3(30,95,330),V3(10,0,175)],[V3(40,90,470),V3(30,0,330)]];
+  [V3(-2.2,2.5,47.6),V3(0.4,1.6,54.2)],[V3(58.8,2.5,47.6),V3(61.4,1.6,54.2)],[V3(30,95,330),V3(10,0,175)],[V3(40,90,470),V3(30,0,330)],
+  [V3(-520,48,150),V3(-565,6,285)],[V3(600,85,-40),V3(630,4,190)],[V3(-540,70,-380),V3(-680,2,-250)]];   // ziekenhuis, kassen, waterzuivering
 let fly=null;
 function flyTo(pos,target,dur=1.5){if(FP.on)exitFP();fly={t:0,dur,p0:camera.position.clone(),t0:controls.target.clone(),p1:pos,t1:target};controls.autoRotate=false;}
 function fmtClock(t){const m=((t%1440)+1440)%1440;return `${String(Math.floor(m/60)).padStart(2,'0')}:${String(Math.floor(m%60)).padStart(2,'0')}`;}
@@ -4684,7 +4801,9 @@ function activeFaults(){const o=[],add=(key,sev,title,detail,go,cust=0)=>o.push(
     if(BUSF[b])add('bf'+b,'crit',`Railfout rail ${nm}`,'rail spanningsloos tot de monteur klaar is',{tab});else if(!EN.has(b))add('bd'+b,'crit',`Rail ${nm} spanningsloos`,'',{tab});});
   if(EF.on){const r=efRails();add('ef','crit',`Aardfout 10 kV · U0 ${efU0().toFixed(1).replace('.',',')} kV`,r.length?`op rail ${r.map(b=>BUSES[b].nm).join(' en ')} – zoek door te schakelen`:'',{tab:'10'});}
   if(!SIM.meppel.avail)add('mp','warn','OS Meppel: storing Netbeheer Noord',SIM.meppel.reason||'herstel door Netbeheer Noord',{tab:'M'},offOf(FEEDERS.filter(f=>f.bus==='MP')));
-  FEEDERS.forEach(f=>{if(f.ring)return;const go={tab:tabOfFeeder(f),dev:f.cb};
+  // afnemers met een eigen plek in de wereld: knop 'bekijk' (camerastandpunt)
+  const SITE_VIEW={F5:9,F6:10,G4:11};
+  FEEDERS.forEach(f=>{if(f.ring)return;const go={tab:tabOfFeeder(f),dev:f.cb,view:SITE_VIEW[f.id]};
     if(f.fault)add('ff'+f.id,'crit',`Kabelfout ${f.id} ${f.name}`,f.fault.stage==='search'?'storingsdienst zoekt – veld nog niet inschakelen':'weggeschakeld – veld mag weer in, wacht op reparatie',go,custOff(f));
     else if(f.cust>0&&!f.backfed&&!EN.has(f.node)&&f.unplanned)add('fd'+f.id,'warn',`${f.id} ${f.name} spanningsloos`,'',go,f.cust);
     if((f.temp||0)>CABLE.max)add('ft'+f.id,'warn',`Kabel ${f.cb} te warm`,`${Math.round(f.temp)} °C (max. ${CABLE.max} °C)`,{tab:'K'});});
@@ -4706,12 +4825,12 @@ function activeFaults(){const o=[],add=(key,sev,title,detail,go,cust=0)=>o.push(
   return o.sort((a,b)=>(a.sev==='crit'?0:1)-(b.sev==='crit'?0:1)||a.since-b.since);}
 function renderFaults(){const el=$('#faultList');if(!el)return;const fs=activeFaults(),crit=fs.filter(f=>f.sev==='crit').length;
   const html=fs.length?fs.map(f=>`<div class="fl ${f.sev}${f.go?' go':''}" ${f.go?`data-fgo="${f.go.tab}|${f.go.dev||''}"`:''} title="${f.go?'Klik om in SCADA te tonen':''}"><span class="tm">${fmtClock(f.since)}</span><span class="lv"></span>
-      <span><b>${f.title}</b> <i>· ${Math.max(0,Math.round(SIM.t-f.since))} min</i>${f.detail||f.cust?`<br><small>${f.detail||''}${f.cust?`${f.detail?' · ':''}${f.cust.toLocaleString('nl-NL')} klant${f.cust>1?'en':''} zonder stroom`:''}</small>`:''}</span></div>`).join('')
+      <span><b>${f.title}</b> <i>· ${Math.max(0,Math.round(SIM.t-f.since))} min</i>${f.go?.view!=null?` <button class="mini fl-view" data-fview="${f.go.view}" title="Bekijk ter plaatse">👁 bekijk</button>`:''}${f.detail||f.cust?`<br><small>${f.detail||''}${f.cust?`${f.detail?' · ':''}${f.cust.toLocaleString('nl-NL')} klant${f.cust>1?'en':''} zonder stroom`:''}</small>`:''}</span></div>`).join('')
     :'<div class="fl-none">✓ Geen lopende storingen</div>';
   if(el._h!==html){el._h=html;el.innerHTML=html;}
   const c=$('#faultCnt');c.textContent=fs.length;c.classList.toggle('bad',crit>0);$('#faults').classList.toggle('has-crit',crit>0);
   const h=$('#faults').offsetHeight;if(h!==renderFaults.h){renderFaults.h=h;document.documentElement.style.setProperty('--faultH',(h?h+8:0)+'px');}}
-$('#faultList').addEventListener('click',e=>{const f=e.target.closest('[data-fgo]');if(!f)return;const [tab,dev]=f.dataset.fgo.split('|');setTab(tab);$('#scada').classList.remove('min');if(dev&&D[dev])selectDevice(dev);});
+$('#faultList').addEventListener('click',e=>{const v=e.target.closest('[data-fview]');if(v){const p=VIEWPOS[+v.dataset.fview];return flyTo(p[0].clone(),p[1].clone(),2.5);}const f=e.target.closest('[data-fgo]');if(!f)return;const [tab,dev]=f.dataset.fgo.split('|');setTab(tab);$('#scada').classList.remove('min');if(dev&&D[dev])selectDevice(dev);});
 
 
 // ============================================================ HUD + bediening
@@ -4788,7 +4907,7 @@ else{renderMenu();$('#intro').classList.remove('hidden');controls.autoRotate=tru
 if(params.has('night'))updateSky(22);
 if(params.has('view')){const v=VIEWPOS[+params.get('view')];camera.position.copy(v[0]);controls.target.copy(v[1]);controls.autoRotate=false;controls.update();}
 
-window.OS={SLD,activeFaults,renderFaults,reportPDF,listSaves,openSlots,closeSlots,SAVE_SLOTS,layoutCheck,LAYOUT,FREC,fltRec,openRec,closeRec,renderRec,selectivity,protSelect,feederT,incT,incOf,shortCircuit,EF,earthFault,efTick,efRails,efU0,railsCoupled,controls,tripBreaker,CONS,LS_LINKS,LS_ORDERS,GENSET,lsTick,lsOrder,lsSwitchOrder,lsExec,gsSend,gsOff,gsRestart,tapOrder,setEta,callPrio,lsAreas,PRIO,openLS,closeLS,renderLS,lvVolt,stationLoads,shedFactor,failP,manualP,phoneTick,refreshDevPanel,updateSLD,openKeys,closeKeys,KEY_HELP,RELAY_BAYS,relayTask,relayDue,relayDefect,initRelays,kitTests,kitMeasure,kitVerdict,kitRun,openKit,closeKit,saveGame,readSave,deleteSave,resumeGame,canSave,specOf,CABLE,soilT,FD,meppelFault,linkTick,tabAlarms,updateTabAlarms,renderTasks,INC,INCIDENTS,startIncident,endIncident,incidentTick,setTab,renderCables,GFX,setGfx,applyGfx,openSettings,closeSettings,WX_TYPES,renderer,scene,FIRE,CARS,updateWindows,updateLife,stationLive,cbMaintTask,worstCb,cond,breakerFails,CB_IDS,FLEX,setFlex,flexTick,congestion,openFlex,closeFlex,checkModel,homeBus,BUSES,SEL_BAYS,TORCH,setTorch,HO_POOL,handoverTick,REC,RP,startReplay,stopReplay,analyse,stationDamage,closeHandover,deviations,PHONE,lvFault,callFrom,phoneAnswer,dispatchLV,LVG,forecast,progAdvice,PROG,startTask:(k,...a)=>{TASK={relayTask,cbMaintTask,railTask,railBTask,stationTask,thermoTask,ringTask,feederTask,lineTask,reserveTask}[k](...a);TASK.i=0;TASK.code='WV-TEST';briefInit(TASK);renderTasks();},SIM,D,LESSONS,lessonGo,selectDevice,abortTask,railTask,stationTask,thermoTask,nearDev,VIEWS,PROT,setProt,openProt,closeProt,busFault,BUSF,RINGS,task:()=>TASK,briefSubmit,briefCheck,briefWatch,actKey,taskActs,crewNear,boxOf:id=>VIEWS[id]&&VIEWS[id].box,AudioSys,updateAudio,WX,setWeather,setSeason,SEASONS,ambient,enterKiosk,ROOMS,blockedAt,RING,NPCS,crewDispatch,ringFault,FP,enterFP,exitFP,pickCenter,camera,camInside,setRatio,setTab,GAME,MODES,applyMode,endGame,EN:()=>EN,FLOW,operate,tapStep,setAVR,resetLockout,toggleAR,regulate,computeFlows,randomEvent,lineFault,feederFault,trafoFault,offerTask,simStep,FEEDERS};
+window.OS={VIEWPOS,SITE,updateSites,SLD,activeFaults,renderFaults,reportPDF,listSaves,openSlots,closeSlots,SAVE_SLOTS,layoutCheck,LAYOUT,FREC,fltRec,openRec,closeRec,renderRec,selectivity,protSelect,feederT,incT,incOf,shortCircuit,EF,earthFault,efTick,efRails,efU0,railsCoupled,controls,tripBreaker,CONS,LS_LINKS,LS_ORDERS,GENSET,lsTick,lsOrder,lsSwitchOrder,lsExec,gsSend,gsOff,gsRestart,tapOrder,setEta,callPrio,lsAreas,PRIO,openLS,closeLS,renderLS,lvVolt,stationLoads,shedFactor,failP,manualP,phoneTick,refreshDevPanel,updateSLD,openKeys,closeKeys,KEY_HELP,RELAY_BAYS,relayTask,relayDue,relayDefect,initRelays,kitTests,kitMeasure,kitVerdict,kitRun,openKit,closeKit,saveGame,readSave,deleteSave,resumeGame,canSave,specOf,CABLE,soilT,FD,meppelFault,linkTick,tabAlarms,updateTabAlarms,renderTasks,INC,INCIDENTS,startIncident,endIncident,incidentTick,setTab,renderCables,GFX,setGfx,applyGfx,openSettings,closeSettings,WX_TYPES,renderer,scene,FIRE,CARS,updateWindows,updateLife,stationLive,cbMaintTask,worstCb,cond,breakerFails,CB_IDS,FLEX,setFlex,flexTick,congestion,openFlex,closeFlex,checkModel,homeBus,BUSES,SEL_BAYS,TORCH,setTorch,HO_POOL,handoverTick,REC,RP,startReplay,stopReplay,analyse,stationDamage,closeHandover,deviations,PHONE,lvFault,callFrom,phoneAnswer,dispatchLV,LVG,forecast,progAdvice,PROG,startTask:(k,...a)=>{TASK={relayTask,cbMaintTask,railTask,railBTask,stationTask,thermoTask,ringTask,feederTask,lineTask,reserveTask}[k](...a);TASK.i=0;TASK.code='WV-TEST';briefInit(TASK);renderTasks();},SIM,D,LESSONS,lessonGo,selectDevice,abortTask,railTask,stationTask,thermoTask,nearDev,VIEWS,PROT,setProt,openProt,closeProt,busFault,BUSF,RINGS,task:()=>TASK,briefSubmit,briefCheck,briefWatch,actKey,taskActs,crewNear,boxOf:id=>VIEWS[id]&&VIEWS[id].box,AudioSys,updateAudio,WX,setWeather,setSeason,SEASONS,ambient,enterKiosk,ROOMS,blockedAt,RING,NPCS,crewDispatch,ringFault,FP,enterFP,exitFP,pickCenter,camera,camInside,setRatio,setTab,GAME,MODES,applyMode,endGame,EN:()=>EN,FLOW,operate,tapStep,setAVR,resetLockout,toggleAR,regulate,computeFlows,randomEvent,lineFault,feederFault,trafoFault,offerTask,simStep,FEEDERS};
 const clock=new THREE.Clock();let hudT=0,skyT=0,progT=0;
 let liteAcc=0;
 function frame(){
@@ -4806,7 +4925,7 @@ function frame(){
   controls.minDistance=camInside()?1.2:4;controls.update();}
   if((skyT+=dt)>0.25){skyT=0;if(!params.has('night'))updateSky(hourOf());}
   if((hudT+=dt)>0.25){hudT=0;if(!RP.on)updateHUD();updateSLD();refreshDevPanel();updateAudio();if(!LITE)drawPanelScreens();renderTasks();updateStreetLights();updateWindows();renderFaults();progTick();if((progT+=1)%4===0)renderProg();if(progT%2===0){renderCables();renderLSTab();if(lsOpen()&&progT%4===0)renderLS();}}
-  if(!LITE){updateHover();updateLabels();}if(GFX.particles)updateRain(dt);else RAIN.ls.visible=SNOW.p.visible=false;updateNPCs(dt);updateKioskLight();updateHotspot();phoneTick(dt);replayTick(dt);updateLife(dt);fireTick(dt);
+  if(!LITE){updateHover();updateLabels();}if(GFX.particles)updateRain(dt);else RAIN.ls.visible=SNOW.p.visible=false;updateNPCs(dt);updateKioskLight();updateHotspot();phoneTick(dt);replayTick(dt);updateLife(dt);fireTick(dt);updateSites(dt);
   let off=null;if(shake>0.01){off=V3((Math.random()-0.5)*shake,(Math.random()-0.5)*shake,(Math.random()-0.5)*shake);camera.position.add(off);shake*=Math.pow(0.02,dt);}
   // en het 3D-beeld helemaal niet tekenen: zonder grafische kaart kost één beeld ±2 kernseconden software-grafiek,
   // terwijl de tests alleen de simulatie en de panelen controleren (aanwijzen gaat met raycasting, niet met pixels)

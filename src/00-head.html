@@ -77,7 +77,7 @@ button:disabled{opacity:.35;cursor:not-allowed}
 #faults{left:12px;bottom:calc(20px + var(--alarmHe));width:410px;max-height:min(34vh,290px);display:flex;flex-direction:column;transition:border-color .3s}#faults.has-crit{border-color:rgba(229,72,77,.55)}
 #faultList{overflow:auto;padding:2px 0}.fl{display:grid;grid-template-columns:44px 8px 1fr;gap:8px;padding:5px 14px;font-size:12px;align-items:start}.fl.go{cursor:pointer}.fl.go:hover{background:rgba(255,255,255,.04)}
 .fl .tm{font-family:var(--mono);color:var(--dim);font-size:11px}.fl .lv{width:8px;height:8px;border-radius:2px;margin-top:4px;background:var(--accent)}.fl.crit .lv{background:var(--red);animation:flpulse 1.2s infinite}.fl.crit b{color:#ffd0d1}
-.fl i{font-style:normal;color:var(--muted);font-size:11px}.fl small{color:var(--muted);font-size:11px}.fl-none{padding:6px 14px;font-size:12px;color:var(--green)}#faultCnt.bad{background:var(--red);color:#fff}@keyframes flpulse{50%{opacity:.35}}
+.fl i{font-style:normal;color:var(--muted);font-size:11px}.fl small{color:var(--muted);font-size:11px}.fl-view{padding:0 6px;font-size:10.5px;margin-left:4px}.fl-none{padding:6px 14px;font-size:12px;color:var(--green)}#faultCnt.bad{background:var(--red);color:#fff}@keyframes flpulse{50%{opacity:.35}}
 #alarmList{overflow:auto;flex:1;padding:4px 0}
 .al{display:grid;grid-template-columns:44px 8px 1fr;gap:8px;padding:5px 14px;font-size:12px;align-items:start}
 .al .tm{font-family:var(--mono);color:var(--dim);font-size:11px}
@@ -386,6 +386,9 @@ body.fp #torch.on{display:block}
   <button data-v="6"><kbd>7</kbd>Binnen 20 kV</button>
   <button data-v="7"><kbd>8</kbd>Woonwijk</button>
   <button data-v="8"><kbd>9</kbd>Centrum &amp; Vaart</button>
+  <button data-v="9" title="F5 Ziekenhuis (±500 m westelijk)">Ziekenhuis</button>
+  <button data-v="10" title="F6 Glastuinbouw Oost (±500 m oostelijk)">Kassen</button>
+  <button data-v="11" title="G4 Waterzuivering (±700 m noordwestelijk)">RWZI</button>
   <button id="recBtn" class="tool" title="Storingsschrijver: stroom en spanning rond elke storing"><kbd>R</kbd>Schrijver</button>
   <button id="lsBtn" class="tool" title="Laagspanning, noodaggregaten en klanten informeren"><kbd>N</kbd>LS</button>
   <button id="keysBtn" class="tool" title="Overzicht van alle toetsen"><kbd>H</kbd>Toetsen</button>

@@ -526,6 +526,14 @@ const TESTS = [
         return { leeg, samen, klik, weg: !O.activeFaults().some(f => f.key === 'rsK23' || f.key === 'ffF6'), teller: document.querySelector('#faultCnt').textContent }; });
       for (const [k, v] of Object.entries(r)) if (k !== 'teller') assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
   } },
+  { name: 'afnemers in de wereld: ziekenhuis, kassen en waterzuivering tonen of ze stroom hebben', query: '?autostart&t=22&season=winter', async run(p) {
+      const r = await p.evaluate(() => { T.quiet(); const O = OS, S = O.SITE; O.SIM.paused = false; T.step(0.2); O.updateSites(0.1);
+        const aan = { zkh: S.zkh.glow[0].opacity > 0.5, kassen: S.kassen.glow[0].opacity > 0.3, rwzi: S.rwzi.lamp.emissiveIntensity > 1 };
+        for (const cb of ['V-F5', 'V-F6', 'W-G4']) O.D[cb].state = 0; O.computeFlows(); O.updateSites(0.1);
+        const uit = { zkh: S.zkh.glow[0].opacity < 0.1 && !S.zkh.on, kassen: S.kassen.glow[0].opacity === 0, rwzi: S.rwzi.lamp.emissiveIntensity === 0 };
+        return { aan, uit }; });
+      assert(Object.values(r.aan).every(Boolean) && Object.values(r.uit).every(Boolean), `afnemers tonen hun toestand niet: ${JSON.stringify(r)}`);
+  } },
   { name: 'leven in de wijk: ramen per station, auto\'s en buren bij uitval', query: '?autostart&t=21&night&season=winter', async run(p) {
       const r = await p.evaluate(async () => { T.quiet(); const O = OS, s1 = O.RING.stations[0]; O.SIM.paused = false; T.step(0.2); O.updateWindows();
         const aan = s1.winMats.some(m => m.opacity > 0.3), autos = O.CARS.filter(c => c.g.visible).length;
