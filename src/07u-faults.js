@@ -4,7 +4,7 @@ const FSEEN={};   // sleutel → eerste keer gezien (SIM.t), voor 'sinds' en de 
 const tabOfFeeder=f=>f.bus==='MP'?'M':is20(f.bus)?'20':'10';
 const offOf=cs=>cs.reduce((n,c)=>n+custOff(c),0);
 function activeFaults(){const o=[],add=(key,sev,title,detail,go,cust=0)=>o.push({key,sev,title,detail,go,cust});
-  if(INC.active)add('inc','warn',`Groot incident: ${INC.active.def.name}`,`nog ±${Math.max(0,Math.round(INC.active.until-SIM.t))} min`,null);
+  // een groot incident staat al in de eigen balk bovenin; hier alleen wat er in de installatie speelt
   LINES.forEach(L=>{const ln=SIM.lines[L];if(!ln.avail&&!ln.maint)add('ln'+L,'crit',`Lijn ${L} ${ln.name} spanningsloos`,ln.reason||'TenneT herstelt',{tab:'10',dev:L+'-Q0'});});
   TR.forEach(T=>{const t=D[T];if(t.blocked)add('tr'+T,'crit',`${T} geblokkeerd (relais 86)`,`${t.blockText||'beveiliging'}${t.resettable?' · reset mogelijk':' · inspectie loopt'}`,{tab:T==='T2'?'20':'10',dev:T});
     else if(t.oil>95&&EN.has(T+'h'))add('to'+T,'warn',`${T} warm`,`olie ${Math.round(t.oil)} °C – verlaag de belasting`,{tab:T==='T2'?'20':'10',dev:T});});

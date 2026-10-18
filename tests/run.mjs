@@ -526,6 +526,42 @@ const TESTS = [
         return { leeg, samen, klik, weg: !O.activeFaults().some(f => f.key === 'rsK23' || f.key === 'ffF6'), teller: document.querySelector('#faultCnt').textContent }; });
       for (const [k, v] of Object.entries(r)) if (k !== 'teller') assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
   } },
+  { name: 'brand 10 kV: vlammen uit het dak, brandweerwagens en brandweerlieden, blussen na spanningsloos, alles weer weg', query: '?autostart&t=14', async run(p) {
+      const r = await p.evaluate(async () => { const O = OS; T.quiet(); O.startIncident('brand', true); const F = O.FIRE;
+        const start = F.on && F.flames.length > 10 && F.trucks.length === 2 && F.trucks.some(t => t.lad) && O.NPCS.filter(n => n.say === 'Brandweer').length === 4 && typeof O.AudioSys.fireBell === 'function' && typeof O.AudioSys.siren === 'function';
+        await T.step(6); O.D['V-T1'].state = 0; O.D['V-T3'].state = 0; O.computeFlows(); await T.step(2);
+        const blust = F.douseAt != null; await T.step(20); O.fireTick(0.02); const kleiner = F.k < 0.5;
+        await T.step(15); const uit = !F.on && F.flames.length === 0 && !F.scorch && F.trucks.every(t => t.state !== 'come' && t.state !== 'park');
+        return { start, blust, kleiner, uit }; });
+      for (const [k, v] of Object.entries(r)) assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
+  } },
+  { name: 'noodaggregaat voedt altijd alle huizen van één MS-station, ook op de koudste winteravond', query: '?autostart&lite&t=18&season=winter', async run(p) {
+      const r = await p.evaluate(() => { const O = OS; T.quiet(); O.WX.cur.dT = -12; let worst = 0, at = '';
+        for (let m = 16 * 60; m < 22 * 60; m += 10) { O.SIM.t = m; O.computeFlows();
+          for (const s of O.RING.stations) { const L = s.groups.filter(g => g.kind === 'res' || g.kind === 'ovl').reduce((a, g) => a + Math.max(0, g.demand || 0) / (g.clp || 1), 0) / O.gsCap(); if (L > worst) { worst = L; at = s.id; } } }
+        return { worst: +worst.toFixed(2), at }; });
+      assert(r.worst <= 1, `huizen van ${r.at} vragen ${Math.round(r.worst * 100)}% van het aggregaat`);
+  } },
+  { name: 'zonnepark: alleen overdag een overstroomfout; grote incidenten niet dubbel in Lopende storingen', query: '?autostart&lite&t=1&season=zomer', async run(p) {
+      const r = await p.evaluate(() => { const O = OS; T.quiet(); const g1 = O.FEEDERS.find(f => f.id === 'G1');
+        const count = h => { O.SIM.t = h * 60; O.computeFlows(); let n = 0; for (let i = 0; i < 400; i++) { O.feederFault(); if (g1.fault) n++; O.FEEDERS.forEach(f => { f.fault = null; O.D[f.cb].state = 1; }); O.RING.secs.forEach(s => s.fault = false); O.computeFlows(); } return n; };
+        const nacht = count(1), dag = count(13);
+        O.startIncident('storm', true); const inc = O.activeFaults().some(f => f.key === 'inc' || /incident/i.test(f.title));
+        return { nacht, dag, inc }; });
+      assert(r.nacht === 0, `zonnepark kreeg 's nachts ${r.nacht} keer een overstroomfout`);
+      assert(r.dag > 0, 'zonnepark kreeg overdag nooit een fout');
+      assert(!r.inc, 'groot incident staat ook in Lopende storingen');
+  } },
+  { name: 'voetgangers lopen over de stoepen (meer overdag dan s nachts)', query: '?autostart&t=12&season=zomer', async run(p) {
+      await new Promise(r => setTimeout(r, 1500));
+      const r = await p.evaluate(async () => { const O = OS; O.camera.position.set(-40, 30, 200); O.controls.target.set(-40, 0, 240); O.controls.update(); await T.sleep(800);
+        const st = O.LAYOUT.filter(e => e.kind === 'stoep'), dag = O.WK.torso.count, W = O.getWalkers();
+        const off = W.slice(0, dag).filter(w => !w.cross && !st.some(e => w.x >= e.r[0] - 0.05 && w.x <= e.r[2] + 0.05 && w.z >= e.r[1] - 0.05 && w.z <= e.r[3] + 0.05)).length;
+        O.SIM.t = 3 * 60; await T.sleep(500); return { dag, off, nacht: O.WK.torso.count }; });
+      assert(r.dag >= 20, `overdag maar ${r.dag} voetgangers`);
+      assert(r.off === 0, `${r.off} voetgangers naast de stoep`);
+      assert(r.nacht < r.dag / 3, `'s nachts nog ${r.nacht} voetgangers`);
+  } },
   { name: 'kleine afnemers in de wijk: elk aan een eigen LS-groep, lichten uit bij spanningsloos, wereld compact', query: '?autostart&t=22&season=winter', async run(p) {
       const r = await p.evaluate(async () => { const O = OS; O.updateSmall();
         const named = O.SMALL.filter(e => !e.g).map(e => e.name), E = O.SMALL.find(e => e.name === 'Basisschool De Linde'), H = O.SMALL.find(e => e.name === 'Huisartsenpost');

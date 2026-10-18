@@ -106,7 +106,7 @@ Bedoeld voor **bedrijfsvoerders en monteurs in opleiding**, studenten **elektrot
   - *Cyberaanval op SCADA*: bediening op afstand valt weg. Loop het station in (`V`) en schakel lokaal aan het veld, terwijl de kassen en lijn L1 uitvallen.
   - *Overstroming De Vaart*: het water stijgt bij MS9. Sluit het normaal-open punt, haal MS9 uit de ring (MS8-R open, V-F2 uit) vóór het water er is, en neem MS9 na het droogvallen weer in bedrijf.
   - *Kraan raakt de 110 kV-lijn*: L1 is urenlang weg en TenneT laat via L2 maar 33 MW toe tijdens de avondpiek; blijf eronder met flexibel vermogen.
-  - *Brand in het 10 kV-gebouw*: rook uit het dak. De brandweer wil de hele 10 kV spanningsloos voordat ze naar binnen gaat; het ziekenhuis draait op noodstroom. Daarna stap voor stap herstellen (V-F6 heeft rookschade).
+  - *Brand in het 10 kV-gebouw*: de brandbel gaat, er slaan vlammen uit het dak en er komt rook. Twee brandweerwagens rijden met sirene en zwaailichten naar de poort en vier brandweerlieden gaan op verkenning. De brandweer wil de hele 10 kV spanningsloos voordat ze naar binnen gaat; het ziekenhuis draait op noodstroom. Is de 10 kV spanningsloos, dan steekt de ladderwagen de ladder op en blust met een waterstraal; de vlammen worden kleiner en de rook wordt stoom. Daarna stap voor stap herstellen (V-F6 heeft rookschade).
   - *Concert op het Marktplein*: podium, lichtshow en foodtrucks overbelasten MS6; het podium heeft een flexcontract.
   - *Laadpiek op een winteravond*: een uitgebreid laadplein en thuisladers in de hele woonwijk; congestie in trafo's en kabels.
   - *Zonnige pinksterzondag*: weinig afname en ±50% meer zonnepanelen: overspanning in de lange straten. Verlaag de vaste trappen. Dat kan alleen spanningsloos, dus open de trafo pas als de monteur er bijna is, of voed de straat via een kabelkast. Doelen: om 14:00 alle straten binnen 207–253 V, hooguit 30 keer omvormers uit, minder dan 10.000 klantminuten.
@@ -144,7 +144,7 @@ Bedoeld voor **bedrijfsvoerders en monteurs in opleiding**, studenten **elektrot
 | `B` | beveiliging | `C` | flex en congestie |
 | `O` | onderhoud | `K` | testkoffer |
 | `N` | laagspanning | `I` | instellingen |
-| `R` | storingsschrijver | `T` | weer en tijd bekijken |
+| `R` | storingsschrijver | `T` | weer en tijd bekijken, muisbesturing, voetgangers |
 | `WASD` / pijltjes | beeld schuiven | dubbelklik | daarheen vliegen |
 | `Ctrl+S` | opslaan | `L` / `M` | labels / geluid |
 
@@ -181,6 +181,7 @@ Bedoeld voor **bedrijfsvoerders en monteurs in opleiding**, studenten **elektrot
 - **Pauzemenu (`Esc`):** hervatten, de dienst beëindigen met rapport, of de score opslaan en terug naar het hoofdmenu.
 - **Lopende storingen** (paneel boven *Meldingen & gebeurtenissen*): wat er **nu** speelt, opgebouwd uit de toestand van de installatie en niet uit het logboek. Per storing zie je sinds wanneer en hoe lang al, de status (bijvoorbeeld *fout zoeken*, *weggeschakeld – wacht op reparatie*, *reset mogelijk*) en hoeveel klanten zonder stroom zitten.
   - Kritieke storingen staan bovenaan en knipperen rood.
+  - Een groot incident staat al in de balk boven de taken; het paneel toont alleen wat er in de installatie speelt.
   - Gevolgen staan bij de oorzaak: MS-stations die door een kabelfout in hun ring zonder stroom zitten, worden bij die kabelfout genoemd.
   - Klik op een storing om er in SCADA naartoe te gaan. Is hij opgelost, dan verdwijnt hij vanzelf. Zonder storingen staat er *✓ Geen lopende storingen*.
 - **Klaar om te schakelen:** als de storingsdienst of TenneT klaar is, of een transformator weer gereset mag worden, hoor je een oplopend klokgeluid en verschijnt een groene banner. Het betreffende veld knippert groen in SCADA en in 3D tot je het schakelt. · `spatie` pauze · `L` labels · `M` geluid · `Esc` deselecteren
@@ -198,7 +199,7 @@ Bedoeld voor **bedrijfsvoerders en monteurs in opleiding**, studenten **elektrot
   - **Omzetten onder last** mag alleen als V-K gesloten is: eerst de scheider naar de nieuwe rail sluiten, dan de oude openen. Zonder koppeling blokkeert de vergrendeling (of, met de vergrendelingen uit, ontstaat er een vlamboog). V-K kan niet open zolang een veld op beide rails staat.
   - Railaardschakelaars RA-Q8 en RB-Q8 zitten in de meetvelden.
 - **T2** (110/21 kV, 20/25 MVA) voedt de 20 kV-installatie in het tweede gebouw. Die heeft twee railhelften:
-  - **rail C1** met W-T2, G1 Zonnepark (productie en teruglevering) en G2 Industrieterrein Noord;
+  - **rail C1** met W-T2, G1 Zonnepark (productie en teruglevering; een overstroomfout kan alleen overdag, als er stroom loopt) en G2 Industrieterrein Noord;
   - **rail C2** met W-T3, G3 Buitengebied Oost en G4 Waterzuivering;
   - de **railkoppeling W-K** (normaal gesloten, met synchrocheck tot 0,5 kV verschil) en per railhelft een **railaardschakelaar** (RC-Q8, RD-Q8) in het meetveld.
 - **T3** is de omschakelbare reservetransformator (110/10,5-21 kV, 20/25 MVA).
@@ -316,7 +317,7 @@ Toets `N`, de knop *LS* of het SCADA-tabblad *LS*.
 
 Klantminuten blijven tellen, maar je kunt met acties punten terugverdienen:
   - **Herstelbonus:** elke klant die na een storing weer stroom krijgt, levert punten op; sneller herstel levert meer op, en prioriteitsklanten geven extra. Wie je zelf afschakelde, telt niet mee.
-  - **Noodaggregaten:** drie aggregaten van 400 kVA. Stuur er een naar een spanningsloos MS-station (±15–25 min). De monteur opent `MSx-T` en het aggregaat voedt de LS-velden die IN staan. Houd het onder 400 kVA (schakel zo nodig straten af), anders valt het uit. Is het MS-net terug, laat het dan afkoppelen: de monteur sluit `MSx-T` weer.
+  - **Noodaggregaten:** drie aggregaatsets van 2 × 1600 kVA. Stuur er een naar een spanningsloos MS-station (±15–25 min). De monteur opent `MSx-T` en het aggregaat voedt de LS-velden die IN staan. Eén set kan altijd alle huizen van een station voeden, ook op een koude winteravond. Met bedrijven, laadplein of school erbij kan het te veel worden: houd het onder 2 × 1600 kVA (schakel zo nodig groepen af), anders valt het uit. Is het MS-net terug, laat het dan afkoppelen: de monteur sluit `MSx-T` weer.
   - **Rotatie:** is er te weinig transformatorcapaciteit (een 110/10 kV-trafo boven 88%), dan tellen klanten die je zelf afschakelt de eerste 45 minuten maar half. Schakel je ze binnen 10–75 minuten weer in (rouleren), dan krijg je punten. Na 45 minuten krijg je een waarschuwing.
   - **Klanten informeren:** geef per uitgevallen gebied een **verwachte hersteltijd** door (+10 binnen 10 min); haal je die, dan krijg je punten, ben je later, dan kost het punten. **Bel prioriteitsklanten** (ziekenhuis, RWZI, huisartsenpost) als ze zonder stroom zitten (+20 binnen 10 min).
 </details>
@@ -456,6 +457,7 @@ Het 10 kV-net is **gecompenseerd** (Petersenspoel in het sterpunt van T1 en T3).
   - Samen ±10% extra draw calls: materialen worden gedeeld, zodat alles bij het samenvoegen van statische objecten meegaat.
 - **Verlichte ramen:** 's avonds gaat het licht aan in de woningen en appartementen; laat in de nacht nog maar een paar. Elk huis hangt aan het dichtstbijzijnde MS-station: valt dat station uit, dan gaan de lichten in die buurt uit. Bij een noodaggregaat blijven ze branden.
 - **Verkeer:** een dozijn auto's rijdt rechts over de straten van beide wijken, met koplampen en een lichtbundel in het donker. In de spits rijden er meer.
+- **Voetgangers:** tot 48 mensen lopen over de stoepen van de woonwijk en het centrum en steken over bij de kruisingen; ze wijken uit voor lantaarnpalen, kasten en stations. Overdag en in de spits zijn het er meer, 's nachts en in de regen weinig. Samen kosten ze maar een paar tekenbeurten.
 - **Buren:** zit een station een paar minuten zonder stroom, dan komen de buren naar buiten; 's avonds met de zaklamp van hun telefoon.
 </details>
 

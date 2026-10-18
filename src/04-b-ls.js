@@ -39,8 +39,9 @@ function lvVolt(g){if(g.backfed&&g.st.gs?.state==='aan')return 231;const src=lvS
   const Ums=FLOW.UN?.[src.node]||10.5,ref=Math.max(g.base*1.2,g.cust*0.0011,0.02);   // referentie: de eigen belasting van de straat of het bedrijf
   return U_NOM*1.044*(Ums/10.5)*(1+0.025*src.tapLv)*(1-g.kz*(g.Pc||0)/ref);}
 
-// ---- noodaggregaten: drie mobiele aggregaten van 400 kVA
-const GENSET={units:3,kva:400,busy:0};
+// ---- noodaggregaten: drie mobiele sets van 2 × 1600 kVA (parallel). Eén set voedt altijd alle huizen van een MS-station, ook op een koude winteravond;
+// bedrijven, laadplein en scholen erbij kan te veel zijn: dan straten of groepen afschakelen.
+const GENSET={units:3,kva:3200,busy:0,name:'2 × 1600 kVA'};
 const gsCap=()=>GENSET.kva*0.95/1000;
 const gsLoad=s=>s.groups.reduce((a,g)=>a+(D[g.id].state===1?Math.max(0,g.demand||0):0),0);
 
@@ -65,7 +66,7 @@ function lsExec(o){const s=RING.stations.find(x=>x.id===o.st);LS_CREW[o.st]=SIM.
   if(o.kind==='gs'){if(EN.has(s.node+'v')){GENSET.busy--;return pushAlarm(`Monteur ${s.id}: het station heeft weer spanning – aggregaat niet meer nodig, terug naar de werf`,'info');}
     if(D[s.id+'-T'].state===1){D[s.id+'-T'].state=0;D[s.id+'-T'].ops++;}
     s.gs={state:'aan',at:SIM.t,ot:0};s.genset=true;computeFlows();
-    const L=gsLoad(s)/gsCap();return pushAlarm(`Noodaggregaat bij ${s.id} draait (${s.id}-T geopend) – belasting ${Math.round(L*100)}% van 400 kVA${L>1?': te zwaar! Schakel LS-groepen af':''}`,L>1?'warn':'ok');}
+    const L=gsLoad(s)/gsCap();return pushAlarm(`Noodaggregaat bij ${s.id} draait (${s.id}-T geopend) – belasting ${Math.round(L*100)}% van ${GENSET.name}${L>1?': te zwaar! Schakel LS-groepen af':''}`,L>1?'warn':'ok');}
   if(o.kind==='gsrestart'){if(s.gs?.state==='trip'){s.gs.state='aan';s.gs.ot=0;s.genset=true;pushAlarm(`Noodaggregaat bij ${s.id} herstart`,'ok');}return;}
   if(o.kind==='gsoff'){if(!s.gs)return;s.gs=null;s.genset=false;s.groups.forEach(g=>{g.backfed=false;});addTimer(20,()=>{GENSET.busy=Math.max(0,GENSET.busy-1);renderLS?.();});
     computeFlows();if(EN.has(s.node)&&!D[s.id+'-T'].state&&!s.fuse){D[s.id+'-T'].state=1;D[s.id+'-T'].ops++;computeFlows();}
@@ -77,7 +78,7 @@ function lsExec(o){const s=RING.stations.find(x=>x.id===o.st);LS_CREW[o.st]=SIM.
 
 // acties vanuit het LS-venster
 function gsSend(s){if(GENSET.busy>=GENSET.units)return deny('Alle noodaggregaten zijn in gebruik');if(stationLive(s))return deny(`${s.id} heeft spanning – een aggregaat is niet nodig`);
-  if(s.gs||s.genset||LS_ORDERS.some(o=>o.kind==='gs'&&o.st===s.id))return deny(`Er staat of komt al een aggregaat bij ${s.id}`);GENSET.busy++;lsOrder('gs',s.id,{},'noodaggregaat 400 kVA aansluiten');}
+  if(s.gs||s.genset||LS_ORDERS.some(o=>o.kind==='gs'&&o.st===s.id))return deny(`Er staat of komt al een aggregaat bij ${s.id}`);GENSET.busy++;lsOrder('gs',s.id,{},`noodaggregaat ${GENSET.name} aansluiten`);}
 function gsOff(s){if(!s.gs)return;if(LS_ORDERS.some(o=>o.kind==='gsoff'&&o.st===s.id))return;lsOrder('gsoff',s.id,{},'noodaggregaat afkoppelen');}
 function gsRestart(s){if(s.gs?.state!=='trip')return;lsOrder('gsrestart',s.id,{},'noodaggregaat herstarten');}
 function tapOrder(s,dir){const t=s.tapLv+dir;if(t<-2||t>2)return deny('De vaste trap gaat van −2 tot +2');lsOrder('tap',s.id,{dir},`vaste trap distributietrafo ${dir<0?'omlaag':'omhoog'}`);}

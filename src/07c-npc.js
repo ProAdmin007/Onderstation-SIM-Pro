@@ -2,22 +2,22 @@
 // ============================================================ collega's: monteurs die komen kijken en werken
 const NPCS=[];
 const NM={vest:mat({color:0xf28c1a,roughness:0.6}),vestY:mat({color:0xcfe83a,roughness:0.6}),strip:mat({color:0xe6e9eb,emissive:0x2a2a2a,roughness:0.25,metalness:0.5}),
-  trouser:mat({color:0x22304a,roughness:0.85}),skin:mat({color:0xd6a17e,roughness:0.7}),helmet:mat({color:0xf4f4f0,roughness:0.3}),helmetY:mat({color:0xf2c200,roughness:0.3}),boot:mat({color:0x1b1b1b,roughness:0.8})};
+  trouser:mat({color:0x22304a,roughness:0.85}),fire:mat({color:0x2a2e36,roughness:0.8}),skin:mat({color:0xd6a17e,roughness:0.7}),helmet:mat({color:0xf4f4f0,roughness:0.3}),helmetY:mat({color:0xf2c200,roughness:0.3}),boot:mat({color:0x1b1b1b,roughness:0.8})};
 function npcMesh(geo,m,p,x,y,z){const o=new THREE.Mesh(geo,m);o.position.set(x,y,z);o.castShadow=true;p.add(o);return o;}
-function makePerson(v){
-  const g=new THREE.Group(),vest=v%2?NM.vestY:NM.vest,B=(w,h,d)=>new THREE.BoxGeometry(w,h,d);
+function makePerson(v,kind){const fire=kind==='fire';
+  const g=new THREE.Group(),vest=fire?NM.fire:v%2?NM.vestY:NM.vest,B=(w,h,d)=>new THREE.BoxGeometry(w,h,d);
   const limb=(x,y)=>{const j=new THREE.Group();j.position.set(x,y,0);g.add(j);return j;};
   const legL=limb(-0.11,0.92),legR=limb(0.11,0.92);
-  for(const l of[legL,legR]){npcMesh(B(0.15,0.84,0.18),NM.trouser,l,0,-0.42,0);npcMesh(B(0.16,0.1,0.28),NM.boot,l,0,-0.87,0.04);}
+  for(const l of[legL,legR]){npcMesh(B(0.15,0.84,0.18),fire?NM.fire:NM.trouser,l,0,-0.42,0);if(fire)npcMesh(B(0.16,0.05,0.19),NM.vestY,l,0,-0.6,0);npcMesh(B(0.16,0.1,0.28),NM.boot,l,0,-0.87,0.04);}
   npcMesh(B(0.46,0.64,0.27),vest,g,0,1.23,0);
-  for(const y of[1.08,1.3])npcMesh(B(0.47,0.05,0.28),NM.strip,g,0,y,0);
+  for(const y of[1.08,1.3])npcMesh(B(0.47,0.05,0.28),fire?NM.vestY:NM.strip,g,0,y,0);
   const armL=limb(-0.3,1.5),armR=limb(0.3,1.5);
   for(const a of[armL,armR]){npcMesh(B(0.12,0.6,0.14),vest,a,0,-0.3,0);npcMesh(new THREE.SphereGeometry(0.06,8,6),NM.skin,a,0,-0.64,0);}
   const head=new THREE.Group();head.position.set(0,1.62,0);g.add(head);
   npcMesh(B(0.1,0.08,0.1),NM.skin,head,0,-0.04,0);
   npcMesh(new THREE.SphereGeometry(0.12,14,10),NM.skin,head,0,0.08,0);
-  npcMesh(new THREE.SphereGeometry(0.135,14,8,0,Math.PI*2,0,Math.PI/2),v%3?NM.helmet:NM.helmetY,head,0,0.12,0);
-  npcMesh(new THREE.CylinderGeometry(0.17,0.17,0.02,16),v%3?NM.helmet:NM.helmetY,head,0,0.12,0.02);
+  {const hm=fire||!(v%3)?NM.helmetY:NM.helmet;npcMesh(new THREE.SphereGeometry(0.135,14,8,0,Math.PI*2,0,Math.PI/2),hm,head,0,0.12,0);
+  npcMesh(new THREE.CylinderGeometry(0.17,0.17,0.02,16),hm,head,0,0.12,0.02);}
   scene.add(g);return {g,legL,legR,armL,armR,head};}
 
 // ---- routeplanning op een raster van 1 m (A*), met de botsingsvakken van het rondlopen
@@ -52,11 +52,11 @@ function standPoints(box,n,from){const c=box.getCenter(V3()),pts=[];
   for(const p of cand){const f=nearestFree(p.x,p.z);if(!f)continue;const q=V3(GRID.x0+f[0]+0.5,0,GRID.z0+f[1]+0.5);if(pts.every(o=>o.distanceTo(q)>1.4))pts.push(q);if(pts.length>=n)break;}
   return pts;}
 const CREW_NAMES=['Henk','Sandra','Kees','Mo','Fatima','Joris','Ilse','Daan','Ruud','Esra','Bram','Lotte'];let crewSeq=0;
-function crewDispatch({box,say,until,n=2,from=CREW_FROM,rel=[]}){
+function crewDispatch({box,say,until,n=2,from=CREW_FROM,rel=[],kind}){
   if(!box)return;const look=box.getCenter(V3()),relSet=new Set(rel);
   standPoints(box,n,from).forEach((sp,i)=>{
     const start=from.clone().add(V3(i*0.9,0,i*0.6)),path=findPath(start.x,start.z,sp.x,sp.z);if(!path)return;
-    const P=makePerson(NPCS.length+i);P.g.position.copy(path[0]);
+    const P=makePerson(NPCS.length+i,kind);P.g.position.copy(path[0]);
     const el=document.createElement('div');el.className='npc';el.textContent=say;$('#labels').appendChild(el);
     NPCS.push({P,path,i:1,state:'in',look,until,home:start,phase:Math.random()*6,el,say,t:0,talk:i===0,name:CREW_NAMES[(crewSeq++)%CREW_NAMES.length],rel:relSet,bubble:0});
   });}

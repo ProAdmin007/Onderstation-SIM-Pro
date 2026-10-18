@@ -38,18 +38,17 @@ const INCIDENTS=[
     tick(dm){const lim=GAME.flags.lineLimit;if(lim&&FLOW.P110>lim){GAME.score-=dm*2;if(!this.warn){this.warn=true;pushAlarm(`TenneT: u neemt ${Math.round(FLOW.P110)} MW af, de grens is ${lim} MW – verlaag de afname`,'warn');}}else this.warn=false;},
     end(){GAME.flags.lineLimit=null;lineRestore(this.L);}},
   {id:'brand',name:'Brand in het 10 kV-gebouw',desc:'Rookmelders slaan aan. De brandweer gaat pas naar binnen als de 10 kV spanningsloos is.',w:0.6,dur:90,ok:()=>!FIRE.on&&!D.T1.blocked,
-    start(){this.t0=SIM.t;this.dead=null;FIRE.on=true;const b=VIEWS.MS.box;FIRE.glow=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,color:0xff7a1a,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending}));
-      FIRE.glow.position.set((b.min.x+b.max.x)/2-8,b.min.y+2.5,b.min.z-0.4);FIRE.glow.scale.set(6,4,1);scene.add(FIRE.glow);crewDispatch({box:b,say:'Brandweer: verkenning',until:()=>!FIRE.on});
+    start(){this.t0=SIM.t;this.dead=null;fireStart();
       pushAlarm('BRANDMELDING 10 kV-gebouw – brandweer onderweg','crit');
       addTimer(5,()=>{GAME.flags.mustOpen=['V-T1','V-T3'];pushAlarm('Brandweer: maak de 10 kV spanningsloos (V-T1 en V-T3 UIT) – dan gaan we blussen','crit');});},
     // na het zelf afschakelen door de brandweer is EN pas in de volgende stap bijgewerkt: dan stoppen (anders vals veiligheidsincident)
     tick(){const dead=!EN.has('RA')&&!EN.has('RB'),t=SIM.t-this.t0;
-      if(t>5&&dead&&this.dead==null){this.dead=SIM.t;pushAlarm('Brandweer: 10 kV spanningsloos – we gaan naar binnen','ok');}
-      if(t>20&&this.dead==null){['V-T1','V-T3'].forEach(tripBreaker);this.dead=SIM.t;incident();pushAlarm('Brandweer: niemand reageerde – wij hebben de 10 kV zelf afgeschakeld','crit');return;}
-      if(this.dead!=null&&!this.out&&SIM.t>this.dead+30){this.out=true;FIRE.on=false;if(FIRE.glow){scene.remove(FIRE.glow);FIRE.glow=null;}GAME.flags.mustOpen=null;{const v=D['V-F6'];v.refusals=(v.refusals||0)+2;v.wear=Math.max(v.wear,0.8);}
+      if(t>5&&dead&&this.dead==null){this.dead=SIM.t;fireDouse();pushAlarm('Brandweer: 10 kV spanningsloos – we gaan naar binnen en blussen','ok');}
+      if(t>20&&this.dead==null){['V-T1','V-T3'].forEach(tripBreaker);this.dead=SIM.t;fireDouse();incident();pushAlarm('Brandweer: niemand reageerde – wij hebben de 10 kV zelf afgeschakeld','crit');return;}
+      if(this.dead!=null&&!this.out&&SIM.t>this.dead+30){this.out=true;fireStop();GAME.flags.mustOpen=null;{const v=D['V-F6'];v.refusals=(v.refusals||0)+2;v.wear=Math.max(v.wear,0.8);}
         readyNotice('Brandweer: brand geblust – de 10 kV mag weer onder spanning. V-F6 heeft rookschade (revisie nodig)',null);INC.active.until=SIM.t+25;}
       if(this.dead!=null&&!this.out&&!dead&&!this.danger){this.danger=true;incident();pushAlarm('Brandweer: er staat weer spanning op terwijl wij binnen zijn!','crit');}},
-    end(){FIRE.on=false;if(FIRE.glow){scene.remove(FIRE.glow);FIRE.glow=null;}GAME.flags.mustOpen=null;}},
+    end(){if(FIRE.on)fireStop();GAME.flags.mustOpen=null;}},
   {id:'concert',name:'Concert op het Marktplein',desc:'Podium, lichtshow en foodtrucks op het net van MS6 – houd het concert in de lucht.',w:1,dur:200,ok:()=>isSeason('lente','zomer')&&hIn(17.5,19),
     start(){const g=LVG.find(x=>x.id==='MS6-G2');this.g=g;this.b=g.base;if(!FLEX.some(f=>f.id==='MS6-G2'))FLEX.push({id:'MS6-G2',name:'Concert Marktplein',how:'podium deels op eigen aggregaat',max:0.75,eur:240,c:g,req:0,at:0});
       pushAlarm('Vanavond concert op het Marktplein (19:15–22:00) – het podium heeft een flexcontract','info');},

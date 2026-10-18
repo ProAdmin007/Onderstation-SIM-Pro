@@ -84,7 +84,7 @@ function renderLS(){renderLSTab();if(!lsOpen())return;const s=RING.stations.find
     <p class="bf-desc">⚡ ${gsHtml}</p>
     <div class="eyebrow" style="margin-top:12px">Klanten informeren</div>
     <table>${comm}</table><p class="bf-desc">Prioriteitsklanten zonder stroom: ${prioHtml}</p>
-    <p class="bf-desc dl">Een kabelkast mag alleen dicht als één kant spanningsloos is én het LS-veld aan die kant open staat. Een aggregaat voedt alleen de LS-velden die IN staan – houd het onder 400 kVA.</p>
+    <p class="bf-desc dl">Een kabelkast mag alleen dicht als één kant spanningsloos is én het LS-veld aan die kant open staat. Een aggregaat voedt alleen de LS-velden die IN staan – houd het onder 2 × 1600 kVA. Alle huizen van één station passen altijd; met bedrijven erbij soms niet.</p>
     <div class="rep-btns"><button class="primary" data-lsclose>Sluiten <kbd>N</kbd></button></div></div>`;}
 $('#lsWin').addEventListener('click',e=>{if(e.target.closest('[data-lsclose]')||e.target.id==='lsWin')return closeLS();
   const t=e.target.closest('[data-lst]');if(t){lsSt=t.dataset.lst;return renderLS();}

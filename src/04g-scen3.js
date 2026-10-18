@@ -1,13 +1,9 @@
 
 // ============================================================ scenario's rond congestie, flex en veroudering: kraan, brand, evenement, laadpiek
 // rookpluim: elke aanroep één wolk die opstijgt en uitdijt (FX-lus)
-function smokePuff(x,y,z,k=1){const m=new THREE.SpriteMaterial({map:smokeTex,color:0x4a4a4a,transparent:true,opacity:0.55,depthWrite:false});const s=new THREE.Sprite(m);
+function smokePuff(x,y,z,k=1,col=0x4a4a4a){const m=new THREE.SpriteMaterial({map:smokeTex,color:col,transparent:true,opacity:0.55,depthWrite:false});const s=new THREE.Sprite(m);
   s.position.set(x+rnd(-1.5,1.5),y,z+rnd(-1.5,1.5));s.scale.setScalar(3*k);scene.add(s);const vx=rnd(-0.4,0.4),life=rnd(7,10);
   FX.push({t:0,update(dt){this.t+=dt;s.position.y+=dt*2.2;s.position.x+=vx*dt+dt*0.6;s.scale.multiplyScalar(1+dt*0.22);m.opacity=0.55*(1-this.t/life);if(this.t>life){scene.remove(s);m.dispose();return false;}return true;}});}
-const FIRE={on:false,acc:0,glow:null};
-function fireTick(dt){if(!FIRE.on)return;FIRE.acc+=dt;const b=VIEWS.MS.box;
-  if(FIRE.acc>0.35){FIRE.acc=0;smokePuff((b.min.x+b.max.x)/2-8+rnd(-6,6),b.max.y+0.5,(b.min.z+b.max.z)/2,1.2);}
-  if(FIRE.glow){FIRE.glow.material.opacity=0.55+0.35*Math.sin(performance.now()/90)*Math.sin(performance.now()/37);}}
 const p110Over=()=>{const lim=GAME.flags.lineLimit;return lim&&FLOW.P110>lim;};
 Object.assign(MODES,{
   kraan:{scen:true,name:'Kraan raakt de 110 kV-lijn',tag:'Scenario · moeilijk',start:16.5,dur:100,season:'herfst',weather:'helder',
@@ -23,16 +19,14 @@ Object.assign(MODES,{
       {t:'Minder dan 3.000 klantminuten',check:()=>SIM.cml>3000?'fail':null,final:()=>SIM.cml<=3000},noIncidents]},
   brand:{scen:true,name:'Brand in het 10 kV-gebouw',tag:'Scenario · moeilijk',start:14,dur:90,season:'herfst',weather:'bewolkt',
     desc:'De rookmelders in het 10 kV-gebouw slaan aan. De brandweer gaat pas naar binnen als de hele 10 kV-installatie spanningsloos is – ook het ziekenhuis gaat dan op noodstroom.',
-    setup(){at(2,()=>{FIRE.on=true;const b=VIEWS.MS.box;FIRE.glow=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,color:0xff7a1a,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending}));
-        FIRE.glow.position.set((b.min.x+b.max.x)/2-8,b.min.y+2.5,b.min.z-0.4);FIRE.glow.scale.set(6,4,1);scene.add(FIRE.glow);
+    setup(){at(2,()=>{fireStart();
         pushAlarm('BRANDMELDING: rookmelders 10 kV-gebouw OS Zuidwolde – brandweer onderweg','crit');
-        crewDispatch({box:VIEWS.MS.box,say:'Brandweer: verkenning',until:()=>!FIRE.on});
         at(5,()=>{GAME.flags.fireReq=SIM.t;GAME.flags.mustOpen=['V-T1','V-T3'];GAME.countdown={label:'Brandweer wacht: 10 kV spanningsloos',until:SIM.t+10};
           pushAlarm('Brandweer: maak de hele 10 kV-installatie spanningsloos (V-T1 en V-T3 UIT) – pas dan gaan we binnen blussen','crit');
           pushAlarm('Tip: het ziekenhuis gaat op noodstroom (±60 min brandstof). De 20 kV-installatie in het andere gebouw kan gewoon in bedrijf blijven.','info');});});},
     tick(dm){const r=GAME.flags.fireReq;if(r==null)return;const dead=!EN.has('RA')&&!EN.has('RB');
-      if(dead&&!GAME.flags.deadAt){GAME.flags.deadAt=SIM.t;GAME.countdown={label:'Noodstroom ziekenhuis',until:SIM.t+60};pushAlarm('Brandweer: 10 kV spanningsloos bevestigd – we gaan naar binnen','ok');
-        at(SIM.t-GAME.t0+30,()=>{FIRE.on=false;if(FIRE.glow){scene.remove(FIRE.glow);FIRE.glow=null;}GAME.flags.mustOpen=null;GAME.flags.outAt=SIM.t;{const v=D['V-F6'];v.refusals=(v.refusals||0)+2;v.wear=Math.max(v.wear,0.8);}
+      if(dead&&!GAME.flags.deadAt){GAME.flags.deadAt=SIM.t;GAME.countdown={label:'Noodstroom ziekenhuis',until:SIM.t+60};pushAlarm('Brandweer: 10 kV spanningsloos bevestigd – we gaan naar binnen en blussen','ok');fireDouse();
+        at(SIM.t-GAME.t0+30,()=>{fireStop();GAME.flags.mustOpen=null;GAME.flags.outAt=SIM.t;{const v=D['V-F6'];v.refusals=(v.refusals||0)+2;v.wear=Math.max(v.wear,0.8);}
           readyNotice('Brandweer: brand geblust, rook afgezogen. De 10 kV mag weer onder spanning – V-F6 heeft rookschade en blijft defect',null);});}
       if(GAME.flags.deadAt&&!GAME.flags.outAt&&!dead&&!GAME.flags.danger){GAME.flags.danger=true;incident();pushAlarm('Brandweer: er staat weer spanning op de installatie terwijl wij binnen zijn! Iedereen naar buiten!','crit');}},
     obj:()=>[{t:'10 kV spanningsloos binnen 10 min na het verzoek',check:()=>GAME.flags.fireReq==null?null:GAME.flags.deadAt?'done':SIM.t>GAME.flags.fireReq+10?'fail':null},
