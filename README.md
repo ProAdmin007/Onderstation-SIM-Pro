@@ -586,3 +586,13 @@ Three.js (MIT) en de lettertypen Inter en JetBrains Mono (SIL OFL) worden via ee
 <div align="center">
 <sub>Gemaakt met Three.js · alles procedureel (geen modellen of texturen) · één HTML-bestand van ±490 kB</sub>
 </div>
+
+---
+
+<div align="center">
+
+## ☕ Support
+
+<a href="https://ko-fi.com/proadmin007" target="_blank"><img height="48" src="https://storage.ko-fi.com/cdn/kofi2.png?v=6" alt="Buy Me a Coffee at ko-fi.com" /></a>
+
+</div>
