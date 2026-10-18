@@ -545,6 +545,20 @@ const TESTS = [
         return { open, kijk, simEcht, terug: O.WX.type === wx0 && Math.abs(O.viewHour() - O.SIM.t / 60 % 24) < 0.01 && !O.getPreview(), seizoen: O.GAME.season === 'zomer', loopt: !O.SIM.paused, dicht: document.querySelector('#pvBar').classList.contains('hidden') }; });
       for (const [k, v] of Object.entries(r)) assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
   } },
+  { name: 'muisbesturing overzicht: kaart/klassiek, zoomen naar de muis, toetsen schuiven, grenzen, dubbelklik', query: '?autostart&t=11', async run(p) {
+      const r = await p.evaluate(async () => { const O = OS, c = O.controls, M = { ROTATE: 0, DOLLY: 1, PAN: 2 };
+        localStorage.removeItem('osz-mouse'); O.setMouseMode('kaart');
+        const kaart = c.mouseButtons.LEFT === M.PAN && c.mouseButtons.RIGHT === M.ROTATE && c.zoomToCursor && !c.screenSpacePanning;
+        O.setMouseMode('klassiek'); const klassiek = c.mouseButtons.LEFT === M.ROTATE && c.mouseButtons.RIGHT === M.PAN && localStorage.getItem('osz-mouse') === 'klassiek'; O.setMouseMode('kaart');
+        const t0 = c.target.clone(); O.OVK.KeyW = true; O.cameraKeys(0.1); O.OVK.KeyW = false; const toets = c.target.distanceTo(t0) > 1 && Math.abs(c.target.y - t0.y) < 1e-6;
+        c.target.set(5000, 80, 5000); O.camera.position.set(5010, 120, 5010); await T.sleep(300); const grens = c.target.x <= 1300 && c.target.z <= 1300 && c.target.y <= 30;
+        const v = O.VIEWPOS[0]; O.camera.position.copy(v[0]); c.target.copy(v[1]); c.update(); await T.sleep(200);
+        const cv = document.querySelector('canvas'), rc = cv.getBoundingClientRect(), d0 = O.camera.position.distanceTo(c.target);
+        cv.dispatchEvent(new MouseEvent('dblclick', { clientX: rc.left + rc.width * 0.5, clientY: rc.top + rc.height * 0.62, bubbles: true }));
+        await T.sleep(1600); const dubbel = O.camera.position.distanceTo(c.target) < d0 * 0.8;
+        return { kaart, klassiek, toets, grens, dubbel }; });
+      for (const [k, v] of Object.entries(r)) assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
+  } },
   { name: 'leven in de wijk: ramen per station, auto\'s en buren bij uitval', query: '?autostart&t=21&night&season=winter', async run(p) {
       const r = await p.evaluate(async () => { T.quiet(); const O = OS, s1 = O.RING.stations[0]; O.SIM.paused = false; T.step(0.2); O.updateWindows();
         const aan = s1.winMats.some(m => m.opacity > 0.3), autos = O.CARS.filter(c => c.g.visible).length;

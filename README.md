@@ -145,6 +145,7 @@ Bedoeld voor **bedrijfsvoerders en monteurs in opleiding**, studenten **elektrot
 | `O` | onderhoud | `K` | testkoffer |
 | `N` | laagspanning | `I` | instellingen |
 | `R` | storingsschrijver | `T` | weer en tijd bekijken |
+| `WASD` / pijltjes | beeld schuiven | dubbelklik | daarheen vliegen |
 | `Ctrl+S` | opslaan | `L` / `M` | labels / geluid |
 
 <details>
@@ -152,7 +153,7 @@ Bedoeld voor **bedrijfsvoerders en monteurs in opleiding**, studenten **elektrot
 
 - Druk op `H` (of `?`, of de knop *Toetsen*) voor een **overzicht van alle toetsen**.
 - Klik op een schakelaar in 3D of in het SCADA-schema en kies vervolgens IN/UIT of SLUITEN/OPENEN.
-- Linker muisknop draaien, rechter muisknop schuiven, scrollen om te zoomen.
+- **Muis in het overzicht** (werkt als een 3D-kaart): links slepen schuift over de grond, rechts slepen (of `Shift` + links) draait en kantelt, scrollen zoomt naar het punt onder de muis en dubbelklik vliegt naar dat punt. `WASD` of de pijltjestoetsen schuiven ook, sneller naarmate je verder weg bent. Het beeld blijft binnen de wereld en de camera gaat nooit onder de grond. Liever de oude bediening (links draaien, rechts schuiven)? Kies *Instellingen* (`I`) → *Muis* → *Klassiek*.
 - `1`–`9` camerastandpunten (6 = binnen 10 kV, 7 = binnen 20 kV, 8 = woonwijk, 9 = centrum en De Vaart)
 - `K` opent de **testkoffer** tijdens een relaistest
 - `T` opent **weer en tijd bekijken**
