@@ -526,6 +526,17 @@ const TESTS = [
         return { leeg, samen, klik, weg: !O.activeFaults().some(f => f.key === 'rsK23' || f.key === 'ffF6'), teller: document.querySelector('#faultCnt').textContent }; });
       for (const [k, v] of Object.entries(r)) if (k !== 'teller') assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
   } },
+  { name: 'kleine afnemers in de wijk: elk aan een eigen LS-groep, lichten uit bij spanningsloos, wereld compact', query: '?autostart&t=22&season=winter', async run(p) {
+      const r = await p.evaluate(async () => { const O = OS; O.updateSmall();
+        const named = O.SMALL.filter(e => !e.g).map(e => e.name), E = O.SMALL.find(e => e.name === 'Basisschool De Linde'), H = O.SMALL.find(e => e.name === 'Huisartsenpost');
+        const lit = E.signs[0].color.r > 0.9 && H.glow[0].opacity > 0.3 && E.lampMat.emissiveIntensity > 0;
+        O.D[E.g.id].state = 0; O.computeFlows(); O.updateSmall();
+        const uit = E.signs[0].color.r < 0.3 && E.glow.every(m => m.opacity === 0) && E.lampMat.emissiveIntensity === 0 && H.glow[0].opacity > 0.3;
+        O.D[E.g.id].state = 1; O.computeFlows(); O.updateSmall(); const terug = E.signs[0].color.r > 0.9;
+        const far = Math.max(...['zkh', 'rwzi'].map(k => Math.hypot(O.SITE[k].x, O.SITE[k].z)), O.SITE.kassen.x0);
+        return { named: named.length === 0 ? true : named, aantal: O.SMALL.length >= 16, lit, uit, terug, compact: far < 500, layout: O.layoutCheck().length === 0 }; });
+      for (const [k, v] of Object.entries(r)) assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
+  } },
   { name: 'afnemers in de wereld: ziekenhuis, kassen en waterzuivering tonen of ze stroom hebben', query: '?autostart&t=22&season=winter', async run(p) {
       const r = await p.evaluate(() => { T.quiet(); const O = OS, S = O.SITE; O.SIM.paused = false; T.step(0.2); O.updateSites(0.1);
         const aan = { zkh: S.zkh.glow[0].opacity > 0.5, kassen: S.kassen.glow[0].opacity > 0.3, rwzi: S.rwzi.lamp.emissiveIntensity > 1 };

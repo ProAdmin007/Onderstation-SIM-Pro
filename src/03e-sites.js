@@ -1,7 +1,7 @@
 
 // ============================================================ grote afnemers in de wereld: ziekenhuis (F5), kassen (F6) en waterzuivering (G4)
-// Alleen visueel: je ziet of ze stroom hebben. Ver van het station (zoals in het echt); statisch en samengevoegd, licht via oplichtende materialen.
-const SITE={zkh:{f:'F5',x:-560,z:300,glow:[],on:true},kassen:{f:'F6',x0:430,z0:60,x1:830,z1:330,glow:[],halo:[],on:true},rwzi:{f:'G4',x:-680,z:-260,on:true}};
+// Alleen visueel: je ziet of ze stroom hebben. Aan de rand van de stad, met een eigen toegangsweg; statisch en samengevoegd, licht via oplichtende materialen.
+const SITE={zkh:{f:'F5',x:-290,z:322,glow:[],on:true},kassen:{f:'F6',x0:280,z0:60,x1:600,z1:330,glow:[],halo:[],on:true},rwzi:{f:'G4',x:-300,z:-150,on:true}};
 const siteLive=s=>{const f=FEEDERS.find(x=>x.id===s.f);return !!f&&EN.has(f.node);};
 // terreinverlichting die aan het veld van de afnemer hangt (gaat uit bij uitval)
 function siteLamp(S,x,z){if(!S.lampMat){S.lampMat=mat({color:0x2a2c2e,emissive:0xffd9a0,emissiveIntensity:0});S.poolMat=new THREE.MeshBasicMaterial({map:poolTex,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false,fog:false});}
@@ -92,7 +92,9 @@ function buildRWZI(){const S=SITE.rwzi,{x,z}=S;
   plate('RWZI · WATERSCHAP',staticRoot,x+75,6,z+46.95,Math.PI,8);
   S.lamp=mat({color:0x111111,emissive:0x30ff60,emissiveIntensity:0});const l=box(0.5,0.5,0.5,S.lamp,staticRoot,x+62,7.5,z+46.8);l.userData.dyn=true;}
 
-function buildSites(){buildHospital();buildGreenhouses();buildRWZI();}
+function buildSites(){buildHospital();buildGreenhouses();buildRWZI();buildSmall();
+  // toegangswegen: ziekenhuis aan de straat langs de woonwijk, kassen aan de noordstraat, RWZI via de weg langs het station
+  for(const r of[[-180,236,-150,242],[165,98,260,104],[-300,38,-30,44],[-300,-70,-294,38]]){groundQuad(...r,0.04,MAT.asphalt,6);lay('road',...r);}}
 
 // ---- elke frame: stroom aan of uit zichtbaar maken (goedkoop: alleen materialen en een paar objecten)
 let siteSmoke=0;

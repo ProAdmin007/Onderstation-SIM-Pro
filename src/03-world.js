@@ -3,7 +3,7 @@
 // register van voetafdrukken (x0,z0,x1,z1) voor de plaatsingscontrole (layoutCheck): niets mag in een ander object staan
 const LAYOUT=[];
 // terreinen van de grote afnemers (03e-sites.js): daar geen bomen uit de verre boomgroepen
-const SITE_RECTS=[[-680,210,-440,400],[400,30,860,360],[-800,-350,-560,-170]];
+const SITE_RECTS=[[-410,232,-170,422],[250,30,630,360],[-420,-240,-180,-60]];
 const inSite=(x,z)=>SITE_RECTS.some(r=>x>r[0]&&x<r[2]&&z>r[1]&&z<r[3]);
 function lay(kind,x0,z0,x1,z1){LAYOUT.push({kind,r:[Math.min(x0,x1),Math.min(z0,z1),Math.max(x0,x1),Math.max(z0,z1)]});}
 const rectsOverlap=(a,b,m=0)=>Math.min(a[2],b[2])-Math.max(a[0],b[0])>-m&&Math.min(a[3],b[3])-Math.max(a[1],b[1])>-m;
@@ -98,7 +98,7 @@ function tree(x,z,s=1,cast=false,force=false){if(!force&&inSite(x,z))return;lay(
 function poplar(x,z){if(inSite(x,z))return;lay('tree',x-0.4,z-0.4,x+0.4,z+0.4);const h=rr(14,18);cyl(0.2,0.3,h*0.5,MAT.bark,staticRoot,x,h*0.25,z,7).castShadow=false;const c=mesh(crownGeos[Math.floor(R()*3)],MAT.leaf[0],staticRoot,x,h*0.58,z);c.scale.set(rr(1.3,1.8),h*0.42,rr(1.3,1.8));c.castShadow=Math.abs(x)<200&&Math.abs(z)<200;}
 function buildTrees(){
   for(let z=78;z<1200;z+=rr(9,13)){if(Math.abs(z-101)<7||Math.abs(z-239)<7||Math.abs(z-161.5)<6||Math.abs(z-273)<7||Math.abs(z-387)<7)continue;tree(17+rr(-0.5,0.5),z,rr(0.9,1.1),z<160);tree(33+rr(-0.5,0.5),z,rr(0.9,1.1),z<160);}
-  for(let z=-70;z<110;z+=rr(8,11)){if(Math.abs(z-101)<5)continue;poplar(-64+rr(-1,1),z);poplar(108+rr(-1,1),z);}   // niet op de weg naar de wijk
+  for(let z=-70;z<110;z+=rr(8,11)){if(Math.abs(z-101)<5||Math.abs(z-41)<5)continue;poplar(-64+rr(-1,1),z);poplar(108+rr(-1,1),z);}   // niet op de weg naar de wijk
   for(let x=-64;x<110;x+=rr(8,11))poplar(x,-62+rr(-1,1));
   for(let k=0;k<26;k++){const cx=rr(-2200,2200),cz=rr(-2200,2200);if(Math.abs(cx)<350&&cz>-400&&cz<500)continue;const n=4+Math.floor(R()*10);for(let i=0;i<n;i++)tree(cx+rr(-30,30),cz+rr(-30,30),rr(1.2,1.8));}
   for(let x=-2000;x<2000;x+=rr(10,16))tree(x,-1300+rr(-3,3),1.5);

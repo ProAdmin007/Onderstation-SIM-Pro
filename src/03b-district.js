@@ -44,9 +44,12 @@ function houseRow(x0,z,n,faceSouth){const W=6,Dp=9,H=5.6,len=n*W,cx=x0+len/2,v=M
   const back=faceSouth?-1:1;for(let i=0;i<n;i++){const sx=x0+W/2+i*W+(i%2?1:-1),sz=z+back*(Dp/2+6);box(2.2,2.1,2,i%3?SM.woodGrey:SM.wood,staticRoot,sx,1.05,sz);lay('shed',sx-1.1,sz-1,sx+1.1,sz+1);box(2.5,0.12,2.3,SM.shedRoof,staticRoot,sx,2.16,sz);}
   houseExtras(x0,z,n,faceSouth,W,Dp,H,v);
   DISTRICT_RECTS.push([x0,z-Dp/2,x0+len,z+Dp/2]);}
-function hall(cx,cz,w,d,h,label,blue){lay('hall',cx-w/2,cz-d/2,cx+w/2,cz+d/2);box(w,h,d,blue?DM.hallBlue:DM.hall,staticRoot,cx,h/2,cz);box(w+0.6,0.4,d+0.6,MAT.roof,staticRoot,cx,h+0.2,cz);
+function hall(cx,cz,w,d,h,label,blue,grp,hours){lay('hall',cx-w/2,cz-d/2,cx+w/2,cz+d/2);box(w,h,d,blue?DM.hallBlue:DM.hall,staticRoot,cx,h/2,cz);box(w+0.6,0.4,d+0.6,MAT.roof,staticRoot,cx,h+0.2,cz);
   for(let i=0;i<3;i++){const p=mesh(new THREE.PlaneGeometry(4,4.5),MAT.louvre,staticRoot,cx-w/2+5+i*6,2.25,cz-d/2-0.02);p.rotation.y=Math.PI;p.castShadow=false;}
-  const t=toTex(textCanvas(label,{w:1024,h:160,bg:'#ffffff',fg:'#1d2b45',font:'bold 92px Arial',border:false}));const sg=mesh(new THREE.PlaneGeometry(9,1.4),mat({map:t,roughness:0.5}),staticRoot,cx+w/2-7,h-1.4,cz-d/2-0.03);sg.rotation.y=Math.PI;sg.castShadow=false;
+  const t=toTex(textCanvas(label,{w:1024,h:160,bg:'#ffffff',fg:'#1d2b45',font:'bold 92px Arial',border:false}));const E=grp&&smallReg(grp,hours||[6,20],0.22),sm=E?new THREE.MeshBasicMaterial({map:t,color:0xffffff}):mat({map:t,roughness:0.5});if(E)E.signs.push(sm);
+  const sg=mesh(new THREE.PlaneGeometry(9,1.4),sm,staticRoot,cx+w/2-7,h-1.4,cz-d/2-0.03);sg.rotation.y=Math.PI;sg.castShadow=false;
+  if(E){const bl=w-24;if(bl>3){const bx=cx+w/2-2-bl/2;smallPlane(bl,1.4,BAND_GLASS,bx,3.2,cz-d/2-0.03,Math.PI);bandPlane(E,bl,1.4,bx,3.2,cz-d/2-0.06,Math.PI);}
+    for(let i=0;i<3;i++)box(0.6,0.18,0.25,E.lampMat,staticRoot,cx-w/2+5+i*6,4.8,cz-d/2-0.15);}
   DISTRICT_RECTS.push([cx-w/2,cz-d/2,cx+w/2,cz+d/2]);}
 // inloop-MS-station: 5 × 3,2 m, deur aan de straatkant (lokaal +z), binnen RMU, LS-rek en trafo achter gaas
 const KW=5.0,KD=3.2,KH=2.8,KT=0.15,KY=0.25;
@@ -155,6 +158,7 @@ function aptBlock(x0,z0,x1,z1,floors){const W=x1-x0,Dz=z1-z0,H=floors*3+3.6,cx=(
     const g=mesh(new THREE.PlaneGeometry(len,floors*3),m,staticRoot,x,3.6+floors*1.5,z);g.rotation.y=ry;g.castShadow=g.receiveShadow=false;g.renderOrder=1;};
   for(const s of[-1,1]){const f=mesh(new THREE.PlaneGeometry(W,floors*3),facade(W),staticRoot,cx,3.6+floors*1.5,cz+s*(Dz/2+0.02));f.rotation.y=s>0?0:Math.PI;f.castShadow=false;glow(W,cx,cz+s*(Dz/2+0.05),f.rotation.y);
     const sp=mesh(new THREE.PlaneGeometry(W,3.4),shop(W),staticRoot,cx,1.7,cz+s*(Dz/2+0.02));sp.rotation.y=s>0?0:Math.PI;sp.castShadow=false;
+    {const E=st.id==='MS6'?smallReg('Winkels Marktplein',[9,21],0.35):smallReg('Kantoren Stationsstraat',[7.5,19],0.3);bandPlane(E,W-1,2.2,cx,1.6,cz+s*(Dz/2+0.05),sp.rotation.y);}
     box(W,0.15,1.6,MAT.trim,staticRoot,cx,3.5,cz+s*(Dz/2+0.8));}
   for(const s of[-1,1]){const f=mesh(new THREE.PlaneGeometry(Dz,floors*3),facade(Dz),staticRoot,cx+s*(W/2+0.02),3.6+floors*1.5,cz);f.rotation.y=s*Math.PI/2;f.castShadow=false;glow(Dz,cx+s*(W/2+0.05),cz,f.rotation.y);}
   box(W+0.4,0.6,Dz+0.4,MAT.concreteDark,staticRoot,cx,H+0.3,cz);box(3,1.4,2,MAT.cabinet,staticRoot,cx-W/4,H+1.3,cz);box(2,1,2,MAT.cabinet,staticRoot,cx+W/4,H+1.1,cz);
@@ -179,7 +183,7 @@ function buildDistrict(){
   [[-84,118,6,0],[-40,118,6,0],[-84,145,6,1],[-40,145,6,1],[-84,190,6,0],[-40,190,6,0],[-84,220,6,1],[-40,220,6,1],
    [-140,150,5,0],[-140,185,5,1],[40,130,3,0],[40,170,3,0],[40,205,3,1],[72,220,6,1],[112,220,6,1],[72,190,6,0]].forEach(([x,z,n,s])=>houseRow(x,z,n,!!s));
   // bedrijventerrein bij MS5
-  hall(100,140,30,20,8,'TRANSPORT');hall(145,140,30,22,9,'KOELHUIS',true);hall(130,175,40,18,7,'GARAGE · KANTOREN');
+  hall(100,140,30,20,8,'TRANSPORT',false,'Transportbedrijf',[0,24]);hall(145,140,30,22,9,'KOELHUIS',true,'Koelhuis',[0,24]);hall(130,175,40,18,7,'GARAGE · KANTOREN',false,'Garage en werkplaats',[7,18]);
   // LS-verdeelkasten in de straat
   [[-62,112],[-18,112],[-104,165],[-36,228],[52,124],[96,226],[150,114]].forEach(([x,z])=>{box(0.9,1.15,0.35,DM.green,staticRoot,x,0.6,z);lay('kast',x-0.45,z-0.18,x+0.45,z+0.18);});
   // ---- Centrum en bedrijventerrein De Vaart (ring 2)
@@ -188,8 +192,13 @@ function buildDistrict(){
   groundQuad(-125,364,-70,380,0.035,MAT.concrete,3);   // marktplein
   for(let x=-120;x<-72;x+=12)tree(x,372,0.9,false);
   aptBlock(-125,292,-70,310,4);aptBlock(-52,292,8,310,5);aptBlock(-125,330,-70,356,3);aptBlock(-52,330,8,360,4);
-  hall(62,318,38,24,9,'METAALBEWERKING SMIT');hall(158,322,50,32,11,'DISTRIBUTIECENTRUM',true);hall(70,362,32,18,7,'BOUWMARKT');
+  hall(62,318,38,24,9,'METAALBEWERKING SMIT',false,'Metaalbewerking Smit',[6,22]);hall(158,322,50,32,11,'DISTRIBUTIECENTRUM',true,'Distributiecentrum',[0,24]);hall(70,362,32,18,7,'BOUWMARKT',false,'Bouwmarkt',[8,21]);
   box(14,0.5,9,MAT.trim,staticRoot,96,5.2,300);for(const [dx,dz] of[[-6,-4],[6,-4],[-6,4],[6,4]])cyl(0.15,0.15,5,MAT.galv,staticRoot,96+dx,2.5,300+dz,8);   // tankstation
+  {const E=smallReg('Tankstation',[6,23],0.25),lm=new THREE.MeshBasicMaterial({color:0xfff4e0,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false});E.glow.push(lm);
+    const ul=mesh(new THREE.PlaneGeometry(13,8),lm,staticRoot,96,4.93,300);ul.rotation.x=Math.PI/2;ul.userData.noBake=true;ul.castShadow=ul.receiveShadow=false;
+    for(const dx of[-3,3])box(0.8,1.6,0.5,smMat(0xe8e8e2,0.5),staticRoot,96+dx,0.8,300);
+    cyl(0.12,0.12,4,MAT.galv,staticRoot,104.5,2,292,8);const sm=new THREE.MeshBasicMaterial({map:signTex('⛽ 1,89','#d8262c','#ffffff',512,256,'bold 110px Arial'),color:0xffffff});E.signs.push(sm);
+    smallPlane(2.4,1.2,sm,104.5,4.4,291.8,Math.PI);smallPlane(2.4,1.2,sm,104.5,4.4,292.2,0);}
   for(let x=-120;x<190;x+=30){streetLight(x,268.5);streetLight(x+15,391.5);}
   dressStreets();
   RING.stations.forEach(kiosk);
