@@ -9,7 +9,7 @@ const LITE = params.has('lite');if(LITE)document.body.classList.add('lite');
 // prestatie-instellingen (bewaard in de browser): resolutie, schaduwen, max. beelden per seconde, omgevingslicht, verkeer/buren, regen/sneeuw
 const GFX_PRESETS={laag:{scale:0.6,shadows:'uit',fps:30,env:false,life:false,particles:false},midden:{scale:0.85,shadows:'laag',fps:60,env:true,life:true,particles:true},
   hoog:{scale:1,shadows:'hoog',fps:0,env:true,life:true,particles:true}};
-var GFX={preset:'hoog',...GFX_PRESETS.hoog,meter:false};
+var GFX={preset:'hoog',...GFX_PRESETS.hoog,meter:false,autoRes:true};
 try{Object.assign(GFX,JSON.parse(localStorage.getItem('osz-gfx')||'{}'));}catch(e){}
 const shadowSize=()=>LITE?512:GFX.shadows==='laag'?1024:4096;   // testmodus: geen 3D-beeld tekenen, lage resolutie, geen schaduwen, lus 15× per seconde
 const $ = s => document.querySelector(s);
@@ -29,6 +29,7 @@ renderer.setPixelRatio(LITE?0.4:Math.min(devicePixelRatio,1.75)*GFX.scale);
 renderer.setSize(innerWidth,innerHeight);
 renderer.shadowMap.enabled = !LITE&&GFX.shadows!=='uit';
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+let SHADOW_DIRTY=true;   // schaduwkaart opnieuw tekenen (zie shadowTick in de hoofdlus)
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 0.6;
 $('#scene').appendChild(renderer.domElement);
@@ -190,10 +191,13 @@ function membersGeo(list){const geos=[];const up=V3(0,1,0);
     const m=new THREE.Matrix4().compose(a.clone().addScaledVector(d,0.5),new THREE.Quaternion().setFromUnitVectors(up,d.clone().normalize()),V3(1,1,1));g.applyMatrix4(m);geos.push(g);}
   return mergeGeometries(geos);}
 
-// alle statische meshes samenvoegen per materiaal (minder draw calls)
+// alle statische meshes samenvoegen per materiaal én per zone (minder draw calls). Per zone, zodat de GPU wat buiten beeld
+// (of buiten het schaduwgebied) ligt niet hoeft te tekenen; grote vlakken (grond, spoor) houden één stuk. Elders vakken van 400 m.
+const BAKE_ZONES=[['station',-130,-130,150,90],['wijk',-160,90,215,262],['centrum',-160,262,215,440],['zkh',-420,220,-160,440],['kassen',230,20,650,380],['rwzi',-430,-260,-160,60]];
+const bakeZone=(x,z)=>(BAKE_ZONES.find(q=>x>=q[1]&&x<q[3]&&z>=q[2]&&z<q[4])||[Math.floor(x/400)+','+Math.floor(z/400)])[0];
 function bakeStatic(){
   scene.updateMatrixWorld(true);
-  const buckets=new Map(),remove=[];
+  const buckets=new Map(),remove=[],bb=new THREE.Box3(),bc=new THREE.Vector3(),bs=new THREE.Vector3();
   scene.traverse(o=>{
     if(!o.isMesh||o.userData.noBake)return;
     for(let p=o;p;p=p.parent)if(p.userData.dyn)return;
@@ -201,10 +205,12 @@ function bakeStatic(){
     for(const k of Object.keys(g.attributes))if(!['position','normal','uv'].includes(k))g.deleteAttribute(k);
     if(!g.attributes.uv)g.setAttribute('uv',new THREE.BufferAttribute(new Float32Array(g.attributes.position.count*2),2));
     g.clearGroups();g.applyMatrix4(o.matrixWorld);
-    const key=o.material.uuid+(o.castShadow?'s':'n')+(g.index?'i':'x');
+    g.computeBoundingBox();bb.copy(g.boundingBox).getCenter(bc);bb.getSize(bs);
+    const cell=Math.max(bs.x,bs.z)>300?'big':bakeZone(bc.x,bc.z);
+    const key=o.material.uuid+(o.castShadow?'s':'n')+(g.index?'i':'x')+cell;
     if(!buckets.has(key))buckets.set(key,{m:o.material,cast:o.castShadow,geos:[]});
     buckets.get(key).geos.push(g);remove.push(o);
   });
   remove.forEach(o=>o.parent.remove(o));
-  for(const {m,cast,geos} of buckets.values()){const mg=mergeGeometries(geos,false);if(!mg)continue;const o=new THREE.Mesh(mg,m);o.castShadow=cast;o.receiveShadow=true;o.userData.noBake=true;o.frustumCulled=false;scene.add(o);}
+  for(const {m,cast,geos} of buckets.values()){const mg=mergeGeometries(geos,false);if(!mg)continue;mg.computeBoundingSphere();const o=new THREE.Mesh(mg,m);o.castShadow=cast;o.receiveShadow=true;o.userData.noBake=true;o.userData.baked=true;scene.add(o);}
 }

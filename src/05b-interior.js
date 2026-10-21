@@ -18,7 +18,8 @@ const IM={
   wood:mat({color:0x9a8366,roughness:0.6}),
 };
 function iplane(w,h,m,x,y,z,ry=0,rx=0){const o=mesh(new THREE.PlaneGeometry(w,h),m,staticRoot,x,y,z);o.rotation.set(rx,ry,0);o.castShadow=false;return o;}
-function liveTex(w,h){const c=cnv(w,h);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=MAXANISO;return {c,g:c.getContext('2d'),t,w,h};}
+// schermtextuur zonder mipmaps: wordt vaak bijgewerkt, en een upload met mipmaps kost veel meer
+function liveTex(w,h){const c=cnv(w,h);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.generateMipmaps=false;t.minFilter=THREE.LinearFilter;return {c,g:c.getContext('2d'),t,w,h};}
 function mimicTex(kind){const c=cnv(256,96),g=c.getContext('2d');g.fillStyle='#e9ebe6';g.fillRect(0,0,256,96);
   g.strokeStyle='#1d3b8f';g.lineWidth=8;g.beginPath();g.moveTo(0,12);g.lineTo(256,12);g.stroke();g.lineWidth=5;g.beginPath();
   if(kind==='feed'||kind==='inc'){g.moveTo(128,12);g.lineTo(128,30);g.moveTo(128,66);g.lineTo(128,92);g.stroke();g.strokeRect(110,30,36,36);
@@ -124,12 +125,16 @@ function buildInterior(){
   // eigenbedrijfstransformator
   box(1.3,1.7,1.0,MAT.trafo,staticRoot,17.6,Y+0.85,47.6);iplane(0.9,0.7,MAT.louvre,17.6,Y+1.0,48.11,0);plate('EB 10/0,4 kV',staticRoot,17.6,Y+1.55,48.11,0,0.5);
 }
-function drawPanelScreens(){
-  SCREENS.forEach(s=>{const d=D[s.id],g=s.g;g.fillStyle='#08160f';g.fillRect(0,0,256,128);g.fillStyle='#7dffa8';g.font='bold 26px monospace';g.fillText(s.id,14,32);
+// alleen schermen in de buurt van de camera, en alleen als er iets veranderd is (elke upload naar de GPU kost tijd)
+const DESK_POS=V3(-15.5,1.5,47);
+function drawPanelScreens(){const cp=camera.position;
+  SCREENS.forEach(s=>{const d=D[s.id],g=s.g,c=VIEWS[s.id]?.center;if(c&&cp.distanceTo(c)>30)return;
+    const key=[d.state,d.I|0,EN.has(s.node)?nodeU(s.node).toFixed(2):0,!!(d.feeder&&d.feeder.fault),springOk(d),s.es&&D[s.es].state].join();if(key===s.key)return;s.key=key;
+    g.fillStyle='#08160f';g.fillRect(0,0,256,128);g.fillStyle='#7dffa8';g.font='bold 26px monospace';g.fillText(s.id,14,32);
     const fault=d.feeder&&d.feeder.fault;const st=d.type==='es'?(d.state?'AARD':'OPEN'):d.state?'IN':fault?'TRIP':'UIT';
     g.font='22px monospace';g.fillText(`I ${String(Math.round(d.I)).padStart(4)} A`,14,66);g.fillText(`U ${EN.has(s.node)?nodeU(s.node).toFixed(2).replace('.',','):' 0,00'} kV`,14,96);
     g.fillStyle=st==='IN'?'#ff7a7a':st==='TRIP'?'#ffcc33':'#7dffa8';g.font='bold 22px monospace';g.fillText(st,190,32);if(!springOk(d)){g.fillStyle='#ffcc33';g.font='16px monospace';g.fillText('VEER',190,96);}if(s.es&&D[s.es].state){g.fillStyle='#ffd23a';g.font='bold 16px monospace';g.fillText('GEAARD',176,66);}s.t.needsUpdate=true;});
-  if(!deskScreens)return;
+  if(!deskScreens||cp.distanceTo(DESK_POS)>25)return;
   const [a,b]=deskScreens;let g=a.g;g.fillStyle='#0d1117';g.fillRect(0,0,512,320);g.fillStyle='#e7ecf1';g.font='bold 22px Arial';g.fillText('OS ZUIDWOLDE · MS',18,34);
   g.font='16px monospace';g.fillStyle='#9fd0ff';g.font='14px monospace';g.fillText(`A ${FLOW.U.RA.toFixed(2)}  B ${FLOW.U.RB.toFixed(2)}  C1 ${FLOW.U.RC.toFixed(2)}  C2 ${FLOW.U.RD.toFixed(2)} kV`,18,60);
   FEEDERS.forEach((f,i)=>{const on=EN.has(f.node),y=88+i*23;g.fillStyle=on?(is20(f.bus)?'#c07cff':'#4aa3ff'):'#56616b';g.fillRect(18,y-12,10,15);g.fillStyle='#e7ecf1';g.fillText(`${f.id} ${f.short.padEnd(10)} ${on?f.P.toFixed(1).padStart(5)+' MW':'   UIT  '}`,40,y);

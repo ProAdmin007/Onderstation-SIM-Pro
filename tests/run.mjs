@@ -526,6 +526,18 @@ const TESTS = [
         return { leeg, samen, klik, weg: !O.activeFaults().some(f => f.key === 'rsK23' || f.key === 'ffF6'), teller: document.querySelector('#faultCnt').textContent }; });
       for (const [k, v] of Object.entries(r)) if (k !== 'teller') assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
   } },
+  { name: 'prestaties: wereld per zone samengevoegd en geculd, schaduw alleen bij beweging, automatische resolutie', query: '?autostart&t=12', async run(p) {
+      const r = await p.evaluate(async () => { const O = OS, baked = []; O.scene.traverse(o => { if (o.userData.baked) baked.push(o); });
+        const cull = baked.length > 50 && baked.every(o => o.frustumCulled && o.geometry.boundingSphere);
+        const sm = O.renderer.shadowMap, lazy = sm.autoUpdate === false;
+        const D = O.DYN, pr0 = O.renderer.getPixelRatio(); O.GFX.autoRes = true; Object.assign(D, { k: 1, low: 0, high: 0, t: 0, told: true, test: true });
+        const win = fps => { for (let i = 0; i < fps / 2; i++) O.fpsTick(1 / fps); };
+        for (let i = 0; i < 12; i++) win(20); const k1 = D.k, pr1 = O.renderer.getPixelRatio();
+        for (let i = 0; i < 80; i++) win(60); const omlaag = k1 < 1 && pr1 < O.renderer.getPixelRatio(), omhoog = D.k === 1;
+        O.GFX.autoRes = false; for (let i = 0; i < 12; i++) win(20); const uit = D.k === 1; D.test = false; O.renderer.setPixelRatio(pr0);
+        return { cull, lazy, omlaag, omhoog, uit, n: baked.length }; });
+      for (const [k, v] of Object.entries(r)) if (k !== 'n') assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
+  } },
   { name: 'brand 10 kV: vlammen uit het dak, brandweerwagens en brandweerlieden, blussen na spanningsloos, alles weer weg', query: '?autostart&t=14', async run(p) {
       const r = await p.evaluate(async () => { const O = OS; T.quiet(); O.startIncident('brand', true); const F = O.FIRE;
         const start = F.on && F.flames.length > 10 && F.trucks.length === 2 && F.trucks.some(t => t.lad) && O.NPCS.filter(n => n.say === 'Brandweer').length === 4 && typeof O.AudioSys.fireBell === 'function' && typeof O.AudioSys.siren === 'function';

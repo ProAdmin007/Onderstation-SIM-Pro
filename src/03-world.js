@@ -178,5 +178,5 @@ function updateSky(h){
   su.turbidity.value=5.5+14.5*cl;su.rayleigh.value=1.5-0.9*cl;su.mieCoefficient.value=0.004+0.026*cl;
   applySnowCover();
   // omgevingslicht opnieuw berekenen (PMREM-render) – niet in de testmodus: zonder grafische kaart is dat erg zwaar
-  if(!LITE&&GFX.env&&(Math.abs(el-lastEnvElev)>0.6||Math.abs(cl-lastEnvCloud)>0.08)){lastEnvElev=el;lastEnvCloud=cl;updateEnv();}
+  if(!LITE&&GFX.env&&(Math.abs(el-lastEnvElev)>2.5||Math.abs(cl-lastEnvCloud)>0.15)){lastEnvElev=el;lastEnvCloud=cl;updateEnv();}
 }

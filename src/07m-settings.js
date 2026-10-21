@@ -3,18 +3,27 @@
 const AUDIO_LABELS={master:'Hoofdvolume',omgeving:'Omgeving (brom, verkeer, vogels, regen)',schakel:'Schakelen (vermogenschakelaars, motoren, vlambogen)',alarm:'Meldingen en alarmen',telefoon:'Telefoon'};
 // geluidsvolumes uit de browser terugzetten (werkt ook vóór het eerste geluid)
 try{const v=JSON.parse(localStorage.getItem('osz-audio')||'{}');if(v.master!=null)AudioSys.vol=v.master;AUDIO_BUSES.forEach(k=>{if(v[k]!=null)AudioSys.busVol[k]=v[k];});}catch(e){}
+const DYN={k:1,low:0,high:0,t:0,told:false,env:GFX.env};
+const applyRes=()=>{renderer.setPixelRatio(Math.min(devicePixelRatio,1.75)*GFX.scale*(GFX.autoRes!==false?DYN.k:1));renderer.setSize(innerWidth,innerHeight);};
 const saveGfx=()=>{try{localStorage.setItem('osz-gfx',JSON.stringify(GFX));}catch(e){}};
 const saveAudio=()=>{try{localStorage.setItem('osz-audio',JSON.stringify({master:AudioSys.vol,...AudioSys.busVol}));}catch(e){}};
 // grafische instellingen direct toepassen
 function applyGfx(){saveGfx();if(LITE)return;
-  renderer.setPixelRatio(Math.min(devicePixelRatio,1.75)*GFX.scale);renderer.setSize(innerWidth,innerHeight);
+  applyRes();
   const sh=GFX.shadows!=='uit',size=shadowSize();
   if(renderer.shadowMap.enabled!==sh){renderer.shadowMap.enabled=sh;scene.traverse(o=>{if(o.material)[].concat(o.material).forEach(m=>m.needsUpdate=true);});}
   if(sun.shadow.mapSize.x!==size){sun.shadow.mapSize.set(size,size);if(sun.shadow.map){sun.shadow.map.dispose();sun.shadow.map=null;}}
-  if(GFX.env)lastEnvElev=-999;$('#fps').classList.toggle('on',!!GFX.meter);}
+  if(GFX.env&&!DYN.env)lastEnvElev=-999;DYN.env=GFX.env;SHADOW_DIRTY=true;$('#fps').classList.toggle('on',!!GFX.meter);}
 function setGfx(k,v){if(k==='preset'){Object.assign(GFX,GFX_PRESETS[v]);GFX.preset=v;}else{GFX[k]=v;GFX.preset='eigen';}applyGfx();renderSettings();}
-// beeldfrequentie-meter
-let fpsN=0,fpsT=0;function fpsTick(dt){fpsN++;fpsT+=dt;if(fpsT>=0.5){if(GFX.meter)$('#fps').textContent=`${Math.round(fpsN/fpsT)} fps`;fpsN=0;fpsT=0;}}
+// beeldfrequentie-meter en automatische resolutie: haalt de computer de beeldfrequentie niet, dan gaat de resolutie in stapjes omlaag
+// (tot 60%); is er weer ruim marge, dan stap voor stap terug omhoog. Niet bewaard: elke keer opnieuw bepaald.
+let fpsN=0,fpsT=0;function fpsTick(dt){fpsN++;fpsT+=dt;if(fpsT<0.5)return;const fps=fpsN/fpsT;
+  if(GFX.meter)$('#fps').textContent=`${Math.round(fps)} fps${DYN.k<1?` · ${Math.round(DYN.k*100)}%`:''}`;fpsN=0;fpsT=0;
+  if(LITE&&!DYN.test||GFX.autoRes===false||document.hidden||!$('#intro').classList.contains('hidden'))return;const goal=Math.min(60,GFX.fps||60);DYN.t+=0.5;
+  DYN.low=fps<goal*0.72?DYN.low+1:0;DYN.high=fps>goal*0.95?DYN.high+1:0;
+  if(DYN.low>=4&&DYN.k>0.6&&DYN.t>4){DYN.k=Math.max(0.6,+(DYN.k-0.1).toFixed(2));DYN.low=0;DYN.t=0;applyRes();
+    if(!DYN.told){DYN.told=true;pushAlarm(`Het beeld haperde: de resolutie is automatisch verlaagd naar ${Math.round(DYN.k*100)}%. Uitzetten of zelf kiezen: Instellingen (I) → Prestaties`,'info');}}
+  else if(DYN.high>=12&&DYN.k<1&&DYN.t>8){DYN.k=Math.min(1,+(DYN.k+0.1).toFixed(2));DYN.high=0;DYN.t=0;applyRes();}}
 // ---- venster
 let setPrev=false;
 const setOpen=()=>!$('#settings').classList.contains('hidden');
@@ -30,7 +39,7 @@ function renderSettings(){if(!setOpen())return;
     <div class="st-row"><span>Resolutie</span><input type="range" min="0.4" max="1" step="0.05" value="${GFX.scale}" data-gs="scale"><em>${Math.round(GFX.scale*100)}%</em></div>
     <div class="st-row"><span>Schaduwen</span>${seg('shadows',[['uit','Uit'],['laag','Laag'],['hoog','Hoog']])}</div>
     <div class="st-row"><span>Max. beelden per seconde</span>${seg('fps',[[30,'30'],[60,'60'],[0,'onbeperkt']])}</div>
-    <div class="st-tgs">${tog('env','Omgevingslicht volgt de zon','Herberekent de lichtreflecties als de zon beweegt (zwaar op trage computers)')}${tog('life','Verkeer en buren in de wijk')}${tog('particles','Regen en sneeuw')}${tog('meter','Toon beelden per seconde')}</div>
+    <div class="st-tgs">${tog('env','Omgevingslicht volgt de zon','Herberekent de lichtreflecties als de zon beweegt (zwaar op trage computers)')}${tog('life','Verkeer en buren in de wijk')}${tog('particles','Regen en sneeuw')}${tog('autoRes','Resolutie automatisch verlagen bij haperen','Haalt de computer de beeldfrequentie niet, dan gaat de resolutie vanzelf een stapje omlaag (tot 60%)')}${tog('meter','Toon beelden per seconde')}</div>
     <div class="mh">Weer en seizoen</div>
     <div class="st-row"><span>Muis</span><div class="seg"><button data-mouse="kaart" class="${MOUSE_MODE==='kaart'?'on':''}" title="Links slepen schuift, rechts slepen draait (zoals een online kaart)">🗺 Kaart</button><button data-mouse="klassiek" class="${MOUSE_MODE==='klassiek'?'on':''}" title="Links slepen draait, rechts slepen schuift">↻ Klassiek</button></div></div>
     <div class="st-row"><span>Bekijken</span><div class="seg"><button data-pvopen title="Klok schuiven en weer kiezen om te kijken, zonder dat de simulatie meeloopt">🌤 Weer en tijd bekijken <kbd>T</kbd></button></div></div>
