@@ -20,7 +20,7 @@ SITE_RECTS.push([-152,52,-70,97],[-150,196,-104,230],[-130,246,-96,266],[-52,246
 const FRONT={'+z':[0,1,0],'-z':[0,-1,Math.PI],'+x':[1,0,Math.PI/2],'-x':[-1,0,-Math.PI/2]};
 function smallPlane(w,h,m,x,y,z,ry){const p=mesh(new THREE.PlaneGeometry(w,h),m,staticRoot,x,y,z);p.rotation.y=ry;p.castShadow=false;return p;}
 function smallBuild(E,{x,z,w,d,h,col,front,sign,signW=10,bg='#ffffff',fg='#1d2b45',band=[1,2.4],back=true,canopy=true}){
-  lay('small',x-w/2,z-d/2,x+w/2,z+d/2);DISTRICT_RECTS.push([x-w/2,z-d/2,x+w/2,z+d/2]);
+  E.pos??=[x,z];lay('small',x-w/2,z-d/2,x+w/2,z+d/2);DISTRICT_RECTS.push([x-w/2,z-d/2,x+w/2,z+d/2]);
   box(w,h,d,smMat(col),staticRoot,x,h/2,z);box(w+0.5,0.4,d+0.5,MAT.concreteDark,staticRoot,x,h+0.2,z);
   const [nx,nz,ry]=FRONT[front],len=nx?d:w,dep=nx?w:d,ax=Math.cos(ry),az=-Math.sin(ry);
   const at=(s,off,along=0)=>[x+s*nx*(dep/2+off)+ax*along*s,z+s*nz*(dep/2+off)+az*along*s];
@@ -50,7 +50,7 @@ function buildSmall(){
   // ---- MS3: huisartsenpost (dag en nacht open)
   {const E=smallReg('Huisartsenpost',[0,24],0.35);smallBuild(E,{x:-40,z:256,w:20,d:12,h:4.5,col:0xeeeeea,front:'-z',sign:'✚ HUISARTSENPOST',signW:8,bg:'#ffffff',fg:'#1b8a4a',band:[0.4,2.6]});}
   // ---- MS4: laadplein met laadpalen onder een overkapping met zonnepanelen
-  {const E=smallReg("Laadplein elektrische auto's",[0,24],0);groundQuad(68,248,104,264,0.035,MAT.asphalt,6);lay('laad',68,248,104,264);
+  {const E=smallReg("Laadplein elektrische auto's",[0,24],0);E.pos=[86,256];groundQuad(68,248,104,264,0.035,MAT.asphalt,6);lay('laad',68,248,104,264);
     E.led=mat({color:0x0a1a0e,emissive:0x2cff6a,emissiveIntensity:0});
     for(let i=0;i<6;i++){const x=71+i*6;box(0.4,1.5,0.3,smMat(0xf2f2ee,0.4),staticRoot,x,0.75,253.2);box(0.3,0.25,0.05,E.led,staticRoot,x,1.25,253.04);
       if(i%3!==1)parkedCar(x+3,257.5,false,i);}
@@ -62,7 +62,7 @@ function buildSmall(){
   // ---- MS6: bibliotheek aan de rand van het centrum
   {const E=smallReg('Bibliotheek',[10,20],0.3);smallBuild(E,{x:-112,z:256,w:30,d:14,h:7,col:0x9aa3a8,front:'+z',sign:'BIBLIOTHEEK',signW:9,bg:'#ffffff',fg:'#7a1f4c',band:[0.3,3.2]});}
   // ---- MS6: horeca aan het marktplein: lichtsnoeren boven het plein en een café met terras
-  {const E=smallReg('Horeca Marktplein',[10,24],0.3);const sm=new THREE.MeshBasicMaterial({map:signTex('CAFÉ DE MARKT','#2a1a12','#ffd27a',1024,160,'bold 92px Arial'),color:0xffffff});E.signs.push(sm);
+  {const E=smallReg('Horeca Marktplein',[10,24],0.3);E.pos=[-97,360];const sm=new THREE.MeshBasicMaterial({map:signTex('CAFÉ DE MARKT','#2a1a12','#ffd27a',1024,160,'bold 92px Arial'),color:0xffffff});E.signs.push(sm);
     smallPlane(9,1.4,sm,-112,4.7,356.3,0);const bulb=new THREE.SphereGeometry(0.14,6,4),bm=E.bulbMat=mat({color:0xe8dcc0,emissive:0xffc070,emissiveIntensity:0});
     for(const z of[367,377])for(let x=-123;x<=-72;x+=2.6){const b=mesh(bulb,bm,staticRoot,x,3.6-Math.sin((x+123)/12*Math.PI)**2*0.5,z);b.castShadow=false;}
     for(const x of[-123,-72])for(const z of[367,377])cyl(0.06,0.06,3.8,MAT.galv,staticRoot,x,1.9,z,6);

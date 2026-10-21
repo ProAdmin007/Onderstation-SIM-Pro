@@ -234,6 +234,7 @@ kbd{font-family:var(--mono);font-size:11px;background:rgba(255,255,255,.12);bord
 body.fp:not(.fplocked) #fpPause{display:flex;position:fixed;left:50%;top:84px;transform:translateX(-50%);align-items:center;gap:10px;background:rgba(13,17,22,.9);border:1px solid var(--accent);border-radius:10px;padding:8px 16px;z-index:7;pointer-events:none;font-size:12.5px}
 #fpPause b{font-size:13px;color:var(--accent)}#fpPause .k{color:var(--muted);font-size:12px;font-family:var(--mono)}
 #views .walk,#views .tool{background:rgba(240,164,58,.14);border-color:rgba(240,164,58,.4)}
+#views .tool.on{background:var(--accent);color:#1a1206;border-color:var(--accent)}
 body.fp #views .walk{background:var(--accent);color:#1a1206;font-weight:700}
 body.fp #labels{opacity:.75}
 #notice{position:fixed;left:50%;top:84px;transform:translate(-50%,-12px);min-width:340px;max-width:600px;background:rgba(10,40,24,.94);border:1px solid var(--green);border-radius:10px;padding:10px 18px;z-index:8;opacity:0;pointer-events:none;transition:opacity .3s,transform .3s;display:flex;flex-direction:column;gap:2px;box-shadow:0 0 0 4px rgba(63,207,114,.15),0 12px 30px rgba(0,0,0,.4)}
@@ -309,6 +310,14 @@ body.fp #torch.on{display:block}
 .mode.resume{border-color:var(--green)}.mode.resume .mt{color:var(--green)}.mode.delsave{opacity:.75}
 #fps{display:none;position:fixed;right:14px;bottom:14px;z-index:8;font:600 12px var(--mono);color:#9fe39a;background:rgba(13,17,22,.7);padding:3px 8px;border-radius:6px;pointer-events:none}#fps.on{display:block}
 .selc{width:100%;height:auto;background:rgba(255,255,255,.02);border:1px solid var(--line);border-radius:8px}.selc .ax{font:9px var(--mono);fill:var(--muted)}.sel-btns{display:flex;flex-wrap:wrap;gap:3px;margin:4px 0 6px}.sel-btns .on{background:var(--accent);color:#1a1206;border-color:var(--accent)}.pr .bad{color:var(--red)}
+#gisTab{position:fixed;right:16px;bottom:96px;z-index:15;width:min(440px,calc(100vw - 32px));padding:10px;border-radius:20px;background:#1b1f24;border:2px solid #3a4048;box-shadow:0 10px 40px rgba(0,0,0,.55);color:#e7ecf1}
+#gisTab.hidden{display:none}#gisTab.fp{transform:perspective(900px) rotateX(8deg);transform-origin:bottom center}
+#gisTab .gt-bar{display:flex;align-items:center;gap:6px;margin:0 2px 8px;font-size:13px}#gisTab .gt-bar b{flex:1}
+#gisTab canvas{display:block;width:100%;aspect-ratio:1;border-radius:10px;background:#f3f1ea;cursor:grab;touch-action:none}
+#gisTab .gt-layers{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;margin:8px 4px 4px}#gisTab .gt-layers label{display:flex;gap:4px;align-items:center}
+#gisTab .gt-leg{display:flex;gap:10px;flex-wrap:wrap;font-size:11px;color:#b9c2cc;margin:2px 4px 6px}#gisTab .gt-leg i{display:inline-block;width:14px;height:4px;border-radius:2px;vertical-align:middle;margin-right:3px}
+#gtInfo{min-height:42px;font-size:12.5px;line-height:1.45;padding:6px 6px 2px;border-top:1px solid #333a42}#gtInfo .gt-act{margin-top:6px;display:flex;gap:6px;flex-wrap:wrap}
+#gisTab button.on{outline:2px solid var(--accent,#3d9bff)}
 #pvBar{position:fixed;left:434px;bottom:96px;z-index:14;display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;padding:10px 14px;width:min(480px,calc(100vw - 446px))}#pvBar.hidden{display:none}
 .pv-t b{display:block;font-size:13px}.pv-t span{font-size:11px;color:var(--muted)}.pv-time{display:flex;align-items:center;gap:8px}.pv-time input{width:230px;accent-color:var(--accent)}.pv-time b{font-family:var(--mono);font-size:14px;min-width:44px}
 .pv-wx{display:flex;gap:3px}.pv-wx .on{background:var(--accent);color:#1a1206;border-color:var(--accent)}#pvBar select{background:#0b0f14;color:var(--text);border:1px solid var(--line);border-radius:6px;padding:3px 6px;font:inherit}
@@ -394,6 +403,8 @@ body.previewing #tasks,body.previewing #alarms,body.previewing #faults{opacity:.
   <button data-v="10" title="F6 Glastuinbouw Oost (±500 m oostelijk)">Kassen</button>
   <button data-v="11" title="G4 Waterzuivering (±700 m noordwestelijk)">RWZI</button>
   <button id="pvBtn" class="tool" title="Weer en tijd bekijken: klok schuiven, weer en seizoen kiezen (alleen kijken)"><kbd>T</kbd>Weer &amp; tijd</button>
+  <button id="xrayBtn" class="tool" title="Röntgenblik: zie in 3D waar de kabels onder straat en stoep liggen"><kbd>X</kbd>Kabels</button>
+  <button id="gisBtn" class="tool" title="Kabeltablet: kaart met alle kabels, moffen en je eigen positie"><kbd>G</kbd>Tablet</button>
   <button id="recBtn" class="tool" title="Storingsschrijver: stroom en spanning rond elke storing"><kbd>R</kbd>Schrijver</button>
   <button id="lsBtn" class="tool" title="Laagspanning, noodaggregaten en klanten informeren"><kbd>N</kbd>LS</button>
   <button id="keysBtn" class="tool" title="Overzicht van alle toetsen"><kbd>H</kbd>Toetsen</button>
@@ -420,6 +431,11 @@ body.previewing #tasks,body.previewing #alarms,body.previewing #faults{opacity:.
 <div id="lsWin" class="hidden"></div>
 <div id="recWin" class="hidden"></div>
 <div id="slotWin" class="hidden"></div>
+<div id="gisTab" class="hidden"><div class="gt-bar"><b>📟 Kabeltablet</b><button class="mini" data-gt="out" title="Uitzoomen">−</button><button class="mini" data-gt="in" title="Inzoomen">+</button><button class="mini" id="gtFollow" data-gt="follow" title="Kaart volgt je positie">◎</button><button class="mini" id="gtStyle" data-gt="style">🛰 Luchtfoto</button><button class="mini" data-gt="close" title="Sluiten (G)">✕</button></div>
+  <canvas id="gtMap" width="420" height="420"></canvas>
+  <div class="gt-layers"><label><input type="checkbox" data-gl="ms" checked>MS-kabels</label><label><input type="checkbox" data-gl="ls" checked>LS-kabels</label><label><input type="checkbox" data-gl="mof" checked>Moffen</label></div>
+  <div class="gt-leg"><span><i style="background:#3d9bff"></i>10 kV</span><span><i style="background:#b57cff"></i>20 kV</span><span><i style="background:#f2c94c"></i>LS</span><span><i style="background:#7a828a"></i>spanningsloos</span><span><i style="background:#ff3b3b"></i>storing</span><span><i style="background:#ff9a2a"></i>overbelast</span><span>● mof: <b style="color:#5ccf72">na 2000</b> <b style="color:#f5b335">1985–2000</b> <b style="color:#ff5a4a">vóór 1985</b></span></div>
+  <div id="gtInfo"><small>Klik op een kabel voor de gegevens. Slepen schuift de kaart, scrollen zoomt.</small></div></div>
 <div id="pvBar" class="panel hidden"></div>
 <div id="settings" class="hidden"></div>
 <div id="fps"></div>

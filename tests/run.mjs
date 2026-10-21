@@ -526,6 +526,21 @@ const TESTS = [
         return { leeg, samen, klik, weg: !O.activeFaults().some(f => f.key === 'rsK23' || f.key === 'ffF6'), teller: document.querySelector('#faultCnt').textContent }; });
       for (const [k, v] of Object.entries(r)) if (k !== 'teller') assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
   } },
+  { name: 'kabeltracés: elke kabel een route langs de straat (niet door gebouwen), röntgenblik en kabeltablet', query: '?autostart&t=13', async run(p) {
+      const r = await p.evaluate(() => { const O = OS, C = O.CABLES, BL = new Set(['house', 'apt', 'hall', 'small', 'kiosk']), bad = [];
+        const at = (c, d) => { for (let i = 1; i < c.pts.length; i++) { const [ax, az] = c.pts[i - 1], [bx, bz] = c.pts[i], l = Math.hypot(bx - ax, bz - az); if (d <= l) return [ax + (bx - ax) * d / l, az + (bz - az) * d / l]; d -= l; } return c.pts[c.pts.length - 1]; };
+        for (const c of C) { if (c.far) continue; for (let d = 6; d < c.len - 6; d += 1.5) { const [x, z] = at(c, d); if (O.LAYOUT.some(e => BL.has(e.kind) && x > e.r[0] + 0.2 && x < e.r[2] - 0.2 && z > e.r[1] + 0.2 && z < e.r[3] - 0.2)) { bad.push(c.id); break; } } }
+        const ring = O.RING.secs.every(s => C.some(c => c.sec === s)), ls = O.LVG.filter(g => g.kind !== 'ovl').every(g => C.some(c => c.g === g)), feed = ['F5', 'F6', 'G4'].every(id => C.some(c => c.f?.id === id && !c.far && c.len > 100));
+        O.setXray(true); const xr = O.XRAY.root.visible && O.XRAY.mats.size === C.length;
+        O.openTablet(); const cv = document.querySelector('#gtMap'), K = C.find(c => c.kind === 'ring'), m = K.pts[Math.floor(K.pts.length / 2)];
+        O.TAB.follow = false; O.TAB.cx = m[0]; O.TAB.cz = m[1]; O.TAB.zoom = 2; O.drawTablet();
+        const rc = cv.getBoundingClientRect(); cv.dispatchEvent(new PointerEvent('pointerdown', { clientX: rc.left + rc.width / 2, clientY: rc.top + rc.height / 2, bubbles: true }));
+        cv.dispatchEvent(new PointerEvent('pointerup', { clientX: rc.left + rc.width / 2, clientY: rc.top + rc.height / 2, bubbles: true }));
+        const info = document.querySelector('#gtInfo').textContent, tab = !document.querySelector('#gisTab').classList.contains('hidden') && /kabel/i.test(info) && /aangelegd \d{4}/.test(info);
+        O.closeTablet(); O.setXray(false);
+        return { bad: bad.length ? bad : true, ring, ls, feed, xr, tab, info: info.slice(0, 120) }; });
+      for (const k of ['bad', 'ring', 'ls', 'feed', 'xr', 'tab']) assert(r[k] === true, `${k} klopt niet: ${JSON.stringify(r)}`);
+  } },
   { name: 'prestaties: wereld per zone samengevoegd en geculd, schaduw alleen bij beweging, automatische resolutie', query: '?autostart&t=12', async run(p) {
       const r = await p.evaluate(async () => { const O = OS, baked = []; O.scene.traverse(o => { if (o.userData.baked) baked.push(o); });
         const cull = baked.length > 50 && baked.every(o => o.frustumCulled && o.geometry.boundingSphere);

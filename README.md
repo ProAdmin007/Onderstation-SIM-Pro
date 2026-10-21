@@ -146,6 +146,7 @@ Bedoeld voor **bedrijfsvoerders en monteurs in opleiding**, studenten **elektrot
 | `N` | laagspanning | `I` | instellingen |
 | `R` | storingsschrijver | `T` | weer en tijd bekijken, muisbesturing, voetgangers |
 | `WASD` / pijltjes | beeld schuiven | dubbelklik | daarheen vliegen |
+| `X` | röntgenblik: kabels in 3D | `G` | kabeltablet (GIS-kaart) |
 | `Ctrl+S` | opslaan | `L` / `M` | labels / geluid |
 
 <details>
@@ -447,6 +448,9 @@ Het 10 kV-net is **gecompenseerd** (Petersenspoel in het sterpunt van T1 en T3).
 <summary><b>Leven in de wijk</b></summary>
 
 - **Straatbeeld:** stoepen van tegels met stoepranden, belijning op de doorgaande wegen en een woonerf met klinkers, bomen en geparkeerde auto's. De rijtjeshuizen hebben voortuinen met een heg en tuinpad, kliko's, fietsen en een luifel bij de voordeur, schuttingen en schuurtjes in de achtertuin met een achterpad, ramen in de kopgevels, erkers aan de hoekwoningen, pannendaken met dakgoten, dakkapellen en op ongeveer een derde van de huizen **zonnepanelen** (op het zuiden). De flats hebben balkons en elk een eigen gevelkleur; in het centrum zijn er parkeerstroken, een winkelstoep en een parkeerterrein. Alles is procedureel en wordt per materiaal samengevoegd, dus het kost nauwelijks extra rekenkracht.
+- **Kabeltracés (GIS):** alle kabels liggen fysiek in de wereld, in de stoep of berm langs de straten: de 10 kV-ringen, de MS-kabels naar ziekenhuis, kassen en RWZI (en richting zonnepark, industrie en buitengebied), de LS-kabels per straat of gebouw en de koppelkabels naar de kabelkasten. Elke kabel heeft een type, aanlegjaar, lengte en moffen.
+  - **Röntgenblik (`X`):** de kabels lichten op onder straat en stoep, in de kleur van hun toestand: blauw 10 kV, paars 20 kV, geel LS, grijs spanningsloos, rood knipperend bij een storing, oranje bij overbelasting. Moffen zijn blokjes in de kleur van hun leeftijd.
+  - **Kabeltablet (`G`):** kaart met je eigen positie (pijl in je kijkrichting), MS-stations, kabelkasten en moffen. Wissel tussen een GIS-kaart en een luchtfoto, zet lagen aan of uit, sleep en zoom. Klik op een kabel voor de gegevens; tijdens het rondlopen (`V`) toont de tablet vanzelf de kabel waar je boven staat.
 - **Grote afnemers in de wereld** (camerastandpunten *Ziekenhuis*, *Kassen* en *RWZI*, of *👁 bekijk* in het paneel Lopende storingen). Ze liggen aan de rand van de stad, elk met een eigen toegangsweg, en je ziet direct of ze stroom hebben:
   - **Ziekenhuis** (F5, aan de westrand van de stad): verlichte afdelingen, verlicht bord, helikopterplatform, ambulances en terreinverlichting. Bij uitval brandt alleen nog wat noodverlichting en draait het **noodstroomaggregaat**, met rook en een knipperlamp.
   - **Kassen Glastuinbouw Oost** (F6, ±300 m oostelijk): vier glazen kassen met gewas. Buiten daglicht gaat de **oranje assimilatiebelichting** aan, met een gloed die je van ver ziet. Bij uitval wordt het in één klap donker. Het ketelhuis rookt zolang er stroom is.

@@ -234,6 +234,7 @@ kbd{font-family:var(--mono);font-size:11px;background:rgba(255,255,255,.12);bord
 body.fp:not(.fplocked) #fpPause{display:flex;position:fixed;left:50%;top:84px;transform:translateX(-50%);align-items:center;gap:10px;background:rgba(13,17,22,.9);border:1px solid var(--accent);border-radius:10px;padding:8px 16px;z-index:7;pointer-events:none;font-size:12.5px}
 #fpPause b{font-size:13px;color:var(--accent)}#fpPause .k{color:var(--muted);font-size:12px;font-family:var(--mono)}
 #views .walk,#views .tool{background:rgba(240,164,58,.14);border-color:rgba(240,164,58,.4)}
+#views .tool.on{background:var(--accent);color:#1a1206;border-color:var(--accent)}
 body.fp #views .walk{background:var(--accent);color:#1a1206;font-weight:700}
 body.fp #labels{opacity:.75}
 #notice{position:fixed;left:50%;top:84px;transform:translate(-50%,-12px);min-width:340px;max-width:600px;background:rgba(10,40,24,.94);border:1px solid var(--green);border-radius:10px;padding:10px 18px;z-index:8;opacity:0;pointer-events:none;transition:opacity .3s,transform .3s;display:flex;flex-direction:column;gap:2px;box-shadow:0 0 0 4px rgba(63,207,114,.15),0 12px 30px rgba(0,0,0,.4)}
@@ -309,6 +310,14 @@ body.fp #torch.on{display:block}
 .mode.resume{border-color:var(--green)}.mode.resume .mt{color:var(--green)}.mode.delsave{opacity:.75}
 #fps{display:none;position:fixed;right:14px;bottom:14px;z-index:8;font:600 12px var(--mono);color:#9fe39a;background:rgba(13,17,22,.7);padding:3px 8px;border-radius:6px;pointer-events:none}#fps.on{display:block}
 .selc{width:100%;height:auto;background:rgba(255,255,255,.02);border:1px solid var(--line);border-radius:8px}.selc .ax{font:9px var(--mono);fill:var(--muted)}.sel-btns{display:flex;flex-wrap:wrap;gap:3px;margin:4px 0 6px}.sel-btns .on{background:var(--accent);color:#1a1206;border-color:var(--accent)}.pr .bad{color:var(--red)}
+#gisTab{position:fixed;right:16px;bottom:96px;z-index:15;width:min(440px,calc(100vw - 32px));padding:10px;border-radius:20px;background:#1b1f24;border:2px solid #3a4048;box-shadow:0 10px 40px rgba(0,0,0,.55);color:#e7ecf1}
+#gisTab.hidden{display:none}#gisTab.fp{transform:perspective(900px) rotateX(8deg);transform-origin:bottom center}
+#gisTab .gt-bar{display:flex;align-items:center;gap:6px;margin:0 2px 8px;font-size:13px}#gisTab .gt-bar b{flex:1}
+#gisTab canvas{display:block;width:100%;aspect-ratio:1;border-radius:10px;background:#f3f1ea;cursor:grab;touch-action:none}
+#gisTab .gt-layers{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;margin:8px 4px 4px}#gisTab .gt-layers label{display:flex;gap:4px;align-items:center}
+#gisTab .gt-leg{display:flex;gap:10px;flex-wrap:wrap;font-size:11px;color:#b9c2cc;margin:2px 4px 6px}#gisTab .gt-leg i{display:inline-block;width:14px;height:4px;border-radius:2px;vertical-align:middle;margin-right:3px}
+#gtInfo{min-height:42px;font-size:12.5px;line-height:1.45;padding:6px 6px 2px;border-top:1px solid #333a42}#gtInfo .gt-act{margin-top:6px;display:flex;gap:6px;flex-wrap:wrap}
+#gisTab button.on{outline:2px solid var(--accent,#3d9bff)}
 #pvBar{position:fixed;left:434px;bottom:96px;z-index:14;display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;padding:10px 14px;width:min(480px,calc(100vw - 446px))}#pvBar.hidden{display:none}
 .pv-t b{display:block;font-size:13px}.pv-t span{font-size:11px;color:var(--muted)}.pv-time{display:flex;align-items:center;gap:8px}.pv-time input{width:230px;accent-color:var(--accent)}.pv-time b{font-family:var(--mono);font-size:14px;min-width:44px}
 .pv-wx{display:flex;gap:3px}.pv-wx .on{background:var(--accent);color:#1a1206;border-color:var(--accent)}#pvBar select{background:#0b0f14;color:var(--text);border:1px solid var(--line);border-radius:6px;padding:3px 6px;font:inherit}
@@ -394,6 +403,8 @@ body.previewing #tasks,body.previewing #alarms,body.previewing #faults{opacity:.
   <button data-v="10" title="F6 Glastuinbouw Oost (±500 m oostelijk)">Kassen</button>
   <button data-v="11" title="G4 Waterzuivering (±700 m noordwestelijk)">RWZI</button>
   <button id="pvBtn" class="tool" title="Weer en tijd bekijken: klok schuiven, weer en seizoen kiezen (alleen kijken)"><kbd>T</kbd>Weer &amp; tijd</button>
+  <button id="xrayBtn" class="tool" title="Röntgenblik: zie in 3D waar de kabels onder straat en stoep liggen"><kbd>X</kbd>Kabels</button>
+  <button id="gisBtn" class="tool" title="Kabeltablet: kaart met alle kabels, moffen en je eigen positie"><kbd>G</kbd>Tablet</button>
   <button id="recBtn" class="tool" title="Storingsschrijver: stroom en spanning rond elke storing"><kbd>R</kbd>Schrijver</button>
   <button id="lsBtn" class="tool" title="Laagspanning, noodaggregaten en klanten informeren"><kbd>N</kbd>LS</button>
   <button id="keysBtn" class="tool" title="Overzicht van alle toetsen"><kbd>H</kbd>Toetsen</button>
@@ -420,6 +431,11 @@ body.previewing #tasks,body.previewing #alarms,body.previewing #faults{opacity:.
 <div id="lsWin" class="hidden"></div>
 <div id="recWin" class="hidden"></div>
 <div id="slotWin" class="hidden"></div>
+<div id="gisTab" class="hidden"><div class="gt-bar"><b>📟 Kabeltablet</b><button class="mini" data-gt="out" title="Uitzoomen">−</button><button class="mini" data-gt="in" title="Inzoomen">+</button><button class="mini" id="gtFollow" data-gt="follow" title="Kaart volgt je positie">◎</button><button class="mini" id="gtStyle" data-gt="style">🛰 Luchtfoto</button><button class="mini" data-gt="close" title="Sluiten (G)">✕</button></div>
+  <canvas id="gtMap" width="420" height="420"></canvas>
+  <div class="gt-layers"><label><input type="checkbox" data-gl="ms" checked>MS-kabels</label><label><input type="checkbox" data-gl="ls" checked>LS-kabels</label><label><input type="checkbox" data-gl="mof" checked>Moffen</label></div>
+  <div class="gt-leg"><span><i style="background:#3d9bff"></i>10 kV</span><span><i style="background:#b57cff"></i>20 kV</span><span><i style="background:#f2c94c"></i>LS</span><span><i style="background:#7a828a"></i>spanningsloos</span><span><i style="background:#ff3b3b"></i>storing</span><span><i style="background:#ff9a2a"></i>overbelast</span><span>● mof: <b style="color:#5ccf72">na 2000</b> <b style="color:#f5b335">1985–2000</b> <b style="color:#ff5a4a">vóór 1985</b></span></div>
+  <div id="gtInfo"><small>Klik op een kabel voor de gegevens. Slepen schuift de kaart, scrollen zoomt.</small></div></div>
 <div id="pvBar" class="panel hidden"></div>
 <div id="settings" class="hidden"></div>
 <div id="fps"></div>
@@ -1119,7 +1135,7 @@ function houseRow(x0,z,n,faceSouth){const W=6,Dp=9,H=5.6,len=n*W,cx=x0+len/2,v=M
   DISTRICT_RECTS.push([x0,z-Dp/2,x0+len,z+Dp/2]);}
 function hall(cx,cz,w,d,h,label,blue,grp,hours){lay('hall',cx-w/2,cz-d/2,cx+w/2,cz+d/2);box(w,h,d,blue?DM.hallBlue:DM.hall,staticRoot,cx,h/2,cz);box(w+0.6,0.4,d+0.6,MAT.roof,staticRoot,cx,h+0.2,cz);
   for(let i=0;i<3;i++){const p=mesh(new THREE.PlaneGeometry(4,4.5),MAT.louvre,staticRoot,cx-w/2+5+i*6,2.25,cz-d/2-0.02);p.rotation.y=Math.PI;p.castShadow=false;}
-  const t=toTex(textCanvas(label,{w:1024,h:160,bg:'#ffffff',fg:'#1d2b45',font:'bold 92px Arial',border:false}));const E=grp&&smallReg(grp,hours||[6,20],0.22),sm=E?new THREE.MeshBasicMaterial({map:t,color:0xffffff}):mat({map:t,roughness:0.5});if(E)E.signs.push(sm);
+  const t=toTex(textCanvas(label,{w:1024,h:160,bg:'#ffffff',fg:'#1d2b45',font:'bold 92px Arial',border:false}));const E=grp&&smallReg(grp,hours||[6,20],0.22),sm=E?new THREE.MeshBasicMaterial({map:t,color:0xffffff}):mat({map:t,roughness:0.5});if(E){E.signs.push(sm);E.pos??=[cx,cz];}
   const sg=mesh(new THREE.PlaneGeometry(9,1.4),sm,staticRoot,cx+w/2-7,h-1.4,cz-d/2-0.03);sg.rotation.y=Math.PI;sg.castShadow=false;
   if(E){const bl=w-24;if(bl>3){const bx=cx+w/2-2-bl/2;smallPlane(bl,1.4,BAND_GLASS,bx,3.2,cz-d/2-0.03,Math.PI);bandPlane(E,bl,1.4,bx,3.2,cz-d/2-0.06,Math.PI);}
     for(let i=0;i<3;i++)box(0.6,0.18,0.25,E.lampMat,staticRoot,cx-w/2+5+i*6,4.8,cz-d/2-0.15);}
@@ -1231,7 +1247,7 @@ function aptBlock(x0,z0,x1,z1,floors){const W=x1-x0,Dz=z1-z0,H=floors*3+3.6,cx=(
     const g=mesh(new THREE.PlaneGeometry(len,floors*3),m,staticRoot,x,3.6+floors*1.5,z);g.rotation.y=ry;g.castShadow=g.receiveShadow=false;g.renderOrder=1;};
   for(const s of[-1,1]){const f=mesh(new THREE.PlaneGeometry(W,floors*3),facade(W),staticRoot,cx,3.6+floors*1.5,cz+s*(Dz/2+0.02));f.rotation.y=s>0?0:Math.PI;f.castShadow=false;glow(W,cx,cz+s*(Dz/2+0.05),f.rotation.y);
     const sp=mesh(new THREE.PlaneGeometry(W,3.4),shop(W),staticRoot,cx,1.7,cz+s*(Dz/2+0.02));sp.rotation.y=s>0?0:Math.PI;sp.castShadow=false;
-    {const E=st.id==='MS6'?smallReg('Winkels Marktplein',[9,21],0.35):smallReg('Kantoren Stationsstraat',[7.5,19],0.3);bandPlane(E,W-1,2.2,cx,1.6,cz+s*(Dz/2+0.05),sp.rotation.y);}
+    {const E=st.id==='MS6'?smallReg('Winkels Marktplein',[9,21],0.35):smallReg('Kantoren Stationsstraat',[7.5,19],0.3);E.pos??=[cx,cz];bandPlane(E,W-1,2.2,cx,1.6,cz+s*(Dz/2+0.05),sp.rotation.y);}
     box(W,0.15,1.6,MAT.trim,staticRoot,cx,3.5,cz+s*(Dz/2+0.8));}
   for(const s of[-1,1]){const f=mesh(new THREE.PlaneGeometry(Dz,floors*3),facade(Dz),staticRoot,cx+s*(W/2+0.02),3.6+floors*1.5,cz);f.rotation.y=s*Math.PI/2;f.castShadow=false;glow(Dz,cx+s*(W/2+0.05),cz,f.rotation.y);}
   box(W+0.4,0.6,Dz+0.4,MAT.concreteDark,staticRoot,cx,H+0.3,cz);box(3,1.4,2,MAT.cabinet,staticRoot,cx-W/4,H+1.3,cz);box(2,1,2,MAT.cabinet,staticRoot,cx+W/4,H+1.1,cz);
@@ -1267,7 +1283,7 @@ function buildDistrict(){
   aptBlock(-125,292,-70,310,4);aptBlock(-52,292,8,310,5);aptBlock(-125,330,-70,356,3);aptBlock(-52,330,8,360,4);
   hall(62,318,38,24,9,'METAALBEWERKING SMIT',false,'Metaalbewerking Smit',[6,22]);hall(158,322,50,32,11,'DISTRIBUTIECENTRUM',true,'Distributiecentrum',[0,24]);hall(70,362,32,18,7,'BOUWMARKT',false,'Bouwmarkt',[8,21]);
   box(14,0.5,9,MAT.trim,staticRoot,96,5.2,300);for(const [dx,dz] of[[-6,-4],[6,-4],[-6,4],[6,4]])cyl(0.15,0.15,5,MAT.galv,staticRoot,96+dx,2.5,300+dz,8);   // tankstation
-  {const E=smallReg('Tankstation',[6,23],0.25),lm=new THREE.MeshBasicMaterial({color:0xfff4e0,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false});E.glow.push(lm);
+  {const E=smallReg('Tankstation',[6,23],0.25);E.pos=[96,300];const lm=new THREE.MeshBasicMaterial({color:0xfff4e0,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false});E.glow.push(lm);
     const ul=mesh(new THREE.PlaneGeometry(13,8),lm,staticRoot,96,4.93,300);ul.rotation.x=Math.PI/2;ul.userData.noBake=true;ul.castShadow=ul.receiveShadow=false;
     for(const dx of[-3,3])box(0.8,1.6,0.5,smMat(0xe8e8e2,0.5),staticRoot,96+dx,0.8,300);
     cyl(0.12,0.12,4,MAT.galv,staticRoot,104.5,2,292,8);const sm=new THREE.MeshBasicMaterial({map:signTex('⛽ 1,89','#d8262c','#ffffff',512,256,'bold 110px Arial'),color:0xffffff});E.signs.push(sm);
@@ -1572,7 +1588,7 @@ SITE_RECTS.push([-152,52,-70,97],[-150,196,-104,230],[-130,246,-96,266],[-52,246
 const FRONT={'+z':[0,1,0],'-z':[0,-1,Math.PI],'+x':[1,0,Math.PI/2],'-x':[-1,0,-Math.PI/2]};
 function smallPlane(w,h,m,x,y,z,ry){const p=mesh(new THREE.PlaneGeometry(w,h),m,staticRoot,x,y,z);p.rotation.y=ry;p.castShadow=false;return p;}
 function smallBuild(E,{x,z,w,d,h,col,front,sign,signW=10,bg='#ffffff',fg='#1d2b45',band=[1,2.4],back=true,canopy=true}){
-  lay('small',x-w/2,z-d/2,x+w/2,z+d/2);DISTRICT_RECTS.push([x-w/2,z-d/2,x+w/2,z+d/2]);
+  E.pos??=[x,z];lay('small',x-w/2,z-d/2,x+w/2,z+d/2);DISTRICT_RECTS.push([x-w/2,z-d/2,x+w/2,z+d/2]);
   box(w,h,d,smMat(col),staticRoot,x,h/2,z);box(w+0.5,0.4,d+0.5,MAT.concreteDark,staticRoot,x,h+0.2,z);
   const [nx,nz,ry]=FRONT[front],len=nx?d:w,dep=nx?w:d,ax=Math.cos(ry),az=-Math.sin(ry);
   const at=(s,off,along=0)=>[x+s*nx*(dep/2+off)+ax*along*s,z+s*nz*(dep/2+off)+az*along*s];
@@ -1602,7 +1618,7 @@ function buildSmall(){
   // ---- MS3: huisartsenpost (dag en nacht open)
   {const E=smallReg('Huisartsenpost',[0,24],0.35);smallBuild(E,{x:-40,z:256,w:20,d:12,h:4.5,col:0xeeeeea,front:'-z',sign:'✚ HUISARTSENPOST',signW:8,bg:'#ffffff',fg:'#1b8a4a',band:[0.4,2.6]});}
   // ---- MS4: laadplein met laadpalen onder een overkapping met zonnepanelen
-  {const E=smallReg("Laadplein elektrische auto's",[0,24],0);groundQuad(68,248,104,264,0.035,MAT.asphalt,6);lay('laad',68,248,104,264);
+  {const E=smallReg("Laadplein elektrische auto's",[0,24],0);E.pos=[86,256];groundQuad(68,248,104,264,0.035,MAT.asphalt,6);lay('laad',68,248,104,264);
     E.led=mat({color:0x0a1a0e,emissive:0x2cff6a,emissiveIntensity:0});
     for(let i=0;i<6;i++){const x=71+i*6;box(0.4,1.5,0.3,smMat(0xf2f2ee,0.4),staticRoot,x,0.75,253.2);box(0.3,0.25,0.05,E.led,staticRoot,x,1.25,253.04);
       if(i%3!==1)parkedCar(x+3,257.5,false,i);}
@@ -1614,7 +1630,7 @@ function buildSmall(){
   // ---- MS6: bibliotheek aan de rand van het centrum
   {const E=smallReg('Bibliotheek',[10,20],0.3);smallBuild(E,{x:-112,z:256,w:30,d:14,h:7,col:0x9aa3a8,front:'+z',sign:'BIBLIOTHEEK',signW:9,bg:'#ffffff',fg:'#7a1f4c',band:[0.3,3.2]});}
   // ---- MS6: horeca aan het marktplein: lichtsnoeren boven het plein en een café met terras
-  {const E=smallReg('Horeca Marktplein',[10,24],0.3);const sm=new THREE.MeshBasicMaterial({map:signTex('CAFÉ DE MARKT','#2a1a12','#ffd27a',1024,160,'bold 92px Arial'),color:0xffffff});E.signs.push(sm);
+  {const E=smallReg('Horeca Marktplein',[10,24],0.3);E.pos=[-97,360];const sm=new THREE.MeshBasicMaterial({map:signTex('CAFÉ DE MARKT','#2a1a12','#ffd27a',1024,160,'bold 92px Arial'),color:0xffffff});E.signs.push(sm);
     smallPlane(9,1.4,sm,-112,4.7,356.3,0);const bulb=new THREE.SphereGeometry(0.14,6,4),bm=E.bulbMat=mat({color:0xe8dcc0,emissive:0xffc070,emissiveIntensity:0});
     for(const z of[367,377])for(let x=-123;x<=-72;x+=2.6){const b=mesh(bulb,bm,staticRoot,x,3.6-Math.sin((x+123)/12*Math.PI)**2*0.5,z);b.castShadow=false;}
     for(const x of[-123,-72])for(const z of[367,377])cyl(0.06,0.06,3.8,MAT.galv,staticRoot,x,1.9,z,6);
@@ -4779,7 +4795,7 @@ const KEY_HELP=[
   ['Camera en kijken',[['1 – 9','Camerastandpunten (6 = binnen 10 kV, 7 = binnen 20 kV, 8 = woonwijk, 9 = centrum)'],['L','Labels aan/uit'],['+ / −','SCADA in- en uitzoomen (ook Ctrl + scrollwiel op het schema)']]],
   ['Muis in het overzicht',[['Links slepen','Schuiven over de kaart (bij Klassiek: draaien)'],['Rechts slepen','Draaien en kantelen (ook Shift + links)'],['Scrollwiel','Zoomen naar de muis'],['Dubbelklik','Ernaartoe vliegen en inzoomen'],['W A S D / pijltjes','Beeld schuiven'],['Klik','Schakelaar, station of veld selecteren']]],
   ['Rondlopen',[['V','Rondlopen starten of stoppen'],['W A S D','Lopen'],['Shift / Q','Rennen / sprinten'],['Spatie','Springen'],['F','Schakelaar in het vizier direct bedienen'],['E','Cursor vrij (paneel open van wat je ziet); nog eens E = verder lopen'],['Z','Zaklamp aan/uit']]],
-  ['Vensters',[['B','Beveiligingsinstellingen'],['C','Flex en netcongestie'],['O','Onderhoud: conditie van schakelaars en relaistests'],['K','Testkoffer (tijdens een relaistest)'],['N','Laagspanning: LS-velden, kabelkasten, noodaggregaten en klanten informeren'],['R','Storingsschrijver: stroom en spanning rond elke storing'],['T','Weer en tijd bekijken: klok schuiven, weer en seizoen kiezen (alleen kijken)'],['I','Instellingen: prestaties, weer en geluid']]]];
+  ['Vensters',[['B','Beveiligingsinstellingen'],['C','Flex en netcongestie'],['O','Onderhoud: conditie van schakelaars en relaistests'],['K','Testkoffer (tijdens een relaistest)'],['G','Kabeltablet: kaart met alle kabels, moffen en je positie'],['X','Röntgenblik: kabels onder de straat zien in 3D'],['N','Laagspanning: LS-velden, kabelkasten, noodaggregaten en klanten informeren'],['R','Storingsschrijver: stroom en spanning rond elke storing'],['T','Weer en tijd bekijken: klok schuiven, weer en seizoen kiezen (alleen kijken)'],['I','Instellingen: prestaties, weer en geluid']]]];
 let keysPrev=false;
 const keysOpen=()=>!$('#keys').classList.contains('hidden');
 function openKeys(){if(keysOpen())return;modalOpen('keys');if(FP.on)unlockPointer();
@@ -5146,6 +5162,193 @@ function updateWalkers(dt){if(!WALKERS){if(!LAYOUT.length)return;initWalkers();}
 const _wcen=new THREE.Vector3(25,0,245);
 
 
+// ============================================================ kabeltracés (GIS): waar de kabels fysiek liggen
+// Elke kabel heeft een tracé langs de straten (in de stoep of berm) met moffen en een aanlegjaar.
+// Röntgenblik (X): de kabels oplichtend op straat in 3D. Kabeltablet (G): kaart met je positie, GIS-stijl of luchtfoto.
+
+// ---- wegennet: hartlijnen van de geregistreerde wegen, plus de hoofdweg en de stationsweg
+const GIS_NET=(()=>{const segs=[];const add=(x0,z0,x1,z1)=>segs.push({x0:Math.min(x0,x1),z0:Math.min(z0,z1),x1:Math.max(x0,x1),z1:Math.max(z0,z1),h:z0===z1});
+  for(const e of LAYOUT){if(e.kind!=='road')continue;const [x0,z0,x1,z1]=e.r;if(x1-x0>=z1-z0){const z=(z0+z1)/2;add(x0-4,z,x1+4,z);}else{const x=(x0+x1)/2;add(x,z0-4,x,z1+4);}}
+  add(25,37,25,470);add(-34,41,90,41);
+  // knooppunten: eindpunten en kruisingen; per weg de knooppunten erop, gesorteerd: dat zijn de takken
+  const nodes=[],key=(x,z)=>Math.round(x*2)+','+Math.round(z*2),idx=new Map();
+  const node=(x,z)=>{const k=key(x,z);if(!idx.has(k)){idx.set(k,nodes.length);nodes.push({x,z,e:[]});}return idx.get(k);};
+  const on=(s,x,z)=>s.h?Math.abs(z-s.z0)<0.6&&x>=s.x0-0.6&&x<=s.x1+0.6:Math.abs(x-s.x0)<0.6&&z>=s.z0-0.6&&z<=s.z1+0.6;
+  const pts=[];segs.forEach(s=>pts.push([s.x0,s.z0],[s.x1,s.z1]));
+  for(const a of segs)for(const b of segs)if(a.h&&!b.h&&b.x0>=a.x0-0.6&&b.x0<=a.x1+0.6&&a.z0>=b.z0-0.6&&a.z0<=b.z1+0.6)pts.push([b.x0,a.z0]);
+  for(const s of segs){const on_=pts.filter(([x,z])=>on(s,x,z)).map(([x,z])=>s.h?[x,s.z0]:[s.x0,z]).sort((p,q)=>s.h?p[0]-q[0]:p[1]-q[1]);
+    for(let i=1;i<on_.length;i++){const a=node(...on_[i-1]),b=node(...on_[i]);if(a===b)continue;const L=Math.hypot(nodes[a].x-nodes[b].x,nodes[a].z-nodes[b].z);nodes[a].e.push([b,L]);nodes[b].e.push([a,L]);}}
+  return {segs,nodes};})();
+// dichtstbijzijnde punt op het wegennet (projectie op een tak)
+function gisSnap(x,z){let best=null;for(const n of GIS_NET.nodes)for(const [j] of n.e){const m=GIS_NET.nodes[j],dx=m.x-n.x,dz=m.z-n.z,L2=dx*dx+dz*dz||1,t=clamp(((x-n.x)*dx+(z-n.z)*dz)/L2,0,1),px=n.x+dx*t,pz=n.z+dz*t,d=Math.hypot(px-x,pz-z);
+    if(!best||d<best.d)best={d,x:px,z:pz,a:GIS_NET.nodes.indexOf(n),b:j};}return best;}
+// kortste route over het wegennet (Dijkstra) tussen twee punten; geeft de punten op de hartlijn
+function gisPath(ax,az,bx,bz){const A=gisSnap(ax,az),B=gisSnap(bx,bz),N=GIS_NET.nodes;if(!A||!B)return null;
+  if((A.a===B.a&&A.b===B.b)||(A.a===B.b&&A.b===B.a))return [[A.x,A.z],[B.x,B.z]];
+  const dist=new Map(),prev=new Map(),done=new Set(),q=[];const push=(i,d,p)=>{if(d<(dist.get(i)??1e18)){dist.set(i,d);prev.set(i,p);q.push([d,i]);}};
+  for(const i of[A.a,A.b])push(i,Math.hypot(N[i].x-A.x,N[i].z-A.z),-1);
+  while(q.length){q.sort((p,r)=>p[0]-r[0]);const [d,i]=q.shift();if(done.has(i))continue;done.add(i);if(i===B.a||i===B.b)break;for(const [j,L] of N[i].e)push(j,d+L,i);}
+  const tot=i=>(dist.get(i)??1e18)+Math.hypot(N[i].x-B.x,N[i].z-B.z),end=tot(B.a)<=tot(B.b)?B.a:B.b;if(!dist.has(end))return null;
+  const out=[[B.x,B.z]];for(let i=end;i!==-1;i=prev.get(i))out.push([N[i].x,N[i].z]);out.push([A.x,A.z]);return out.reverse();}
+// tracé van P naar Q: haakse aansluiting (spruit) vanaf P naar de sleuf, langs de sleuf (hartlijn + verschuiving), haaks naar Q
+function gisRoute(P,Q,off){const c=gisPath(P[0],P[1],Q[0],Q[1]);if(!c)return [P,Q];const o=c.map(([x,z])=>[x+off,z+off]),out=[P];
+  const spur=(p,q)=>{const s=gisSnap(q[0]-off,q[1]-off),hz=s&&GIS_NET.nodes[s.a].z===GIS_NET.nodes[s.b].z;return hz?[p[0],q[1]]:[q[0],p[1]];};
+  out.push(spur(P,o[0]),...o,spur(Q,o[o.length-1]),Q);
+  const r=[];for(const p of out){const l=r[r.length-1];if(l&&Math.hypot(l[0]-p[0],l[1]-p[1])<0.2)continue;r.push(p);}
+  for(let i=r.length-2;i>0;i--){const [a,b,c2]=[r[i-1],r[i],r[i+1]];if((Math.abs(a[0]-b[0])<0.05&&Math.abs(b[0]-c2[0])<0.05)||(Math.abs(a[1]-b[1])<0.05&&Math.abs(b[1]-c2[1])<0.05))r.splice(i,1);}
+  return r;}
+const polyLen=p=>p.reduce((a,q,i)=>i?a+Math.hypot(q[0]-p[i-1][0],q[1]-p[i-1][1]):0,0);
+function polyAt(p,d){for(let i=1;i<p.length;i++){const L=Math.hypot(p[i][0]-p[i-1][0],p[i][1]-p[i-1][1]);if(d<=L||i===p.length-1){const f=L?clamp(d/L,0,1):0;return [p[i-1][0]+(p[i][0]-p[i-1][0])*f,p[i-1][1]+(p[i][1]-p[i-1][1])*f];}d-=L;}return p[0];}
+
+// ---- de kabels
+const CABLES=[];
+const OS_EXIT={F1:-14,F2:-10,F3:-6,F4:-2,F5:2,F6:6,G1:52,G2:56,G3:60,G4:64};   // waar de kabel het gebouw verlaat (x, voorgevel z 46)
+const osExit=f=>[OS_EXIT[f]??0,46];
+const R_GIS=mulberry32(4242);   // eigen vaste reeks: het landschap blijft hetzelfde
+function cableType(kind,year){if(kind==='ls'||kind==='kk')return year<1985?'GPLK 4×95 Al (papier-lood)':'VMvKas 4×150 Al';
+  return year<1990?'GPLK 3×150 Cu (papier-lood)':year<2005?'XLPE 3×1×150 Al':'XLPE 3×1×240 Al';}
+function addCable(o){const len=polyLen(o.pts),year=o.year??(1966+Math.floor(R_GIS()*56)),moffen=[];
+  for(let d=rr2(140,260);d<len-25;d+=rr2(150,320)){const [x,z]=polyAt(o.pts,d),y=R_GIS()<0.3?year+Math.floor(R_GIS()*(2024-year)):year;moffen.push({d,x,z,year:Math.min(2024,y)});}
+  const c=Object.assign({len,year,moffen,type:cableType(o.kind,year)},o);CABLES.push(c);return c;}
+function rr2(a,b){return a+R_GIS()*(b-a);}
+// 10 kV ringkabels: per kabelstuk tussen twee stations (of tussen het OS en het eerste station)
+RINGS.forEach((rg,ri)=>RING.secs.filter(s=>s.ring===rg).forEach(s=>{const st=id=>RING.stations.find(x=>x.id===id);
+  const P=s.a?st(s.a).pos:osExit(rg.from),Q=s.b?st(s.b).pos:osExit(rg.to);
+  addCable({id:s.id,kind:'ring',kv:10,sec:s,name:`10 kV ringkabel ${secName(s)}`,pts:gisRoute([...P],[...Q],3.6+ri*0.35)});}));
+// MS-velden naar de grote afnemers; zonnepark, industrie en buitengebied lopen het kaartbeeld uit
+[['F5',()=>[SITE.zkh.x+40,SITE.zkh.z-62]],['F6',()=>[SITE.kassen.x0+6,101]],['G4',()=>[SITE.rwzi.x+10,SITE.rwzi.z+62]]].forEach(([id,q],i)=>{const f=FD(id);
+  addCable({id,kind:'feeder',kv:is20(f.bus)?20:10,f,name:`${is20(f.bus)?20:10} kV kabel ${f.cb} → ${f.name}`,pts:gisRoute(osExit(id),q(),4.3+i*0.3)});});
+[['G1',[1500,47],'Zonnepark De Hoeve (±3 km)'],['G2',[-1500,47],'Industrieterrein Noord (±2,5 km)'],['G3',[1500,49],'Buitengebied Oost (±4 km)']].forEach(([id,q,to],i)=>{const f=FD(id),P=osExit(id);
+  addCable({id,kind:'feeder',kv:20,f,far:to,name:`20 kV kabel ${f.cb} → ${to}`,pts:[P,[P[0],45+i],[q[0]<0?-300:600,45+i],q]});});
+// laagspanning: per LS-groep een kabel van het MS-station naar de straat of het gebouw van die groep
+// het eindpunt ligt op de gevel aan de straatkant (daar zit de aansluiting), niet midden in het gebouw
+const rectAt=(x,z)=>LAYOUT.find(e=>['house','apt','hall','small'].includes(e.kind)&&x>=e.r[0]-0.5&&x<=e.r[2]+0.5&&z>=e.r[1]-0.5&&z<=e.r[3]+0.5)?.r;
+// per gevel het punt het dichtst bij de straat; kies de gevel met de kortste vrije aansluiting (niet dwars door andere gebouwen)
+function facadePoint(r){const cx=(r[0]+r[2])/2,cz=(r[1]+r[3])/2,cands=[[cx,r[1]-0.4],[cx,r[3]+0.4],[r[0]-0.4,cz],[r[2]+0.4,cz]];let best=null;
+  const blocked=(ax,az,bx,bz)=>{const L=Math.hypot(bx-ax,bz-az);for(let d=0.8;d<L;d+=1){const x=ax+(bx-ax)*d/L,z=az+(bz-az)*d/L;
+    if(LAYOUT.some(e=>e.r!==r&&['house','apt','hall','small','kiosk'].includes(e.kind)&&x>e.r[0]&&x<e.r[2]&&z>e.r[1]&&z<e.r[3]))return true;}return false;};
+  for(const [x0,z0] of cands){const sn=gisSnap(x0,z0);if(!sn)continue;const hz=GIS_NET.nodes[sn.a].z===GIS_NET.nodes[sn.b].z;
+    // langs de gevel naar het punt recht tegenover de straat schuiven (binnen de gevel)
+    const x=hz?clamp(sn.x,r[0],r[2]):x0,z=hz?z0:clamp(sn.z,r[1],r[3]),fx=x0===cx?x:x0,fz=z0===cz?z:z0,ex=hz?fx:sn.x,ez=hz?sn.z:fz,d=Math.hypot(ex-fx,ez-fz);
+    if(!blocked(fx,fz,ex,ez)&&(!best||d<best.d))best={d,p:[fx,fz]};}
+  return best?.p||[cx,r[3]+0.4];}
+const LS_ANCHOR=(()=>{const A=new Map(),rows=LAYOUT.filter(e=>e.kind==='house'||e.kind==='apt').map(e=>({x:(e.r[0]+e.r[2])/2,z:(e.r[1]+e.r[3])/2,r:e.r}));
+  RING.stations.forEach(s=>{const res=s.groups.filter(g=>g.kind==='res'),mine=rows.filter(r=>nearestStation(r.x,r.z)===s).sort((a,b)=>Math.atan2(a.z-s.pos[1],a.x-s.pos[0])-Math.atan2(b.z-s.pos[1],b.x-s.pos[0]));
+    res.forEach((g,i)=>{const r=mine[Math.floor((i+0.5)*mine.length/Math.max(1,res.length))];if(r)A.set(g.id,facadePoint(r.r));});
+    s.groups.forEach(g=>{const E=SMALL.find(e=>e.name===g.name);if(!E?.pos||A.has(g.id))return;const r=rectAt(...E.pos);A.set(g.id,r?facadePoint(r):E.pos);});});return A;})();
+RING.stations.forEach(s=>s.groups.forEach((g,j)=>{if(g.kind==='ovl')return;const a=LS_ANCHOR.get(g.id)||[s.pos[0]+(j%2?40:-40),s.pos[1]+(j<2?-6:6)];
+  addCable({id:g.id,kind:'ls',kv:0.4,g,name:`LS-kabel ${g.id} ${g.name}`,pts:gisRoute([...s.pos],a,4.7+(j%3)*0.25)});}));
+// kabelkasten: LS-koppelkabel van beide stations naar de kast
+LS_LINKS.forEach(d=>[d.a,d.b].forEach((gid,i)=>{const s=RING.stations.find(x=>x.id===D[gid].bay);
+  addCable({id:d.id+'-'+(i?'b':'a'),kind:'kk',kv:0.4,kk:d,name:`LS-koppelkabel ${s.id} → ${d.id}`,pts:gisRoute([...s.pos],d.pos,5.2)});}));
+
+// ---- status per kabel: aan, uit, fout, warm (overbelast), open (kabelkast open)
+function cableState(c){if(c.kind==='ring'){const s=c.sec;return s.fault?'fout':!EN.has(s.node)?'uit':(s.temp||0)>CABLE.max?'warm':'aan';}
+  if(c.kind==='feeder'){const f=c.f;return f.fault?'fout':!EN.has(f.node)?'uit':(f.temp||0)>CABLE.max?'warm':'aan';}
+  if(c.kind==='ls'){const g=c.g;return g.lvf?'fout':!lvgLive(g)?'uit':'aan';}
+  return c.kk.state!==1?'open':'aan';}
+const GIS_COL={aan10:'#3d9bff',aan20:'#b57cff',aanls:'#f2c94c',uit:'#7a828a',fout:'#ff3b3b',warm:'#ff9a2a',open:'#8fa0b0'};
+const cableCol=(c,st=cableState(c))=>st==='aan'?GIS_COL[c.kv===20?'aan20':c.kv===10?'aan10':'aanls']:GIS_COL[st];
+const mofCol=y=>y<1985?'#ff5a4a':y<2000?'#f5b335':'#5ccf72';
+
+// ---- röntgenblik (X): lintjes op straat in de kleur van de status, moffen als blokjes
+const XRAY={on:false,root:new THREE.Group(),mats:new Map(),mof:null};XRAY.root.visible=false;XRAY.root.userData.dyn=true;scene.add(XRAY.root);
+(()=>{const all=CABLES.flatMap(c=>c.moffen);
+  for(const c of CABLES){const w=c.kind==='ring'||c.kind==='feeder'?0.8:0.55,pos=[],idx=[];
+    for(let i=1;i<c.pts.length;i++){const [ax,az]=c.pts[i-1],[bx,bz]=c.pts[i],L=Math.hypot(bx-ax,bz-az)||1,nx=-(bz-az)/L*w/2,nz=(bx-ax)/L*w/2,k=pos.length/3,y=0.2+(c.kv===0.4?0.01:0.02);
+      pos.push(ax+nx,y,az+nz,ax-nx,y,az-nz,bx+nx,y,bz+nz,bx-nx,y,bz-nz);idx.push(k,k+2,k+1,k+1,k+2,k+3);}
+    const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setIndex(idx);
+    const m=new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.92,depthWrite:false,side:THREE.DoubleSide,fog:false});XRAY.mats.set(c,m);
+    const me=new THREE.Mesh(g,m);me.renderOrder=6;me.userData.dyn=true;XRAY.root.add(me);}
+  const im=new THREE.InstancedMesh(new THREE.BoxGeometry(0.7,0.35,0.7),new THREE.MeshBasicMaterial({color:0xffffff,fog:false}),Math.max(1,all.length)),M4=new THREE.Matrix4(),col=new THREE.Color();
+  all.forEach((m,i)=>{im.setMatrixAt(i,M4.makeTranslation(m.x,0.3,m.z));im.setColorAt(i,col.set(mofCol(m.year)));});im.userData.dyn=true;XRAY.mof=im;XRAY.root.add(im);})();
+// foutplek en graafwerk in 3D: rode baken (gevonden fout) – later ook de KLIC-sleuven
+const SPOT_MAT=new THREE.SpriteMaterial({map:glowTex,color:0xff3020,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending});
+function gisColors(){if(!XRAY.on)return;const blink=(performance.now()%900)<450;
+  for(const [c,m] of XRAY.mats){const st=cableState(c);m.color.set(cableCol(c,st));m.opacity=st==='fout'?(blink?1:0.35):st==='uit'||st==='open'?0.55:0.92;}}
+function setXray(on){XRAY.on=on??!XRAY.on;XRAY.root.visible=XRAY.on;$('#xrayBtn')?.classList.toggle('on',XRAY.on);if(XRAY.on)gisColors();gisToast(XRAY.on?'Röntgenblik aan: je ziet de kabels onder straat en stoep (X)':'Röntgenblik uit');}
+function gisToast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2400);}
+
+// ---- kabeltablet (G): kaart rond je positie; GIS-stijl of luchtfoto
+const TAB={on:false,style:'gis',zoom:1.6,follow:true,cx:0,cz:100,sel:null,aerial:null,layers:{ms:true,ls:true,mof:true}};
+const gisOpen=()=>TAB.on;
+function openTablet(){if(TAB.on)return;TAB.on=true;TAB.follow=true;$('#gisTab').classList.remove('hidden');renderTabletChrome();drawTablet();}
+function closeTablet(){TAB.on=false;$('#gisTab').classList.add('hidden');}
+// luchtfoto: één keer van bovenaf gerenderd (overdag, zonder mist) op het moment dat je hem voor het eerst kiest
+const AERIAL_B=[-460,-300,700,470];
+function captureAerial(){if(TAB.aerial||LITE)return TAB.aerial;const [x0,z0,x1,z1]=AERIAL_B,W=2048,H=Math.round(W*(z1-z0)/(x1-x0));
+  const cam=new THREE.OrthographicCamera(x0,x1,-z0,-z1,10,1500);cam.position.set(0,800,0);cam.up.set(0,0,-1);cam.lookAt(0,0,0);
+  // ortho-camera kijkt omlaag met 'boven' = -z: links/rechts = x, boven/onder = z0/z1
+  cam.left=x0;cam.right=x1;cam.top=-z0;cam.bottom=-z1;cam.updateProjectionMatrix();
+  const rt=new THREE.WebGLRenderTarget(W,H,{colorSpace:THREE.SRGBColorSpace}),fog=scene.fog,xr=XRAY.root.visible;updateSky(13);scene.fog=null;XRAY.root.visible=false;
+  renderer.setRenderTarget(rt);renderer.render(scene,cam);const px=new Uint8Array(W*H*4);renderer.readRenderTargetPixels(rt,0,0,W,H,px);renderer.setRenderTarget(null);
+  scene.fog=fog;XRAY.root.visible=xr;updateSky(viewHour());SHADOW_DIRTY=true;rt.dispose();
+  const c=cnv(W,H),g=c.getContext('2d'),id=g.createImageData(W,H);for(let y=0;y<H;y++)id.data.set(px.subarray((H-1-y)*W*4,(H-y)*W*4),y*W*4);g.putImageData(id,0,0);TAB.aerial=c;return c;}
+function tabCenter(){if(TAB.follow){const p=FP.on?camera.position:controls.target;TAB.cx=p.x;TAB.cz=p.z;}return [TAB.cx,TAB.cz];}
+const tabXY=(x,z,cv)=>{const [cx,cz]=[TAB.cx,TAB.cz],s=TAB.zoom;return [(x-cx)*s+cv.width/2,(z-cz)*s+cv.height/2];};
+const tabWorld=(px,py,cv)=>[(px-cv.width/2)/TAB.zoom+TAB.cx,(py-cv.height/2)/TAB.zoom+TAB.cz];
+const cableVisible=c=>c.kind==='ring'||c.kind==='feeder'?TAB.layers.ms:TAB.layers.ls;
+function drawTablet(){if(!TAB.on)return;const cv=$('#gtMap'),g=cv.getContext('2d'),W=cv.width,H=cv.height,s=TAB.zoom;tabCenter();
+  g.setTransform(1,0,0,1,0,0);
+  if(TAB.style==='lucht'&&captureAerial()){g.fillStyle='#4b6b3a';g.fillRect(0,0,W,H);const [x0,z0,x1,z1]=AERIAL_B,[ax,ay]=tabXY(x0,z0,cv);g.drawImage(TAB.aerial,ax,ay,(x1-x0)*s,(z1-z0)*s);}
+  else{g.fillStyle='#f3f1ea';g.fillRect(0,0,W,H);
+    const fill={road:'#cfcfcc',stoep:'#e4e1d8',plein:'#e4e1d8',parkeer:'#d6d5cf',woonerf:'#dcd3c8',site:'#e9eee3',house:'#d9cfc1',apt:'#d1c8bc',hall:'#cfd3d6',small:'#d6d0c6',kiosk:'#9fb4c8',perron:'#d8d4cc',laad:'#d6d5cf'};
+    const stroke={house:'#a89a87',apt:'#a09484',hall:'#9aa2a8',small:'#a3998a',kiosk:'#5d7a96',site:'#b7c4ac'};
+    for(const k of['site','parkeer','plein','woonerf','stoep','road','perron','laad','hall','apt','house','small','kiosk'])for(const e of LAYOUT){if(e.kind!==k)continue;const [a,b]=tabXY(e.r[0],e.r[1],cv),w=(e.r[2]-e.r[0])*s,h=(e.r[3]-e.r[1])*s;
+      if(a>W||b>H||a+w<0||b+h<0)continue;g.fillStyle=fill[k];g.fillRect(a,b,w,h);if(stroke[k]){g.strokeStyle=stroke[k];g.lineWidth=1;g.strokeRect(a+0.5,b+0.5,w-1,h-1);}}
+    // hoofdweg, stationsweg en het OS-terrein (niet in het layoutregister)
+    g.fillStyle='#cfcfcc';{const [a,b]=tabXY(22,38,cv);g.fillRect(a,b,6*s,432*s);const [c,d]=tabXY(-30,38,cv);g.fillRect(c,d,116*s,6*s);}
+    g.strokeStyle='#8a8f96';g.setLineDash([4,3]);{const [a,b]=tabXY(-64,-62,cv);g.strokeRect(a,b,174*s,160*s);}g.setLineDash([]);
+    g.fillStyle='#b9a99a';BUILDINGS.forEach(B=>{const [a,b]=tabXY(B.x0,B.z0,cv);g.fillRect(a,b,(B.x1-B.x0)*s,(B.z1-B.z0)*s);});}
+  // kabels: dikker voor MS, gestippeld als ze uit staan; de gekozen kabel met een witte rand
+  for(const c of CABLES){if(!cableVisible(c))continue;const st=cableState(c);g.beginPath();c.pts.forEach(([x,z],i)=>{const [a,b]=tabXY(x,z,cv);i?g.lineTo(a,b):g.moveTo(a,b);});
+    const w=(c.kind==='ring'||c.kind==='feeder'?3.2:2)*Math.min(1.6,Math.max(0.7,s/1.4));
+    if(TAB.sel===c){g.strokeStyle='#ffffff';g.lineWidth=w+4;g.setLineDash([]);g.stroke();}
+    g.strokeStyle=cableCol(c,st);g.lineWidth=w;g.setLineDash(st==='uit'||st==='open'?[6,4]:[]);g.globalAlpha=st==='fout'&&(performance.now()%900)<450?0.35:1;g.stroke();g.globalAlpha=1;}
+  g.setLineDash([]);
+  if(TAB.layers.mof&&s>0.8)for(const c of CABLES){if(!cableVisible(c))continue;for(const m of c.moffen){const [a,b]=tabXY(m.x,m.z,cv);if(a<-5||b<-5||a>W+5||b>H+5)continue;g.fillStyle=mofCol(m.year);g.strokeStyle='#222';g.lineWidth=1;g.beginPath();g.arc(a,b,3.2,0,7);g.fill();g.stroke();}}
+  // MS-stations en kabelkasten
+  g.font='bold 11px Arial';g.textAlign='center';
+  RING.stations.forEach(st=>{const [a,b]=tabXY(...st.pos,cv);g.fillStyle=stationLive(st)?'#1d4f91':'#6b7177';g.fillRect(a-5,b-5,10,10);g.fillStyle='#111';g.fillText(st.id,a,b-8);});
+  LS_LINKS.forEach(d=>{const [a,b]=tabXY(...d.pos,cv);g.fillStyle=d.state?'#2f8a4a':'#ffffff';g.strokeStyle='#2f5a3c';g.lineWidth=1.5;g.fillRect(a-3.5,b-3.5,7,7);g.strokeRect(a-3.5,b-3.5,7,7);});
+  // eigen positie: pijl in kijkrichting
+  {const p=camera.position,dir=camera.getWorldDirection(_tdir),[a,b]=tabXY(p.x,p.z,cv),ang=Math.atan2(dir.x,-dir.z);g.save();g.translate(a,b);g.rotate(ang);g.fillStyle='#e8412c';g.strokeStyle='#fff';g.lineWidth=2;
+    g.beginPath();g.moveTo(0,-9);g.lineTo(6,7);g.lineTo(0,3);g.lineTo(-6,7);g.closePath();g.stroke();g.fill();g.restore();}
+  // schaalbalk en noordpijl
+  {const m=TAB.zoom>2?20:TAB.zoom>0.9?50:TAB.zoom>0.45?100:250,L=m*s;g.fillStyle='rgba(255,255,255,0.85)';g.fillRect(8,H-24,L+44,18);g.fillStyle='#222';g.fillRect(12,H-12,L,3);g.font='11px Arial';g.textAlign='left';g.fillText(`${m} m`,16+L,H-9);
+    g.textAlign='center';g.fillStyle='rgba(255,255,255,0.85)';g.fillRect(W-26,8,18,22);g.fillStyle='#222';g.font='bold 11px Arial';g.fillText('N',W-17,20);g.fillText('▲',W-17,29);}
+  // dichtstbijzijnde kabel (rondlopen: waar sta ik boven?)
+  if(FP.on&&!TAB.sel){const n=nearestCable(camera.position.x,camera.position.z,12);$('#gtInfo').innerHTML=n?cableCard(n.c,n.d):'<small>Geen kabel binnen 12 m. Loop over de stoep: daar liggen de kabels.</small>';}}
+const _tdir=new THREE.Vector3();
+function nearestCable(x,z,max=8){let best=null;for(const c of CABLES){if(!cableVisible(c))continue;for(let i=1;i<c.pts.length;i++){const [ax,az]=c.pts[i-1],[bx,bz]=c.pts[i],dx=bx-ax,dz=bz-az,L2=dx*dx+dz*dz||1,t=clamp(((x-ax)*dx+(z-az)*dz)/L2,0,1),d=Math.hypot(ax+dx*t-x,az+dz*t-z);
+    if(d<max&&(!best||d<best.d))best={c,d};}}return best;}
+const fmtLen=m=>m>=1000?(m/1000).toFixed(1).replace('.',',')+' km':Math.round(m)+' m';
+function cableCard(c,d){const st=cableState(c),old=c.moffen.reduce((a,m)=>Math.min(a,m.year),9999),stTxt={aan:'onder spanning',uit:'spanningsloos',fout:'storing',warm:'overbelast – te warm',open:'open (kabelkast)'}[st];
+  const I=c.kind==='ring'?c.sec.I:c.kind==='feeder'?c.f.I:null;
+  return `<div class="gt-card"><b style="color:${cableCol(c,st)}">■</b> <b>${c.name}</b>${d!=null?` <small>· ${d.toFixed(1).replace('.',',')} m van je af</small>`:''}<br>
+    <small>${c.type} · aangelegd ${c.year} · ${c.far?'tracé loopt het kaartbeeld uit':fmtLen(c.len)} · ${c.moffen.length} mof${c.moffen.length===1?'':'fen'}${c.moffen.length?` (oudste ${old})`:''}<br>
+    Status: <b>${stTxt}</b>${I!=null&&st==='aan'?` · ${Math.round(I)} A`:''}</small></div>`;}
+function renderTabletChrome(){$('#gtStyle').textContent=TAB.style==='gis'?'🛰 Luchtfoto':'🗺 Kaart';$('#gtFollow').classList.toggle('on',TAB.follow);
+  $('#gisTab').classList.toggle('fp',FP.on);for(const k in TAB.layers){const b=$(`#gisTab [data-gl="${k}"]`);if(b)b.checked=TAB.layers[k];}}
+// bediening van de tablet: knoppen, lagen, slepen (overzicht), scrollen om te zoomen, klik op een kabel
+(()=>{const T=$('#gisTab'),cv=$('#gtMap');let drag=null;
+  T.addEventListener('click',e=>{const b=e.target.closest('[data-gt]');if(!b)return;const a=b.dataset.gt;
+    if(a==='close')closeTablet();else if(a==='style'){TAB.style=TAB.style==='gis'?'lucht':'gis';if(TAB.style==='lucht'&&LITE)gisToast('Luchtfoto niet beschikbaar in de testmodus');}
+    else if(a==='in')TAB.zoom=Math.min(5,TAB.zoom*1.4);else if(a==='out')TAB.zoom=Math.max(0.25,TAB.zoom/1.4);else if(a==='follow')TAB.follow=true;
+    renderTabletChrome();drawTablet();});
+  T.addEventListener('change',e=>{const k=e.target.dataset.gl;if(k){TAB.layers[k]=e.target.checked;drawTablet();}});
+  cv.addEventListener('wheel',e=>{e.preventDefault();TAB.zoom=clamp(TAB.zoom*(e.deltaY<0?1.15:1/1.15),0.25,5);drawTablet();},{passive:false});
+  cv.addEventListener('pointerdown',e=>{drag={x:e.offsetX,y:e.offsetY,moved:false};});
+  cv.addEventListener('pointermove',e=>{if(!drag)return;const dx=e.offsetX-drag.x,dy=e.offsetY-drag.y;if(Math.abs(dx)+Math.abs(dy)>3){drag.moved=true;TAB.follow=false;TAB.cx-=dx/TAB.zoom;TAB.cz-=dy/TAB.zoom;drag.x=e.offsetX;drag.y=e.offsetY;renderTabletChrome();drawTablet();}});
+  cv.addEventListener('pointerup',e=>{const d=drag;drag=null;if(d&&d.moved)return;const r=cv.getBoundingClientRect(),[x,z]=tabWorld((e.clientX-r.left)*cv.width/r.width,(e.clientY-r.top)*cv.height/r.height,cv),n=nearestCable(x,z,10/TAB.zoom+2);
+    TAB.sel=n?.c||null;$('#gtInfo').innerHTML=TAB.sel?cableCard(TAB.sel):'<small>Klik op een kabel voor de gegevens. Slepen schuift de kaart, scrollen zoomt.</small>';drawTablet();});})();
+$('#gisBtn')?.addEventListener('click',()=>TAB.on?closeTablet():openTablet());
+$('#xrayBtn')?.addEventListener('click',()=>setXray());
+addEventListener('keydown',e=>{if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT'||e.ctrlKey||e.metaKey||!$('#intro').classList.contains('hidden'))return;
+  if(e.code==='KeyG'){TAB.on?closeTablet():openTablet();}else if(e.code==='KeyX')setXray();});
+let gisT=0;function gisTick(dt){if((gisT+=dt)<0.25)return;gisT=0;gisColors();if(TAB.on){renderTabletChrome();drawTablet();}}
+
+
 // ============================================================ HUD + bediening
 function updateHUD(){
   $('#clock').textContent=fmtClock(SIM.t);
@@ -5169,7 +5372,7 @@ addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;
   else if(e.code==='KeyP'){if($('#intro').classList.contains('hidden'))setSpeed(0);}
   else if(e.key==='l'||e.key==='L')document.body.classList.toggle('nolabels');
   else if(e.key==='m'||e.key==='M')$('#mute').click();
-  else if(e.key==='Escape'){if(GAME.handover?.open)closeHandover();else if(setOpen())closeSettings();else if(flexOpen())closeFlex();else if(assOpen())closeAssets();else if(kitOpen())closeKit();else if(keysOpen())closeKeys();else if(lsOpen())closeLS();else if(recOpen())closeRec();else if(protOpen())closeProt();else if(slotsOpen())closeSlots();else if(pvOpen())closePreview();else if(menuOpen()){if(performance.now()-menuAt>350)closeMenu();}else if(SEL&&!document.pointerLockElement)selectDevice(null);else openMenu();}});
+  else if(e.key==='Escape'){if(GAME.handover?.open)closeHandover();else if(setOpen())closeSettings();else if(flexOpen())closeFlex();else if(assOpen())closeAssets();else if(kitOpen())closeKit();else if(keysOpen())closeKeys();else if(lsOpen())closeLS();else if(recOpen())closeRec();else if(gisOpen())closeTablet();else if(protOpen())closeProt();else if(slotsOpen())closeSlots();else if(pvOpen())closePreview();else if(menuOpen()){if(performance.now()-menuAt>350)closeMenu();}else if(SEL&&!document.pointerLockElement)selectDevice(null);else openMenu();}});
 // ---------- SCADA-zoom
 let SLDZ=1;try{SLDZ=+localStorage.getItem('osz-sldz')||1;}catch(e){}
 function setZoom(z){SLDZ=clamp(Math.round(z*4)/4,0.75,2.5);document.documentElement.style.setProperty('--sldz',SLDZ);$('#zVal').textContent=Math.round(SLDZ*100)+'%';$('#scada .zoom').title='Zoom '+Math.round(SLDZ*100)+'% – Ctrl + scrollwiel of + / −';try{localStorage.setItem('osz-sldz',SLDZ);}catch(e){}}
@@ -5220,7 +5423,7 @@ else{renderMenu();$('#intro').classList.remove('hidden');controls.autoRotate=tru
 if(params.has('night'))updateSky(22);
 if(params.has('view')){const v=VIEWPOS[+params.get('view')];camera.position.copy(v[0]);controls.target.copy(v[1]);controls.autoRotate=false;controls.update();}
 
-window.OS={DYN,fpsTick,fireTick,WK,getWalkers:()=>WALKERS,getStrips:()=>WSTRIPS,fireStart,fireDouse,fireStop,GENSET,gsCap,SMALL,lvgLive,updateSmall,setMouseMode,getMouseMode:()=>MOUSE_MODE,cameraKeys,OVK,openPreview,closePreview,viewHour,getPreview:()=>PREVIEW,VIEWPOS,SITE,updateSites,SLD,activeFaults,renderFaults,reportPDF,listSaves,openSlots,closeSlots,SAVE_SLOTS,layoutCheck,LAYOUT,FREC,fltRec,openRec,closeRec,renderRec,selectivity,protSelect,feederT,incT,incOf,shortCircuit,EF,earthFault,efTick,efRails,efU0,railsCoupled,controls,tripBreaker,CONS,LS_LINKS,LS_ORDERS,GENSET,lsTick,lsOrder,lsSwitchOrder,lsExec,gsSend,gsOff,gsRestart,tapOrder,setEta,callPrio,lsAreas,PRIO,openLS,closeLS,renderLS,lvVolt,stationLoads,shedFactor,failP,manualP,phoneTick,refreshDevPanel,updateSLD,openKeys,closeKeys,KEY_HELP,RELAY_BAYS,relayTask,relayDue,relayDefect,initRelays,kitTests,kitMeasure,kitVerdict,kitRun,openKit,closeKit,saveGame,readSave,deleteSave,resumeGame,canSave,specOf,CABLE,soilT,FD,meppelFault,linkTick,tabAlarms,updateTabAlarms,renderTasks,INC,INCIDENTS,startIncident,endIncident,incidentTick,setTab,renderCables,GFX,setGfx,applyGfx,openSettings,closeSettings,WX_TYPES,renderer,scene,FIRE,CARS,updateWindows,updateLife,stationLive,cbMaintTask,worstCb,cond,breakerFails,CB_IDS,FLEX,setFlex,flexTick,congestion,openFlex,closeFlex,checkModel,homeBus,BUSES,SEL_BAYS,TORCH,setTorch,HO_POOL,handoverTick,REC,RP,startReplay,stopReplay,analyse,stationDamage,closeHandover,deviations,PHONE,lvFault,callFrom,phoneAnswer,dispatchLV,LVG,forecast,progAdvice,PROG,startTask:(k,...a)=>{TASK={relayTask,cbMaintTask,railTask,railBTask,stationTask,thermoTask,ringTask,feederTask,lineTask,reserveTask}[k](...a);TASK.i=0;TASK.code='WV-TEST';briefInit(TASK);renderTasks();},SIM,D,LESSONS,lessonGo,selectDevice,abortTask,railTask,stationTask,thermoTask,nearDev,VIEWS,PROT,setProt,openProt,closeProt,busFault,BUSF,RINGS,task:()=>TASK,briefSubmit,briefCheck,briefWatch,actKey,taskActs,crewNear,boxOf:id=>VIEWS[id]&&VIEWS[id].box,AudioSys,updateAudio,WX,setWeather,setSeason,SEASONS,ambient,enterKiosk,ROOMS,blockedAt,RING,NPCS,crewDispatch,ringFault,FP,enterFP,exitFP,pickCenter,camera,camInside,setRatio,setTab,GAME,MODES,applyMode,endGame,EN:()=>EN,FLOW,operate,tapStep,setAVR,resetLockout,toggleAR,regulate,computeFlows,randomEvent,lineFault,feederFault,trafoFault,offerTask,simStep,FEEDERS};
+window.OS={CABLES,GIS_NET,gisRoute,cableState,setXray,XRAY,TAB,openTablet,closeTablet,drawTablet,nearestCable,DYN,fpsTick,fireTick,WK,getWalkers:()=>WALKERS,getStrips:()=>WSTRIPS,fireStart,fireDouse,fireStop,GENSET,gsCap,SMALL,lvgLive,updateSmall,setMouseMode,getMouseMode:()=>MOUSE_MODE,cameraKeys,OVK,openPreview,closePreview,viewHour,getPreview:()=>PREVIEW,VIEWPOS,SITE,updateSites,SLD,activeFaults,renderFaults,reportPDF,listSaves,openSlots,closeSlots,SAVE_SLOTS,layoutCheck,LAYOUT,FREC,fltRec,openRec,closeRec,renderRec,selectivity,protSelect,feederT,incT,incOf,shortCircuit,EF,earthFault,efTick,efRails,efU0,railsCoupled,controls,tripBreaker,CONS,LS_LINKS,LS_ORDERS,GENSET,lsTick,lsOrder,lsSwitchOrder,lsExec,gsSend,gsOff,gsRestart,tapOrder,setEta,callPrio,lsAreas,PRIO,openLS,closeLS,renderLS,lvVolt,stationLoads,shedFactor,failP,manualP,phoneTick,refreshDevPanel,updateSLD,openKeys,closeKeys,KEY_HELP,RELAY_BAYS,relayTask,relayDue,relayDefect,initRelays,kitTests,kitMeasure,kitVerdict,kitRun,openKit,closeKit,saveGame,readSave,deleteSave,resumeGame,canSave,specOf,CABLE,soilT,FD,meppelFault,linkTick,tabAlarms,updateTabAlarms,renderTasks,INC,INCIDENTS,startIncident,endIncident,incidentTick,setTab,renderCables,GFX,setGfx,applyGfx,openSettings,closeSettings,WX_TYPES,renderer,scene,FIRE,CARS,updateWindows,updateLife,stationLive,cbMaintTask,worstCb,cond,breakerFails,CB_IDS,FLEX,setFlex,flexTick,congestion,openFlex,closeFlex,checkModel,homeBus,BUSES,SEL_BAYS,TORCH,setTorch,HO_POOL,handoverTick,REC,RP,startReplay,stopReplay,analyse,stationDamage,closeHandover,deviations,PHONE,lvFault,callFrom,phoneAnswer,dispatchLV,LVG,forecast,progAdvice,PROG,startTask:(k,...a)=>{TASK={relayTask,cbMaintTask,railTask,railBTask,stationTask,thermoTask,ringTask,feederTask,lineTask,reserveTask}[k](...a);TASK.i=0;TASK.code='WV-TEST';briefInit(TASK);renderTasks();},SIM,D,LESSONS,lessonGo,selectDevice,abortTask,railTask,stationTask,thermoTask,nearDev,VIEWS,PROT,setProt,openProt,closeProt,busFault,BUSF,RINGS,task:()=>TASK,briefSubmit,briefCheck,briefWatch,actKey,taskActs,crewNear,boxOf:id=>VIEWS[id]&&VIEWS[id].box,AudioSys,updateAudio,WX,setWeather,setSeason,SEASONS,ambient,enterKiosk,ROOMS,blockedAt,RING,NPCS,crewDispatch,ringFault,FP,enterFP,exitFP,pickCenter,camera,camInside,setRatio,setTab,GAME,MODES,applyMode,endGame,EN:()=>EN,FLOW,operate,tapStep,setAVR,resetLockout,toggleAR,regulate,computeFlows,randomEvent,lineFault,feederFault,trafoFault,offerTask,simStep,FEEDERS};
 const clock=new THREE.Clock();let hudT=0,skyT=0,progT=0;
 let liteAcc=0,shadowT=0,hudStep=4;
 // schaduwkaart alleen opnieuw tekenen als er op het stationsterrein iets beweegt (scheiders, monteurs, brandweer); anders 2× per seconde voor de zon.
@@ -5248,7 +5451,7 @@ function frame(){
     else if(k===1){if(!LITE)drawPanelScreens();renderTasks();updateStreetLights();updateWindows();}
     else if(k===2){renderFaults();progTick();if(progT%4===0)renderProg();}
     else if(progT%2===0){renderCables();renderLSTab();if(lsOpen()&&progT%4===0)renderLS();}}
-  if(!LITE){updateHover();updateLabels();}if(GFX.particles)updateRain(dt);else RAIN.ls.visible=SNOW.p.visible=false;updateNPCs(dt);updateKioskLight();updateHotspot();phoneTick(dt);replayTick(dt);updateLife(dt);fireTick(dt);updateSites(dt);updateSmall();
+  if(!LITE){updateHover();updateLabels();}if(GFX.particles)updateRain(dt);else RAIN.ls.visible=SNOW.p.visible=false;updateNPCs(dt);updateKioskLight();updateHotspot();phoneTick(dt);replayTick(dt);updateLife(dt);fireTick(dt);gisTick(dt);updateSites(dt);updateSmall();
   let off=null;if(shake>0.01){off=V3((Math.random()-0.5)*shake,(Math.random()-0.5)*shake,(Math.random()-0.5)*shake);camera.position.add(off);shake*=Math.pow(0.02,dt);}
   // en het 3D-beeld helemaal niet tekenen: zonder grafische kaart kost één beeld ±2 kernseconden software-grafiek,
   // terwijl de tests alleen de simulatie en de panelen controleren (aanwijzen gaat met raycasting, niet met pixels)
