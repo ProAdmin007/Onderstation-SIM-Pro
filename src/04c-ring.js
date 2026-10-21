@@ -30,8 +30,8 @@ function ringPathStations(from,to){const prev={[from]:null},q=[from];
   const out=[];if(!(to in prev))return out;for(let n=to;n!=null;n=prev[n]){const s=RING.stations.find(s=>s.node===n);if(s)out.unshift(s.id);}return out;}
 function ringFault(f,forced,repairMin){
   const c=forced?[forced]:RING.secs.filter(s=>!s.fault&&EN.has(s.node)&&FLOW.TAG[s.node]?.cb===f.cb);if(!c.length)return;
-  const s=pick(c),flagged=ringPathStations(f.node,s.node);
-  s.fault=true;s.located=false;RING.stations.forEach(x=>x.flag=flagged.includes(x.id));
+  const s=wpick(c,x=>cableRisk(cableOf(x))),flagged=ringPathStations(f.node,s.node);
+  s.fault=true;s.located=false;s.meas=null;s.spot=faultSpot(cableOf(s));RING.stations.forEach(x=>x.flag=flagged.includes(x.id));
   tripFrom(s.node);shortCircuit(f,rnd(2000,IK_MAX(f)*0.8));
   pushAlarm(`${f.cb} ${f.name}: I>> – kabelfout in de 10 kV-ring. Kortsluitverklikkers aangesproken: ${flagged.length?flagged.join(', '):'geen'}`,'crit');
   pushAlarm(`Tip: de fout zit achter het laatste station met een aangesproken verklikker. Isoleer die kabel met de lastscheiders aan beide kanten, voed de rest terug via het normaal-open punt ${s.ring.nop} en schakel ${f.cb} weer in.`,'info');
@@ -39,8 +39,8 @@ function ringFault(f,forced,repairMin){
     readyNotice(`Storingsdienst: kabelfout gevonden tussen ${secName(s)}${open.length?` – isoleer met ${open.join(' en ')}`:' – kabel is al geïsoleerd'}, herstel daarna via het normaal-open punt`,
       open[0]||null,()=>!!open[0]&&D[open[0]].state===1);
     const st=RING.stations.find(x=>x.id===(s.a||s.b));if(st)crewDispatch({box:VIEWS[st.id].box,say:`Kabelfout ${secName(s)} graven`,until:()=>!s.fault,from:V3(st.pos[0]+6,0,st.pos[1]-8),rel:isoSwitches(s).concat(s.a?[]:['V-'+s.ring.from],s.b?[]:['V-'+s.ring.to])});});
-  addTimer(repairMin||rnd(70,130)*(WX.cur.snow>0.5?1.4:1),()=>{s.fault=false;s.located=false;RING.stations.forEach(x=>x.flag=false);
-    pushAlarm(`Storingsdienst: kabel ${secName(s)} gerepareerd – normaliseer de ring (normaal-open punt ${s.ring.nop} weer open)`,'ok');refreshAll();});
+  // reparatie op tijdstip repairAt; een foutplaatsbepaling (kabeltablet) haalt dat naar voren
+  const dur=repairMin||rnd(70,130)*(WX.cur.snow>0.5?1.4:1);s.repairAt=SIM.t+dur;addTimer(dur,()=>ringRepair(s));
   refreshAll();}
 // een kabel met fout die weer onder spanning komt: beveiliging schakelt direct af
 function ringProtection(dm=0){

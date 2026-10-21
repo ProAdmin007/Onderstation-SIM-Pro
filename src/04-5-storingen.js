@@ -25,7 +25,7 @@ function lineFault(forceL,forcePerm){const c=LINES.filter(L=>SIM.lines[L].avail&
     else readyNotice(`TenneT: lijn ${L} na herinschakeling aan de overzijde weer onder spanning – ${L}-Q0 mag weer IN`,L+'-Q0',()=>!D[L+'-Q0'].state&&SIM.lines[L].avail);
     refreshAll();},700);}
 // een zonnepark levert alleen overdag stroom: zonder stroom geen overstroom (een opgelegde fout gaat wel door)
-function feederFault(forceF,searchMin,forceIk){const c=FEEDERS.filter(f=>D[f.cb].state===1&&EN.has(f.node)&&!f.fault&&!f.backfed&&(!forceF||f.id===forceF)&&(forceF||!f.gen||Math.abs(f.P||0)>0.5));if(!c.length)return;const f=pick(c);if(f.ring)return ringFault(f);
+function feederFault(forceF,searchMin,forceIk){const c=FEEDERS.filter(f=>D[f.cb].state===1&&EN.has(f.node)&&!f.fault&&!f.backfed&&(!forceF||f.id===forceF)&&(forceF||!f.gen||Math.abs(f.P||0)>0.5));if(!c.length)return;const f=wpick(c,x=>cableRisk(cableOf(x)));if(f.ring)return ringFault(f);
   tripBreaker(f.cb);shortCircuit(f,forceIk||rnd(2500,IK_MAX(f)));f.fault={stage:'search',frac:f.prio?0:rnd(0.12,0.35)};
   const why=pick(['kabelbeschadiging door graafwerk','mofstoring','kortsluiting in een middenspanningsruimte','kabelfout (veroudering)']);
   const ts=searchMin||rnd(12,25);
@@ -33,7 +33,7 @@ function feederFault(forceF,searchMin,forceIk){const c=FEEDERS.filter(f=>D[f.cb]
   pushAlarm(`Storingsdienst: monteur onderweg naar ${f.id}, foutzoeken ±${Math.round(ts)} min. Veld nog niet inschakelen!`,'info');
   addTimer(ts,()=>{f.fault.stage='isolated';f.outFrac=f.fault.frac;
     readyNotice(`Storingsdienst: fout in ${f.id} ${f.name} gevonden en weggeschakeld – ${f.cb} mag weer IN${f.outFrac?` (${Math.round(f.cust*f.outFrac)} klanten wachten nog op reparatie)`:''}`,f.cb,()=>!D[f.cb].state);
-    addTimer(rnd(40,80),()=>{f.fault=null;f.outFrac=0;pushAlarm(`Storingsdienst: kabel ${f.id} gerepareerd – alle klanten van ${f.name} terug`,'ok');});});
+    const F=f.fault;if(!F)return;F.spot??=faultSpot(cableOf(f));const dur=rnd(40,80);F.repairAt=SIM.t+dur;addTimer(dur,()=>feederRepair(f));});
   refreshAll();}
 const BUSF={};   // rails met een kortsluiting (tot de monteur hem heeft verholpen)
 function busFault(bus,repairMin){if(BUSF[bus]||!EN.has(bus))return null;const nm=BUS_BAND[bus][2],kv=is20(bus)?20:10;

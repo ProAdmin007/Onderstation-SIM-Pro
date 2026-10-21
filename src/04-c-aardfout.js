@@ -32,7 +32,7 @@ function earthFault(forceNode){if(EF.on)return null;computeFlows();
 // gevonden: de fout wordt een gewone kabelfout die de storingsdienst repareert
 function efFound(){const e=EF.on,dt=SIM.t-e.at;EF.on=null;GAME.flags.efFoundAt=SIM.t;RING.stations.forEach(s=>{s.efFlag=false;});
   award(dt<=15?60:dt<=30?35:10,'Aardfout gevonden');GAME.stats.efFound=(GAME.stats.efFound||0)+1;
-  if(e.secId){const s=RING.secs.find(x=>x.id===e.secId);s.fault=true;s.located=true;
+  if(e.secId){const s=RING.secs.find(x=>x.id===e.secId);s.fault=true;s.located=true;s.repairAt=1e9;s.spot=null;s.meas=null;
     pushAlarm(`U0 verdwenen: de aardfout zit in kabel ${secName(s)}. Houd die kabel spanningsloos – de storingsdienst repareert hem`,'ok');
     addTimer(rnd(40,70),()=>{s.fault=false;s.located=false;pushAlarm(`Storingsdienst: kabel ${secName(s)} gerepareerd – normaliseer de ring`,'ok');refreshAll();});}
   else if(e.fId){const f=FD(e.fId);f.fault={stage:'search',frac:f.prio?0:rnd(0.15,0.35)};

@@ -490,6 +490,18 @@ const TESTS = [
       const r = await p.evaluate(() => ({ n: OS.LAYOUT.length, bad: OS.layoutCheck() }));
       assert(r.n > 500 && r.bad.length === 0, `botsingen in de wijk (${r.bad.length}): ${r.bad.slice(0, 6).join(' | ')}`);
   } },
+  { name: 'opslaan en hervatten: moffen, graafwerk en een bekende foutplek blijven bewaard', query: '?play=free&t=11', async run(p) {
+      const voor = await p.evaluate(async () => { const O = OS; O.closeHandover?.(); T.quiet(); localStorage.removeItem('osz-save-3');
+        const c = O.CABLES.find(x => x.id === 'K34'); c.moffen.forEach(m => m.year = 1971); O.KLIC.jobs.length = 0; const j = O.klicNew(O.CABLES.find(x => x.id === 'K12')); j.marked = true;
+        const sec = O.RING.secs.find(x => x.id === 'K67'); O.ringFault(O.FEEDERS.find(x => x.id === 'F1'), sec, 200); sec.located = true; sec.spot.known = true;
+        O.saveGame(true, '3'); O.GAME.ended = true; return { n: c.moffen.length, d: Math.round(sec.spot.d) }; });
+      await p.goto(pageUrl + '?resume=3&lite', { waitUntil: 'load', timeout: 180000 });
+      for (let i = 0; i < 120 && !(await p.evaluate(() => !!window.OS)); i++) await sleep(500);
+      const na = await p.evaluate(() => { const O = OS, c = O.CABLES.find(x => x.id === 'K34'), sec = O.RING.secs.find(x => x.id === 'K67'), j = O.KLIC.jobs[0];
+        const r = { moffen: c.moffen.length && c.moffen.every(m => m.year === 1971), klic: !!j && j.c.id === 'K12' && j.marked, spot: sec.fault && sec.spot?.known && Math.round(sec.spot.d), rep: sec.repairAt > O.SIM.t + 100, dig: O.DIGS.has(sec.spot) };
+        localStorage.removeItem('osz-save-3'); return r; });
+      assert(na.moffen === true && na.klic === true && na.spot === voor.d && na.rep === true && na.dig === true, `niet goed hervat: ${JSON.stringify({ voor, na })}`);
+  } },
   { name: 'meerdere opslagplekken: kiezen, hervatten uit een plek, verwijderen', query: '?play=free&t=11', async run(p) {
       const voor = await p.evaluate(async () => { const O = OS; O.closeHandover?.(); T.quiet(); O.SIM.paused = false; T.step(0.5);
         localStorage.removeItem('osz-save-2'); await T.op('V-F6', 0); O.GAME.score = 4321;
@@ -540,6 +552,39 @@ const TESTS = [
         O.closeTablet(); O.setXray(false);
         return { bad: bad.length ? bad : true, ring, ls, feed, xr, tab, info: info.slice(0, 120) }; });
       for (const k of ['bad', 'ring', 'ls', 'feed', 'xr', 'tab']) assert(r[k] === true, `${k} klopt niet: ${JSON.stringify(r)}`);
+  } },
+  { name: 'kabels in het spel: foutplaats bepalen versnelt de reparatie, oude moffen geven vaker storing', query: '?autostart&t=10', async run(p) {
+      const r = await p.evaluate(async () => { const O = OS; T.quiet(); const sec = O.RING.secs.find(s => s.id === 'K23'), c = O.cableOf(sec), f = O.FEEDERS.find(x => x.id === 'F3');
+        O.ringFault(f, sec, 120); const t0 = O.SIM.t, spot = !!sec.spot && sec.repairAt > t0 + 100;
+        const vroeg = (O.gisMeasure(c), !sec.meas);   // nog niet gevonden: meten mag niet
+        sec.located = true; O.gisMeasure(c); const onder = !sec.meas;   // nog niet geïsoleerd
+        O.isoSwitches(sec).forEach(id => O.D[id].state = 0); O.computeFlows(); O.gisMeasure(c); const meet = !!sec.meas;
+        await T.step(12); const bekend = sec.spot.known && sec.repairAt < t0 + 60 && O.DIGS.has(sec.spot);
+        await T.step(45); const klaar = !sec.fault && !O.DIGS.size && c.moffen.some(m => m.year === 2026);
+        // ouderdom: een kabel met oude moffen weegt zwaarder
+        const oud = { moffen: [{ year: 1975 }, { year: 1981 }] }, nieuw = { moffen: [{ year: 2015 }, { year: 2003 }] };
+        const risk = O.cableRisk(oud) > O.cableRisk(nieuw) + 0.5;
+        return { spot, vroeg, onder, meet, bekend, klaar, risk }; });
+      for (const [k, v] of Object.entries(r)) assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
+  } },
+  { name: 'graafwerk (KLIC): kabels aanwijzen voorkomt schade, graafschade geeft een storing op een bekende plek', query: '?autostart&t=10', async run(p) {
+      const r = await p.evaluate(async () => { const O = OS; T.quiet(); const K = O.KLIC; K.jobs.length = 0; K.next = 1e9;
+        const c1 = O.CABLES.find(c => c.id === 'K12'), j1 = O.klicNew(c1), melding = /KLIC-melding/.test(document.querySelector('#alarmList').textContent) && O.activeFaults().some(f => f.key === 'kl' + j1.id);
+        O.klicMark(j1); await T.step(16); const aangewezen = j1.marked && !O.activeFaults().some(f => f.key === 'kl' + j1.id);
+        const c2 = O.CABLES.find(c => c.id === 'K45'), j2 = O.klicNew(c2); j2.start = O.SIM.t + 1; j2.hitAt = O.SIM.t + 2; const rnd0 = Math.random; Math.random = () => 0.1;
+        await T.step(4); Math.random = rnd0; const sec = c2.sec, schade = j2.hit && sec.fault && sec.located && sec.spot?.known && O.DIGS.has(j2);
+        return { melding, aangewezen, schade }; });
+      for (const [k, v] of Object.entries(r)) assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
+  } },
+  { name: 'moffen preventief vervangen: alleen spanningsloos, onder spanning brengen tijdens het werk is een veiligheidsincident', query: '?autostart&t=10', async run(p) {
+      const r = await p.evaluate(async () => { const O = OS; T.quiet(); const c = O.CABLES.find(x => x.kind === 'ring' && x.sec.a && x.sec.b && x.moffen.some(m => m.year < 1990)) || O.CABLES.find(x => x.kind === 'ring' && x.sec.a && x.sec.b);
+        c.moffen.forEach(m => m.year = 1978); if (!c.moffen.length) c.moffen.push({ d: 20, x: c.pts[1][0], z: c.pts[1][1], year: 1978 });
+        O.gisMofReplace(c); const weiger = !c.work;
+        const iso = O.isoSwitches(c.sec); iso.forEach(id => O.D[id].state = 0); O.computeFlows(); O.gisMofReplace(c); const bezig = !!c.work;
+        await T.step(Math.ceil(c.work.until - O.SIM.t) + 2); const klaar = !c.work && c.moffen.every(m => m.year === 2026);
+        c.moffen.forEach(m => m.year = 1978); O.gisMofReplace(c); const inc0 = O.SIM.incidents || 0; iso.forEach(id => O.D[id].state = 1); O.computeFlows(); await T.step(2);
+        return { weiger, bezig, klaar, incident: (O.SIM.incidents || 0) > inc0 && !c.work }; });
+      for (const [k, v] of Object.entries(r)) assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
   } },
   { name: 'prestaties: wereld per zone samengevoegd en geculd, schaduw alleen bij beweging, automatische resolutie', query: '?autostart&t=12', async run(p) {
       const r = await p.evaluate(async () => { const O = OS, baked = []; O.scene.traverse(o => { if (o.userData.baked) baked.push(o); });

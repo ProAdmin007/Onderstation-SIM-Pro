@@ -45,7 +45,7 @@ const R_GIS=mulberry32(4242);   // eigen vaste reeks: het landschap blijft hetze
 function cableType(kind,year){if(kind==='ls'||kind==='kk')return year<1985?'GPLK 4×95 Al (papier-lood)':'VMvKas 4×150 Al';
   return year<1990?'GPLK 3×150 Cu (papier-lood)':year<2005?'XLPE 3×1×150 Al':'XLPE 3×1×240 Al';}
 function addCable(o){const len=polyLen(o.pts),year=o.year??(1966+Math.floor(R_GIS()*56)),moffen=[];
-  for(let d=rr2(140,260);d<len-25;d+=rr2(150,320)){const [x,z]=polyAt(o.pts,d),y=R_GIS()<0.3?year+Math.floor(R_GIS()*(2024-year)):year;moffen.push({d,x,z,year:Math.min(2024,y)});}
+  for(let d=rr2(40,140);d<len-20;d+=rr2(90,200)){const [x,z]=polyAt(o.pts,d),y=R_GIS()<0.3?year+Math.floor(R_GIS()*(2024-year)):year;moffen.push({d,x,z,year:Math.min(2024,y)});}
   const c=Object.assign({len,year,moffen,type:cableType(o.kind,year)},o);CABLES.push(c);return c;}
 function rr2(a,b){return a+R_GIS()*(b-a);}
 // 10 kV ringkabels: per kabelstuk tussen twee stations (of tussen het OS en het eerste station)
@@ -90,15 +90,18 @@ const mofCol=y=>y<1985?'#ff5a4a':y<2000?'#f5b335':'#5ccf72';
 
 // ---- röntgenblik (X): lintjes op straat in de kleur van de status, moffen als blokjes
 const XRAY={on:false,root:new THREE.Group(),mats:new Map(),mof:null};XRAY.root.visible=false;XRAY.root.userData.dyn=true;scene.add(XRAY.root);
-(()=>{const all=CABLES.flatMap(c=>c.moffen);
+(()=>{
   for(const c of CABLES){const w=c.kind==='ring'||c.kind==='feeder'?0.8:0.55,pos=[],idx=[];
     for(let i=1;i<c.pts.length;i++){const [ax,az]=c.pts[i-1],[bx,bz]=c.pts[i],L=Math.hypot(bx-ax,bz-az)||1,nx=-(bz-az)/L*w/2,nz=(bx-ax)/L*w/2,k=pos.length/3,y=0.2+(c.kv===0.4?0.01:0.02);
       pos.push(ax+nx,y,az+nz,ax-nx,y,az-nz,bx+nx,y,bz+nz,bx-nx,y,bz-nz);idx.push(k,k+2,k+1,k+1,k+2,k+3);}
     const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setIndex(idx);
     const m=new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.92,depthWrite:false,side:THREE.DoubleSide,fog:false});XRAY.mats.set(c,m);
     const me=new THREE.Mesh(g,m);me.renderOrder=6;me.userData.dyn=true;XRAY.root.add(me);}
+  buildMofMesh();})();
+// moffen als blokjes (opnieuw opgebouwd na een reparatie of vervanging)
+function buildMofMesh(){const all=CABLES.flatMap(c=>c.moffen);if(XRAY.mof){XRAY.root.remove(XRAY.mof);XRAY.mof.dispose();}
   const im=new THREE.InstancedMesh(new THREE.BoxGeometry(0.7,0.35,0.7),new THREE.MeshBasicMaterial({color:0xffffff,fog:false}),Math.max(1,all.length)),M4=new THREE.Matrix4(),col=new THREE.Color();
-  all.forEach((m,i)=>{im.setMatrixAt(i,M4.makeTranslation(m.x,0.3,m.z));im.setColorAt(i,col.set(mofCol(m.year)));});im.userData.dyn=true;XRAY.mof=im;XRAY.root.add(im);})();
+  all.forEach((m,i)=>{im.setMatrixAt(i,M4.makeTranslation(m.x,0.3,m.z));im.setColorAt(i,col.set(mofCol(m.year)));});im.count=all.length;im.userData.dyn=true;XRAY.mof=im;XRAY.root.add(im);}
 // foutplek en graafwerk in 3D: rode baken (gevonden fout) – later ook de KLIC-sleuven
 const SPOT_MAT=new THREE.SpriteMaterial({map:glowTex,color:0xff3020,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending});
 function gisColors(){if(!XRAY.on)return;const blink=(performance.now()%900)<450;
@@ -144,6 +147,7 @@ function drawTablet(){if(!TAB.on)return;const cv=$('#gtMap'),g=cv.getContext('2d
     g.strokeStyle=cableCol(c,st);g.lineWidth=w;g.setLineDash(st==='uit'||st==='open'?[6,4]:[]);g.globalAlpha=st==='fout'&&(performance.now()%900)<450?0.35:1;g.stroke();g.globalAlpha=1;}
   g.setLineDash([]);
   if(TAB.layers.mof&&s>0.8)for(const c of CABLES){if(!cableVisible(c))continue;for(const m of c.moffen){const [a,b]=tabXY(m.x,m.z,cv);if(a<-5||b<-5||a>W+5||b>H+5)continue;g.fillStyle=mofCol(m.year);g.strokeStyle='#222';g.lineWidth=1;g.beginPath();g.arc(a,b,3.2,0,7);g.fill();g.stroke();}}
+  gisDrawExtra(g,cv);
   // MS-stations en kabelkasten
   g.font='bold 11px Arial';g.textAlign='center';
   RING.stations.forEach(st=>{const [a,b]=tabXY(...st.pos,cv);g.fillStyle=stationLive(st)?'#1d4f91':'#6b7177';g.fillRect(a-5,b-5,10,10);g.fillStyle='#111';g.fillText(st.id,a,b-8);});
@@ -164,7 +168,7 @@ function cableCard(c,d){const st=cableState(c),old=c.moffen.reduce((a,m)=>Math.m
   const I=c.kind==='ring'?c.sec.I:c.kind==='feeder'?c.f.I:null;
   return `<div class="gt-card"><b style="color:${cableCol(c,st)}">■</b> <b>${c.name}</b>${d!=null?` <small>· ${d.toFixed(1).replace('.',',')} m van je af</small>`:''}<br>
     <small>${c.type} · aangelegd ${c.year} · ${c.far?'tracé loopt het kaartbeeld uit':fmtLen(c.len)} · ${c.moffen.length} mof${c.moffen.length===1?'':'fen'}${c.moffen.length?` (oudste ${old})`:''}<br>
-    Status: <b>${stTxt}</b>${I!=null&&st==='aan'?` · ${Math.round(I)} A`:''}</small></div>`;}
+    Status: <b>${stTxt}</b>${I!=null&&st==='aan'?` · ${Math.round(I)} A`:''}</small>${gisCardExtra(c)}</div>`;}
 function renderTabletChrome(){$('#gtStyle').textContent=TAB.style==='gis'?'🛰 Luchtfoto':'🗺 Kaart';$('#gtFollow').classList.toggle('on',TAB.follow);
   $('#gisTab').classList.toggle('fp',FP.on);for(const k in TAB.layers){const b=$(`#gisTab [data-gl="${k}"]`);if(b)b.checked=TAB.layers[k];}}
 // bediening van de tablet: knoppen, lagen, slepen (overzicht), scrollen om te zoomen, klik op een kabel

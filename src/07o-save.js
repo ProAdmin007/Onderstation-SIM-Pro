@@ -12,7 +12,7 @@ const SAVE_MIGRATE={1:d=>{for(const id in d.D||{}){const x=d.D[id];if(x.stuck){d
 const BASE0=new Map(CONS.map(c=>[c.id,c.base]));   // normale belasting per afnemer (voor het opruimen van een lopend incident)
 const KEYS={dev:['state','ops','wear','refusals','year','wearWarn','oil','tap','avr','fans','fanFail','blocked','resettable','blockText','blockKind','ratio','gas','hot'],
   feed:['eta','etaAt','aOff','aOffAt','lsOff','lsOffAt','lsManual','shed','called','relay','relayYear','relayKnown','fault','outFrac','clp','offSince','oc','temp','hotWarn','backfed','interruptible','base','unplanned','wait','wasOn'],
-  lvg:['pvTrip','ovAt','lsOff','lsOffAt','lsManual','shed','called','outFrac','lvf','backfed','cut','base','offSince','clp'],sec:['fault','located','temp','ovl','hot'],
+  lvg:['pvTrip','ovAt','lsOff','lsOffAt','lsManual','shed','called','outFrac','lvf','backfed','cut','base','offSince','clp'],sec:['fault','located','temp','ovl','hot','spot','repairAt','meas'],
   st:['efFlag','tapLv','gs','eta','etaAt','aOff','aOffAt','ovFixed','flag','damaged','evac','fuse','genset','trOt','trWarn','unplanned','wait','wasOn']};
 const grab=(o,keys)=>{const r={};keys.forEach(k=>{if(o[k]!==undefined)r[k]=o[k];});return r;};
 const canSave=()=>['free','day','eve'].includes(GAME.mode)&&!GAME.ended&&!RP.on&&$('#intro').classList.contains('hidden');
@@ -44,7 +44,8 @@ function saveGame(silent,slot){if(!canSave())return false;slot=slot||(silent?'au
     ST:Object.fromEntries(RING.stations.map(s=>[s.id,grab(s,KEYS.st)])),BUSF:Object.keys(BUSF),
     WX:{type:WX.type,lock:WX.lock,next:WX.next,cur:{...WX.cur},cover:WX.cover},FLEX:FLEX.map(f=>({id:f.id,req:f.req,at:f.at})),PROT:JSON.parse(JSON.stringify(PROT)),
     TASK:taskSave(),taskSeq,taskCycle,INC:{next:INC.next,done:INC.done,active:INC.active?.def.id||null},PHONE:{...PHONE.stats},EF:EF.on,LS:{busy:GENSET.busy,orders:LS_ORDERS.map(o=>({...o}))},
-    REC:{samples:REC.samples.slice(-600),events:REC.events.slice(-1500)}};
+    REC:{samples:REC.samples.slice(-600),events:REC.events.slice(-1500)},
+    GIS:{m:Object.fromEntries(CABLES.map(c=>[c.id,c.moffen.map(m=>[m.d,m.x,m.z,m.year])])),w:Object.fromEntries(CABLES.filter(c=>c.work).map(c=>[c.id,c.work])),k:{next:KLIC.next,seq:KLIC.seq,jobs:KLIC.jobs.map(j=>({...j,c:j.c.id}))}}};
   try{localStorage.setItem(slotKey(slot),JSON.stringify(data));}catch(e){if(!silent)deny('Opslaan mislukt: niet genoeg ruimte in de browser');return false;}
   if(!silent){SAVE_SLOT=slot;pushAlarm(`💾 Spel opgeslagen in ${slotName(slot).toLowerCase()} (${MODES[GAME.mode].name}, ${fmtClock(SIM.t)})`,'ok');toastSaved(`Opgeslagen · ${slotName(slot)}`);}else toastSaved('Automatisch opgeslagen');return true;}
 function toastSaved(t){const el=$('#saved');el.textContent='💾 '+t;el.classList.remove('show');void el.offsetWidth;el.classList.add('show');}
@@ -80,6 +81,9 @@ function resumeGame(d){$('#intro').classList.add('hidden');SAVE_SLOT=d.slot||'au
   TASK=null;taskSeq=d.taskSeq;taskCycle=d.taskCycle;taskLoad(d.TASK);
   Object.assign(PHONE.stats,d.PHONE);EF.on=d.EF||null;if(d.LS){GENSET.busy=d.LS.busy;LS_ORDERS.splice(0,LS_ORDERS.length,...d.LS.orders);}REC.samples=d.REC.samples;REC.events=d.REC.events;REC.lastM=null;
   INC.next=d.INC.next;INC.done=d.INC.done;INC.active=null;if(d.INC.active)clearIncident(d.INC.active);
+  if(d.GIS){CABLES.forEach(c=>{const m=d.GIS.m[c.id];if(m)c.moffen=m.map(([d,x,z,year])=>({d,x,z,year}));c.work=d.GIS.w?.[c.id]||null;if(c.work)digStart(c.work);});buildMofMesh();
+    KLIC.next=d.GIS.k.next;KLIC.seq=d.GIS.k.seq;KLIC.jobs=d.GIS.k.jobs.map(j=>({...j,c:CABLES.find(c=>c.id===j.c)})).filter(j=>j.c);
+    KLIC.jobs.forEach(j=>{if(j.state==='graaf')digStart(j);if(j.order&&!j.marked)addTimer(rnd(3,6),()=>klicMarked(j));});}
   resumeTimers();computeFlows();FEEDERS.concat(RING.stations).forEach(f=>{f.wasOn=EN.has(f.node);});
   updateSky(hourOf());refreshAll();renderTasks();setSpeed(d.SIM.speed||60);
   const v=VIEWPOS[0];flyTo(v[0].clone(),v[1].clone(),2);
@@ -91,10 +95,12 @@ function clearIncident(id){GAME.flags.scadaDown=false;$('#scada').classList.remo
   const def=INCIDENTS.find(x=>x.id===id);pushAlarm(`Het incident “${def?def.name:id}” is tijdens het opslaan afgerond`,'info');}
 // geplande gebeurtenissen opnieuw inplannen op basis van de opgeslagen toestand
 function resumeTimers(){
-  FEEDERS.forEach(f=>{if(!f.fault)return;const repair=()=>addTimer(rnd(25,55),()=>{f.fault=null;f.outFrac=0;pushAlarm(`Storingsdienst: kabel ${f.id} gerepareerd – alle klanten van ${f.name} terug`,'ok');});
+  FEEDERS.forEach(f=>{if(!f.fault)return;const F=f.fault,c=cableOf(f);if(F.spot?.known)digStart(F.spot);if(F.meas&&!F.spot?.known)addTimer(rnd(2,5),()=>measDone(c,F));
+    const repair=()=>{F.repairAt=F.repairAt>SIM.t?F.repairAt:SIM.t+rnd(25,55);addTimer(F.repairAt-SIM.t,()=>feederRepair(f));};
     if(f.fault.stage==='search')addTimer(rnd(4,10),()=>{if(!f.fault)return;f.fault.stage='isolated';f.outFrac=f.fault.frac;readyNotice(`Storingsdienst: fout in ${f.id} ${f.name} gevonden en weggeschakeld – ${f.cb} mag weer IN`,f.cb,()=>!D[f.cb].state);repair();});else repair();});
   RING.secs.forEach(s=>{if(!s.fault)return;if(!s.located)addTimer(rnd(4,10),()=>{if(s.fault){s.located=true;pushAlarm(`Storingsdienst: kabelfout gevonden tussen ${secName(s)} – isoleer de kabel en voed terug via het normaal-open punt`,'info');}});
-    addTimer(rnd(30,70),()=>{s.fault=false;s.located=false;RING.stations.forEach(x=>x.flag=false);pushAlarm(`Storingsdienst: kabel ${secName(s)} gerepareerd – normaliseer de ring`,'ok');refreshAll();});});
+    if(s.spot?.known)digStart(s.spot);if(s.meas&&!s.spot?.known)addTimer(rnd(2,5),()=>measDone(cableOf(s),s));
+    s.repairAt=s.repairAt>SIM.t?s.repairAt:SIM.t+rnd(30,70);addTimer(s.repairAt-SIM.t,()=>ringRepair(s));});
   LINES.forEach(L=>{const ln=SIM.lines[L];if(!ln.avail&&!ln.maint)addTimer(rnd(8,20),()=>lineRestore(L));
     if(ln.maint&&ln.avail)addTimer(3,()=>{if(ln.maint&&ln.avail){ln.avail=false;ln.reason='vrijgeschakeld voor werkzaamheden';pushAlarm(`TenneT: lijn ${L} spanningsloos – aarden toegestaan`,'info');}});});
   TR.forEach(T=>{const t=D[T];if(t.blocked&&!t.resettable&&t.blockKind!=='temp')addTimer(rnd(15,35),()=>{if(!t.blocked)return;t.resettable=true;readyNotice(`${T}: inspectie gereed – reset blokkeerrelais 86`,T,()=>t.blocked);});});

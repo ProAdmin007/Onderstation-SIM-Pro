@@ -20,7 +20,7 @@ function activeFaults(){const o=[],add=(key,sev,title,detail,go,cust=0)=>o.push(
     if((f.temp||0)>CABLE.max)add('ft'+f.id,'warn',`Kabel ${f.cb} te warm`,`${Math.round(f.temp)} °C (max. ${CABLE.max} °C)`,{tab:'K'});});
   // stations die door een kabelfout in hun ring spanningsloos zijn, staan bij die kabelfout (oorzaak, niet elk gevolg apart)
   const ringDead=rg=>rg.stations.filter(st=>!st.damaged&&!st.fuse&&!stationLive(st)),told=new Set();
-  RING.secs.forEach(s=>{if(s.fault){let det=s.located?'gevonden – isoleer de kabel en voed terug':'storingsdienst zoekt – kijk naar de verklikkers ⚑',cust=0;
+  RING.secs.forEach(s=>{if(s.fault){let det=s.spot?.known?`fout op ${Math.round(s.spot.d)} m vanaf ${s.a||'OS'} – graafploeg bezig`:s.located?(s.meas?'gevonden – meetwagen meet de foutplaats':'gevonden – isoleer de kabel, voed terug en bepaal de foutplaats (tablet G)'):'storingsdienst zoekt – kijk naar de verklikkers ⚑',cust=0;
       if(!told.has(s.ring)){told.add(s.ring);const dd=ringDead(s.ring);if(dd.length){det+=` · zonder stroom: ${dd.map(x=>x.id).join(', ')}`;cust=offOf(dd.flatMap(x=>x.groups));}}
       add('rs'+s.id,'crit',`Kabelfout ${secName(s)}`,det,{tab:'R'},cust);}
     else if((s.temp||0)>CABLE.max)add('rt'+s.id,'warn',`Kabel ${secName(s)} te warm`,`${Math.round(s.temp)} °C – verleg het normaal-open punt of zet flex in`,{tab:'K'});});
@@ -32,6 +32,7 @@ function activeFaults(){const o=[],add=(key,sev,title,detail,go,cust=0)=>o.push(
     if(hi)add('lh'+s.id,'warn',`${s.id}: overspanning`,`${hi} straat${hi>1?'en':''} boven 253 V – verlaag de vaste trap (N)`,{tab:'L'});
     if(lo)add('ll'+s.id,'warn',`${s.id}: onderspanning`,`${lo} straat${lo>1?'en':''} onder 207 V`,{tab:'L'});
     if(s.gs?.state==='trip')add('gs'+s.id,'crit',`Noodaggregaat ${s.id} uitgevallen`,'overbelast – schakel straten af en herstart (N)',{tab:'L'});});
+  KLIC.jobs.forEach(j=>{if(!j.marked)add('kl'+j.id,'warn',`Graafwerk bij ${j.where}: ${j.c.name}`,`${j.firm} ${j.state==='plan'?`begint ${fmtClock(j.start)}`:'graaft nu'} – ${j.order?'monteur onderweg om aan te wijzen':'laat de kabels aanwijzen (tablet G)'}`,null);});
   const now=new Set(o.map(x=>x.key));for(const k in FSEEN)if(!now.has(k))delete FSEEN[k];o.forEach(x=>{FSEEN[x.key]??=SIM.t;x.since=FSEEN[x.key];});
   return o.sort((a,b)=>(a.sev==='crit'?0:1)-(b.sev==='crit'?0:1)||a.since-b.since);}
 function renderFaults(){const el=$('#faultList');if(!el)return;const fs=activeFaults(),crit=fs.filter(f=>f.sev==='crit').length;

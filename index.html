@@ -316,7 +316,7 @@ body.fp #torch.on{display:block}
 #gisTab canvas{display:block;width:100%;aspect-ratio:1;border-radius:10px;background:#f3f1ea;cursor:grab;touch-action:none}
 #gisTab .gt-layers{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;margin:8px 4px 4px}#gisTab .gt-layers label{display:flex;gap:4px;align-items:center}
 #gisTab .gt-leg{display:flex;gap:10px;flex-wrap:wrap;font-size:11px;color:#b9c2cc;margin:2px 4px 6px}#gisTab .gt-leg i{display:inline-block;width:14px;height:4px;border-radius:2px;vertical-align:middle;margin-right:3px}
-#gtInfo{min-height:42px;font-size:12.5px;line-height:1.45;padding:6px 6px 2px;border-top:1px solid #333a42}#gtInfo .gt-act{margin-top:6px;display:flex;gap:6px;flex-wrap:wrap}
+#gtInfo{min-height:42px;font-size:12.5px;line-height:1.45;padding:6px 6px 2px;border-top:1px solid #333a42}#gtInfo .gt-x{margin-top:5px;font-size:12px;color:#dfe5ea}#gtInfo .gt-act{margin-top:6px;display:flex;gap:6px;flex-wrap:wrap}
 #gisTab button.on{outline:2px solid var(--accent,#3d9bff)}
 #pvBar{position:fixed;left:434px;bottom:96px;z-index:14;display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;padding:10px 14px;width:min(480px,calc(100vw - 446px))}#pvBar.hidden{display:none}
 .pv-t b{display:block;font-size:13px}.pv-t span{font-size:11px;color:var(--muted)}.pv-time{display:flex;align-items:center;gap:8px}.pv-time input{width:230px;accent-color:var(--accent)}.pv-time b{font-family:var(--mono);font-size:14px;min-width:44px}
@@ -2080,7 +2080,7 @@ function lineFault(forceL,forcePerm){const c=LINES.filter(L=>SIM.lines[L].avail&
     else readyNotice(`TenneT: lijn ${L} na herinschakeling aan de overzijde weer onder spanning – ${L}-Q0 mag weer IN`,L+'-Q0',()=>!D[L+'-Q0'].state&&SIM.lines[L].avail);
     refreshAll();},700);}
 // een zonnepark levert alleen overdag stroom: zonder stroom geen overstroom (een opgelegde fout gaat wel door)
-function feederFault(forceF,searchMin,forceIk){const c=FEEDERS.filter(f=>D[f.cb].state===1&&EN.has(f.node)&&!f.fault&&!f.backfed&&(!forceF||f.id===forceF)&&(forceF||!f.gen||Math.abs(f.P||0)>0.5));if(!c.length)return;const f=pick(c);if(f.ring)return ringFault(f);
+function feederFault(forceF,searchMin,forceIk){const c=FEEDERS.filter(f=>D[f.cb].state===1&&EN.has(f.node)&&!f.fault&&!f.backfed&&(!forceF||f.id===forceF)&&(forceF||!f.gen||Math.abs(f.P||0)>0.5));if(!c.length)return;const f=wpick(c,x=>cableRisk(cableOf(x)));if(f.ring)return ringFault(f);
   tripBreaker(f.cb);shortCircuit(f,forceIk||rnd(2500,IK_MAX(f)));f.fault={stage:'search',frac:f.prio?0:rnd(0.12,0.35)};
   const why=pick(['kabelbeschadiging door graafwerk','mofstoring','kortsluiting in een middenspanningsruimte','kabelfout (veroudering)']);
   const ts=searchMin||rnd(12,25);
@@ -2088,7 +2088,7 @@ function feederFault(forceF,searchMin,forceIk){const c=FEEDERS.filter(f=>D[f.cb]
   pushAlarm(`Storingsdienst: monteur onderweg naar ${f.id}, foutzoeken ±${Math.round(ts)} min. Veld nog niet inschakelen!`,'info');
   addTimer(ts,()=>{f.fault.stage='isolated';f.outFrac=f.fault.frac;
     readyNotice(`Storingsdienst: fout in ${f.id} ${f.name} gevonden en weggeschakeld – ${f.cb} mag weer IN${f.outFrac?` (${Math.round(f.cust*f.outFrac)} klanten wachten nog op reparatie)`:''}`,f.cb,()=>!D[f.cb].state);
-    addTimer(rnd(40,80),()=>{f.fault=null;f.outFrac=0;pushAlarm(`Storingsdienst: kabel ${f.id} gerepareerd – alle klanten van ${f.name} terug`,'ok');});});
+    const F=f.fault;if(!F)return;F.spot??=faultSpot(cableOf(f));const dur=rnd(40,80);F.repairAt=SIM.t+dur;addTimer(dur,()=>feederRepair(f));});
   refreshAll();}
 const BUSF={};   // rails met een kortsluiting (tot de monteur hem heeft verholpen)
 function busFault(bus,repairMin){if(BUSF[bus]||!EN.has(bus))return null;const nm=BUS_BAND[bus][2],kv=is20(bus)?20:10;
@@ -2247,7 +2247,7 @@ function simStep(dtReal){
   const dm=dtReal*SIM.speed/60;SIM.t+=dm;
   SIM.timers.sort((a,b)=>a.at-b.at);while(SIM.timers.length&&SIM.timers[0].at<=SIM.t)SIM.timers.shift().fn();
   CONS.forEach(f=>{f.noise+=(-f.noise*0.08+(Math.random()-0.5)*0.03)*Math.min(1,dm);});
-  weatherTick(dm);computeFlows();thermal(dm);regulate(dm);feederTick(dm);flexTick(dm);lsTick(dm);efTick(dm);
+  weatherTick(dm);computeFlows();thermal(dm);regulate(dm);feederTick(dm);flexTick(dm);lsTick(dm);efTick(dm);gisSimTick();
   let off=0;CONS.forEach(c=>{off+=custOff(c);});
   FEEDERS.forEach(f=>{if(f.ring)return;const on=EN.has(f.node);
     if(on!==f.wasOn){f.wasOn=on;restoreTrack(f,on);if(on)pushAlarm(`${f.id} ${f.name}: spanning hersteld`,'ok');
@@ -2588,7 +2588,7 @@ function earthFault(forceNode){if(EF.on)return null;computeFlows();
 // gevonden: de fout wordt een gewone kabelfout die de storingsdienst repareert
 function efFound(){const e=EF.on,dt=SIM.t-e.at;EF.on=null;GAME.flags.efFoundAt=SIM.t;RING.stations.forEach(s=>{s.efFlag=false;});
   award(dt<=15?60:dt<=30?35:10,'Aardfout gevonden');GAME.stats.efFound=(GAME.stats.efFound||0)+1;
-  if(e.secId){const s=RING.secs.find(x=>x.id===e.secId);s.fault=true;s.located=true;
+  if(e.secId){const s=RING.secs.find(x=>x.id===e.secId);s.fault=true;s.located=true;s.repairAt=1e9;s.spot=null;s.meas=null;
     pushAlarm(`U0 verdwenen: de aardfout zit in kabel ${secName(s)}. Houd die kabel spanningsloos – de storingsdienst repareert hem`,'ok');
     addTimer(rnd(40,70),()=>{s.fault=false;s.located=false;pushAlarm(`Storingsdienst: kabel ${secName(s)} gerepareerd – normaliseer de ring`,'ok');refreshAll();});}
   else if(e.fId){const f=FD(e.fId);f.fault={stage:'search',frac:f.prio?0:rnd(0.15,0.35)};
@@ -2819,8 +2819,8 @@ function ringPathStations(from,to){const prev={[from]:null},q=[from];
   const out=[];if(!(to in prev))return out;for(let n=to;n!=null;n=prev[n]){const s=RING.stations.find(s=>s.node===n);if(s)out.unshift(s.id);}return out;}
 function ringFault(f,forced,repairMin){
   const c=forced?[forced]:RING.secs.filter(s=>!s.fault&&EN.has(s.node)&&FLOW.TAG[s.node]?.cb===f.cb);if(!c.length)return;
-  const s=pick(c),flagged=ringPathStations(f.node,s.node);
-  s.fault=true;s.located=false;RING.stations.forEach(x=>x.flag=flagged.includes(x.id));
+  const s=wpick(c,x=>cableRisk(cableOf(x))),flagged=ringPathStations(f.node,s.node);
+  s.fault=true;s.located=false;s.meas=null;s.spot=faultSpot(cableOf(s));RING.stations.forEach(x=>x.flag=flagged.includes(x.id));
   tripFrom(s.node);shortCircuit(f,rnd(2000,IK_MAX(f)*0.8));
   pushAlarm(`${f.cb} ${f.name}: I>> – kabelfout in de 10 kV-ring. Kortsluitverklikkers aangesproken: ${flagged.length?flagged.join(', '):'geen'}`,'crit');
   pushAlarm(`Tip: de fout zit achter het laatste station met een aangesproken verklikker. Isoleer die kabel met de lastscheiders aan beide kanten, voed de rest terug via het normaal-open punt ${s.ring.nop} en schakel ${f.cb} weer in.`,'info');
@@ -2828,8 +2828,8 @@ function ringFault(f,forced,repairMin){
     readyNotice(`Storingsdienst: kabelfout gevonden tussen ${secName(s)}${open.length?` – isoleer met ${open.join(' en ')}`:' – kabel is al geïsoleerd'}, herstel daarna via het normaal-open punt`,
       open[0]||null,()=>!!open[0]&&D[open[0]].state===1);
     const st=RING.stations.find(x=>x.id===(s.a||s.b));if(st)crewDispatch({box:VIEWS[st.id].box,say:`Kabelfout ${secName(s)} graven`,until:()=>!s.fault,from:V3(st.pos[0]+6,0,st.pos[1]-8),rel:isoSwitches(s).concat(s.a?[]:['V-'+s.ring.from],s.b?[]:['V-'+s.ring.to])});});
-  addTimer(repairMin||rnd(70,130)*(WX.cur.snow>0.5?1.4:1),()=>{s.fault=false;s.located=false;RING.stations.forEach(x=>x.flag=false);
-    pushAlarm(`Storingsdienst: kabel ${secName(s)} gerepareerd – normaliseer de ring (normaal-open punt ${s.ring.nop} weer open)`,'ok');refreshAll();});
+  // reparatie op tijdstip repairAt; een foutplaatsbepaling (kabeltablet) haalt dat naar voren
+  const dur=repairMin||rnd(70,130)*(WX.cur.snow>0.5?1.4:1);s.repairAt=SIM.t+dur;addTimer(dur,()=>ringRepair(s));
   refreshAll();}
 // een kabel met fout die weer onder spanning komt: beveiliging schakelt direct af
 function ringProtection(dm=0){
@@ -4661,7 +4661,7 @@ const SAVE_MIGRATE={1:d=>{for(const id in d.D||{}){const x=d.D[id];if(x.stuck){d
 const BASE0=new Map(CONS.map(c=>[c.id,c.base]));   // normale belasting per afnemer (voor het opruimen van een lopend incident)
 const KEYS={dev:['state','ops','wear','refusals','year','wearWarn','oil','tap','avr','fans','fanFail','blocked','resettable','blockText','blockKind','ratio','gas','hot'],
   feed:['eta','etaAt','aOff','aOffAt','lsOff','lsOffAt','lsManual','shed','called','relay','relayYear','relayKnown','fault','outFrac','clp','offSince','oc','temp','hotWarn','backfed','interruptible','base','unplanned','wait','wasOn'],
-  lvg:['pvTrip','ovAt','lsOff','lsOffAt','lsManual','shed','called','outFrac','lvf','backfed','cut','base','offSince','clp'],sec:['fault','located','temp','ovl','hot'],
+  lvg:['pvTrip','ovAt','lsOff','lsOffAt','lsManual','shed','called','outFrac','lvf','backfed','cut','base','offSince','clp'],sec:['fault','located','temp','ovl','hot','spot','repairAt','meas'],
   st:['efFlag','tapLv','gs','eta','etaAt','aOff','aOffAt','ovFixed','flag','damaged','evac','fuse','genset','trOt','trWarn','unplanned','wait','wasOn']};
 const grab=(o,keys)=>{const r={};keys.forEach(k=>{if(o[k]!==undefined)r[k]=o[k];});return r;};
 const canSave=()=>['free','day','eve'].includes(GAME.mode)&&!GAME.ended&&!RP.on&&$('#intro').classList.contains('hidden');
@@ -4693,7 +4693,8 @@ function saveGame(silent,slot){if(!canSave())return false;slot=slot||(silent?'au
     ST:Object.fromEntries(RING.stations.map(s=>[s.id,grab(s,KEYS.st)])),BUSF:Object.keys(BUSF),
     WX:{type:WX.type,lock:WX.lock,next:WX.next,cur:{...WX.cur},cover:WX.cover},FLEX:FLEX.map(f=>({id:f.id,req:f.req,at:f.at})),PROT:JSON.parse(JSON.stringify(PROT)),
     TASK:taskSave(),taskSeq,taskCycle,INC:{next:INC.next,done:INC.done,active:INC.active?.def.id||null},PHONE:{...PHONE.stats},EF:EF.on,LS:{busy:GENSET.busy,orders:LS_ORDERS.map(o=>({...o}))},
-    REC:{samples:REC.samples.slice(-600),events:REC.events.slice(-1500)}};
+    REC:{samples:REC.samples.slice(-600),events:REC.events.slice(-1500)},
+    GIS:{m:Object.fromEntries(CABLES.map(c=>[c.id,c.moffen.map(m=>[m.d,m.x,m.z,m.year])])),w:Object.fromEntries(CABLES.filter(c=>c.work).map(c=>[c.id,c.work])),k:{next:KLIC.next,seq:KLIC.seq,jobs:KLIC.jobs.map(j=>({...j,c:j.c.id}))}}};
   try{localStorage.setItem(slotKey(slot),JSON.stringify(data));}catch(e){if(!silent)deny('Opslaan mislukt: niet genoeg ruimte in de browser');return false;}
   if(!silent){SAVE_SLOT=slot;pushAlarm(`💾 Spel opgeslagen in ${slotName(slot).toLowerCase()} (${MODES[GAME.mode].name}, ${fmtClock(SIM.t)})`,'ok');toastSaved(`Opgeslagen · ${slotName(slot)}`);}else toastSaved('Automatisch opgeslagen');return true;}
 function toastSaved(t){const el=$('#saved');el.textContent='💾 '+t;el.classList.remove('show');void el.offsetWidth;el.classList.add('show');}
@@ -4729,6 +4730,9 @@ function resumeGame(d){$('#intro').classList.add('hidden');SAVE_SLOT=d.slot||'au
   TASK=null;taskSeq=d.taskSeq;taskCycle=d.taskCycle;taskLoad(d.TASK);
   Object.assign(PHONE.stats,d.PHONE);EF.on=d.EF||null;if(d.LS){GENSET.busy=d.LS.busy;LS_ORDERS.splice(0,LS_ORDERS.length,...d.LS.orders);}REC.samples=d.REC.samples;REC.events=d.REC.events;REC.lastM=null;
   INC.next=d.INC.next;INC.done=d.INC.done;INC.active=null;if(d.INC.active)clearIncident(d.INC.active);
+  if(d.GIS){CABLES.forEach(c=>{const m=d.GIS.m[c.id];if(m)c.moffen=m.map(([d,x,z,year])=>({d,x,z,year}));c.work=d.GIS.w?.[c.id]||null;if(c.work)digStart(c.work);});buildMofMesh();
+    KLIC.next=d.GIS.k.next;KLIC.seq=d.GIS.k.seq;KLIC.jobs=d.GIS.k.jobs.map(j=>({...j,c:CABLES.find(c=>c.id===j.c)})).filter(j=>j.c);
+    KLIC.jobs.forEach(j=>{if(j.state==='graaf')digStart(j);if(j.order&&!j.marked)addTimer(rnd(3,6),()=>klicMarked(j));});}
   resumeTimers();computeFlows();FEEDERS.concat(RING.stations).forEach(f=>{f.wasOn=EN.has(f.node);});
   updateSky(hourOf());refreshAll();renderTasks();setSpeed(d.SIM.speed||60);
   const v=VIEWPOS[0];flyTo(v[0].clone(),v[1].clone(),2);
@@ -4740,10 +4744,12 @@ function clearIncident(id){GAME.flags.scadaDown=false;$('#scada').classList.remo
   const def=INCIDENTS.find(x=>x.id===id);pushAlarm(`Het incident “${def?def.name:id}” is tijdens het opslaan afgerond`,'info');}
 // geplande gebeurtenissen opnieuw inplannen op basis van de opgeslagen toestand
 function resumeTimers(){
-  FEEDERS.forEach(f=>{if(!f.fault)return;const repair=()=>addTimer(rnd(25,55),()=>{f.fault=null;f.outFrac=0;pushAlarm(`Storingsdienst: kabel ${f.id} gerepareerd – alle klanten van ${f.name} terug`,'ok');});
+  FEEDERS.forEach(f=>{if(!f.fault)return;const F=f.fault,c=cableOf(f);if(F.spot?.known)digStart(F.spot);if(F.meas&&!F.spot?.known)addTimer(rnd(2,5),()=>measDone(c,F));
+    const repair=()=>{F.repairAt=F.repairAt>SIM.t?F.repairAt:SIM.t+rnd(25,55);addTimer(F.repairAt-SIM.t,()=>feederRepair(f));};
     if(f.fault.stage==='search')addTimer(rnd(4,10),()=>{if(!f.fault)return;f.fault.stage='isolated';f.outFrac=f.fault.frac;readyNotice(`Storingsdienst: fout in ${f.id} ${f.name} gevonden en weggeschakeld – ${f.cb} mag weer IN`,f.cb,()=>!D[f.cb].state);repair();});else repair();});
   RING.secs.forEach(s=>{if(!s.fault)return;if(!s.located)addTimer(rnd(4,10),()=>{if(s.fault){s.located=true;pushAlarm(`Storingsdienst: kabelfout gevonden tussen ${secName(s)} – isoleer de kabel en voed terug via het normaal-open punt`,'info');}});
-    addTimer(rnd(30,70),()=>{s.fault=false;s.located=false;RING.stations.forEach(x=>x.flag=false);pushAlarm(`Storingsdienst: kabel ${secName(s)} gerepareerd – normaliseer de ring`,'ok');refreshAll();});});
+    if(s.spot?.known)digStart(s.spot);if(s.meas&&!s.spot?.known)addTimer(rnd(2,5),()=>measDone(cableOf(s),s));
+    s.repairAt=s.repairAt>SIM.t?s.repairAt:SIM.t+rnd(30,70);addTimer(s.repairAt-SIM.t,()=>ringRepair(s));});
   LINES.forEach(L=>{const ln=SIM.lines[L];if(!ln.avail&&!ln.maint)addTimer(rnd(8,20),()=>lineRestore(L));
     if(ln.maint&&ln.avail)addTimer(3,()=>{if(ln.maint&&ln.avail){ln.avail=false;ln.reason='vrijgeschakeld voor werkzaamheden';pushAlarm(`TenneT: lijn ${L} spanningsloos – aarden toegestaan`,'info');}});});
   TR.forEach(T=>{const t=D[T];if(t.blocked&&!t.resettable&&t.blockKind!=='temp')addTimer(rnd(15,35),()=>{if(!t.blocked)return;t.resettable=true;readyNotice(`${T}: inspectie gereed – reset blokkeerrelais 86`,T,()=>t.blocked);});});
@@ -5023,7 +5029,7 @@ function activeFaults(){const o=[],add=(key,sev,title,detail,go,cust=0)=>o.push(
     if((f.temp||0)>CABLE.max)add('ft'+f.id,'warn',`Kabel ${f.cb} te warm`,`${Math.round(f.temp)} °C (max. ${CABLE.max} °C)`,{tab:'K'});});
   // stations die door een kabelfout in hun ring spanningsloos zijn, staan bij die kabelfout (oorzaak, niet elk gevolg apart)
   const ringDead=rg=>rg.stations.filter(st=>!st.damaged&&!st.fuse&&!stationLive(st)),told=new Set();
-  RING.secs.forEach(s=>{if(s.fault){let det=s.located?'gevonden – isoleer de kabel en voed terug':'storingsdienst zoekt – kijk naar de verklikkers ⚑',cust=0;
+  RING.secs.forEach(s=>{if(s.fault){let det=s.spot?.known?`fout op ${Math.round(s.spot.d)} m vanaf ${s.a||'OS'} – graafploeg bezig`:s.located?(s.meas?'gevonden – meetwagen meet de foutplaats':'gevonden – isoleer de kabel, voed terug en bepaal de foutplaats (tablet G)'):'storingsdienst zoekt – kijk naar de verklikkers ⚑',cust=0;
       if(!told.has(s.ring)){told.add(s.ring);const dd=ringDead(s.ring);if(dd.length){det+=` · zonder stroom: ${dd.map(x=>x.id).join(', ')}`;cust=offOf(dd.flatMap(x=>x.groups));}}
       add('rs'+s.id,'crit',`Kabelfout ${secName(s)}`,det,{tab:'R'},cust);}
     else if((s.temp||0)>CABLE.max)add('rt'+s.id,'warn',`Kabel ${secName(s)} te warm`,`${Math.round(s.temp)} °C – verleg het normaal-open punt of zet flex in`,{tab:'K'});});
@@ -5035,6 +5041,7 @@ function activeFaults(){const o=[],add=(key,sev,title,detail,go,cust=0)=>o.push(
     if(hi)add('lh'+s.id,'warn',`${s.id}: overspanning`,`${hi} straat${hi>1?'en':''} boven 253 V – verlaag de vaste trap (N)`,{tab:'L'});
     if(lo)add('ll'+s.id,'warn',`${s.id}: onderspanning`,`${lo} straat${lo>1?'en':''} onder 207 V`,{tab:'L'});
     if(s.gs?.state==='trip')add('gs'+s.id,'crit',`Noodaggregaat ${s.id} uitgevallen`,'overbelast – schakel straten af en herstart (N)',{tab:'L'});});
+  KLIC.jobs.forEach(j=>{if(!j.marked)add('kl'+j.id,'warn',`Graafwerk bij ${j.where}: ${j.c.name}`,`${j.firm} ${j.state==='plan'?`begint ${fmtClock(j.start)}`:'graaft nu'} – ${j.order?'monteur onderweg om aan te wijzen':'laat de kabels aanwijzen (tablet G)'}`,null);});
   const now=new Set(o.map(x=>x.key));for(const k in FSEEN)if(!now.has(k))delete FSEEN[k];o.forEach(x=>{FSEEN[x.key]??=SIM.t;x.since=FSEEN[x.key];});
   return o.sort((a,b)=>(a.sev==='crit'?0:1)-(b.sev==='crit'?0:1)||a.since-b.since);}
 function renderFaults(){const el=$('#faultList');if(!el)return;const fs=activeFaults(),crit=fs.filter(f=>f.sev==='crit').length;
@@ -5208,7 +5215,7 @@ const R_GIS=mulberry32(4242);   // eigen vaste reeks: het landschap blijft hetze
 function cableType(kind,year){if(kind==='ls'||kind==='kk')return year<1985?'GPLK 4×95 Al (papier-lood)':'VMvKas 4×150 Al';
   return year<1990?'GPLK 3×150 Cu (papier-lood)':year<2005?'XLPE 3×1×150 Al':'XLPE 3×1×240 Al';}
 function addCable(o){const len=polyLen(o.pts),year=o.year??(1966+Math.floor(R_GIS()*56)),moffen=[];
-  for(let d=rr2(140,260);d<len-25;d+=rr2(150,320)){const [x,z]=polyAt(o.pts,d),y=R_GIS()<0.3?year+Math.floor(R_GIS()*(2024-year)):year;moffen.push({d,x,z,year:Math.min(2024,y)});}
+  for(let d=rr2(40,140);d<len-20;d+=rr2(90,200)){const [x,z]=polyAt(o.pts,d),y=R_GIS()<0.3?year+Math.floor(R_GIS()*(2024-year)):year;moffen.push({d,x,z,year:Math.min(2024,y)});}
   const c=Object.assign({len,year,moffen,type:cableType(o.kind,year)},o);CABLES.push(c);return c;}
 function rr2(a,b){return a+R_GIS()*(b-a);}
 // 10 kV ringkabels: per kabelstuk tussen twee stations (of tussen het OS en het eerste station)
@@ -5253,15 +5260,18 @@ const mofCol=y=>y<1985?'#ff5a4a':y<2000?'#f5b335':'#5ccf72';
 
 // ---- röntgenblik (X): lintjes op straat in de kleur van de status, moffen als blokjes
 const XRAY={on:false,root:new THREE.Group(),mats:new Map(),mof:null};XRAY.root.visible=false;XRAY.root.userData.dyn=true;scene.add(XRAY.root);
-(()=>{const all=CABLES.flatMap(c=>c.moffen);
+(()=>{
   for(const c of CABLES){const w=c.kind==='ring'||c.kind==='feeder'?0.8:0.55,pos=[],idx=[];
     for(let i=1;i<c.pts.length;i++){const [ax,az]=c.pts[i-1],[bx,bz]=c.pts[i],L=Math.hypot(bx-ax,bz-az)||1,nx=-(bz-az)/L*w/2,nz=(bx-ax)/L*w/2,k=pos.length/3,y=0.2+(c.kv===0.4?0.01:0.02);
       pos.push(ax+nx,y,az+nz,ax-nx,y,az-nz,bx+nx,y,bz+nz,bx-nx,y,bz-nz);idx.push(k,k+2,k+1,k+1,k+2,k+3);}
     const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setIndex(idx);
     const m=new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.92,depthWrite:false,side:THREE.DoubleSide,fog:false});XRAY.mats.set(c,m);
     const me=new THREE.Mesh(g,m);me.renderOrder=6;me.userData.dyn=true;XRAY.root.add(me);}
+  buildMofMesh();})();
+// moffen als blokjes (opnieuw opgebouwd na een reparatie of vervanging)
+function buildMofMesh(){const all=CABLES.flatMap(c=>c.moffen);if(XRAY.mof){XRAY.root.remove(XRAY.mof);XRAY.mof.dispose();}
   const im=new THREE.InstancedMesh(new THREE.BoxGeometry(0.7,0.35,0.7),new THREE.MeshBasicMaterial({color:0xffffff,fog:false}),Math.max(1,all.length)),M4=new THREE.Matrix4(),col=new THREE.Color();
-  all.forEach((m,i)=>{im.setMatrixAt(i,M4.makeTranslation(m.x,0.3,m.z));im.setColorAt(i,col.set(mofCol(m.year)));});im.userData.dyn=true;XRAY.mof=im;XRAY.root.add(im);})();
+  all.forEach((m,i)=>{im.setMatrixAt(i,M4.makeTranslation(m.x,0.3,m.z));im.setColorAt(i,col.set(mofCol(m.year)));});im.count=all.length;im.userData.dyn=true;XRAY.mof=im;XRAY.root.add(im);}
 // foutplek en graafwerk in 3D: rode baken (gevonden fout) – later ook de KLIC-sleuven
 const SPOT_MAT=new THREE.SpriteMaterial({map:glowTex,color:0xff3020,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending});
 function gisColors(){if(!XRAY.on)return;const blink=(performance.now()%900)<450;
@@ -5307,6 +5317,7 @@ function drawTablet(){if(!TAB.on)return;const cv=$('#gtMap'),g=cv.getContext('2d
     g.strokeStyle=cableCol(c,st);g.lineWidth=w;g.setLineDash(st==='uit'||st==='open'?[6,4]:[]);g.globalAlpha=st==='fout'&&(performance.now()%900)<450?0.35:1;g.stroke();g.globalAlpha=1;}
   g.setLineDash([]);
   if(TAB.layers.mof&&s>0.8)for(const c of CABLES){if(!cableVisible(c))continue;for(const m of c.moffen){const [a,b]=tabXY(m.x,m.z,cv);if(a<-5||b<-5||a>W+5||b>H+5)continue;g.fillStyle=mofCol(m.year);g.strokeStyle='#222';g.lineWidth=1;g.beginPath();g.arc(a,b,3.2,0,7);g.fill();g.stroke();}}
+  gisDrawExtra(g,cv);
   // MS-stations en kabelkasten
   g.font='bold 11px Arial';g.textAlign='center';
   RING.stations.forEach(st=>{const [a,b]=tabXY(...st.pos,cv);g.fillStyle=stationLive(st)?'#1d4f91':'#6b7177';g.fillRect(a-5,b-5,10,10);g.fillStyle='#111';g.fillText(st.id,a,b-8);});
@@ -5327,7 +5338,7 @@ function cableCard(c,d){const st=cableState(c),old=c.moffen.reduce((a,m)=>Math.m
   const I=c.kind==='ring'?c.sec.I:c.kind==='feeder'?c.f.I:null;
   return `<div class="gt-card"><b style="color:${cableCol(c,st)}">■</b> <b>${c.name}</b>${d!=null?` <small>· ${d.toFixed(1).replace('.',',')} m van je af</small>`:''}<br>
     <small>${c.type} · aangelegd ${c.year} · ${c.far?'tracé loopt het kaartbeeld uit':fmtLen(c.len)} · ${c.moffen.length} mof${c.moffen.length===1?'':'fen'}${c.moffen.length?` (oudste ${old})`:''}<br>
-    Status: <b>${stTxt}</b>${I!=null&&st==='aan'?` · ${Math.round(I)} A`:''}</small></div>`;}
+    Status: <b>${stTxt}</b>${I!=null&&st==='aan'?` · ${Math.round(I)} A`:''}</small>${gisCardExtra(c)}</div>`;}
 function renderTabletChrome(){$('#gtStyle').textContent=TAB.style==='gis'?'🛰 Luchtfoto':'🗺 Kaart';$('#gtFollow').classList.toggle('on',TAB.follow);
   $('#gisTab').classList.toggle('fp',FP.on);for(const k in TAB.layers){const b=$(`#gisTab [data-gl="${k}"]`);if(b)b.checked=TAB.layers[k];}}
 // bediening van de tablet: knoppen, lagen, slepen (overzicht), scrollen om te zoomen, klik op een kabel
@@ -5347,6 +5358,110 @@ $('#xrayBtn')?.addEventListener('click',()=>setXray());
 addEventListener('keydown',e=>{if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT'||e.ctrlKey||e.metaKey||!$('#intro').classList.contains('hidden'))return;
   if(e.code==='KeyG'){TAB.on?closeTablet():openTablet();}else if(e.code==='KeyX')setXray();});
 let gisT=0;function gisTick(dt){if((gisT+=dt)<0.25)return;gisT=0;gisColors();if(TAB.on){renderTabletChrome();drawTablet();}}
+
+
+// ============================================================ kabels in het spel: foutplaats bepalen, graafwerk (KLIC) en oude moffen
+const GIS_YEAR=2026;
+const cableOf=o=>o&&CABLES.find(c=>c.sec===o||c.f===o||c.g===o);
+const mofW=m=>Math.max(0,2002-m.year)/12;   // ouderdomsgewicht: een mof van vóór 1990 telt flink mee
+const cableRisk=c=>c?1+c.moffen.reduce((a,m)=>a+mofW(m),0):1;
+function wpick(arr,w){const t=arr.reduce((a,x)=>a+w(x),0);let r=Math.random()*t;for(const x of arr){r-=w(x);if(r<=0)return x;}return arr[arr.length-1];}
+// waar zit de fout: vaak bij een oude mof, anders ergens in de kabel
+function faultSpot(c){if(!c)return null;const old=c.moffen.filter(m=>mofW(m)>0);
+  if(old.length&&Math.random()<0.65){const m=wpick(old,mofW);return {d:m.d,x:m.x,z:m.z,mof:true,known:false};}
+  const d=rnd(Math.min(10,c.len/3),Math.max(c.len-10,c.len*2/3)),[x,z]=polyAt(c.pts,d);return {d,x,z,mof:false,known:false};}
+const spotFrom=c=>c.kind==='ring'?(c.sec.a||'OS Zuidwolde'):c.kind==='feeder'?'OS Zuidwolde':c.g?.st.id||'het station';
+// de lopende storing op een kabel (ringstuk, MS-veld of LS-groep)
+const faultOf=c=>!c?null:c.kind==='ring'?(c.sec.fault?c.sec:null):c.kind==='feeder'?c.f.fault||null:c.kind==='ls'?c.g.lvf||null:null;
+
+// ---- reparatie: op het tijdstip repairAt (een foutplaatsbepaling haalt dat naar voren)
+function ringRepair(s){if(!s.fault||SIM.t+0.05<s.repairAt)return;const c=cableOf(s),sp=s.spot;s.fault=false;s.located=false;s.spot=null;s.meas=null;RING.stations.forEach(x=>x.flag=false);
+  pushAlarm(`Storingsdienst: kabel ${secName(s)} gerepareerd${sp?.known?' (nieuwe mof op de foutplek)':''} – normaliseer de ring (normaal-open punt ${s.ring.nop} weer open)`,'ok');gisAfterRepair(c,sp);refreshAll();}
+function feederRepair(f){const F=f.fault;if(!F||SIM.t+0.05<F.repairAt)return;const c=cableOf(f),sp=F.spot;f.fault=null;f.outFrac=0;
+  pushAlarm(`Storingsdienst: kabel ${f.id} gerepareerd – alle klanten van ${f.name} terug`,'ok');gisAfterRepair(c,sp);refreshAll();}
+function gisAfterRepair(c,sp){if(!c||!sp)return;digStop(sp);if(sp.known||sp.mof){const i=c.moffen.findIndex(m=>Math.abs(m.d-sp.d)<1);if(i>=0)c.moffen.splice(i,1);c.moffen.push({d:sp.d,x:sp.x,z:sp.z,year:GIS_YEAR});c.moffen.sort((a,b)=>a.d-b.d);buildMofMesh();}}
+
+// ---- foutplaatsbepaling: meetwagen met reflectiemeter op een spanningsloze kabel
+function gisMeasure(c){const F=faultOf(c);if(!F||c.kind==='ls')return deny('Deze kabel heeft geen MS-storing om in te meten');
+  if(c.kind==='ring'&&!c.sec.located)return deny('Eerst moet duidelijk zijn wélke kabel het is: de storingsdienst leest de verklikkers');
+  if(c.kind==='feeder'&&F.stage==='search')return deny('De storingsdienst zoekt nog – wacht tot de fout is weggeschakeld');
+  if(F.spot?.known)return deny('De foutplaats is al bekend');if(F.meas)return deny('De meetwagen is al onderweg');
+  if(c.kind==='ring'){const open=isoSwitches(c.sec).filter(id=>D[id].state===1);if(open.length||EN.has(c.sec.node))return deny(`Meten kan alleen op een geïsoleerde kabel: open eerst ${open.join(' en ')||'de lastscheiders aan beide kanten'}`);}
+  F.meas=SIM.t;const t=rnd(6,10);pushAlarm(`Meetwagen onderweg naar ${c.name}: foutplaatsbepaling met de reflectiemeter (±${Math.round(t)} min)`,'info');
+  addTimer(t,()=>measDone(c,F));drawTablet();}
+function measDone(c,F){if(faultOf(c)!==F)return;F.spot??=faultSpot(c);F.spot.known=true;const rest=rnd(28,42);
+  if((F.repairAt??1e9)>SIM.t+rest){F.repairAt=SIM.t+rest;addTimer(rest,()=>c.kind==='ring'?ringRepair(c.sec):feederRepair(c.f));}
+  award(10,'Foutplaats bepaald');digStart(F.spot);
+  pushAlarm(`Meetwagen: fout in ${c.name} op ${Math.round(F.spot.d)} m vanaf ${spotFrom(c)}${F.spot.mof?' – bij een oude mof':''}. De graafploeg gaat direct naar de plek (reparatie ±${Math.round(rest)} min)`,'ok');}
+
+// ---- graafwerk: KLIC-meldingen van aannemers; kabels laten aanwijzen voorkomt graafschade
+const KLIC={jobs:[],next:null,seq:0};
+const KLIC_FIRMS=['Bouwbedrijf Jansen','Van der Veen Infra','GWW De Vries','Glasvezel Noord','Waterbedrijf Drenthe','Hoveniersbedrijf Bakker','Rioleringsbedrijf Mulder'];
+const KLIC_WHY=['een sleuf voor glasvezel','vervanging van de riolering','een nieuwe waterleiding','het planten van straatbomen','een laadpaal-aansluiting','een warmtenet'];
+function klicNew(forceCable){const cs=CABLES.filter(c=>!c.far&&c.kind!=='kk'&&c.len>30),c=forceCable||wpick(cs,c=>c.kind==='ls'?0.5:1);
+  const d=rnd(Math.min(8,c.len/3),Math.max(c.len-8,c.len*2/3)),[x,z]=polyAt(c.pts,d),st=nearestStation(x,z),start=SIM.t+rnd(25,45);
+  const j={id:'KLIC'+(++KLIC.seq),c,d,x,z,firm:pick(KLIC_FIRMS),why:pick(KLIC_WHY),where:`${st.name} (${st.id})`,start,end:start+rnd(40,70),hitAt:start+rnd(8,30),state:'plan',marked:false,order:false};
+  KLIC.jobs.push(j);pushAlarm(`📋 KLIC-melding: ${j.firm} graaft vanaf ${fmtClock(j.start)} bij ${j.where} voor ${j.why}. Het graafgebied kruist ${c.name} – laat de kabels aanwijzen (tablet, G)`,'warn');drawTablet();return j;}
+function klicMark(j){if(!j||j.state==='klaar')return;if(j.marked)return deny('De kabels zijn al aangewezen');if(j.order)return deny('Er is al een monteur onderweg');
+  j.order=true;const t=Math.min(rnd(8,14),Math.max(3,j.start-SIM.t-2));pushAlarm(`Monteur onderweg om ${j.c.name} aan te wijzen bij ${j.where} (±${Math.round(t)} min)`,'info');addTimer(t,()=>klicMarked(j));drawTablet();}
+function klicMarked(j){if(j.state==='klaar'||j.hit)return;j.marked=true;award(5,'Kabels aangewezen bij graafwerk');pushAlarm(`Monteur: ${j.c.name} aangewezen en gemarkeerd bij de sleuf van ${j.firm} (${j.where})`,'ok');drawTablet();}
+function klicHit(j){const c=j.c,spot={d:j.d,x:j.x,z:j.z,known:true,mof:false};j.hit=true;award(-30,'Graafschade aan een kabel');GAME.stats.graaf=(GAME.stats.graaf||0)+1;
+  pushAlarm(`💥 Graafschade: ${j.firm} heeft ${c.name} geraakt bij ${j.where}! De plek is bekend: de graafploeg kan direct aan de slag`,'crit');
+  if(c.kind==='ring'){const s=c.sec,f=FEEDERS.find(x=>x.cb===FLOW.TAG[s.node]?.cb)||FD(s.ring.from);if(!s.fault)ringFault(f,s,rnd(50,80));s.located=true;s.spot=spot;}
+  else if(c.kind==='feeder'){if(!c.f.fault)feederFault(c.f.id,rnd(5,8));if(c.f.fault)c.f.fault.spot=spot;}
+  else if(c.kind==='ls')lvFault(c.g.id);refreshAll();}
+function klicTick(){if(!GAME.events||MODES[GAME.mode]?.les)return;KLIC.next??=SIM.t+rnd(40,110);
+  if(SIM.t>=KLIC.next){KLIC.next=SIM.t+rnd(140,260);if(KLIC.jobs.length<2)klicNew();}
+  for(const j of KLIC.jobs){if(j.state==='plan'&&SIM.t>=j.start){j.state='graaf';digStart(j);pushAlarm(`${j.firm} is begonnen met graven bij ${j.where}${j.marked?' – kabels aangewezen ✓':' – de kabels zijn NIET aangewezen!'}`,j.marked?'info':'warn');}
+    if(j.state==='graaf'){if(!j.hitDone&&SIM.t>=j.hitAt){j.hitDone=true;if(Math.random()<(j.marked?0.03:0.5))klicHit(j);}
+      if(SIM.t>=j.end){j.state='klaar';digStop(j);pushAlarm(`${j.firm}: graafwerk bij ${j.where} klaar${j.hit?'':' – zonder schade'}`,'info');}}}
+  KLIC.jobs=KLIC.jobs.filter(j=>j.state!=='klaar');}
+
+// ---- oude moffen preventief vervangen: alleen op een spanningsloze, gezonde kabel; niet onder spanning brengen zolang de ploeg bezig is
+function gisMofReplace(c){const old=c.moffen.filter(m=>m.year<1990);if(!old.length)return deny('Deze kabel heeft geen moffen van vóór 1990');
+  if(c.work)return deny('De ploeg is al bezig');if(faultOf(c))return deny('Eerst de storing laten repareren');
+  if(cableState(c)==='aan')return deny('Maak de kabel eerst spanningsloos (isoleren, terugvoeden via het normaal-open punt)');
+  const t=25+old.length*10;c.work={until:SIM.t+t,n:old.length,x:old[0].x,z:old[0].z};digStart(c.work);
+  pushAlarm(`Montageploeg vervangt ${old.length} oude mof${old.length>1?'fen':''} in ${c.name} (±${t} min). Breng de kabel niet onder spanning zolang ze bezig zijn!`,'info');drawTablet();}
+function gisWorkTick(){for(const c of CABLES){const w=c.work;if(!w)continue;
+  if(cableState(c)==='aan'){digStop(w);c.work=null;incident();pushAlarm(`Montageploeg: ${c.name} kwam onder spanning terwijl wij aan de moffen werkten!`,'crit');continue;}
+  if(SIM.t>=w.until){digStop(w);c.work=null;c.moffen.forEach(m=>{if(m.year<1990)m.year=GIS_YEAR;});buildMofMesh();award(4*w.n,'Oude moffen preventief vervangen');
+    pushAlarm(`Montageploeg: ${w.n} mof${w.n>1?'fen':''} in ${c.name} vervangen – de kabel mag weer in bedrijf`,'ok');drawTablet();}}}
+function gisSimTick(){klicTick();gisWorkTick();}
+
+// ---- graafplek in 3D: graafmachine, afzetting met rood-witte hekken en een zandhoop
+const DIGS=new Map(),DIGM={yel:mat({color:0xe8b81c,roughness:0.5}),dark:mat({color:0x2a2c30,roughness:0.7}),red:mat({color:0xd8262c,roughness:0.5}),white:mat({color:0xf0f0ea,roughness:0.5}),sand:mat({color:0xb89a6a,roughness:1})};
+function digStart(key){if(!key||DIGS.has(key))return;const g=new THREE.Group();g.position.set(key.x,0,key.z);g.userData.dyn=true;
+  box(2.2,1.1,3.2,DIGM.yel,g,3.2,1.0,0);box(1.4,1.2,1.4,DIGM.yel,g,3.5,2.15,0.6);box(1.42,0.7,1.2,FT.glass,g,3.5,2.3,0.6);box(2.4,0.6,3.6,DIGM.dark,g,3.2,0.3,0);
+  const arm=box(0.35,0.35,3.6,DIGM.yel,g,2.4,2.2,-1.4);arm.rotation.x=0.5;box(0.8,0.6,0.7,DIGM.dark,g,2.4,1.0,-3);
+  for(let i=0;i<8;i++){const a=i/8*Math.PI*2,x=Math.cos(a)*3.2,z=Math.sin(a)*2.4;box(0.06,1.0,0.06,DIGM.white,g,x,0.5,z);const r=box(2.4,0.16,0.04,i%2?DIGM.red:DIGM.white,g,x,0.85,z);r.rotation.y=-a+Math.PI/2;}
+  const pile=cyl(0.2,1.3,0.9,DIGM.sand,g,-1.6,0.45,0.8,10);pile.castShadow=false;box(2.6,0.06,0.9,DIGM.dark,g,0,0.05,0);
+  scene.add(g);DIGS.set(key,g);}
+function digStop(key){const g=key&&DIGS.get(key);if(g){scene.remove(g);DIGS.delete(key);}}
+
+// ---- tablet: storing, graafwerk en moffen in de kabelkaart en de knoppen
+function gisCardExtra(c){const F=faultOf(c),out=[],act=[];
+  if(F&&c.kind!=='ls'){const sp=F.spot;
+    if(sp?.known)out.push(`🔴 Fout op <b>${Math.round(sp.d)} m</b> vanaf ${spotFrom(c)}${sp.mof?' (oude mof)':''} – graafploeg aan het werk`);
+    else if(F.meas)out.push('📡 Meetwagen is aan het meten…');
+    else if(c.kind==='ring'&&!c.sec.located)out.push('🔎 Storingsdienst zoekt nog welke kabel het is (verklikkers)');
+    else{out.push('Foutplaats onbekend: zonder meting graaft de ploeg proefsleuven (duurt lang)');act.push('<button class="mini primary" data-gact="meet">📡 Foutplaats bepalen</button>');}}
+  if(F&&c.kind==='ls')out.push('🔴 LS-storing: de monteur zoekt en repareert');
+  KLIC.jobs.filter(j=>j.c===c).forEach(j=>{out.push(`🚧 ${j.firm}: ${j.why}, ${j.state==='plan'?`vanaf ${fmtClock(j.start)}`:'nu aan het graven'} – ${j.marked?'kabels aangewezen ✓':j.order?'monteur onderweg':'<b>niet aangewezen</b>'}`);
+    if(!j.marked&&!j.order)act.push(`<button class="mini primary" data-gact="klic:${j.id}">👷 Kabels aanwijzen</button>`);});
+  const old=c.moffen.filter(m=>m.year<1990).length;if(c.work)out.push(`🔧 Ploeg vervangt moffen (klaar ${fmtClock(c.work.until)}) – niet inschakelen!`);
+  else if(old)act.push(`<button class="mini" data-gact="mof" title="Alleen op een spanningsloze kabel">🔧 ${old} oude mof${old>1?'fen':''} vervangen</button>`);
+  return (out.length?`<div class="gt-x">${out.join('<br>')}</div>`:'')+(act.length?`<div class="gt-act">${act.join('')}</div>`:'');}
+$('#gtInfo').addEventListener('click',e=>{const b=e.target.closest('[data-gact]');if(!b)return;const c=TAB.sel||nearestCable(camera.position.x,camera.position.z,12)?.c;if(!c)return;const a=b.dataset.gact;
+  if(a==='meet')gisMeasure(c);else if(a==='mof')gisMofReplace(c);else if(a.startsWith('klic:'))klicMark(KLIC.jobs.find(j=>j.id===a.slice(5)));
+  $('#gtInfo').innerHTML=cableCard(c);});
+// kaart: graafwerk (oranje), bekende foutplekken (rood kruis) en werkplekken
+function gisDrawExtra(g,cv){const s=TAB.zoom,now=performance.now();
+  for(const j of KLIC.jobs){const [a,b]=tabXY(j.x,j.z,cv),r=Math.max(6,7*s);g.strokeStyle=j.marked?'#2f8a4a':'#f08a1a';g.lineWidth=2;g.setLineDash([4,3]);g.strokeRect(a-r,b-r,2*r,2*r);g.setLineDash([]);
+    g.fillStyle=j.marked?'#2f8a4a':'#f08a1a';g.font='bold 10px Arial';g.textAlign='center';g.fillText(j.state==='graaf'?'GRAAFT':'KLIC',a,b-r-3);}
+  for(const c of CABLES){const F=faultOf(c),sp=F?.spot;if(!sp?.known)continue;const [a,b]=tabXY(sp.x,sp.z,cv),k=6+2*Math.sin(now/150);g.strokeStyle='#ff2b2b';g.lineWidth=3;
+    g.beginPath();g.moveTo(a-k,b-k);g.lineTo(a+k,b+k);g.moveTo(a+k,b-k);g.lineTo(a-k,b+k);g.stroke();}
+  for(const c of CABLES)if(c.work){const [a,b]=tabXY(c.work.x,c.work.z,cv);g.fillStyle='#e8b81c';g.beginPath();g.arc(a,b,6,0,7);g.fill();}}
 
 
 // ============================================================ HUD + bediening
@@ -5423,7 +5538,7 @@ else{renderMenu();$('#intro').classList.remove('hidden');controls.autoRotate=tru
 if(params.has('night'))updateSky(22);
 if(params.has('view')){const v=VIEWPOS[+params.get('view')];camera.position.copy(v[0]);controls.target.copy(v[1]);controls.autoRotate=false;controls.update();}
 
-window.OS={CABLES,GIS_NET,gisRoute,cableState,setXray,XRAY,TAB,openTablet,closeTablet,drawTablet,nearestCable,DYN,fpsTick,fireTick,WK,getWalkers:()=>WALKERS,getStrips:()=>WSTRIPS,fireStart,fireDouse,fireStop,GENSET,gsCap,SMALL,lvgLive,updateSmall,setMouseMode,getMouseMode:()=>MOUSE_MODE,cameraKeys,OVK,openPreview,closePreview,viewHour,getPreview:()=>PREVIEW,VIEWPOS,SITE,updateSites,SLD,activeFaults,renderFaults,reportPDF,listSaves,openSlots,closeSlots,SAVE_SLOTS,layoutCheck,LAYOUT,FREC,fltRec,openRec,closeRec,renderRec,selectivity,protSelect,feederT,incT,incOf,shortCircuit,EF,earthFault,efTick,efRails,efU0,railsCoupled,controls,tripBreaker,CONS,LS_LINKS,LS_ORDERS,GENSET,lsTick,lsOrder,lsSwitchOrder,lsExec,gsSend,gsOff,gsRestart,tapOrder,setEta,callPrio,lsAreas,PRIO,openLS,closeLS,renderLS,lvVolt,stationLoads,shedFactor,failP,manualP,phoneTick,refreshDevPanel,updateSLD,openKeys,closeKeys,KEY_HELP,RELAY_BAYS,relayTask,relayDue,relayDefect,initRelays,kitTests,kitMeasure,kitVerdict,kitRun,openKit,closeKit,saveGame,readSave,deleteSave,resumeGame,canSave,specOf,CABLE,soilT,FD,meppelFault,linkTick,tabAlarms,updateTabAlarms,renderTasks,INC,INCIDENTS,startIncident,endIncident,incidentTick,setTab,renderCables,GFX,setGfx,applyGfx,openSettings,closeSettings,WX_TYPES,renderer,scene,FIRE,CARS,updateWindows,updateLife,stationLive,cbMaintTask,worstCb,cond,breakerFails,CB_IDS,FLEX,setFlex,flexTick,congestion,openFlex,closeFlex,checkModel,homeBus,BUSES,SEL_BAYS,TORCH,setTorch,HO_POOL,handoverTick,REC,RP,startReplay,stopReplay,analyse,stationDamage,closeHandover,deviations,PHONE,lvFault,callFrom,phoneAnswer,dispatchLV,LVG,forecast,progAdvice,PROG,startTask:(k,...a)=>{TASK={relayTask,cbMaintTask,railTask,railBTask,stationTask,thermoTask,ringTask,feederTask,lineTask,reserveTask}[k](...a);TASK.i=0;TASK.code='WV-TEST';briefInit(TASK);renderTasks();},SIM,D,LESSONS,lessonGo,selectDevice,abortTask,railTask,stationTask,thermoTask,nearDev,VIEWS,PROT,setProt,openProt,closeProt,busFault,BUSF,RINGS,task:()=>TASK,briefSubmit,briefCheck,briefWatch,actKey,taskActs,crewNear,boxOf:id=>VIEWS[id]&&VIEWS[id].box,AudioSys,updateAudio,WX,setWeather,setSeason,SEASONS,ambient,enterKiosk,ROOMS,blockedAt,RING,NPCS,crewDispatch,ringFault,FP,enterFP,exitFP,pickCenter,camera,camInside,setRatio,setTab,GAME,MODES,applyMode,endGame,EN:()=>EN,FLOW,operate,tapStep,setAVR,resetLockout,toggleAR,regulate,computeFlows,randomEvent,lineFault,feederFault,trafoFault,offerTask,simStep,FEEDERS};
+window.OS={measDone,cableCard,isoSwitches,KLIC,klicNew,klicMark,klicHit,gisMeasure,gisMofReplace,faultOf,cableOf,cableRisk,DIGS,CABLES,GIS_NET,gisRoute,cableState,setXray,XRAY,TAB,openTablet,closeTablet,drawTablet,nearestCable,DYN,fpsTick,fireTick,WK,getWalkers:()=>WALKERS,getStrips:()=>WSTRIPS,fireStart,fireDouse,fireStop,GENSET,gsCap,SMALL,lvgLive,updateSmall,setMouseMode,getMouseMode:()=>MOUSE_MODE,cameraKeys,OVK,openPreview,closePreview,viewHour,getPreview:()=>PREVIEW,VIEWPOS,SITE,updateSites,SLD,activeFaults,renderFaults,reportPDF,listSaves,openSlots,closeSlots,SAVE_SLOTS,layoutCheck,LAYOUT,FREC,fltRec,openRec,closeRec,renderRec,selectivity,protSelect,feederT,incT,incOf,shortCircuit,EF,earthFault,efTick,efRails,efU0,railsCoupled,controls,tripBreaker,CONS,LS_LINKS,LS_ORDERS,GENSET,lsTick,lsOrder,lsSwitchOrder,lsExec,gsSend,gsOff,gsRestart,tapOrder,setEta,callPrio,lsAreas,PRIO,openLS,closeLS,renderLS,lvVolt,stationLoads,shedFactor,failP,manualP,phoneTick,refreshDevPanel,updateSLD,openKeys,closeKeys,KEY_HELP,RELAY_BAYS,relayTask,relayDue,relayDefect,initRelays,kitTests,kitMeasure,kitVerdict,kitRun,openKit,closeKit,saveGame,readSave,deleteSave,resumeGame,canSave,specOf,CABLE,soilT,FD,meppelFault,linkTick,tabAlarms,updateTabAlarms,renderTasks,INC,INCIDENTS,startIncident,endIncident,incidentTick,setTab,renderCables,GFX,setGfx,applyGfx,openSettings,closeSettings,WX_TYPES,renderer,scene,FIRE,CARS,updateWindows,updateLife,stationLive,cbMaintTask,worstCb,cond,breakerFails,CB_IDS,FLEX,setFlex,flexTick,congestion,openFlex,closeFlex,checkModel,homeBus,BUSES,SEL_BAYS,TORCH,setTorch,HO_POOL,handoverTick,REC,RP,startReplay,stopReplay,analyse,stationDamage,closeHandover,deviations,PHONE,lvFault,callFrom,phoneAnswer,dispatchLV,LVG,forecast,progAdvice,PROG,startTask:(k,...a)=>{TASK={relayTask,cbMaintTask,railTask,railBTask,stationTask,thermoTask,ringTask,feederTask,lineTask,reserveTask}[k](...a);TASK.i=0;TASK.code='WV-TEST';briefInit(TASK);renderTasks();},SIM,D,LESSONS,lessonGo,selectDevice,abortTask,railTask,stationTask,thermoTask,nearDev,VIEWS,PROT,setProt,openProt,closeProt,busFault,BUSF,RINGS,task:()=>TASK,briefSubmit,briefCheck,briefWatch,actKey,taskActs,crewNear,boxOf:id=>VIEWS[id]&&VIEWS[id].box,AudioSys,updateAudio,WX,setWeather,setSeason,SEASONS,ambient,enterKiosk,ROOMS,blockedAt,RING,NPCS,crewDispatch,ringFault,FP,enterFP,exitFP,pickCenter,camera,camInside,setRatio,setTab,GAME,MODES,applyMode,endGame,EN:()=>EN,FLOW,operate,tapStep,setAVR,resetLockout,toggleAR,regulate,computeFlows,randomEvent,lineFault,feederFault,trafoFault,offerTask,simStep,FEEDERS};
 const clock=new THREE.Clock();let hudT=0,skyT=0,progT=0;
 let liteAcc=0,shadowT=0,hudStep=4;
 // schaduwkaart alleen opnieuw tekenen als er op het stationsterrein iets beweegt (scheiders, monteurs, brandweer); anders 2× per seconde voor de zon.

@@ -66,6 +66,8 @@ async function bot(process_full) {
     if (Math.floor(S.t / 60) !== lastH) { lastH = Math.floor(S.t / 60); console.log(`[bot] ${lastH}:00 score ${Math.round(G.score)} uit ${S.off}`); }
     for (const c of O.FEEDERS.filter(f => !f.gen && !f.ring).concat(O.RING.stations)) if (!EN().has(c.node)) offMin[c.id] = (offMin[c.id] || 0) + 0.5;
     // 0. telefoon: opnemen en de juiste diagnose stellen
+    // graafwerk: kabels laten aanwijzen (zoals een oplettende bedrijfsvoerder)
+    for (const j of O.KLIC?.jobs || []) if (!j.marked && !j.order) { O.klicMark(j); note(`KLIC: kabels aanwijzen bij ${j.where}`); }
     if (O.PHONE.queue.length && !O.PHONE.cur) { const c = O.PHONE.cur = O.PHONE.queue[0], g = c.g;
       if (g.lvf && EN().has(g.node)) { O.phoneAnswer('send', g.st.id); note(`telefoon: monteur naar ${g.st.id}`); } else O.phoneAnswer(c.kind === 'pv' || !EN().has(g.node) ? 'known' : 'own'); }
     // 0b. brandweer vraagt de installatie spanningsloos
@@ -135,7 +137,7 @@ async function bot(process_full) {
   }
   return { obj: G.obj.map(o => `${o.state === 'done' ? '✓' : '✗'} ${o.t}`), score: Math.round(G.score), cml: Math.round(S.cml), incidents: S.incidents,
     punten: (() => { const m = {}, kort = t => t.replace(/\b(?:[VWM]-\w+|MS\d|[FGT]\d|K\d+)\b/g, '#'); O.REC.events.forEach(e => { if (e.pts) m[kort(e.text)] = (m[kort(e.text)] || 0) + e.pts; }); m['klantminuten (geschat)'] = -Math.round(S.cml / 500); return Object.entries(m).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1])).slice(0, 10).map(([k, v]) => k + ' ' + Math.round(v)).join(' | '); })(),
-    st: { pv: G.stats.pvTrips || 0, zekering: G.stats.fuses || 0, kk: G.stats.kkFuse || 0, brand: G.stats.burn || 0, tel: O.PHONE.stats, bandje: O.PHONE.stats.tape || 0, flexEur: Math.round(G.stats.flexEur || 0), uitval: Math.round(S.cml / 7520) },
+    st: { pv: G.stats.pvTrips || 0, zekering: G.stats.fuses || 0, kk: G.stats.kkFuse || 0, brand: G.stats.burn || 0, graaf: G.stats.graaf || 0, tel: O.PHONE.stats, bandje: O.PHONE.stats.tape || 0, flexEur: Math.round(G.stats.flexEur || 0), uitval: Math.round(S.cml / 7520) },
     tasks: S.tasksDone, report: !document.querySelector('#report').classList.contains('hidden'), log: process_full ? log : log.slice(-25), off: Object.entries(offMin).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([k, v]) => k + ' ' + v + ' min').join(', ') };
 }
 
