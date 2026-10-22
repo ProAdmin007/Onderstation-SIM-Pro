@@ -112,7 +112,7 @@ function gisToast(m){const t=$('#toast');t.textContent=m;t.classList.add('show')
 // ---- kabeltablet (G): kaart rond je positie; GIS-stijl of luchtfoto
 const TAB={on:false,style:'gis',zoom:1.6,follow:true,cx:0,cz:100,sel:null,aerial:null,layers:{ms:true,ls:true,mof:true}};
 const gisOpen=()=>TAB.on;
-function openTablet(){if(TAB.on)return;TAB.on=true;TAB.follow=true;$('#gisTab').classList.remove('hidden');renderTabletChrome();drawTablet();}
+function openTablet(){if(TAB.on)return;TAB.on=true;TAB.follow=true;$('#gisTab').classList.remove('hidden');TAB.zoom=Math.max(TAB.zoom,FP.on?2.2:1.6);renderTabletChrome();drawTablet();}
 function closeTablet(){TAB.on=false;$('#gisTab').classList.add('hidden');}
 // luchtfoto: één keer van bovenaf gerenderd (overdag, zonder mist) op het moment dat je hem voor het eerst kiest
 const AERIAL_B=[-460,-300,700,470];
@@ -125,11 +125,14 @@ function captureAerial(){if(TAB.aerial||LITE)return TAB.aerial;const [x0,z0,x1,z
   scene.fog=fog;XRAY.root.visible=xr;updateSky(viewHour());SHADOW_DIRTY=true;rt.dispose();
   const c=cnv(W,H),g=c.getContext('2d'),id=g.createImageData(W,H);for(let y=0;y<H;y++)id.data.set(px.subarray((H-1-y)*W*4,(H-y)*W*4),y*W*4);g.putImageData(id,0,0);TAB.aerial=c;return c;}
 function tabCenter(){if(TAB.follow){const p=FP.on?camera.position:controls.target;TAB.cx=p.x;TAB.cz=p.z;}return [TAB.cx,TAB.cz];}
-const tabXY=(x,z,cv)=>{const [cx,cz]=[TAB.cx,TAB.cz],s=TAB.zoom;return [(x-cx)*s+cv.width/2,(z-cz)*s+cv.height/2];};
-const tabWorld=(px,py,cv)=>[(px-cv.width/2)/TAB.zoom+TAB.cx,(py-cv.height/2)/TAB.zoom+TAB.cz];
+// kaartcoördinaten in CSS-pixels (cv.lw × cv.lh); het canvas zelf in schermpixels, zodat de kaart scherp blijft
+const tabXY=(x,z,cv)=>{const [cx,cz]=[TAB.cx,TAB.cz],s=TAB.zoom;return [(x-cx)*s+cv.lw/2,(z-cz)*s+cv.lh/2];};
+const tabWorld=(px,py,cv)=>[(px-cv.lw/2)/TAB.zoom+TAB.cx,(py-cv.lh/2)/TAB.zoom+TAB.cz];
+function tabSize(cv){const dpr=Math.min(2,devicePixelRatio||1),w=Math.max(200,cv.clientWidth||420),h=Math.max(200,cv.clientHeight||420);
+  if(cv.lw!==w||cv.lh!==h||cv.dpr!==dpr){cv.lw=w;cv.lh=h;cv.dpr=dpr;cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr);}return dpr;}
 const cableVisible=c=>c.kind==='ring'||c.kind==='feeder'?TAB.layers.ms:TAB.layers.ls;
-function drawTablet(){if(!TAB.on)return;const cv=$('#gtMap'),g=cv.getContext('2d'),W=cv.width,H=cv.height,s=TAB.zoom;tabCenter();
-  g.setTransform(1,0,0,1,0,0);
+function drawTablet(){if(!TAB.on)return;const cv=$('#gtMap'),g=cv.getContext('2d'),dpr=tabSize(cv),W=cv.lw,H=cv.lh,s=TAB.zoom;tabCenter();
+  g.setTransform(dpr,0,0,dpr,0,0);
   if(TAB.style==='lucht'&&captureAerial()){g.fillStyle='#4b6b3a';g.fillRect(0,0,W,H);const [x0,z0,x1,z1]=AERIAL_B,[ax,ay]=tabXY(x0,z0,cv);g.drawImage(TAB.aerial,ax,ay,(x1-x0)*s,(z1-z0)*s);}
   else{g.fillStyle='#f3f1ea';g.fillRect(0,0,W,H);
     const fill={road:'#cfcfcc',stoep:'#e4e1d8',plein:'#e4e1d8',parkeer:'#d6d5cf',woonerf:'#dcd3c8',site:'#e9eee3',house:'#d9cfc1',apt:'#d1c8bc',hall:'#cfd3d6',small:'#d6d0c6',kiosk:'#9fb4c8',perron:'#d8d4cc',laad:'#d6d5cf'};
@@ -181,10 +184,11 @@ function renderTabletChrome(){$('#gtStyle').textContent=TAB.style==='gis'?'🛰 
   cv.addEventListener('wheel',e=>{e.preventDefault();TAB.zoom=clamp(TAB.zoom*(e.deltaY<0?1.15:1/1.15),0.25,5);drawTablet();},{passive:false});
   cv.addEventListener('pointerdown',e=>{drag={x:e.offsetX,y:e.offsetY,moved:false};});
   cv.addEventListener('pointermove',e=>{if(!drag)return;const dx=e.offsetX-drag.x,dy=e.offsetY-drag.y;if(Math.abs(dx)+Math.abs(dy)>3){drag.moved=true;TAB.follow=false;TAB.cx-=dx/TAB.zoom;TAB.cz-=dy/TAB.zoom;drag.x=e.offsetX;drag.y=e.offsetY;renderTabletChrome();drawTablet();}});
-  cv.addEventListener('pointerup',e=>{const d=drag;drag=null;if(d&&d.moved)return;const r=cv.getBoundingClientRect(),[x,z]=tabWorld((e.clientX-r.left)*cv.width/r.width,(e.clientY-r.top)*cv.height/r.height,cv),n=nearestCable(x,z,10/TAB.zoom+2);
+  cv.addEventListener('pointerup',e=>{const d=drag;drag=null;if(d&&d.moved)return;const r=cv.getBoundingClientRect(),[x,z]=tabWorld(e.clientX-r.left,e.clientY-r.top,cv),n=nearestCable(x,z,10/TAB.zoom+2);
     TAB.sel=n?.c||null;$('#gtInfo').innerHTML=TAB.sel?cableCard(TAB.sel):'<small>Klik op een kabel voor de gegevens. Slepen schuift de kaart, scrollen zoomt.</small>';drawTablet();});})();
 $('#gisBtn')?.addEventListener('click',()=>TAB.on?closeTablet():openTablet());
 $('#xrayBtn')?.addEventListener('click',()=>setXray());
+addEventListener('resize',()=>TAB.on&&drawTablet());
 addEventListener('keydown',e=>{if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT'||e.ctrlKey||e.metaKey||!$('#intro').classList.contains('hidden'))return;
   if(e.code==='KeyG'){TAB.on?closeTablet():openTablet();}else if(e.code==='KeyX')setXray();});
 let gisT=0;function gisTick(dt){if((gisT+=dt)<0.25)return;gisT=0;gisColors();if(TAB.on){renderTabletChrome();drawTablet();}}
