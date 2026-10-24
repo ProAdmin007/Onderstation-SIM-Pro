@@ -538,6 +538,18 @@ const TESTS = [
         return { leeg, samen, klik, weg: !O.activeFaults().some(f => f.key === 'rsK23' || f.key === 'ffF6'), teller: document.querySelector('#faultCnt').textContent }; });
       for (const [k, v] of Object.entries(r)) if (k !== 'teller') assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
   } },
+  { name: 'storingsmonteurs rijden met het busje naar werk buiten het hek, binnen het hek lopen ze', query: '?autostart&t=13', async run(p) {
+      const r = await p.evaluate(async () => { const O = OS; T.quiet(); window.__klaar = false; const n0 = O.NPCS.length;
+        const binnen = O.crewDispatch({ box: O.VIEWS.T2.box, say: 'Inspectie T2', until: () => window.__klaar }), lopend = Array.isArray(binnen) && binnen.length > 0 && O.VANS.length === 0;
+        O.NPCS.splice(n0).forEach(n => { n.P.g.parent?.remove(n.P.g); n.el.remove(); });
+        const V = O.crewDispatch({ box: O.VIEWS.MS3.box, say: 'Kabelfout graven', until: () => window.__klaar }), busje = !!V && O.VANS.includes(V) && V.state === 'heen' && O.NPCS.length === n0;
+        const start = V.g.position.clone(); for (let i = 0; i < 600 && V.state === 'heen'; i++) O.vanTick(0.1);
+        const end = V.g.position, gereden = start.distanceTo(end) > 150 && end.distanceTo(O.VIEWS.MS3.center) < 25, uit = V.state === 'werk' && V.npcs.length === 2 && V.npcs.every(n => O.NPCS.includes(n));
+        window.__klaar = true; for (let i = 0; i < 200 && V.state === 'werk'; i++) await T.sleep(100);
+        const terug = V.state === 'terug'; for (let i = 0; i < 600 && O.VANS.includes(V); i++) O.vanTick(0.1);
+        return { lopend, busje, gereden, uit, terug, weg: !O.VANS.includes(V) }; });
+      for (const [k, v] of Object.entries(r)) assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
+  } },
   { name: 'stadsleven: weekmarkt, schoolplein, trein met overweg, bus met haltes (wacht bij een dichte overweg)', query: '?autostart&t=10&season=zomer', async run(p) {
       const r = await p.evaluate(async () => { const O = OS, tick = (s, dt = 0.1) => { for (let i = 0; i < s / dt; i++) O.cityTick(dt); };
         const zat = O.cityDay() === 6; tick(1); const markt = O.marketOn() && O.MARKET.visible && O.FIG.slice(0, 16).every(f => f.on);

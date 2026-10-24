@@ -4089,14 +4089,15 @@ function standPoints(box,n,from){const c=box.getCenter(V3()),pts=[];
   for(const p of cand){const f=nearestFree(p.x,p.z);if(!f)continue;const q=V3(GRID.x0+f[0]+0.5,0,GRID.z0+f[1]+0.5);if(pts.every(o=>o.distanceTo(q)>1.4))pts.push(q);if(pts.length>=n)break;}
   return pts;}
 const CREW_NAMES=['Henk','Sandra','Kees','Mo','Fatima','Joris','Ilse','Daan','Ruud','Esra','Bram','Lotte'];let crewSeq=0;
-function crewDispatch({box,say,until,n=2,from=CREW_FROM,rel=[],kind}){
-  if(!box)return;const look=box.getCenter(V3()),relSet=new Set(rel);
+// monteurs laten verschijnen en naar het werk lopen (crewDispatch in 07xb-crewvan.js kiest: lopend of met het storingsbusje)
+function crewSpawn({box,say,until,n=2,from=CREW_FROM,rel=[],kind}){
+  if(!box)return [];const look=box.getCenter(V3()),relSet=new Set(rel),made=[];
   standPoints(box,n,from).forEach((sp,i)=>{
     const start=from.clone().add(V3(i*0.9,0,i*0.6)),path=findPath(start.x,start.z,sp.x,sp.z);if(!path)return;
     const P=makePerson(NPCS.length+i,kind);P.g.position.copy(path[0]);
     const el=document.createElement('div');el.className='npc';el.textContent=say;$('#labels').appendChild(el);
-    NPCS.push({P,path,i:1,state:'in',look,until,home:start,phase:Math.random()*6,el,say,t:0,talk:i===0,name:CREW_NAMES[(crewSeq++)%CREW_NAMES.length],rel:relSet,bubble:0});
-  });}
+    const n_={P,path,i:1,state:'in',look,until,home:start,phase:Math.random()*6,el,say,t:0,talk:i===0,name:CREW_NAMES[(crewSeq++)%CREW_NAMES.length],rel:relSet,bubble:0};NPCS.push(n_);made.push(n_);
+  });return made;}
 function npcWalk(n,dt,spd){const tgt=n.path[n.i];if(!tgt)return true;const p=n.P.g.position,d=V3(tgt.x-p.x,0,tgt.z-p.z),L=d.length();
   if(L<0.15){n.i++;return n.i>=n.path.length;}
   const step=Math.min(L,spd*dt);p.addScaledVector(d,step/L);
@@ -4555,7 +4556,7 @@ function updateNeighbours(dt){phoneMat.opacity=NIGHT>0.3?0.9:0;
       if(s.crowd.length&&camera.position.distanceTo(V3(s.pos[0],0,s.pos[1]))<60)pushAlarm(`Buren rond ${s.id} ${s.name} staan op straat – “Weet u wat er aan de hand is?”`,'info');}
     if(s.crowd){if(!want){s.crowdLeft=(s.crowdLeft||0)+dt;if(s.crowdLeft>4){s.crowd.forEach(p=>scene.remove(p.g));s.crowd=null;s.crowdLeft=0;}}
       else{s.crowdLeft=0;s.crowd.forEach(p=>{p.ph+=dt;p.head.rotation.y=Math.sin(p.ph*0.6)*0.5;});}}});}
-function updateLife(dt){updateCars(dt);updateNeighbours(dt);cityTick(dt);updateWalkers(dt);}
+function updateLife(dt){updateCars(dt);updateNeighbours(dt);cityTick(dt);vanTick(dt);updateWalkers(dt);}
 
 
 // ============================================================ instellingen (toets I): prestaties, weer en seizoen, geluid
@@ -5359,6 +5360,42 @@ function ambTick(dt,run,h){const A=AMB;if(!SITE?.zkh)return;
   if(sir&&run&&A.g){A.sir-=dt;if(A.sir<=0){A.sir=1.2;const v=distGain(A.g.position);if(camera.position.distanceTo(A.g.position)<400)AudioSys.siren?.(v*0.8);}}}
 
 
+// ============================================================ storingsbusjes: monteurs rijden vanaf het onderstation naar werk buiten het hek
+// Het busje rijdt over het wegennet (dezelfde routering als de kabeltracés, rechts rijden, wacht bij een dichte overweg),
+// parkeert op de rijbaan bij het werk met knipperende zwaailamp, de monteurs stappen uit en lopen het laatste stuk.
+// Zijn ze klaar, dan lopen ze terug, stappen in en rijdt het busje terug naar het station.
+const VAN_DEPOT=[62,41];   // parkeerplek op het stationsterrein (stationsweg, binnen het hek)
+const VANS=[];
+const outsideFence=p=>p.x<FENCE.x0-2||p.x>FENCE.x1+2||p.z<FENCE.z0-2||p.z>FENCE.z1+2;
+const VAN_BEACON=mat({color:0x3a2000,emissive:0xffa21a,emissiveIntensity:0});
+function serviceVanModel(){const g=vGroup();vBox(g,2.0,2.4,4.6,CM.white,0,1.5,-0.4);vBox(g,2.0,1.4,1.4,CM.white,0,1.05,2.5);vBox(g,2.02,0.6,0.9,CM.glass,0,1.95,1.9);
+  vBox(g,2.02,0.28,4.62,CM.orange,0,1.0,-0.4);vBox(g,2.02,0.12,4.62,CM.yellow,0,1.2,-0.4);vBox(g,0.5,0.22,0.3,VAN_BEACON,0,2.81,0.9);vBox(g,1.8,0.06,1.6,CM.grey,0,2.73,-1.2);   // imperiaal
+  const sm=new THREE.MeshBasicMaterial({map:signTex('STORINGSDIENST','#ffffff','#1d2b45',1024,128,'bold 86px Arial')});
+  for(const s of[-1,1]){const p=new THREE.Mesh(new THREE.PlaneGeometry(3.2,0.4),sm);p.position.set(s*1.02,1.75,-0.6);p.rotation.y=s*Math.PI/2;g.add(p);}
+  for(const x of[-0.7,0.7])vBox(g,0.3,0.15,0.05,CM.head,x,0.95,3.21);vWheels(g,[-0.9,0.9],[-1.9,2.2],0.38);g.visible=true;return g;}
+// route over de hartlijnen; dubbele punten eruit (anders een stuk van lengte 0)
+function vanRoute(pts){const out=[];for(const p of pts){const l=out[out.length-1];if(!l||Math.hypot(l[0]-p[0],l[1]-p[1])>0.5)out.push(p);}return out.length>1?cityRoute(out,1.7):null;}
+// monteurs sturen: buiten het hek met het busje, binnen het hek (en de brandweer) lopend vanaf de poort
+function crewDispatch(o){if(!o?.box)return;const c=o.box.getCenter(V3());
+  if(o.kind==='fire'||o.walk||!outsideFence(c))return crewSpawn(o);
+  const sn=gisSnap(c.x,c.z),path=sn&&gisPath(VAN_DEPOT[0],VAN_DEPOT[1],sn.x,sn.z),r=path&&vanRoute([VAN_DEPOT,...path]);
+  if(!r)return crewSpawn(o);
+  const V={g:serviceVanModel(),r,pts:[VAN_DEPOT,...path],d:0,v:0,vmax:12,wait:0,stops:[],len:5.6,o,state:'heen',npcs:[]};VANS.push(V);
+  const [x,z,yaw]=routeAt(r,0);V.g.position.set(x,0,z);V.g.rotation.y=yaw;return V;}
+function vanTick(dt){const run=!SIM.paused&&!GAME.ended,blink=(performance.now()%700)<350;
+  for(let i=VANS.length-1;i>=0;i--){const V=VANS[i],o=V.o;
+    if(V.state==='heen'){if(o.until?.()){vanBack(V);continue;}driveVehicle(V,run?dt:0);
+      if(V.d>=V.r.total-0.3){V.state='werk';const [x,z,yaw]=routeAt(V.r,V.r.total),nx=-Math.cos(yaw),nz=Math.sin(yaw);   // uitstappen aan de stoepkant
+        V.npcs=crewSpawn({...o,from:V3(x+nx*1.8,0,z+nz*1.8)})||[];if(!V.npcs.length)vanBack(V);}}
+    else if(V.state==='werk'){if(!V.npcs.some(n=>NPCS.includes(n)))vanBack(V);}
+    else if(V.state==='terug'){driveVehicle(V,run?dt:0);if(V.d>=V.r.total-0.3){scene.remove(V.g);VANS.splice(i,1);continue;}}
+    V.beacon=V.state==='werk'||V.state==='heen';}
+  VAN_BEACON.emissiveIntensity=VANS.some(V=>V.beacon)&&blink?5:0.3;}
+function vanBack(V){const back=V.pts.slice().reverse(),r=vanRoute(back);if(!r){scene.remove(V.g);VANS.splice(VANS.indexOf(V),1);return;}
+  // eerst keren: begin op het punt waar het busje nu staat
+  V.r=r;V.d=Math.min(routeNear(r,V.g.position.x,V.g.position.z),r.total);V.v=0;V.wait=0;V.state='terug';}
+
+
 // ============================================================ kabeltracés (GIS): waar de kabels fysiek liggen
 // Elke kabel heeft een tracé langs de straten (in de stoep of berm) met moffen en een aanlegjaar.
 // Röntgenblik (X): de kabels oplichtend op straat in 3D. Kabeltablet (G): kaart met je positie, GIS-stijl of luchtfoto.
@@ -5732,7 +5769,7 @@ else{renderMenu();$('#intro').classList.remove('hidden');controls.autoRotate=tru
 if(params.has('night'))updateSky(22);
 if(params.has('view')){const v=VIEWPOS[+params.get('view')];camera.position.copy(v[0]);controls.target.copy(v[1]);controls.autoRotate=false;controls.update();}
 
-window.OS={routeAt,driveVehicle,walkActive:()=>WALK_ACTIVE,BUS,GARB,PARCEL,AMB,TRAIN,XING,HALTES,MARKET,FIG,CY,cityDay,marketOn,schoolBreak,cityTick,measDone,cableCard,isoSwitches,KLIC,klicNew,klicMark,klicHit,gisMeasure,gisMofReplace,faultOf,cableOf,cableRisk,DIGS,CABLES,GIS_NET,gisRoute,cableState,setXray,XRAY,TAB,openTablet,closeTablet,drawTablet,nearestCable,DYN,fpsTick,fireTick,WK,getWalkers:()=>WALKERS,getStrips:()=>WSTRIPS,fireStart,fireDouse,fireStop,GENSET,gsCap,SMALL,lvgLive,updateSmall,setMouseMode,getMouseMode:()=>MOUSE_MODE,cameraKeys,OVK,openPreview,closePreview,viewHour,getPreview:()=>PREVIEW,VIEWPOS,SITE,updateSites,SLD,activeFaults,renderFaults,reportPDF,listSaves,openSlots,closeSlots,SAVE_SLOTS,layoutCheck,LAYOUT,FREC,fltRec,openRec,closeRec,renderRec,selectivity,protSelect,feederT,incT,incOf,shortCircuit,EF,earthFault,efTick,efRails,efU0,railsCoupled,controls,tripBreaker,CONS,LS_LINKS,LS_ORDERS,GENSET,lsTick,lsOrder,lsSwitchOrder,lsExec,gsSend,gsOff,gsRestart,tapOrder,setEta,callPrio,lsAreas,PRIO,openLS,closeLS,renderLS,lvVolt,stationLoads,shedFactor,failP,manualP,phoneTick,refreshDevPanel,updateSLD,openKeys,closeKeys,KEY_HELP,RELAY_BAYS,relayTask,relayDue,relayDefect,initRelays,kitTests,kitMeasure,kitVerdict,kitRun,openKit,closeKit,saveGame,readSave,deleteSave,resumeGame,canSave,specOf,CABLE,soilT,FD,meppelFault,linkTick,tabAlarms,updateTabAlarms,renderTasks,INC,INCIDENTS,startIncident,endIncident,incidentTick,setTab,renderCables,GFX,setGfx,applyGfx,openSettings,closeSettings,WX_TYPES,renderer,scene,FIRE,CARS,updateWindows,updateLife,stationLive,cbMaintTask,worstCb,cond,breakerFails,CB_IDS,FLEX,setFlex,flexTick,congestion,openFlex,closeFlex,checkModel,homeBus,BUSES,SEL_BAYS,TORCH,setTorch,HO_POOL,handoverTick,REC,RP,startReplay,stopReplay,analyse,stationDamage,closeHandover,deviations,PHONE,lvFault,callFrom,phoneAnswer,dispatchLV,LVG,forecast,progAdvice,PROG,startTask:(k,...a)=>{TASK={relayTask,cbMaintTask,railTask,railBTask,stationTask,thermoTask,ringTask,feederTask,lineTask,reserveTask}[k](...a);TASK.i=0;TASK.code='WV-TEST';briefInit(TASK);renderTasks();},SIM,D,LESSONS,lessonGo,selectDevice,abortTask,railTask,stationTask,thermoTask,nearDev,VIEWS,PROT,setProt,openProt,closeProt,busFault,BUSF,RINGS,task:()=>TASK,briefSubmit,briefCheck,briefWatch,actKey,taskActs,crewNear,boxOf:id=>VIEWS[id]&&VIEWS[id].box,AudioSys,updateAudio,WX,setWeather,setSeason,SEASONS,ambient,enterKiosk,ROOMS,blockedAt,RING,NPCS,crewDispatch,ringFault,FP,enterFP,exitFP,pickCenter,camera,camInside,setRatio,setTab,GAME,MODES,applyMode,endGame,EN:()=>EN,FLOW,operate,tapStep,setAVR,resetLockout,toggleAR,regulate,computeFlows,randomEvent,lineFault,feederFault,trafoFault,offerTask,simStep,FEEDERS};
+window.OS={VANS,vanTick,crewDispatch,crewSpawn,routeAt,driveVehicle,walkActive:()=>WALK_ACTIVE,BUS,GARB,PARCEL,AMB,TRAIN,XING,HALTES,MARKET,FIG,CY,cityDay,marketOn,schoolBreak,cityTick,measDone,cableCard,isoSwitches,KLIC,klicNew,klicMark,klicHit,gisMeasure,gisMofReplace,faultOf,cableOf,cableRisk,DIGS,CABLES,GIS_NET,gisRoute,cableState,setXray,XRAY,TAB,openTablet,closeTablet,drawTablet,nearestCable,DYN,fpsTick,fireTick,WK,getWalkers:()=>WALKERS,getStrips:()=>WSTRIPS,fireStart,fireDouse,fireStop,GENSET,gsCap,SMALL,lvgLive,updateSmall,setMouseMode,getMouseMode:()=>MOUSE_MODE,cameraKeys,OVK,openPreview,closePreview,viewHour,getPreview:()=>PREVIEW,VIEWPOS,SITE,updateSites,SLD,activeFaults,renderFaults,reportPDF,listSaves,openSlots,closeSlots,SAVE_SLOTS,layoutCheck,LAYOUT,FREC,fltRec,openRec,closeRec,renderRec,selectivity,protSelect,feederT,incT,incOf,shortCircuit,EF,earthFault,efTick,efRails,efU0,railsCoupled,controls,tripBreaker,CONS,LS_LINKS,LS_ORDERS,GENSET,lsTick,lsOrder,lsSwitchOrder,lsExec,gsSend,gsOff,gsRestart,tapOrder,setEta,callPrio,lsAreas,PRIO,openLS,closeLS,renderLS,lvVolt,stationLoads,shedFactor,failP,manualP,phoneTick,refreshDevPanel,updateSLD,openKeys,closeKeys,KEY_HELP,RELAY_BAYS,relayTask,relayDue,relayDefect,initRelays,kitTests,kitMeasure,kitVerdict,kitRun,openKit,closeKit,saveGame,readSave,deleteSave,resumeGame,canSave,specOf,CABLE,soilT,FD,meppelFault,linkTick,tabAlarms,updateTabAlarms,renderTasks,INC,INCIDENTS,startIncident,endIncident,incidentTick,setTab,renderCables,GFX,setGfx,applyGfx,openSettings,closeSettings,WX_TYPES,renderer,scene,FIRE,CARS,updateWindows,updateLife,stationLive,cbMaintTask,worstCb,cond,breakerFails,CB_IDS,FLEX,setFlex,flexTick,congestion,openFlex,closeFlex,checkModel,homeBus,BUSES,SEL_BAYS,TORCH,setTorch,HO_POOL,handoverTick,REC,RP,startReplay,stopReplay,analyse,stationDamage,closeHandover,deviations,PHONE,lvFault,callFrom,phoneAnswer,dispatchLV,LVG,forecast,progAdvice,PROG,startTask:(k,...a)=>{TASK={relayTask,cbMaintTask,railTask,railBTask,stationTask,thermoTask,ringTask,feederTask,lineTask,reserveTask}[k](...a);TASK.i=0;TASK.code='WV-TEST';briefInit(TASK);renderTasks();},SIM,D,LESSONS,lessonGo,selectDevice,abortTask,railTask,stationTask,thermoTask,nearDev,VIEWS,PROT,setProt,openProt,closeProt,busFault,BUSF,RINGS,task:()=>TASK,briefSubmit,briefCheck,briefWatch,actKey,taskActs,crewNear,boxOf:id=>VIEWS[id]&&VIEWS[id].box,AudioSys,updateAudio,WX,setWeather,setSeason,SEASONS,ambient,enterKiosk,ROOMS,blockedAt,RING,NPCS,crewDispatch,ringFault,FP,enterFP,exitFP,pickCenter,camera,camInside,setRatio,setTab,GAME,MODES,applyMode,endGame,EN:()=>EN,FLOW,operate,tapStep,setAVR,resetLockout,toggleAR,regulate,computeFlows,randomEvent,lineFault,feederFault,trafoFault,offerTask,simStep,FEEDERS};
 const clock=new THREE.Clock();let hudT=0,skyT=0,progT=0;
 let liteAcc=0,shadowT=0,hudStep=4;
 // schaduwkaart alleen opnieuw tekenen als er op het stationsterrein iets beweegt (scheiders, monteurs, brandweer); anders 2× per seconde voor de zon.

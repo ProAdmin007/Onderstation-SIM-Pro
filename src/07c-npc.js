@@ -52,14 +52,15 @@ function standPoints(box,n,from){const c=box.getCenter(V3()),pts=[];
   for(const p of cand){const f=nearestFree(p.x,p.z);if(!f)continue;const q=V3(GRID.x0+f[0]+0.5,0,GRID.z0+f[1]+0.5);if(pts.every(o=>o.distanceTo(q)>1.4))pts.push(q);if(pts.length>=n)break;}
   return pts;}
 const CREW_NAMES=['Henk','Sandra','Kees','Mo','Fatima','Joris','Ilse','Daan','Ruud','Esra','Bram','Lotte'];let crewSeq=0;
-function crewDispatch({box,say,until,n=2,from=CREW_FROM,rel=[],kind}){
-  if(!box)return;const look=box.getCenter(V3()),relSet=new Set(rel);
+// monteurs laten verschijnen en naar het werk lopen (crewDispatch in 07xb-crewvan.js kiest: lopend of met het storingsbusje)
+function crewSpawn({box,say,until,n=2,from=CREW_FROM,rel=[],kind}){
+  if(!box)return [];const look=box.getCenter(V3()),relSet=new Set(rel),made=[];
   standPoints(box,n,from).forEach((sp,i)=>{
     const start=from.clone().add(V3(i*0.9,0,i*0.6)),path=findPath(start.x,start.z,sp.x,sp.z);if(!path)return;
     const P=makePerson(NPCS.length+i,kind);P.g.position.copy(path[0]);
     const el=document.createElement('div');el.className='npc';el.textContent=say;$('#labels').appendChild(el);
-    NPCS.push({P,path,i:1,state:'in',look,until,home:start,phase:Math.random()*6,el,say,t:0,talk:i===0,name:CREW_NAMES[(crewSeq++)%CREW_NAMES.length],rel:relSet,bubble:0});
-  });}
+    const n_={P,path,i:1,state:'in',look,until,home:start,phase:Math.random()*6,el,say,t:0,talk:i===0,name:CREW_NAMES[(crewSeq++)%CREW_NAMES.length],rel:relSet,bubble:0};NPCS.push(n_);made.push(n_);
+  });return made;}
 function npcWalk(n,dt,spd){const tgt=n.path[n.i];if(!tgt)return true;const p=n.P.g.position,d=V3(tgt.x-p.x,0,tgt.z-p.z),L=d.length();
   if(L<0.15){n.i++;return n.i>=n.path.length;}
   const step=Math.min(L,spd*dt);p.addScaledVector(d,step/L);

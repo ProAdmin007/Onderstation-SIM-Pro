@@ -272,7 +272,9 @@ Monteurs hebben een naam en melden zich bij aankomst en als het werk klaar is. W
 <details>
 <summary><b>Monteurs</b></summary>
 
-Collega's in een veiligheidsvest lopen het station of de wijk in bij inspecties, werkopdrachten en kabelfouten, en vertrekken weer als het werk klaar is.
+Collega's in een veiligheidsvest komen bij inspecties, werkopdrachten en storingen, en vertrekken weer als het werk klaar is.
+  - Werk op het stationsterrein: ze lopen vanaf de poort naar het werk.
+  - Werk buiten het hek (MS-stations, kabels, LS-storingen, zekeringen, aggregaten): ze rijden met een **storingsbusje** vanaf het onderstation over de wegen erheen, parkeren met knipperende zwaailamp bij het werk en lopen het laatste stuk. Zijn ze klaar, dan stappen ze in en rijdt het busje terug. Bij een dichte spoorwegovergang wacht het busje.
 </details>
 
 <details>
@@ -534,7 +536,7 @@ De broncode staat in `src/`. `build.ps1` plakt de bestanden in strikte naamvolgo
 | `04-c-aardfout.js` | aardfout in het gecompenseerde 10 kV-net: U0, aanwijzingen, zoeken, dubbele aardfout |
 | `04b`–`04i` | spelmodi en score, ring, lessen, dienstoverdracht, extra scenario's, brand in het 10 kV-gebouw (`04g0-fire.js`: vlammen, brandbel, brandweer), scenario's pinksterzondag en aardfout tijdens onweer |
 | `05`–`06` | effecten, geluid, interieur, opbouw van de scène |
-| `07`–`07z` | SCADA en panelen, rondlopen, monteurs, schakelbrief, beveiligingsvenster, prognose, telefoon, tijdlijn/herhaling, modelcontrole, flex- en onderhoudsvenster, leven in de wijk, instellingen, tabblad Kabels, opslaan en hervatten, testkoffer, toetsenoverzicht, LS-venster en -tabblad, storingsschrijver, dienstrapport als PDF, paneel lopende storingen, weer en tijd bekijken, muisbesturing (`07w`), voetgangers (`07x`), stadsleven (`07xa`), kabeltracés en kabeltablet (`07y`), foutplaats, graafwerk en moffen (`07z`) |
+| `07`–`07z` | SCADA en panelen, rondlopen, monteurs, schakelbrief, beveiligingsvenster, prognose, telefoon, tijdlijn/herhaling, modelcontrole, flex- en onderhoudsvenster, leven in de wijk, instellingen, tabblad Kabels, opslaan en hervatten, testkoffer, toetsenoverzicht, LS-venster en -tabblad, storingsschrijver, dienstrapport als PDF, paneel lopende storingen, weer en tijd bekijken, muisbesturing (`07w`), voetgangers (`07x`), stadsleven (`07xa`), storingsbusjes (`07xb`), kabeltracés en kabeltablet (`07y`), foutplaats, graafwerk en moffen (`07z`) |
 | `08-main.js` | HUD, menu's, start en hoofdlus |
 
 **Rails, lijnen en railkeuzevelden** staan op één plek (`BUSES`, `LINES` en het register `SEL_BAYS` in `04-1-net.js`); de koppelingen, spanningsbanden, SCADA-metingen en werkopdrachten worden daarvan afgeleid. Bij het opstarten controleert `checkModel()` of alle verwijzingen naar apparaten kloppen, of elke schakelaar ergens te bedienen is en of alles in de normale toestand spanning heeft. Een fout verschijnt als consolefout, en de tests vallen er dan direct over.
