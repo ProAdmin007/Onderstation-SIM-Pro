@@ -520,7 +520,7 @@ Alle geluid wordt in de browser gemaakt (Web Audio) en hangt af van waar je bent
 <a id="ontwikkelen"></a>
 ## 🧑‍💻 Ontwikkelen
 
-De broncode staat in `src/`. Geplande verbeteringen aan de architectuur staan in de [roadmap](ROADMAP.md). `build.ps1` plakt de bestanden in strikte naamvolgorde aan elkaar tot één `index.html`.
+De broncode staat in `src/`. Plannen voor nieuwe functies (OSE, Asset Management, carrièremodus) en de architectuur staan in de [roadmap](ROADMAP.md). `build.ps1` plakt de bestanden in strikte naamvolgorde aan elkaar tot één `index.html`.
 
 | Bestanden | Inhoud |
 |---|---|
