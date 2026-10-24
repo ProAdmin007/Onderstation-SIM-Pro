@@ -23,12 +23,15 @@ function routeNear(r,x,z){let best=0,bd=1e9;for(let d=0;d<=r.total;d+=1){const [
 const angLerp=(a,b,k)=>a+Math.atan2(Math.sin(b-a),Math.cos(b-a))*k;
 // spoorwegovergang op de hoofdweg (x 22–28, z 416–428): voertuigen wachten als de bomen dicht zijn
 const XING={closed:false,k:0};
+// afzettingen door de politie (rechthoeken x0,z0,x1,z1): verkeer en voetgangers gaan er niet in, hulpdiensten wel
+const CORDONS=[];
+const inCordon=(x,z)=>CORDONS.some(c=>x>c[0]&&x<c[2]&&z>c[1]&&z<c[3]);
 const inXing=(x,z)=>x>18&&x<32&&z>411&&z<433;
 
 // ---- een voertuig rijdt een route af en stopt op ingestelde punten (halte, kliko's, bezorging)
 function driveVehicle(V,dt){const r=V.r;if(V.wait>0){V.wait-=dt;if(V.wait<=0)V.onGo?.(V);}
   else{const st=V.stops?.find(s=>s.d>V.d-0.5&&!s.done),ahead=st?st.d-V.d:1e9,vmax=V.vmax*(V.slow||1);V.v=Math.min(vmax,Math.max(1.2,Math.sqrt(2*1.6*Math.max(0,ahead))),V.v+3*dt);
-    let nd=V.d+V.v*dt;const h=(V.len||6)/2+1,[nx,nz]=routeAt(r,nd+h),[cx,cz]=routeAt(r,V.d+h);if(XING.k>0.05&&!inXing(cx,cz)&&inXing(nx,nz)){nd=V.d;V.v=0;}
+    let nd=V.d+V.v*dt;const h=(V.len||6)/2+1,[nx,nz]=routeAt(r,nd+h),[cx,cz]=routeAt(r,V.d+h);if(XING.k>0.05&&!inXing(cx,cz)&&inXing(nx,nz)||!V.emergency&&!inCordon(cx,cz)&&inCordon(nx,nz)){nd=V.d;V.v=0;}
     if(st&&nd>=st.d){nd=st.d;st.done=true;V.v=0;V.wait=st.dur;V.onStop?.(V,st);}V.d=nd;}
   const [x,z,yaw]=routeAt(r,V.d);V.g.position.set(x,0,z);V.g.rotation.y=angLerp(V.g.rotation.y,yaw,Math.min(1,dt*4));}
 

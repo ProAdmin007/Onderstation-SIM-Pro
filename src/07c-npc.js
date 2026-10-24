@@ -46,16 +46,16 @@ function findPath(ax,az,bx,bz){
 
 // ---- inzet van een ploeg
 const CREW_FROM=V3(25,0,74);   // bij de poort
-function standPoints(box,n,from){const c=box.getCenter(V3()),pts=[];
-  const cand=[];for(let a=0;a<16;a++){const ang=a/16*Math.PI*2;const r=Math.max(box.max.x-box.min.x,box.max.z-box.min.z)/2+1.2;cand.push(V3(c.x+Math.cos(ang)*r,0,c.z+Math.sin(ang)*r));}
+function standPoints(box,n,from,dist=1.2){const c=box.getCenter(V3()),pts=[];
+  const cand=[];for(let a=0;a<16;a++){const ang=a/16*Math.PI*2;const r=Math.max(box.max.x-box.min.x,box.max.z-box.min.z)/2+dist;cand.push(V3(c.x+Math.cos(ang)*r,0,c.z+Math.sin(ang)*r));}
   cand.sort((p,q)=>p.distanceTo(from)-q.distanceTo(from));
   for(const p of cand){const f=nearestFree(p.x,p.z);if(!f)continue;const q=V3(GRID.x0+f[0]+0.5,0,GRID.z0+f[1]+0.5);if(pts.every(o=>o.distanceTo(q)>1.4))pts.push(q);if(pts.length>=n)break;}
   return pts;}
 const CREW_NAMES=['Henk','Sandra','Kees','Mo','Fatima','Joris','Ilse','Daan','Ruud','Esra','Bram','Lotte'];let crewSeq=0;
 // monteurs laten verschijnen en naar het werk lopen (crewDispatch in 07xb-crewvan.js kiest: lopend of met het storingsbusje)
-function crewSpawn({box,say,until,n=2,from=CREW_FROM,rel=[],kind}){
+function crewSpawn({box,say,until,n=2,from=CREW_FROM,rel=[],kind,standOff}){
   if(!box)return [];const look=box.getCenter(V3()),relSet=new Set(rel),made=[];
-  standPoints(box,n,from).forEach((sp,i)=>{
+  standPoints(box,n,from,standOff).forEach((sp,i)=>{
     const start=from.clone().add(V3(i*0.9,0,i*0.6)),path=findPath(start.x,start.z,sp.x,sp.z);if(!path)return;
     const P=makePerson(NPCS.length+i,kind);P.g.position.copy(path[0]);
     const el=document.createElement('div');el.className='npc';el.textContent=say;$('#labels').appendChild(el);

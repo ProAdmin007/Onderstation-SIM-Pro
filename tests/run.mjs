@@ -581,6 +581,19 @@ const TESTS = [
         return { uit, nietBedienbaar, wacht, blust, incident, vervangen, tDicht, klaar, auto }; });
       for (const [k, v] of Object.entries(r)) assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
   } },
+  { name: 'trafobrand: afzetting pas als de politie er is, verkeer stopt ervoor, hulpdiensten op afstand', query: '?autostart&t=10', async run(p) {
+      const r = await p.evaluate(async () => { const O = OS; T.quiet(); const s = O.RING.stations.find(x => x.id === 'MS3'); O.trafoFire(s); s.burn.arrive = 1e9; O.stationVisuals(0.016);
+        const v = O.STV.get(s), eerst = !!v.police && !v.police.arrived && O.CORDONS.length === 0;
+        v.police.arrived = true; O.stationVisuals(0.016); const afgezet = O.CORDONS.length === 1 && !!v.cordon && !!v.tape;
+        const c = O.VIEWS.MS3.center, afstand = Math.hypot(v.police.g.position.x - c.x, v.police.g.position.z - c.z) > 15 || !v.police.r;
+        // een gewone bus mag de afzetting niet in, een hulpdienst wel
+        const rt = O.cityRoute([[c.x - 60, c.z + 0.01], [c.x + 60, c.z + 0.01]]), mk = em => ({ r: rt, d: 0, v: 9, vmax: 9, wait: 0, stops: [], len: 6, emergency: em, g: { position: { set() {} }, rotation: { y: 0 } } });
+        const bus = mk(false), amb = mk(true); for (let i = 0; i < 200; i++) { O.driveVehicle(bus, 0.1); O.driveVehicle(amb, 0.1); }
+        const [bx, bz] = O.routeAt(rt, bus.d + 4), stopt = !O.inCordon(bx, bz) && bus.d < 60, door = amb.d > 80;
+        s.burn = null; O.stationVisuals(0.016); const weg = O.CORDONS.length === 0;
+        return { eerst, afgezet, afstand, stopt, door, weg }; });
+      for (const [k, v] of Object.entries(r)) assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
+  } },
   { name: 'stadsleven: weekmarkt, schoolplein, trein met overweg, bus met haltes (wacht bij een dichte overweg)', query: '?autostart&t=10&season=zomer', async run(p) {
       const r = await p.evaluate(async () => { const O = OS, tick = (s, dt = 0.1) => { for (let i = 0; i < s / dt; i++) O.cityTick(dt); };
         const zat = O.cityDay() === 6; tick(1); const markt = O.marketOn() && O.MARKET.visible && O.FIG.slice(0, 16).every(f => f.on);

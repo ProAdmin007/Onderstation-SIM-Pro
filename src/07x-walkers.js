@@ -50,7 +50,7 @@ function updateWalkers(dt){if(!WALKERS){if(!LAYOUT.length)return;initWalkers();}
   const run=!SIM.paused&&!GAME.ended;
   for(let i=0;i<WALK_N;i++){const w=WALKERS[i];if(i>=n){wHide(i);WK.dog.setMatrixAt(i,_w0);WK.dogHead.setMatrixAt(i,_w0);continue;}const step=run?w.v*dt:0;if(run)w.ph+=dt*w.v*3.3;
     if(w.cross){const c=w.cross;c.f=Math.min(1,c.f+step/c.len);w.x=c.x0+(c.x1-c.x0)*c.f;w.z=c.z0+(c.z1-c.z0)*c.f;w.yaw=Math.atan2(c.x1-c.x0,c.z1-c.z0);if(c.f>=1)walkStrip(w,c.u,c.ua,c.ud);}
-    else{const t=w.t;w.a+=step*w.dir;if(w.a>t.a1||w.a<t.a0){w.a=clamp(w.a,t.a0,t.a1);walkNext(w);}
+    else{const t=w.t;if(CORDONS.length){const [px,pz]=wPos(t,w.a+w.dir*1.5,0);if(inCordon(px,pz)&&!inCordon(w.x,w.z))w.dir*=-1;}w.a+=step*w.dir;if(w.a>t.a1||w.a<t.a0){w.a=clamp(w.a,t.a0,t.a1);walkNext(w);}
       const o=t.obs.find(o=>w.a>o.a0&&w.a<o.a1&&!o.full),want=o?-o.side*t.w*0.28:w.lat;w.adj+=(want-w.adj)*Math.min(1,dt*3);
       [w.x,w.z]=wPos(t,w.a,w.adj);w.yaw=t.h?(w.dir>0?Math.PI/2:-Math.PI/2):(w.dir>0?0:Math.PI);}
     wFigure(i,w.x,w.z,w.yaw,1,run?Math.sin(w.ph)*0.5:0);
