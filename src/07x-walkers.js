@@ -5,7 +5,7 @@
 // de pakketbezorger. Die worden door het stadsleven (07xa-city.js) neergezet; hier alleen getekend.
 const WALK_N=48,FIG_N=48,WALK_ALL=WALK_N+FIG_N;
 const WK=(()=>{const mk=(geo,n)=>{const m=new THREE.InstancedMesh(geo,new THREE.MeshStandardMaterial({color:0xffffff,roughness:0.85}),n);m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-    m.castShadow=true;m.frustumCulled=false;m.userData.dyn=true;m.count=0;scene.add(m);return m;};
+    m.castShadow=false;m.frustumCulled=false;m.userData.dyn=true;m.count=0;scene.add(m);return m;};   // nooit in het schaduwgebied rond het station
   const dog=new THREE.BoxGeometry(0.22,0.24,0.6).translate(0,0.36,0);
   return {torso:mk(new THREE.BoxGeometry(0.44,0.62,0.25),WALK_ALL),head:mk(new THREE.SphereGeometry(0.12,10,8),WALK_ALL),hair:mk(new THREE.SphereGeometry(0.128,10,6,0,Math.PI*2,0,Math.PI/2.2),WALK_ALL),
     leg:mk(new THREE.BoxGeometry(0.15,0.86,0.18).translate(0,-0.43,0),WALK_ALL*2),arm:mk(new THREE.BoxGeometry(0.12,0.58,0.14).translate(0,-0.29,0),WALK_ALL*2),
@@ -34,7 +34,7 @@ const wPos=(t,a,l)=>t.h?[a,t.c+l]:[t.c+l,a];
 function walkStrip(w,t,a,dir){w.t=t;w.a=a;w.dir=dir;w.cross=null;}
 // eind van de stoep: een stoep in de buurt kiezen (oversteken), anders omkeren
 function walkNext(w){const t=w.t,end=w.dir>0?t.a1:t.a0,[ex,ez]=wPos(t,end,0),opts=[];
-  for(const u of WSTRIPS){if(u===t)continue;for(const [ua,ud] of[[u.a0,1],[u.a1,-1]]){const [ux,uz]=wPos(u,ua,0),d=Math.hypot(ux-ex,uz-ez);if(d<10&&d>0.5)opts.push([u,ua,ud,ux,uz]);}}
+  for(const u of WSTRIPS){if(u===t)continue;for(const [ua,ud] of[[u.a0,1],[u.a1,-1]]){const [ux,uz]=wPos(u,ua,0),d=Math.hypot(ux-ex,uz-ez);if(d<10&&d>0.5&&!(CORDONS.length&&inCordon(ux,uz)))opts.push([u,ua,ud,ux,uz]);}}
   if(!opts.length||R()<0.15)return walkStrip(w,t,end,-w.dir);const [u,ua,ud,ux,uz]=pick(opts);w.cross={x0:w.x,z0:w.z,x1:ux,z1:uz,f:0,len:Math.hypot(ux-w.x,uz-w.z)||1,u,ua,ud};}
 function walkLevel(h){return clamp(0.06+0.7*Math.max(gs(h,12.5,3),gs(h,17.5,2))+0.18*(h>7.5&&h<21.5?1:0),0,1)*(1-0.6*clamp(WX.cur.rain||0,0,1));}
 const _wr=new THREE.Object3D(),_wp=new THREE.Object3D(),_wm=new THREE.Matrix4(),_w0=new THREE.Matrix4().makeScale(0,0,0);
@@ -50,7 +50,7 @@ function updateWalkers(dt){if(!WALKERS){if(!LAYOUT.length)return;initWalkers();}
   const run=!SIM.paused&&!GAME.ended;
   for(let i=0;i<WALK_N;i++){const w=WALKERS[i];if(i>=n){wHide(i);WK.dog.setMatrixAt(i,_w0);WK.dogHead.setMatrixAt(i,_w0);continue;}const step=run?w.v*dt:0;if(run)w.ph+=dt*w.v*3.3;
     if(w.cross){const c=w.cross;c.f=Math.min(1,c.f+step/c.len);w.x=c.x0+(c.x1-c.x0)*c.f;w.z=c.z0+(c.z1-c.z0)*c.f;w.yaw=Math.atan2(c.x1-c.x0,c.z1-c.z0);if(c.f>=1)walkStrip(w,c.u,c.ua,c.ud);}
-    else{const t=w.t;if(CORDONS.length){const [px,pz]=wPos(t,w.a+w.dir*1.5,0);if(inCordon(px,pz)&&!inCordon(w.x,w.z))w.dir*=-1;}w.a+=step*w.dir;if(w.a>t.a1||w.a<t.a0){w.a=clamp(w.a,t.a0,t.a1);walkNext(w);}
+    else{const t=w.t;if(CORDONS.length){const [px,pz]=wPos(t,w.a+w.dir*1.5,w.adj);if(inCordon(px,pz)&&!inCordon(w.x,w.z))w.dir*=-1;}w.a+=step*w.dir;if(w.a>t.a1||w.a<t.a0){w.a=clamp(w.a,t.a0,t.a1);walkNext(w);}
       const o=t.obs.find(o=>w.a>o.a0&&w.a<o.a1&&!o.full),want=o?-o.side*t.w*0.28:w.lat;w.adj+=(want-w.adj)*Math.min(1,dt*3);
       [w.x,w.z]=wPos(t,w.a,w.adj);w.yaw=t.h?(w.dir>0?Math.PI/2:-Math.PI/2):(w.dir>0?0:Math.PI);}
     wFigure(i,w.x,w.z,w.yaw,1,run?Math.sin(w.ph)*0.5:0);

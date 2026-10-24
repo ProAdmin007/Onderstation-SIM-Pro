@@ -191,6 +191,12 @@ function membersGeo(list){const geos=[];const up=V3(0,1,0);
     const m=new THREE.Matrix4().compose(a.clone().addScaledVector(d,0.5),new THREE.Quaternion().setFromUnitVectors(up,d.clone().normalize()),V3(1,1,1));g.applyMatrix4(m);geos.push(g);}
   return mergeGeometries(geos);}
 
+// een groep samenvoegen tot één mesh per materiaal (voor groepen die aan/uit gaan, zoals de markt)
+function mergeGroup(g){g.updateMatrixWorld(true);const inv=g.matrixWorld.clone().invert(),buckets=new Map(),old=[];
+  g.traverse(o=>{if(!o.isMesh)return;const geo=o.geometry.clone();for(const k of Object.keys(geo.attributes))if(!['position','normal','uv'].includes(k))geo.deleteAttribute(k);
+    geo.applyMatrix4(new THREE.Matrix4().multiplyMatrices(inv,o.matrixWorld));(buckets.get(o.material)||buckets.set(o.material,[]).get(o.material)).push(geo.index?geo.toNonIndexed():geo);old.push(o);});
+  old.forEach(o=>{o.parent.remove(o);o.geometry.dispose();});[...g.children].forEach(c=>g.remove(c));
+  for(const [m,geos] of buckets){const mg=mergeGeometries(geos,false);if(!mg)continue;const me=new THREE.Mesh(mg,m);me.castShadow=true;me.receiveShadow=true;g.add(me);}return g;}
 // alle statische meshes samenvoegen per materiaal én per zone (minder draw calls). Per zone, zodat de GPU wat buiten beeld
 // (of buiten het schaduwgebied) ligt niet hoeft te tekenen; grote vlakken (grond, spoor) houden één stuk. Elders vakken van 400 m.
 const BAKE_ZONES=[['station',-130,-130,150,90],['wijk',-160,90,215,262],['centrum',-160,262,215,440],['zkh',-420,220,-160,440],['kassen',230,20,650,380],['rwzi',-430,-260,-160,60]];

@@ -109,12 +109,12 @@ function xingTick(dt){const near=xingNear();
 
 // ---- weekmarkt op het Marktplein: woensdag en zaterdag 8:00–13:30, kramen met gestreepte luifels
 const MARKET=(()=>{const g=vGroup(),awn=c=>{const cv=cnv(64,16),x=cv.getContext('2d');for(let i=0;i<8;i++){x.fillStyle=i%2?'#ffffff':c;x.fillRect(i*8,0,8,16);}return toTex(cv);};
-  const cols=['#c81f2a','#2f7a3c','#234a8a','#e8761c'],goods=[0xd83a2a,0xf0c419,0x7ac043,0xe8761c,0x8a5a3a,0xf2f2ee];
+  const cols=['#c81f2a','#2f7a3c','#234a8a','#e8761c'].map(c=>mat({map:awn(c),roughness:0.8,side:THREE.DoubleSide})),goods=[0xd83a2a,0xf0c419,0x7ac043,0xe8761c,0x8a5a3a,0xf2f2ee].map(c=>mat({color:c,roughness:0.8}));
   for(const z of[366.6,377.4])for(const x of[-114,-102,-90,-78]){const k=new THREE.Group();k.position.set(x,0,z);k.rotation.y=z<372?0:Math.PI;g.add(k);
     vBox(k,3.4,0.9,1.4,CM.brown,0,0.45,0);for(const [dx,dz] of[[-1.65,-0.65],[1.65,-0.65],[-1.65,0.65],[1.65,0.65]])vBox(k,0.06,2.4,0.06,CM.grey,dx,1.2,dz);
-    const a=new THREE.Mesh(new THREE.PlaneGeometry(3.6,1.9),mat({map:awn(pick(cols)),roughness:0.8,side:THREE.DoubleSide}));a.rotation.x=-Math.PI/2+0.25;a.position.set(0,2.45,0.1);k.add(a);
-    for(let i=0;i<4;i++)vBox(k,0.7,0.22,0.5,mat({color:pick(goods),roughness:0.8}),-1.15+i*0.77,1.02,0.2);}
-  return g;})();
+    const a=new THREE.Mesh(new THREE.PlaneGeometry(3.6,1.9),pick(cols));a.rotation.x=-Math.PI/2+0.25;a.position.set(0,2.45,0.1);k.add(a);
+    for(let i=0;i<4;i++)vBox(k,0.7,0.22,0.5,pick(goods),-1.15+i*0.77,1.02,0.2);}
+  return mergeGroup(g);})();   // ±12 tekenbeurten in plaats van ±80
 const marketOn=()=>{const d=cityDay(),h=viewHour();return (d===3||d===6)&&h>=8&&h<13.5;};
 const schoolBreak=()=>{const d=cityDay(),h=viewHour();return d>=1&&d<=5&&(h>=10.25&&h<10.5||h>=12&&h<12.75&&d!==3||h>=14.9&&h<15.15&&d!==3);};
 // vrije figuren laten rondlopen binnen een rechthoek (markt, schoolplein)
@@ -126,7 +126,7 @@ const MARKET_FIG=[...Array(16).keys()],KID_FIG=[...Array(16).keys()].map(i=>32+i
 
 // ---- fietsers op de rijbaan (rechts), eigen InstancedMeshes: fiets en fietser
 const CY_N=10;
-const CY=(()=>{const mk=(geo,n,m)=>{const o=new THREE.InstancedMesh(geo,m||new THREE.MeshStandardMaterial({color:0xffffff,roughness:0.7}),n);o.instanceMatrix.setUsage(THREE.DynamicDrawUsage);o.frustumCulled=false;o.castShadow=true;o.userData.dyn=true;o.count=0;scene.add(o);return o;};
+const CY=(()=>{const mk=(geo,n,m)=>{const o=new THREE.InstancedMesh(geo,m||new THREE.MeshStandardMaterial({color:0xffffff,roughness:0.7}),n);o.instanceMatrix.setUsage(THREE.DynamicDrawUsage);o.frustumCulled=false;o.castShadow=false;o.userData.dyn=true;o.count=0;scene.add(o);return o;};
   const wheel=new THREE.TorusGeometry(0.33,0.04,6,14).rotateY(Math.PI/2);
   return {frame:mk(new THREE.BoxGeometry(0.06,0.06,1.0).translate(0,0.62,0),CY_N,CM.dark),wheel:mk(wheel,CY_N*2,CM.tyre),torso:mk(new THREE.BoxGeometry(0.42,0.6,0.24),CY_N),head:mk(new THREE.SphereGeometry(0.12,8,6),CY_N,mat({color:0xd6a17e,roughness:0.7})),
     leg:mk(new THREE.BoxGeometry(0.14,0.62,0.16).translate(0,-0.31,0),CY_N*2,mat({color:0x2a3550,roughness:0.85}))};})();
@@ -136,7 +136,7 @@ const CYCLISTS=Array.from({length:CY_N},(_,i)=>{const loop=LOOPS[i%2],dir=i%4<2?
 const _cy=new THREE.Object3D(),_cp=new THREE.Object3D(),_cm=new THREE.Matrix4();
 function cySet(m,i,x,y,z,rx,rz=0){_cp.position.set(x,y,z);_cp.rotation.set(rx,0,rz);_cp.updateMatrix();m.setMatrixAt(i,_cm.multiplyMatrices(_cy.matrix,_cp.matrix));}
 function cyclistsTick(dt,show,run){const lvl=show?walkLevel(viewHour())*0.9:0;let n=0;
-  for(const c of CYCLISTS){if(c.k>=lvl)continue;const i=n++;if(run){c.d=(c.d+c.v*dt)%c.total;c.ph+=dt*c.v*1.6;}let d=c.d,x=0,z=0,yaw=0;
+  for(const c of CYCLISTS){if(c.k>=lvl)continue;const i=n++;if(run){const nd=(c.d+c.v*dt)%c.total;if(!(CORDONS.length&&!inCordon(...carAt(c,c.d+1.5))&&inCordon(...carAt(c,nd+1.5))))c.d=nd;c.ph+=dt*c.v*1.6;}let d=c.d,x=0,z=0,yaw=0;
     for(const s of c.segs){if(d<=s.len){const f=d/s.len;x=s.p[0]+(s.q[0]-s.p[0])*f;z=s.p[1]+(s.q[1]-s.p[1])*f;yaw=Math.atan2(s.q[0]-s.p[0],s.q[1]-s.p[1]);break;}d-=s.len;}
     _cy.position.set(x,0.06,z);_cy.rotation.set(0,yaw,0);_cy.updateMatrix();const p=Math.sin(c.ph)*0.6;
     cySet(CY.frame,i,0,0,0,0);cySet(CY.wheel,2*i,0,0.36,0.55,0);cySet(CY.wheel,2*i+1,0,0.36,-0.5,0);cySet(CY.torso,i,0,1.35,-0.12,0.25);cySet(CY.head,i,0,1.78,0.0,0);
@@ -176,8 +176,8 @@ function cityTick(dt){const show=GFX.life&&!camInside(),run=!SIM.paused&&!GAME.e
 function ambTick(dt,run,h){const A=AMB;if(!SITE?.zkh)return;
   if(A.state==='idle'){if(run&&(A.next-=dt)<=0){A.g??=ambulanceModel();const S=SITE.zkh,sx=S.x+34,sz=S.z-34;
       A.r=cityRoute([[25,560],[25,239],[-176,239],[-176,262],[sx,262],[sx,sz-4]]);A.d=0;A.v=0;A.stops=[];A.on=true;A.state='heen';A.vmax=13;}}
-  else if(A.state==='heen'){driveVehicle(A,run?dt:0);if(A.d>=A.r.total-0.3){A.state='seh';A.wait=rnd(18,30);}}
+  else if(A.state==='heen'){A.emergency=true;driveVehicle(A,run?dt:0);if(A.d>=A.r.total-0.3){A.state='seh';A.wait=rnd(18,30);}}
   else if(A.state==='seh'){if(run)A.wait-=dt;if(A.wait<=0){A.r=cityRoute([[SITE.zkh.x+34,SITE.zkh.z-38],[SITE.zkh.x+34,262],[-176,262],[-176,239],[25,239],[25,560]]);A.d=0;A.v=0;A.state='terug';A.vmax=9;}}
-  else if(A.state==='terug'){driveVehicle(A,run?dt:0);if(A.d>=A.r.total-0.3){A.state='idle';A.on=false;A.next=rnd(240,480);}}
+  else if(A.state==='terug'){A.emergency=false;driveVehicle(A,run?dt:0);if(A.d>=A.r.total-0.3){A.state='idle';A.on=false;A.next=rnd(240,480);}}
   const sir=A.state==='heen';CM.blink.emissiveIntensity=(A.state==='heen'||A.state==='seh')&&(performance.now()%300)<150?6:0.2;
   if(sir&&run&&A.g){A.sir-=dt;if(A.sir<=0){A.sir=1.2;const v=distGain(A.g.position);if(camera.position.distanceTo(A.g.position)<400)AudioSys.siren?.(v*0.8);}}}

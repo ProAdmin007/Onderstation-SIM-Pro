@@ -95,6 +95,8 @@ function clearIncident(id){GAME.flags.scadaDown=false;$('#scada').classList.remo
   const def=INCIDENTS.find(x=>x.id===id);pushAlarm(`Het incident “${def?def.name:id}” is tijdens het opslaan afgerond`,'info');}
 // geplande gebeurtenissen opnieuw inplannen op basis van de opgeslagen toestand
 function resumeTimers(){
+  RING.stations.forEach(s=>{if(s.theft)crewDispatch({box:VIEWS[s.id].box,n:1,say:`Inbraak ${s.id}: schade opnemen`,until:()=>!s.theft});
+    if(s.burn?.phase==='vervangen')crewDispatch({box:VIEWS[s.id].box,n:2,say:`Trafo ${s.id} vervangen`,until:()=>!s.burn});});
   FEEDERS.forEach(f=>{if(!f.fault)return;const F=f.fault,c=cableOf(f);if(F.spot?.known)digStart(F.spot);if(F.meas&&!F.spot?.known)addTimer(rnd(2,5),()=>measDone(c,F));
     const repair=()=>{F.repairAt=F.repairAt>SIM.t?F.repairAt:SIM.t+rnd(25,55);addTimer(F.repairAt-SIM.t,()=>feederRepair(f));};
     if(f.fault.stage==='search')addTimer(rnd(4,10),()=>{if(!f.fault)return;f.fault.stage='isolated';f.outFrac=f.fault.frac;readyNotice(`Storingsdienst: fout in ${f.id} ${f.name} gevonden en weggeschakeld – ${f.cb} mag weer IN`,f.cb,()=>!D[f.cb].state);repair();});else repair();});

@@ -178,7 +178,7 @@ function drawTablet(){if(!TAB.on)return;const cv=$('#gtMap'),g=cv.getContext('2d
   {const m=TAB.zoom>9?5:TAB.zoom>4.5?10:TAB.zoom>2?20:TAB.zoom>0.9?50:TAB.zoom>0.45?100:250,L=m*s;g.fillStyle='rgba(255,255,255,0.85)';g.fillRect(8,H-24,L+44,18);g.fillStyle='#222';g.fillRect(12,H-12,L,3);g.font='11px Arial';g.textAlign='left';g.fillText(`${m} m`,16+L,H-9);
     g.textAlign='center';g.fillStyle='rgba(255,255,255,0.85)';g.fillRect(W-26,8,18,22);g.fillStyle='#222';g.font='bold 11px Arial';g.fillText('N',W-17,20);g.fillText('▲',W-17,29);}
   // dichtstbijzijnde kabel (rondlopen: waar sta ik boven?)
-  if(FP.on&&!TAB.sel){const n=nearestCable(camera.position.x,camera.position.z,12);$('#gtInfo').innerHTML=n?cableCard(n.c,n.d):'<small>Geen kabel binnen 12 m. Loop over de stoep: daar liggen de kabels.</small>';}}
+  if(FP.on&&!TAB.sel&&!TAB.klic){const n=nearestCable(camera.position.x,camera.position.z,12),el=$('#gtInfo'),h=n?cableCard(n.c,Math.round(n.d)):(KLIC.jobs.length?tabletHome():'<small>Geen kabel binnen 12 m. Loop over de stoep: daar liggen de kabels.</small>');if(el._h!==h){el._h=h;el.innerHTML=h;}}}
 const _tdir=new THREE.Vector3();
 function nearestCable(x,z,max=8){let best=null;for(const c of CABLES){if(!cableVisible(c))continue;for(let i=1;i<c.pts.length;i++){const [ax,az]=c.pts[i-1],[bx,bz]=c.pts[i],dx=bx-ax,dz=bz-az,L2=dx*dx+dz*dz||1,t=clamp(((x-ax)*dx+(z-az)*dz)/L2,0,1),d=Math.hypot(ax+dx*t-x,az+dz*t-z);
     if(d<max&&(!best||d<best.d))best={c,d};}}return best;}

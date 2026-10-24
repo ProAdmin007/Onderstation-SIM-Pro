@@ -5,11 +5,14 @@
 // Zijn ze klaar, dan lopen ze terug, stappen in en rijdt het busje terug naar het station.
 const VAN_DEPOT=[62,41];   // parkeerplek op het stationsterrein (stationsweg, binnen het hek)
 const VANS=[];
+let VAN_SIGN_M=null;const VAN_SIGN=()=>VAN_SIGN_M??=new THREE.MeshBasicMaterial({map:signTex('STORINGSDIENST','#ffffff','#1d2b45',1024,128,'bold 86px Arial')});
+// verwijderde objecten ook uit het GPU-geheugen halen (geometrie altijd, materialen alleen als ze niet gedeeld zijn)
+function disposeTree(o,mats=false){o.traverse(x=>{if(x.geometry)x.geometry.dispose();if(mats&&x.material)[].concat(x.material).forEach(m=>{m.map?.dispose();m.dispose();});});}
 const outsideFence=p=>p.x<FENCE.x0-2||p.x>FENCE.x1+2||p.z<FENCE.z0-2||p.z>FENCE.z1+2;
 const VAN_BEACON=mat({color:0x3a2000,emissive:0xffa21a,emissiveIntensity:0});
 function serviceVanModel(){const g=vGroup();vBox(g,2.0,2.4,4.6,CM.white,0,1.5,-0.4);vBox(g,2.0,1.4,1.4,CM.white,0,1.05,2.5);vBox(g,2.02,0.6,0.9,CM.glass,0,1.95,1.9);
   vBox(g,2.02,0.28,4.62,CM.orange,0,1.0,-0.4);vBox(g,2.02,0.12,4.62,CM.yellow,0,1.2,-0.4);vBox(g,0.5,0.22,0.3,VAN_BEACON,0,2.81,0.9);vBox(g,1.8,0.06,1.6,CM.grey,0,2.73,-1.2);   // imperiaal
-  const sm=new THREE.MeshBasicMaterial({map:signTex('STORINGSDIENST','#ffffff','#1d2b45',1024,128,'bold 86px Arial')});
+  const sm=VAN_SIGN();
   for(const s of[-1,1]){const p=new THREE.Mesh(new THREE.PlaneGeometry(3.2,0.4),sm);p.position.set(s*1.02,1.75,-0.6);p.rotation.y=s*Math.PI/2;g.add(p);}
   for(const x of[-0.7,0.7])vBox(g,0.3,0.15,0.05,CM.head,x,0.95,3.21);vWheels(g,[-0.9,0.9],[-1.9,2.2],0.38);g.visible=true;return g;}
 // waar langs de route stoppen: zo dicht mogelijk bij het doel, maar niet dichterbij dan 'park' meter
@@ -29,9 +32,9 @@ function vanTick(dt){const run=!SIM.paused&&!GAME.ended,blink=(performance.now()
       if(V.d>=V.stopAt-0.3){V.state='werk';const [x,z,yaw]=routeAt(V.r,V.d),nx=-Math.cos(yaw),nz=Math.sin(yaw);   // uitstappen aan de stoepkant
         V.npcs=crewSpawn({...o,from:V3(x+nx*1.8,0,z+nz*1.8)})||[];if(!V.npcs.length)vanBack(V);}}
     else if(V.state==='werk'){if(!V.npcs.some(n=>NPCS.includes(n)))vanBack(V);}
-    else if(V.state==='terug'){driveVehicle(V,run?dt:0);if(V.d>=V.r.total-0.3){scene.remove(V.g);VANS.splice(i,1);continue;}}
+    else if(V.state==='terug'){driveVehicle(V,run?dt:0);if(V.d>=V.r.total-0.3){scene.remove(V.g);disposeTree(V.g);VANS.splice(i,1);continue;}}
     V.beacon=V.state==='werk'||V.state==='heen';}
   VAN_BEACON.emissiveIntensity=VANS.some(V=>V.beacon)&&blink?5:0.3;}
-function vanBack(V){const back=V.pts.slice().reverse(),r=vanRoute(back);if(!r){scene.remove(V.g);VANS.splice(VANS.indexOf(V),1);return;}
+function vanBack(V){const back=V.pts.slice().reverse(),r=vanRoute(back);if(!r){scene.remove(V.g);disposeTree(V.g);VANS.splice(VANS.indexOf(V),1);return;}
   // eerst keren: begin op het punt waar het busje nu staat
   V.r=r;V.d=Math.min(routeNear(r,V.g.position.x,V.g.position.z),r.total);V.v=0;V.wait=0;V.stops=[];V.state='terug';}

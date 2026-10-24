@@ -674,6 +674,12 @@ function membersGeo(list){const geos=[];const up=V3(0,1,0);
     const m=new THREE.Matrix4().compose(a.clone().addScaledVector(d,0.5),new THREE.Quaternion().setFromUnitVectors(up,d.clone().normalize()),V3(1,1,1));g.applyMatrix4(m);geos.push(g);}
   return mergeGeometries(geos);}
 
+// een groep samenvoegen tot één mesh per materiaal (voor groepen die aan/uit gaan, zoals de markt)
+function mergeGroup(g){g.updateMatrixWorld(true);const inv=g.matrixWorld.clone().invert(),buckets=new Map(),old=[];
+  g.traverse(o=>{if(!o.isMesh)return;const geo=o.geometry.clone();for(const k of Object.keys(geo.attributes))if(!['position','normal','uv'].includes(k))geo.deleteAttribute(k);
+    geo.applyMatrix4(new THREE.Matrix4().multiplyMatrices(inv,o.matrixWorld));(buckets.get(o.material)||buckets.set(o.material,[]).get(o.material)).push(geo.index?geo.toNonIndexed():geo);old.push(o);});
+  old.forEach(o=>{o.parent.remove(o);o.geometry.dispose();});[...g.children].forEach(c=>g.remove(c));
+  for(const [m,geos] of buckets){const mg=mergeGeometries(geos,false);if(!mg)continue;const me=new THREE.Mesh(mg,m);me.castShadow=true;me.receiveShadow=true;g.add(me);}return g;}
 // alle statische meshes samenvoegen per materiaal én per zone (minder draw calls). Per zone, zodat de GPU wat buiten beeld
 // (of buiten het schaduwgebied) ligt niet hoeft te tekenen; grote vlakken (grond, spoor) houden één stuk. Elders vakken van 400 m.
 const BAKE_ZONES=[['station',-130,-130,150,90],['wijk',-160,90,215,262],['centrum',-160,262,215,440],['zkh',-420,220,-160,440],['kassen',230,20,650,380],['rwzi',-430,-260,-160,60]];
@@ -4141,7 +4147,7 @@ function updateNPCs(dt){
       n.P.armR.rotation.x=-1.1-Math.sin(n.t*1.3)*0.25;n.P.armL.rotation.x=-0.3;n.P.head.rotation.x=-0.25+Math.sin(n.t*0.7)*0.15;n.P.head.rotation.y=Math.sin(n.t*0.4)*0.4;
       if(n.until()){if(n.talk)radio(n,'Werk gereed, wij zijn vrij. Je kunt weer schakelen.');const back=findPath(n.P.g.position.x,n.P.g.position.z,n.home.x,n.home.z);n.path=back||[n.home];n.i=0;n.state='out';n.el.textContent='Klaar, op weg terug';n.P.head.rotation.set(0,0,0);n.P.armL.rotation.x=n.P.armR.rotation.x=0;}}
     if(n.bubble>0){n.bubble-=dt;if(n.bubble<=0)n.el.textContent=n.state==='out'?'Klaar, op weg terug':n.say;}
-    else if(n.state==='out'){if(spd&&npcWalk(n,dt,spd)){scene.remove(n.P.g);n.el.remove();NPCS.splice(k,1);continue;}}
+    else if(n.state==='out'){if(spd&&npcWalk(n,dt,spd)){scene.remove(n.P.g);disposeTree(n.P.g);n.el.remove();NPCS.splice(k,1);continue;}}
     // tekstwolkje boven het hoofd
     _np.copy(n.P.g.position).setY(2.25).project(camera);const dist=camera.position.distanceTo(n.P.g.position);
     const vis=!ins&&dist<60&&(n.talk||n.state!=='work'||n.bubble>0);
@@ -4553,7 +4559,7 @@ function makeCar(i){const g=new THREE.Group(),body=mat({color:CAR_COL[i%CAR_COL.
   B(1.8,0.7,4.2,body,0,0.6,0);B(1.6,0.6,2.2,CMAT.glass,0,1.2,-0.2);
   for(const [x,z] of[[-0.85,1.3],[0.85,1.3],[-0.85,-1.3],[0.85,-1.3]]){const w=new THREE.Mesh(new THREE.CylinderGeometry(0.33,0.33,0.25,12),CMAT.tyre);w.rotation.z=Math.PI/2;w.position.set(x,0.33,z);g.add(w);}
   for(const x of[-0.6,0.6]){B(0.35,0.15,0.05,CMAT.head,x,0.75,2.11);B(0.35,0.12,0.05,CMAT.tail,x,0.8,-2.11);}
-  const beam=new THREE.Mesh(new THREE.PlaneGeometry(4,12),beamMat);beam.rotation.x=-Math.PI/2;beam.position.set(0,0.06,8.2);g.add(beam);
+  const beam=new THREE.Mesh(new THREE.PlaneGeometry(4,12),beamMat);beam.castShadow=false;beam.rotation.x=-Math.PI/2;beam.position.set(0,0.06,8.2);g.add(beam);
   g.traverse(o=>o.userData.dyn=true);scene.add(g);return g;}
 const CARS=Array.from({length:12},(_,i)=>{const loop=LOOPS[i%2],dir=i%4<2?1:-1,lane=laneOf(loop,dir),segs=lane.map((p,k)=>{const q=lane[(k+1)%4];return {p,q,len:Math.hypot(q[0]-p[0],q[1]-p[1])};});
   const total=segs.reduce((a,s)=>a+s.len,0);return {g:makeCar(i),segs,total,d:(i*0.37%1)*total,v:rnd(7,11),k:i/12};});
@@ -4774,6 +4780,8 @@ function clearIncident(id){GAME.flags.scadaDown=false;$('#scada').classList.remo
   const def=INCIDENTS.find(x=>x.id===id);pushAlarm(`Het incident “${def?def.name:id}” is tijdens het opslaan afgerond`,'info');}
 // geplande gebeurtenissen opnieuw inplannen op basis van de opgeslagen toestand
 function resumeTimers(){
+  RING.stations.forEach(s=>{if(s.theft)crewDispatch({box:VIEWS[s.id].box,n:1,say:`Inbraak ${s.id}: schade opnemen`,until:()=>!s.theft});
+    if(s.burn?.phase==='vervangen')crewDispatch({box:VIEWS[s.id].box,n:2,say:`Trafo ${s.id} vervangen`,until:()=>!s.burn});});
   FEEDERS.forEach(f=>{if(!f.fault)return;const F=f.fault,c=cableOf(f);if(F.spot?.known)digStart(F.spot);if(F.meas&&!F.spot?.known)addTimer(rnd(2,5),()=>measDone(c,F));
     const repair=()=>{F.repairAt=F.repairAt>SIM.t?F.repairAt:SIM.t+rnd(25,55);addTimer(F.repairAt-SIM.t,()=>feederRepair(f));};
     if(f.fault.stage==='search')addTimer(rnd(4,10),()=>{if(!f.fault)return;f.fault.stage='isolated';f.outFrac=f.fault.frac;readyNotice(`Storingsdienst: fout in ${f.id} ${f.name} gevonden en weggeschakeld – ${f.cb} mag weer IN`,f.cb,()=>!D[f.cb].state);repair();});else repair();});
@@ -5205,7 +5213,7 @@ function mouseHint(){let seen=false;try{seen=!!localStorage.getItem('osz-mousehi
 // de pakketbezorger. Die worden door het stadsleven (07xa-city.js) neergezet; hier alleen getekend.
 const WALK_N=48,FIG_N=48,WALK_ALL=WALK_N+FIG_N;
 const WK=(()=>{const mk=(geo,n)=>{const m=new THREE.InstancedMesh(geo,new THREE.MeshStandardMaterial({color:0xffffff,roughness:0.85}),n);m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-    m.castShadow=true;m.frustumCulled=false;m.userData.dyn=true;m.count=0;scene.add(m);return m;};
+    m.castShadow=false;m.frustumCulled=false;m.userData.dyn=true;m.count=0;scene.add(m);return m;};   // nooit in het schaduwgebied rond het station
   const dog=new THREE.BoxGeometry(0.22,0.24,0.6).translate(0,0.36,0);
   return {torso:mk(new THREE.BoxGeometry(0.44,0.62,0.25),WALK_ALL),head:mk(new THREE.SphereGeometry(0.12,10,8),WALK_ALL),hair:mk(new THREE.SphereGeometry(0.128,10,6,0,Math.PI*2,0,Math.PI/2.2),WALK_ALL),
     leg:mk(new THREE.BoxGeometry(0.15,0.86,0.18).translate(0,-0.43,0),WALK_ALL*2),arm:mk(new THREE.BoxGeometry(0.12,0.58,0.14).translate(0,-0.29,0),WALK_ALL*2),
@@ -5234,7 +5242,7 @@ const wPos=(t,a,l)=>t.h?[a,t.c+l]:[t.c+l,a];
 function walkStrip(w,t,a,dir){w.t=t;w.a=a;w.dir=dir;w.cross=null;}
 // eind van de stoep: een stoep in de buurt kiezen (oversteken), anders omkeren
 function walkNext(w){const t=w.t,end=w.dir>0?t.a1:t.a0,[ex,ez]=wPos(t,end,0),opts=[];
-  for(const u of WSTRIPS){if(u===t)continue;for(const [ua,ud] of[[u.a0,1],[u.a1,-1]]){const [ux,uz]=wPos(u,ua,0),d=Math.hypot(ux-ex,uz-ez);if(d<10&&d>0.5)opts.push([u,ua,ud,ux,uz]);}}
+  for(const u of WSTRIPS){if(u===t)continue;for(const [ua,ud] of[[u.a0,1],[u.a1,-1]]){const [ux,uz]=wPos(u,ua,0),d=Math.hypot(ux-ex,uz-ez);if(d<10&&d>0.5&&!(CORDONS.length&&inCordon(ux,uz)))opts.push([u,ua,ud,ux,uz]);}}
   if(!opts.length||R()<0.15)return walkStrip(w,t,end,-w.dir);const [u,ua,ud,ux,uz]=pick(opts);w.cross={x0:w.x,z0:w.z,x1:ux,z1:uz,f:0,len:Math.hypot(ux-w.x,uz-w.z)||1,u,ua,ud};}
 function walkLevel(h){return clamp(0.06+0.7*Math.max(gs(h,12.5,3),gs(h,17.5,2))+0.18*(h>7.5&&h<21.5?1:0),0,1)*(1-0.6*clamp(WX.cur.rain||0,0,1));}
 const _wr=new THREE.Object3D(),_wp=new THREE.Object3D(),_wm=new THREE.Matrix4(),_w0=new THREE.Matrix4().makeScale(0,0,0);
@@ -5250,7 +5258,7 @@ function updateWalkers(dt){if(!WALKERS){if(!LAYOUT.length)return;initWalkers();}
   const run=!SIM.paused&&!GAME.ended;
   for(let i=0;i<WALK_N;i++){const w=WALKERS[i];if(i>=n){wHide(i);WK.dog.setMatrixAt(i,_w0);WK.dogHead.setMatrixAt(i,_w0);continue;}const step=run?w.v*dt:0;if(run)w.ph+=dt*w.v*3.3;
     if(w.cross){const c=w.cross;c.f=Math.min(1,c.f+step/c.len);w.x=c.x0+(c.x1-c.x0)*c.f;w.z=c.z0+(c.z1-c.z0)*c.f;w.yaw=Math.atan2(c.x1-c.x0,c.z1-c.z0);if(c.f>=1)walkStrip(w,c.u,c.ua,c.ud);}
-    else{const t=w.t;if(CORDONS.length){const [px,pz]=wPos(t,w.a+w.dir*1.5,0);if(inCordon(px,pz)&&!inCordon(w.x,w.z))w.dir*=-1;}w.a+=step*w.dir;if(w.a>t.a1||w.a<t.a0){w.a=clamp(w.a,t.a0,t.a1);walkNext(w);}
+    else{const t=w.t;if(CORDONS.length){const [px,pz]=wPos(t,w.a+w.dir*1.5,w.adj);if(inCordon(px,pz)&&!inCordon(w.x,w.z))w.dir*=-1;}w.a+=step*w.dir;if(w.a>t.a1||w.a<t.a0){w.a=clamp(w.a,t.a0,t.a1);walkNext(w);}
       const o=t.obs.find(o=>w.a>o.a0&&w.a<o.a1&&!o.full),want=o?-o.side*t.w*0.28:w.lat;w.adj+=(want-w.adj)*Math.min(1,dt*3);
       [w.x,w.z]=wPos(t,w.a,w.adj);w.yaw=t.h?(w.dir>0?Math.PI/2:-Math.PI/2):(w.dir>0?0:Math.PI);}
     wFigure(i,w.x,w.z,w.yaw,1,run?Math.sin(w.ph)*0.5:0);
@@ -5372,12 +5380,12 @@ function xingTick(dt){const near=xingNear();
 
 // ---- weekmarkt op het Marktplein: woensdag en zaterdag 8:00–13:30, kramen met gestreepte luifels
 const MARKET=(()=>{const g=vGroup(),awn=c=>{const cv=cnv(64,16),x=cv.getContext('2d');for(let i=0;i<8;i++){x.fillStyle=i%2?'#ffffff':c;x.fillRect(i*8,0,8,16);}return toTex(cv);};
-  const cols=['#c81f2a','#2f7a3c','#234a8a','#e8761c'],goods=[0xd83a2a,0xf0c419,0x7ac043,0xe8761c,0x8a5a3a,0xf2f2ee];
+  const cols=['#c81f2a','#2f7a3c','#234a8a','#e8761c'].map(c=>mat({map:awn(c),roughness:0.8,side:THREE.DoubleSide})),goods=[0xd83a2a,0xf0c419,0x7ac043,0xe8761c,0x8a5a3a,0xf2f2ee].map(c=>mat({color:c,roughness:0.8}));
   for(const z of[366.6,377.4])for(const x of[-114,-102,-90,-78]){const k=new THREE.Group();k.position.set(x,0,z);k.rotation.y=z<372?0:Math.PI;g.add(k);
     vBox(k,3.4,0.9,1.4,CM.brown,0,0.45,0);for(const [dx,dz] of[[-1.65,-0.65],[1.65,-0.65],[-1.65,0.65],[1.65,0.65]])vBox(k,0.06,2.4,0.06,CM.grey,dx,1.2,dz);
-    const a=new THREE.Mesh(new THREE.PlaneGeometry(3.6,1.9),mat({map:awn(pick(cols)),roughness:0.8,side:THREE.DoubleSide}));a.rotation.x=-Math.PI/2+0.25;a.position.set(0,2.45,0.1);k.add(a);
-    for(let i=0;i<4;i++)vBox(k,0.7,0.22,0.5,mat({color:pick(goods),roughness:0.8}),-1.15+i*0.77,1.02,0.2);}
-  return g;})();
+    const a=new THREE.Mesh(new THREE.PlaneGeometry(3.6,1.9),pick(cols));a.rotation.x=-Math.PI/2+0.25;a.position.set(0,2.45,0.1);k.add(a);
+    for(let i=0;i<4;i++)vBox(k,0.7,0.22,0.5,pick(goods),-1.15+i*0.77,1.02,0.2);}
+  return mergeGroup(g);})();   // ±12 tekenbeurten in plaats van ±80
 const marketOn=()=>{const d=cityDay(),h=viewHour();return (d===3||d===6)&&h>=8&&h<13.5;};
 const schoolBreak=()=>{const d=cityDay(),h=viewHour();return d>=1&&d<=5&&(h>=10.25&&h<10.5||h>=12&&h<12.75&&d!==3||h>=14.9&&h<15.15&&d!==3);};
 // vrije figuren laten rondlopen binnen een rechthoek (markt, schoolplein)
@@ -5389,7 +5397,7 @@ const MARKET_FIG=[...Array(16).keys()],KID_FIG=[...Array(16).keys()].map(i=>32+i
 
 // ---- fietsers op de rijbaan (rechts), eigen InstancedMeshes: fiets en fietser
 const CY_N=10;
-const CY=(()=>{const mk=(geo,n,m)=>{const o=new THREE.InstancedMesh(geo,m||new THREE.MeshStandardMaterial({color:0xffffff,roughness:0.7}),n);o.instanceMatrix.setUsage(THREE.DynamicDrawUsage);o.frustumCulled=false;o.castShadow=true;o.userData.dyn=true;o.count=0;scene.add(o);return o;};
+const CY=(()=>{const mk=(geo,n,m)=>{const o=new THREE.InstancedMesh(geo,m||new THREE.MeshStandardMaterial({color:0xffffff,roughness:0.7}),n);o.instanceMatrix.setUsage(THREE.DynamicDrawUsage);o.frustumCulled=false;o.castShadow=false;o.userData.dyn=true;o.count=0;scene.add(o);return o;};
   const wheel=new THREE.TorusGeometry(0.33,0.04,6,14).rotateY(Math.PI/2);
   return {frame:mk(new THREE.BoxGeometry(0.06,0.06,1.0).translate(0,0.62,0),CY_N,CM.dark),wheel:mk(wheel,CY_N*2,CM.tyre),torso:mk(new THREE.BoxGeometry(0.42,0.6,0.24),CY_N),head:mk(new THREE.SphereGeometry(0.12,8,6),CY_N,mat({color:0xd6a17e,roughness:0.7})),
     leg:mk(new THREE.BoxGeometry(0.14,0.62,0.16).translate(0,-0.31,0),CY_N*2,mat({color:0x2a3550,roughness:0.85}))};})();
@@ -5399,7 +5407,7 @@ const CYCLISTS=Array.from({length:CY_N},(_,i)=>{const loop=LOOPS[i%2],dir=i%4<2?
 const _cy=new THREE.Object3D(),_cp=new THREE.Object3D(),_cm=new THREE.Matrix4();
 function cySet(m,i,x,y,z,rx,rz=0){_cp.position.set(x,y,z);_cp.rotation.set(rx,0,rz);_cp.updateMatrix();m.setMatrixAt(i,_cm.multiplyMatrices(_cy.matrix,_cp.matrix));}
 function cyclistsTick(dt,show,run){const lvl=show?walkLevel(viewHour())*0.9:0;let n=0;
-  for(const c of CYCLISTS){if(c.k>=lvl)continue;const i=n++;if(run){c.d=(c.d+c.v*dt)%c.total;c.ph+=dt*c.v*1.6;}let d=c.d,x=0,z=0,yaw=0;
+  for(const c of CYCLISTS){if(c.k>=lvl)continue;const i=n++;if(run){const nd=(c.d+c.v*dt)%c.total;if(!(CORDONS.length&&!inCordon(...carAt(c,c.d+1.5))&&inCordon(...carAt(c,nd+1.5))))c.d=nd;c.ph+=dt*c.v*1.6;}let d=c.d,x=0,z=0,yaw=0;
     for(const s of c.segs){if(d<=s.len){const f=d/s.len;x=s.p[0]+(s.q[0]-s.p[0])*f;z=s.p[1]+(s.q[1]-s.p[1])*f;yaw=Math.atan2(s.q[0]-s.p[0],s.q[1]-s.p[1]);break;}d-=s.len;}
     _cy.position.set(x,0.06,z);_cy.rotation.set(0,yaw,0);_cy.updateMatrix();const p=Math.sin(c.ph)*0.6;
     cySet(CY.frame,i,0,0,0,0);cySet(CY.wheel,2*i,0,0.36,0.55,0);cySet(CY.wheel,2*i+1,0,0.36,-0.5,0);cySet(CY.torso,i,0,1.35,-0.12,0.25);cySet(CY.head,i,0,1.78,0.0,0);
@@ -5439,9 +5447,9 @@ function cityTick(dt){const show=GFX.life&&!camInside(),run=!SIM.paused&&!GAME.e
 function ambTick(dt,run,h){const A=AMB;if(!SITE?.zkh)return;
   if(A.state==='idle'){if(run&&(A.next-=dt)<=0){A.g??=ambulanceModel();const S=SITE.zkh,sx=S.x+34,sz=S.z-34;
       A.r=cityRoute([[25,560],[25,239],[-176,239],[-176,262],[sx,262],[sx,sz-4]]);A.d=0;A.v=0;A.stops=[];A.on=true;A.state='heen';A.vmax=13;}}
-  else if(A.state==='heen'){driveVehicle(A,run?dt:0);if(A.d>=A.r.total-0.3){A.state='seh';A.wait=rnd(18,30);}}
+  else if(A.state==='heen'){A.emergency=true;driveVehicle(A,run?dt:0);if(A.d>=A.r.total-0.3){A.state='seh';A.wait=rnd(18,30);}}
   else if(A.state==='seh'){if(run)A.wait-=dt;if(A.wait<=0){A.r=cityRoute([[SITE.zkh.x+34,SITE.zkh.z-38],[SITE.zkh.x+34,262],[-176,262],[-176,239],[25,239],[25,560]]);A.d=0;A.v=0;A.state='terug';A.vmax=9;}}
-  else if(A.state==='terug'){driveVehicle(A,run?dt:0);if(A.d>=A.r.total-0.3){A.state='idle';A.on=false;A.next=rnd(240,480);}}
+  else if(A.state==='terug'){A.emergency=false;driveVehicle(A,run?dt:0);if(A.d>=A.r.total-0.3){A.state='idle';A.on=false;A.next=rnd(240,480);}}
   const sir=A.state==='heen';CM.blink.emissiveIntensity=(A.state==='heen'||A.state==='seh')&&(performance.now()%300)<150?6:0.2;
   if(sir&&run&&A.g){A.sir-=dt;if(A.sir<=0){A.sir=1.2;const v=distGain(A.g.position);if(camera.position.distanceTo(A.g.position)<400)AudioSys.siren?.(v*0.8);}}}
 
@@ -5452,11 +5460,14 @@ function ambTick(dt,run,h){const A=AMB;if(!SITE?.zkh)return;
 // Zijn ze klaar, dan lopen ze terug, stappen in en rijdt het busje terug naar het station.
 const VAN_DEPOT=[62,41];   // parkeerplek op het stationsterrein (stationsweg, binnen het hek)
 const VANS=[];
+let VAN_SIGN_M=null;const VAN_SIGN=()=>VAN_SIGN_M??=new THREE.MeshBasicMaterial({map:signTex('STORINGSDIENST','#ffffff','#1d2b45',1024,128,'bold 86px Arial')});
+// verwijderde objecten ook uit het GPU-geheugen halen (geometrie altijd, materialen alleen als ze niet gedeeld zijn)
+function disposeTree(o,mats=false){o.traverse(x=>{if(x.geometry)x.geometry.dispose();if(mats&&x.material)[].concat(x.material).forEach(m=>{m.map?.dispose();m.dispose();});});}
 const outsideFence=p=>p.x<FENCE.x0-2||p.x>FENCE.x1+2||p.z<FENCE.z0-2||p.z>FENCE.z1+2;
 const VAN_BEACON=mat({color:0x3a2000,emissive:0xffa21a,emissiveIntensity:0});
 function serviceVanModel(){const g=vGroup();vBox(g,2.0,2.4,4.6,CM.white,0,1.5,-0.4);vBox(g,2.0,1.4,1.4,CM.white,0,1.05,2.5);vBox(g,2.02,0.6,0.9,CM.glass,0,1.95,1.9);
   vBox(g,2.02,0.28,4.62,CM.orange,0,1.0,-0.4);vBox(g,2.02,0.12,4.62,CM.yellow,0,1.2,-0.4);vBox(g,0.5,0.22,0.3,VAN_BEACON,0,2.81,0.9);vBox(g,1.8,0.06,1.6,CM.grey,0,2.73,-1.2);   // imperiaal
-  const sm=new THREE.MeshBasicMaterial({map:signTex('STORINGSDIENST','#ffffff','#1d2b45',1024,128,'bold 86px Arial')});
+  const sm=VAN_SIGN();
   for(const s of[-1,1]){const p=new THREE.Mesh(new THREE.PlaneGeometry(3.2,0.4),sm);p.position.set(s*1.02,1.75,-0.6);p.rotation.y=s*Math.PI/2;g.add(p);}
   for(const x of[-0.7,0.7])vBox(g,0.3,0.15,0.05,CM.head,x,0.95,3.21);vWheels(g,[-0.9,0.9],[-1.9,2.2],0.38);g.visible=true;return g;}
 // waar langs de route stoppen: zo dicht mogelijk bij het doel, maar niet dichterbij dan 'park' meter
@@ -5476,10 +5487,10 @@ function vanTick(dt){const run=!SIM.paused&&!GAME.ended,blink=(performance.now()
       if(V.d>=V.stopAt-0.3){V.state='werk';const [x,z,yaw]=routeAt(V.r,V.d),nx=-Math.cos(yaw),nz=Math.sin(yaw);   // uitstappen aan de stoepkant
         V.npcs=crewSpawn({...o,from:V3(x+nx*1.8,0,z+nz*1.8)})||[];if(!V.npcs.length)vanBack(V);}}
     else if(V.state==='werk'){if(!V.npcs.some(n=>NPCS.includes(n)))vanBack(V);}
-    else if(V.state==='terug'){driveVehicle(V,run?dt:0);if(V.d>=V.r.total-0.3){scene.remove(V.g);VANS.splice(i,1);continue;}}
+    else if(V.state==='terug'){driveVehicle(V,run?dt:0);if(V.d>=V.r.total-0.3){scene.remove(V.g);disposeTree(V.g);VANS.splice(i,1);continue;}}
     V.beacon=V.state==='werk'||V.state==='heen';}
   VAN_BEACON.emissiveIntensity=VANS.some(V=>V.beacon)&&blink?5:0.3;}
-function vanBack(V){const back=V.pts.slice().reverse(),r=vanRoute(back);if(!r){scene.remove(V.g);VANS.splice(VANS.indexOf(V),1);return;}
+function vanBack(V){const back=V.pts.slice().reverse(),r=vanRoute(back);if(!r){scene.remove(V.g);disposeTree(V.g);VANS.splice(VANS.indexOf(V),1);return;}
   // eerst keren: begin op het punt waar het busje nu staat
   V.r=r;V.d=Math.min(routeNear(r,V.g.position.x,V.g.position.z),r.total);V.v=0;V.wait=0;V.stops=[];V.state='terug';}
 
@@ -5520,9 +5531,9 @@ function stationTick(){for(const s of RING.stations){const T=s.theft,B=s.burn;
     else if(T.phase==='onveilig'&&SIM.t>=T.until){const g=T.lv&&LVG.find(x=>x.id===T.lv);if(g?.lvf?.theft){g.lvf=null;g.outFrac=0;}s.theft=null;award(15,`Aarding ${s.id} hersteld`);
       readyNotice(`${s.id}: aarding hersteld, het station is weer veilig${g?` en ${g.name} heeft weer stroom`:''}`,null);refreshAll();}}
   if(B){const iso=stIsolated(s);
-    if(B.phase==='brand'&&SIM.t>=B.arrive){B.phase='wacht';B.wait=SIM.t;pushAlarm(`Brandweer ter plaatse bij ${s.id}: maak het station en de kabels ernaartoe spanningsloos (${stNeighborSwitches(s).join(' en ')} UIT) – dan blussen we`,'crit');}
-    if(B.phase==='wacht'){if(iso){B.phase='blussen';B.until=SIM.t+rnd(15,22);award(B.wait&&SIM.t-B.wait<=10?25:10,`${s.id} spanningsloos voor de brandweer`);pushAlarm(`Brandweer: ${s.id} spanningsloos bevestigd – we blussen`,'ok');}
-      else if(SIM.t-B.wait>25){stNeighborSwitches(s).forEach(id=>{if(D[id].state===1)D[id].state=0;});computeFlows();award(-40,`Brandweer liet ${s.id} zelf afschakelen`);
+    if(B.phase==='brand'&&SIM.t>=B.arrive){B.phase='wacht';B.wait=SIM.t;B.warn=SIM.t+10;pushAlarm(`Brandweer ter plaatse bij ${s.id}: maak het station en de kabels ernaartoe spanningsloos (${stNeighborSwitches(s).join(' en ')} UIT) – dan blussen we`,'crit');}
+    if(B.phase==='wacht'){if(iso){B.phase='blussen';B.until=SIM.t+rnd(15,22);if(!B.forced)award(B.wait&&SIM.t-B.wait<=10?25:10,`${s.id} spanningsloos voor de brandweer`);pushAlarm(`Brandweer: ${s.id} spanningsloos bevestigd – we blussen`,'ok');}
+      else if(SIM.t-B.wait>25){B.forced=true;stNeighborSwitches(s).forEach(id=>{if(D[id].state===1)D[id].state=0;});computeFlows();award(-40,`Brandweer liet ${s.id} zelf afschakelen`);
         pushAlarm(`Storingsdienst: niemand schakelde – ${stNeighborSwitches(s).join(' en ')} zijn op verzoek van de brandweer afgeschakeld`,'crit');refreshAll();}
       else if(SIM.t>=B.warn){B.warn=SIM.t+10;award(-10,`Brandweer wacht bij ${s.id}`);pushAlarm(`Brandweer wacht nog steeds bij ${s.id}: ${stNeighborSwitches(s).filter(id=>D[id].state===1).join(' en ')||'het station'} nog in bedrijf`,'warn');}}
     else if(B.phase==='blussen'){if(!iso&&!B.danger){B.danger=true;incident();pushAlarm(`Brandweer: er staat weer spanning op ${s.id} terwijl wij blussen!`,'crit');}
@@ -5545,7 +5556,8 @@ const FIRE_CORDON=22,PARK={politie:26,brandweer:16,ploeg:30};
 function stRoadSpot(s){const sn=gisSnap(...s.pos);if(!sn)return {x:s.pos[0],z:s.pos[1],yaw:0};const a=GIS_NET.nodes[sn.a],b=GIS_NET.nodes[sn.b],yaw=Math.atan2(b.x-a.x,b.z-a.z);
   const dx=s.pos[0]-sn.x,dz=s.pos[1]-sn.z,L=Math.hypot(dx,dz)||1;return {x:sn.x+dx/L*1.7,z:sn.z+dz/L*1.7,yaw};}
 function policeModel(){const g=vGroup();vBox(g,1.8,0.75,4.3,CM.white,0,0.65,0);vBox(g,1.6,0.6,2.2,CM.glass,0,1.25,-0.2);vBox(g,1.82,0.22,4.32,CM.blue,0,0.75,0);vBox(g,1.82,0.1,4.32,CM.orange,0,0.95,0);
-  for(const x of[-0.4,0.4])vBox(g,0.5,0.15,0.25,CM.blink,x,1.62,-0.2);vWheels(g,[-0.85,0.85],[-1.3,1.3],0.33);g.visible=true;return g;}
+  for(const x of[-0.4,0.4])vBox(g,0.5,0.15,0.25,POLICE_BLINK,x,1.62,-0.2);vWheels(g,[-0.85,0.85],[-1.3,1.3],0.33);g.visible=true;return g;}
+const POLICE_BLINK=mat({color:0x0a1430,emissive:0x2a6bff,emissiveIntensity:0});
 // lint met paaltjes rond het station (marge in meters)
 function tapeAround(s,m=1.4){const b=VIEWS[s.id].box,g=new THREE.Group(),x0=b.min.x-m,x1=b.max.x+m,z0=b.min.z-m,z1=b.max.z+m,pts=[[x0,z0],[x1,z0],[x1,z1],[x0,z1]];
   for(let i=0;i<4;i++)tapeLine(g,...pts[i],...pts[(i+1)%4]);g.userData.dyn=true;scene.add(g);return g;}
@@ -5562,7 +5574,7 @@ function cordonUp(s){const c=VIEWS[s.id].center,R=FIRE_CORDON,rect=[c.x-R,c.z-R,
       tapeLine(g,x-px*5,z-pz*5,x+px*5,z+pz*5);
       for(const k of[-2.2,0,2.2]){const b=vBox(g,1.9,0.5,0.12,k?CM.white:CM.red,x+px*k,0.75,z+pz*k);b.rotation.y=Math.atan2(px,pz)-Math.PI/2;}}}});
   scene.add(g);CORDONS.push(rect);return {g,rect};}
-function cordonDown(cd){if(!cd)return;scene.remove(cd.g);const i=CORDONS.indexOf(cd.rect);if(i>=0)CORDONS.splice(i,1);}
+function cordonDown(cd){if(!cd)return;scene.remove(cd.g);disposeTree(cd.g);const i=CORDONS.indexOf(cd.rect);if(i>=0)CORDONS.splice(i,1);}
 // hulpdienst rijdt vanaf de rand van de stad naar het station en parkeert op afstand
 function respond(model,s,park,vmax){const c=VIEWS[s.id].center,sn=gisSnap(c.x,c.z),path=sn&&gisPath(25,560,sn.x,sn.z),r=path&&vanRoute([[25,560],...path]);
   if(!r){const p=stRoadSpot(s);model.position.set(p.x,0,p.z);model.rotation.y=p.yaw;return {g:model,arrived:true};}
@@ -5580,9 +5592,9 @@ function foamDrop(a,tg){const s=new THREE.Sprite(FOAM_MAT);s.scale.setScalar(0.7
 function foamLayer(s){const b=VIEWS[s.id].box,c=b.getCenter(V3()),g=new THREE.Group(),blobs=[];g.userData.dyn=true;
   for(let i=0;i<14;i++){const top=i<7,o=mesh(new THREE.SphereGeometry(1,10,6),FOAM_BLOB,g,top?rnd(b.min.x+0.4,b.max.x-0.4):c.x+(Math.random()<0.5?-1:1)*rnd(1.8,3),top?b.max.y+0.05:0.05,top?rnd(b.min.z+0.3,b.max.z-0.3):c.z+rnd(-2.2,2.2));
     o.userData.r=top?rnd(0.7,1.1):rnd(0.6,1.2);o.scale.set(0.01,0.01,0.01);o.castShadow=false;blobs.push(o);}scene.add(g);return {g,blobs};}
-function stationVisuals(dt){const run=!SIM.paused,now=performance.now();
+function stationVisuals(dt){const run=!SIM.paused,now=performance.now();POLICE_BLINK.emissiveIntensity=[...STV.values()].some(v=>v.police)&&now%300<150?6:0.2;
   for(const s of RING.stations){const T=s.theft,B=s.burn;let v=STV.get(s);
-    if(!T&&!B){if(v){[v.police?.g,v.tape,v.truck?.g,v.soot,v.foam?.g].forEach(o=>o&&scene.remove(o));(v.flames||[]).forEach(f=>scene.remove(f));cordonDown(v.cordon);STV.delete(s);}continue;}
+    if(!T&&!B){if(v){[v.police?.g,v.tape,v.truck?.g,v.soot,v.foam?.g].forEach(o=>{if(o){scene.remove(o);disposeTree(o,o===v.soot);}});(v.flames||[]).forEach(f=>{scene.remove(f);f.material.dispose();});cordonDown(v.cordon);STV.delete(s);}continue;}
     if(!v){v={};STV.set(s,v);}
     // koperdiefstal: politieauto bij het station en lint zolang het onveilig is
     if(T){if(!v.police){const p=stRoadSpot(s),g=policeModel();g.position.set(p.x,0,p.z);g.rotation.y=p.yaw;v.police={g,arrived:true};}
@@ -5595,7 +5607,7 @@ function stationVisuals(dt){const run=!SIM.paused,now=performance.now();
       if(!v.ploeg){v.ploeg=true;crewDispatch({box:bx,n:2,say:`Storingsdienst ${s.id}: toezicht`,park:PARK.ploeg,standOff:16,until:()=>!s.burn||s.burn.phase==='vervangen'});}
       if(B.phase!=='brand'){respondPark(v.police);respondPark(v.truck);}
       respondTick(v.police,dt,run,true);respondTick(v.truck,dt,run,true);
-      if(v.truck.bm)v.truck.bm.emissiveIntensity=now%400<200?6:0.3;CM.blink.emissiveIntensity=Math.max(CM.blink.emissiveIntensity,now%300<150?6:0.2);
+      if(v.truck.bm)v.truck.bm.emissiveIntensity=now%400<200?6:0.3;
       // afzetting en lint pas als de politie er is
       if(v.police.arrived&&!v.cordon){v.cordon=cordonUp(s);v.tape=tapeAround(s,5);}
       // vlammen en rook tot het blussen klaar is
@@ -5612,8 +5624,9 @@ function stationVisuals(dt){const run=!SIM.paused,now=performance.now();
           if(n&&NPCS.includes(n)&&n.state==='work'){const a=n.P.g.position.clone().setY(1.3),d=V3(c.x-a.x,0,c.z-a.z).normalize();foamDrop(a.addScaledVector(d,0.6),V3(c.x+rnd(-1.2,1.2),bx.max.y+0.3,c.z+rnd(-0.8,0.8)));}}}}}
     if(!v.soot){v.soot=mesh(new THREE.PlaneGeometry(bx.max.x-bx.min.x+0.2,bx.max.z-bx.min.z+0.2),mat({color:0x151515,roughness:1}),scene,c.x,bx.max.y+0.04,c.z);v.soot.rotation.x=-Math.PI/2;v.soot.castShadow=false;}
     // geblust: vlammen, afzetting en wagens weg; het schuim blijft liggen tot de trafo vervangen is
-    if(!burning){if(v.flames){v.flames.forEach(f=>scene.remove(f));v.flames=null;}cordonDown(v.cordon);v.cordon=null;if(v.tape){scene.remove(v.tape);v.tape=null;}
-      for(const key of['police','truck'])if(v[key]){scene.remove(v[key].g);v[key]=null;}v.crew=null;}}}
+    if(!burning){if(v.flames){v.flames.forEach(f=>{scene.remove(f);f.material.dispose();});v.flames=null;}cordonDown(v.cordon);v.cordon=null;if(v.tape){scene.remove(v.tape);disposeTree(v.tape);v.tape=null;}
+      if(v.police){scene.remove(v.police.g);disposeTree(v.police.g);v.police=null;}
+      if(v.truck&&!(v.crew||[]).some(n=>NPCS.includes(n))){scene.remove(v.truck.g);disposeTree(v.truck.g);v.truck=null;v.crew=null;}}}}
 
 
 // ============================================================ kabeltracés (GIS): waar de kabels fysiek liggen
@@ -5795,7 +5808,7 @@ function drawTablet(){if(!TAB.on)return;const cv=$('#gtMap'),g=cv.getContext('2d
   {const m=TAB.zoom>9?5:TAB.zoom>4.5?10:TAB.zoom>2?20:TAB.zoom>0.9?50:TAB.zoom>0.45?100:250,L=m*s;g.fillStyle='rgba(255,255,255,0.85)';g.fillRect(8,H-24,L+44,18);g.fillStyle='#222';g.fillRect(12,H-12,L,3);g.font='11px Arial';g.textAlign='left';g.fillText(`${m} m`,16+L,H-9);
     g.textAlign='center';g.fillStyle='rgba(255,255,255,0.85)';g.fillRect(W-26,8,18,22);g.fillStyle='#222';g.font='bold 11px Arial';g.fillText('N',W-17,20);g.fillText('▲',W-17,29);}
   // dichtstbijzijnde kabel (rondlopen: waar sta ik boven?)
-  if(FP.on&&!TAB.sel){const n=nearestCable(camera.position.x,camera.position.z,12);$('#gtInfo').innerHTML=n?cableCard(n.c,n.d):'<small>Geen kabel binnen 12 m. Loop over de stoep: daar liggen de kabels.</small>';}}
+  if(FP.on&&!TAB.sel&&!TAB.klic){const n=nearestCable(camera.position.x,camera.position.z,12),el=$('#gtInfo'),h=n?cableCard(n.c,Math.round(n.d)):(KLIC.jobs.length?tabletHome():'<small>Geen kabel binnen 12 m. Loop over de stoep: daar liggen de kabels.</small>');if(el._h!==h){el._h=h;el.innerHTML=h;}}}
 const _tdir=new THREE.Vector3();
 function nearestCable(x,z,max=8){let best=null;for(const c of CABLES){if(!cableVisible(c))continue;for(let i=1;i<c.pts.length;i++){const [ax,az]=c.pts[i-1],[bx,bz]=c.pts[i],dx=bx-ax,dz=bz-az,L2=dx*dx+dz*dz||1,t=clamp(((x-ax)*dx+(z-az)*dz)/L2,0,1),d=Math.hypot(ax+dx*t-x,az+dz*t-z);
     if(d<max&&(!best||d<best.d))best={c,d};}}return best;}
@@ -5890,7 +5903,7 @@ function klicHit(j){const c=j.c,spot={d:j.d,x:j.x,z:j.z,known:true,mof:false};j.
   pushAlarm(`💥 Graafschade: ${j.firm} heeft ${c.name} geraakt bij ${j.where}! De plek is bekend: de graafploeg kan direct aan de slag`,'crit');
   if(c.kind==='ring'){const s=c.sec,f=FEEDERS.find(x=>x.cb===FLOW.TAG[s.node]?.cb)||FD(s.ring.from);if(!s.fault)ringFault(f,s,rnd(50,80));s.located=true;s.spot=spot;}
   else if(c.kind==='feeder'){if(!c.f.fault)feederFault(c.f.id,rnd(5,8));if(c.f.fault)c.f.fault.spot=spot;}
-  else if(c.kind==='ls')lvFault(c.g.id);refreshAll();}
+  else if(c.kind==='ls'&&!c.g.lvf&&EN.has(c.g.node))lvFault(c.g.id);refreshAll();}
 function klicTick(){if(!GAME.events||MODES[GAME.mode]?.les)return;KLIC.next??=SIM.t+rnd(40,110);
   if(SIM.t>=KLIC.next){KLIC.next=SIM.t+rnd(140,260);if(KLIC.jobs.length<2)klicNew();}
   for(const j of KLIC.jobs){if(j.state==='plan'&&SIM.t>=j.start){j.state='graaf';digStart(j);pushAlarm(`${j.firm} is begonnen met graven bij ${j.where}${j.marked?' – kabels aangewezen ✓':' – de kabels zijn NIET aangewezen!'}`,j.marked?'info':'warn');}
@@ -5901,11 +5914,11 @@ function klicTick(){if(!GAME.events||MODES[GAME.mode]?.les)return;KLIC.next??=SI
 // ---- oude moffen preventief vervangen: alleen op een spanningsloze, gezonde kabel; niet onder spanning brengen zolang de ploeg bezig is
 function gisMofReplace(c){const old=c.moffen.filter(m=>m.year<1990);if(!old.length)return deny('Deze kabel heeft geen moffen van vóór 1990');
   if(c.work)return deny('De ploeg is al bezig');if(faultOf(c))return deny('Eerst de storing laten repareren');
-  if(cableState(c)==='aan')return deny('Maak de kabel eerst spanningsloos (isoleren, terugvoeden via het normaal-open punt)');
+  if(['aan','warm'].includes(cableState(c)))return deny('Maak de kabel eerst spanningsloos (isoleren, terugvoeden via het normaal-open punt)');
   const t=25+old.length*10;c.work={until:SIM.t+t,n:old.length,x:old[0].x,z:old[0].z};digStart(c.work);
   pushAlarm(`Montageploeg vervangt ${old.length} oude mof${old.length>1?'fen':''} in ${c.name} (±${t} min). Breng de kabel niet onder spanning zolang ze bezig zijn!`,'info');drawTablet();}
 function gisWorkTick(){for(const c of CABLES){const w=c.work;if(!w)continue;
-  if(cableState(c)==='aan'){digStop(w);c.work=null;incident();pushAlarm(`Montageploeg: ${c.name} kwam onder spanning terwijl wij aan de moffen werkten!`,'crit');continue;}
+  if(['aan','warm'].includes(cableState(c))){digStop(w);c.work=null;incident();pushAlarm(`Montageploeg: ${c.name} kwam onder spanning terwijl wij aan de moffen werkten!`,'crit');continue;}
   if(SIM.t>=w.until){digStop(w);c.work=null;c.moffen.forEach(m=>{if(m.year<1990)m.year=GIS_YEAR;});buildMofMesh();award(4*w.n,'Oude moffen preventief vervangen');
     pushAlarm(`Montageploeg: ${w.n} mof${w.n>1?'fen':''} in ${c.name} vervangen – de kabel mag weer in bedrijf`,'ok');drawTablet();}}}
 function gisSimTick(){klicTick();gisWorkTick();}
@@ -5918,7 +5931,7 @@ function digStart(key){if(!key||DIGS.has(key))return;const g=new THREE.Group();g
   for(let i=0;i<8;i++){const a=i/8*Math.PI*2,x=Math.cos(a)*3.2,z=Math.sin(a)*2.4;box(0.06,1.0,0.06,DIGM.white,g,x,0.5,z);const r=box(2.4,0.16,0.04,i%2?DIGM.red:DIGM.white,g,x,0.85,z);r.rotation.y=-a+Math.PI/2;}
   const pile=cyl(0.2,1.3,0.9,DIGM.sand,g,-1.6,0.45,0.8,10);pile.castShadow=false;box(2.6,0.06,0.9,DIGM.dark,g,0,0.05,0);
   scene.add(g);DIGS.set(key,g);}
-function digStop(key){const g=key&&DIGS.get(key);if(g){scene.remove(g);DIGS.delete(key);}}
+function digStop(key){const g=key&&DIGS.get(key);if(g){scene.remove(g);disposeTree(g);DIGS.delete(key);}}
 
 // ---- tablet: storing, graafwerk en moffen in de kabelkaart en de knoppen
 function gisCardExtra(c){const F=faultOf(c),out=[],act=[];
@@ -5961,7 +5974,7 @@ function updateHUD(){
   $('#kCml').textContent=Math.round(SIM.cml).toLocaleString('nl-NL');
   $('#kScore').textContent=Math.round(GAME.score).toLocaleString('nl-NL');$('#kInc').textContent=SIM.incidents;$('#kpiInc').classList.toggle('bad',SIM.incidents>0);
 }
-function setSpeed(s){if(GAME.ended)return;if(s===0)SIM.paused=!SIM.paused;else{SIM.speed=s;SIM.paused=false;}syncSpeed();}
+function setSpeed(s){if(GAME.ended)return;if(PREVIEW)return deny('Eerst terug naar de dienst (Weer en tijd)');if(s===0)SIM.paused=!SIM.paused;else{SIM.speed=s;SIM.paused=false;}syncSpeed();}
 function syncSpeed(){document.querySelectorAll('#speed button').forEach(b=>{const v=+b.dataset.s;b.classList.toggle('on',v===0?SIM.paused:(!SIM.paused&&v===SIM.speed));});updateHUD();}
 $('#speed').addEventListener('click',e=>{const b=e.target.closest('button');if(b)setSpeed(+b.dataset.s);});
 $('#interlock').addEventListener('change',e=>{SIM.interlock=e.target.checked;pushAlarm(SIM.interlock?'Vergrendelingen ingeschakeld':'Let op: vergrendelingen UITGESCHAKELD – verkeerde handelingen worden niet tegengehouden',SIM.interlock?'info':'warn');refreshDevPanel();});
@@ -6025,7 +6038,7 @@ else{renderMenu();$('#intro').classList.remove('hidden');controls.autoRotate=tru
 if(params.has('night'))updateSky(22);
 if(params.has('view')){const v=VIEWPOS[+params.get('view')];camera.position.copy(v[0]);controls.target.copy(v[1]);controls.autoRotate=false;controls.update();}
 
-window.OS={klicFocus,klicCard,klicCables,tabletHome,refreshInfo,XLAB,TRACES,cableDist,stationVisuals,cityRoute,CORDONS,inCordon,copperTheft,trafoFire,stationTick,stationBlock,stIsolated,stNeighborSwitches,STV,updateHUD,pushAlarm,FF,ffStart,ffStop,skipRain,openWT,closeWT,setRealWeather,autoWeather,pickWeather,wetNow,ALARM:()=>ALARM_CRIT,VANS,vanTick,crewDispatch,crewSpawn,routeAt,driveVehicle,walkActive:()=>WALK_ACTIVE,BUS,GARB,PARCEL,AMB,TRAIN,XING,HALTES,MARKET,FIG,CY,cityDay,marketOn,schoolBreak,cityTick,measDone,cableCard,isoSwitches,KLIC,klicNew,klicMark,klicHit,gisMeasure,gisMofReplace,faultOf,cableOf,cableRisk,DIGS,CABLES,GIS_NET,gisRoute,cableState,setXray,XRAY,TAB,openTablet,closeTablet,drawTablet,nearestCable,DYN,fpsTick,fireTick,WK,getWalkers:()=>WALKERS,getStrips:()=>WSTRIPS,fireStart,fireDouse,fireStop,GENSET,gsCap,SMALL,lvgLive,updateSmall,setMouseMode,getMouseMode:()=>MOUSE_MODE,cameraKeys,OVK,openPreview,closePreview,viewHour,getPreview:()=>PREVIEW,VIEWPOS,SITE,updateSites,SLD,activeFaults,renderFaults,reportPDF,listSaves,openSlots,closeSlots,SAVE_SLOTS,layoutCheck,LAYOUT,FREC,fltRec,openRec,closeRec,renderRec,selectivity,protSelect,feederT,incT,incOf,shortCircuit,EF,earthFault,efTick,efRails,efU0,railsCoupled,controls,tripBreaker,CONS,LS_LINKS,LS_ORDERS,GENSET,lsTick,lsOrder,lsSwitchOrder,lsExec,gsSend,gsOff,gsRestart,tapOrder,setEta,callPrio,lsAreas,PRIO,openLS,closeLS,renderLS,lvVolt,stationLoads,shedFactor,failP,manualP,phoneTick,refreshDevPanel,updateSLD,openKeys,closeKeys,KEY_HELP,RELAY_BAYS,relayTask,relayDue,relayDefect,initRelays,kitTests,kitMeasure,kitVerdict,kitRun,openKit,closeKit,saveGame,readSave,deleteSave,resumeGame,canSave,specOf,CABLE,soilT,FD,meppelFault,linkTick,tabAlarms,updateTabAlarms,renderTasks,INC,INCIDENTS,startIncident,endIncident,incidentTick,setTab,renderCables,GFX,setGfx,applyGfx,openSettings,closeSettings,WX_TYPES,renderer,scene,FIRE,CARS,updateWindows,updateLife,stationLive,cbMaintTask,worstCb,cond,breakerFails,CB_IDS,FLEX,setFlex,flexTick,congestion,openFlex,closeFlex,checkModel,homeBus,BUSES,SEL_BAYS,TORCH,setTorch,HO_POOL,handoverTick,REC,RP,startReplay,stopReplay,analyse,stationDamage,closeHandover,deviations,PHONE,lvFault,callFrom,phoneAnswer,dispatchLV,LVG,forecast,progAdvice,PROG,startTask:(k,...a)=>{TASK={relayTask,cbMaintTask,railTask,railBTask,stationTask,thermoTask,ringTask,feederTask,lineTask,reserveTask}[k](...a);TASK.i=0;TASK.code='WV-TEST';briefInit(TASK);renderTasks();},SIM,D,LESSONS,lessonGo,selectDevice,abortTask,railTask,stationTask,thermoTask,nearDev,VIEWS,PROT,setProt,openProt,closeProt,busFault,BUSF,RINGS,task:()=>TASK,briefSubmit,briefCheck,briefWatch,actKey,taskActs,crewNear,boxOf:id=>VIEWS[id]&&VIEWS[id].box,AudioSys,updateAudio,WX,setWeather,setSeason,SEASONS,ambient,enterKiosk,ROOMS,blockedAt,RING,NPCS,crewDispatch,ringFault,FP,enterFP,exitFP,pickCenter,camera,camInside,setRatio,setTab,GAME,MODES,applyMode,endGame,EN:()=>EN,FLOW,operate,tapStep,setAVR,resetLockout,toggleAR,regulate,computeFlows,randomEvent,lineFault,feederFault,trafoFault,offerTask,simStep,FEEDERS};
+window.OS={setSpeed,klicFocus,klicCard,klicCables,tabletHome,refreshInfo,XLAB,TRACES,cableDist,stationVisuals,cityRoute,CORDONS,inCordon,copperTheft,trafoFire,stationTick,stationBlock,stIsolated,stNeighborSwitches,STV,updateHUD,pushAlarm,FF,ffStart,ffStop,skipRain,openWT,closeWT,setRealWeather,autoWeather,pickWeather,wetNow,ALARM:()=>ALARM_CRIT,VANS,vanTick,crewDispatch,crewSpawn,routeAt,driveVehicle,walkActive:()=>WALK_ACTIVE,BUS,GARB,PARCEL,AMB,TRAIN,XING,HALTES,MARKET,FIG,CY,cityDay,marketOn,schoolBreak,cityTick,measDone,cableCard,isoSwitches,KLIC,klicNew,klicMark,klicHit,gisMeasure,gisMofReplace,faultOf,cableOf,cableRisk,DIGS,CABLES,GIS_NET,gisRoute,cableState,setXray,XRAY,TAB,openTablet,closeTablet,drawTablet,nearestCable,DYN,fpsTick,fireTick,WK,getWalkers:()=>WALKERS,getStrips:()=>WSTRIPS,fireStart,fireDouse,fireStop,GENSET,gsCap,SMALL,lvgLive,updateSmall,setMouseMode,getMouseMode:()=>MOUSE_MODE,cameraKeys,OVK,openPreview,closePreview,viewHour,getPreview:()=>PREVIEW,VIEWPOS,SITE,updateSites,SLD,activeFaults,renderFaults,reportPDF,listSaves,openSlots,closeSlots,SAVE_SLOTS,layoutCheck,LAYOUT,FREC,fltRec,openRec,closeRec,renderRec,selectivity,protSelect,feederT,incT,incOf,shortCircuit,EF,earthFault,efTick,efRails,efU0,railsCoupled,controls,tripBreaker,CONS,LS_LINKS,LS_ORDERS,GENSET,lsTick,lsOrder,lsSwitchOrder,lsExec,gsSend,gsOff,gsRestart,tapOrder,setEta,callPrio,lsAreas,PRIO,openLS,closeLS,renderLS,lvVolt,stationLoads,shedFactor,failP,manualP,phoneTick,refreshDevPanel,updateSLD,openKeys,closeKeys,KEY_HELP,RELAY_BAYS,relayTask,relayDue,relayDefect,initRelays,kitTests,kitMeasure,kitVerdict,kitRun,openKit,closeKit,saveGame,readSave,deleteSave,resumeGame,canSave,specOf,CABLE,soilT,FD,meppelFault,linkTick,tabAlarms,updateTabAlarms,renderTasks,INC,INCIDENTS,startIncident,endIncident,incidentTick,setTab,renderCables,GFX,setGfx,applyGfx,openSettings,closeSettings,WX_TYPES,renderer,scene,FIRE,CARS,updateWindows,updateLife,stationLive,cbMaintTask,worstCb,cond,breakerFails,CB_IDS,FLEX,setFlex,flexTick,congestion,openFlex,closeFlex,checkModel,homeBus,BUSES,SEL_BAYS,TORCH,setTorch,HO_POOL,handoverTick,REC,RP,startReplay,stopReplay,analyse,stationDamage,closeHandover,deviations,PHONE,lvFault,callFrom,phoneAnswer,dispatchLV,LVG,forecast,progAdvice,PROG,startTask:(k,...a)=>{TASK={relayTask,cbMaintTask,railTask,railBTask,stationTask,thermoTask,ringTask,feederTask,lineTask,reserveTask}[k](...a);TASK.i=0;TASK.code='WV-TEST';briefInit(TASK);renderTasks();},SIM,D,LESSONS,lessonGo,selectDevice,abortTask,railTask,stationTask,thermoTask,nearDev,VIEWS,PROT,setProt,openProt,closeProt,busFault,BUSF,RINGS,task:()=>TASK,briefSubmit,briefCheck,briefWatch,actKey,taskActs,crewNear,boxOf:id=>VIEWS[id]&&VIEWS[id].box,AudioSys,updateAudio,WX,setWeather,setSeason,SEASONS,ambient,enterKiosk,ROOMS,blockedAt,RING,NPCS,crewDispatch,ringFault,FP,enterFP,exitFP,pickCenter,camera,camInside,setRatio,setTab,GAME,MODES,applyMode,endGame,EN:()=>EN,FLOW,operate,tapStep,setAVR,resetLockout,toggleAR,regulate,computeFlows,randomEvent,lineFault,feederFault,trafoFault,offerTask,simStep,FEEDERS};
 const clock=new THREE.Clock();let hudT=0,skyT=0,progT=0;
 let liteAcc=0,shadowT=0,hudStep=4;
 // dieptebuffer: in het overzicht schuift de near-plane mee met de kijkafstand, zodat gevels op afstand niet flikkeren
@@ -6034,7 +6047,7 @@ function nearPlane(){const n=FP.on||camInside()?0.3:clamp(camera.position.distan
 // schaduwkaart alleen opnieuw tekenen als er op het stationsterrein iets beweegt (scheiders, monteurs, brandweer); anders 2× per seconde voor de zon.
 // Het schaduwgebied ligt vast rond het station, dus auto's en voetgangers in de wijk tellen niet mee.
 renderer.shadowMap.autoUpdate=false;
-function shadowTick(dt){shadowT+=dt;if(SHADOW_DIRTY||shadowT>0.5||NPCS.length||FIRE.trucks.length||Object.values(D).some(d=>d.busy)){shadowT=0;SHADOW_DIRTY=false;renderer.shadowMap.needsUpdate=true;}}
+function shadowTick(dt){shadowT+=dt;if(SHADOW_DIRTY||shadowT>0.5||NPCS.some(n=>!outsideFence(n.P.g.position))||FIRE.trucks.length||Object.values(D).some(d=>d.busy)){shadowT=0;SHADOW_DIRTY=false;renderer.shadowMap.needsUpdate=true;}}
 function frame(){
   // testmodus (?lite): de hele lus 15× per seconde in plaats van 60× – elke wijziging aan de pagina kost een compositie in software-grafiek
   // (en in het spel bij een ingestelde maximale beeldfrequentie)

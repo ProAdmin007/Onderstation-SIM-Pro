@@ -55,7 +55,7 @@ function klicHit(j){const c=j.c,spot={d:j.d,x:j.x,z:j.z,known:true,mof:false};j.
   pushAlarm(`💥 Graafschade: ${j.firm} heeft ${c.name} geraakt bij ${j.where}! De plek is bekend: de graafploeg kan direct aan de slag`,'crit');
   if(c.kind==='ring'){const s=c.sec,f=FEEDERS.find(x=>x.cb===FLOW.TAG[s.node]?.cb)||FD(s.ring.from);if(!s.fault)ringFault(f,s,rnd(50,80));s.located=true;s.spot=spot;}
   else if(c.kind==='feeder'){if(!c.f.fault)feederFault(c.f.id,rnd(5,8));if(c.f.fault)c.f.fault.spot=spot;}
-  else if(c.kind==='ls')lvFault(c.g.id);refreshAll();}
+  else if(c.kind==='ls'&&!c.g.lvf&&EN.has(c.g.node))lvFault(c.g.id);refreshAll();}
 function klicTick(){if(!GAME.events||MODES[GAME.mode]?.les)return;KLIC.next??=SIM.t+rnd(40,110);
   if(SIM.t>=KLIC.next){KLIC.next=SIM.t+rnd(140,260);if(KLIC.jobs.length<2)klicNew();}
   for(const j of KLIC.jobs){if(j.state==='plan'&&SIM.t>=j.start){j.state='graaf';digStart(j);pushAlarm(`${j.firm} is begonnen met graven bij ${j.where}${j.marked?' – kabels aangewezen ✓':' – de kabels zijn NIET aangewezen!'}`,j.marked?'info':'warn');}
@@ -66,11 +66,11 @@ function klicTick(){if(!GAME.events||MODES[GAME.mode]?.les)return;KLIC.next??=SI
 // ---- oude moffen preventief vervangen: alleen op een spanningsloze, gezonde kabel; niet onder spanning brengen zolang de ploeg bezig is
 function gisMofReplace(c){const old=c.moffen.filter(m=>m.year<1990);if(!old.length)return deny('Deze kabel heeft geen moffen van vóór 1990');
   if(c.work)return deny('De ploeg is al bezig');if(faultOf(c))return deny('Eerst de storing laten repareren');
-  if(cableState(c)==='aan')return deny('Maak de kabel eerst spanningsloos (isoleren, terugvoeden via het normaal-open punt)');
+  if(['aan','warm'].includes(cableState(c)))return deny('Maak de kabel eerst spanningsloos (isoleren, terugvoeden via het normaal-open punt)');
   const t=25+old.length*10;c.work={until:SIM.t+t,n:old.length,x:old[0].x,z:old[0].z};digStart(c.work);
   pushAlarm(`Montageploeg vervangt ${old.length} oude mof${old.length>1?'fen':''} in ${c.name} (±${t} min). Breng de kabel niet onder spanning zolang ze bezig zijn!`,'info');drawTablet();}
 function gisWorkTick(){for(const c of CABLES){const w=c.work;if(!w)continue;
-  if(cableState(c)==='aan'){digStop(w);c.work=null;incident();pushAlarm(`Montageploeg: ${c.name} kwam onder spanning terwijl wij aan de moffen werkten!`,'crit');continue;}
+  if(['aan','warm'].includes(cableState(c))){digStop(w);c.work=null;incident();pushAlarm(`Montageploeg: ${c.name} kwam onder spanning terwijl wij aan de moffen werkten!`,'crit');continue;}
   if(SIM.t>=w.until){digStop(w);c.work=null;c.moffen.forEach(m=>{if(m.year<1990)m.year=GIS_YEAR;});buildMofMesh();award(4*w.n,'Oude moffen preventief vervangen');
     pushAlarm(`Montageploeg: ${w.n} mof${w.n>1?'fen':''} in ${c.name} vervangen – de kabel mag weer in bedrijf`,'ok');drawTablet();}}}
 function gisSimTick(){klicTick();gisWorkTick();}
@@ -83,7 +83,7 @@ function digStart(key){if(!key||DIGS.has(key))return;const g=new THREE.Group();g
   for(let i=0;i<8;i++){const a=i/8*Math.PI*2,x=Math.cos(a)*3.2,z=Math.sin(a)*2.4;box(0.06,1.0,0.06,DIGM.white,g,x,0.5,z);const r=box(2.4,0.16,0.04,i%2?DIGM.red:DIGM.white,g,x,0.85,z);r.rotation.y=-a+Math.PI/2;}
   const pile=cyl(0.2,1.3,0.9,DIGM.sand,g,-1.6,0.45,0.8,10);pile.castShadow=false;box(2.6,0.06,0.9,DIGM.dark,g,0,0.05,0);
   scene.add(g);DIGS.set(key,g);}
-function digStop(key){const g=key&&DIGS.get(key);if(g){scene.remove(g);DIGS.delete(key);}}
+function digStop(key){const g=key&&DIGS.get(key);if(g){scene.remove(g);disposeTree(g);DIGS.delete(key);}}
 
 // ---- tablet: storing, graafwerk en moffen in de kabelkaart en de knoppen
 function gisCardExtra(c){const F=faultOf(c),out=[],act=[];

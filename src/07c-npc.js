@@ -77,7 +77,7 @@ function updateNPCs(dt){
       n.P.armR.rotation.x=-1.1-Math.sin(n.t*1.3)*0.25;n.P.armL.rotation.x=-0.3;n.P.head.rotation.x=-0.25+Math.sin(n.t*0.7)*0.15;n.P.head.rotation.y=Math.sin(n.t*0.4)*0.4;
       if(n.until()){if(n.talk)radio(n,'Werk gereed, wij zijn vrij. Je kunt weer schakelen.');const back=findPath(n.P.g.position.x,n.P.g.position.z,n.home.x,n.home.z);n.path=back||[n.home];n.i=0;n.state='out';n.el.textContent='Klaar, op weg terug';n.P.head.rotation.set(0,0,0);n.P.armL.rotation.x=n.P.armR.rotation.x=0;}}
     if(n.bubble>0){n.bubble-=dt;if(n.bubble<=0)n.el.textContent=n.state==='out'?'Klaar, op weg terug':n.say;}
-    else if(n.state==='out'){if(spd&&npcWalk(n,dt,spd)){scene.remove(n.P.g);n.el.remove();NPCS.splice(k,1);continue;}}
+    else if(n.state==='out'){if(spd&&npcWalk(n,dt,spd)){scene.remove(n.P.g);disposeTree(n.P.g);n.el.remove();NPCS.splice(k,1);continue;}}
     // tekstwolkje boven het hoofd
     _np.copy(n.P.g.position).setY(2.25).project(camera);const dist=camera.position.distanceTo(n.P.g.position);
     const vis=!ins&&dist<60&&(n.talk||n.state!=='work'||n.bubble>0);

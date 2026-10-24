@@ -594,6 +594,16 @@ const TESTS = [
         return { eerst, afgezet, afstand, stopt, door, weg }; });
       for (const [k, v] of Object.entries(r)) assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
   } },
+  { name: 'regressie: geen hervatten tijdens bekijken, geen moffenwerk op een warme kabel, graafschade aan een spanningsloze LS-kabel geen MS-storing, markt samengevoegd', query: '?autostart&t=10', async run(p) {
+      const r = await p.evaluate(async () => { const O = OS; T.quiet();
+        O.openWT(); document.querySelector('#pvBar [data-pv="view"]').click(); O.setSpeed(0); const bekijken = O.SIM.paused && !!O.getPreview(); O.closeWT();
+        const c = O.CABLES.find(x => x.kind === 'ring' && x.sec.a && x.sec.b); c.moffen.forEach(m => m.year = 1975); c.sec.temp = 120; const warm = O.cableState(c) === 'warm'; O.gisMofReplace(c); const geenWerk = warm && !c.work; c.sec.temp = 20;
+        const ls = O.CABLES.find(x => x.kind === 'ls'); O.D[ls.g.id].state = 0; O.computeFlows(); const ff0 = O.FEEDERS.filter(f => f.fault).length, j = O.klicNew(ls); O.klicHit(j);
+        const geenMS = O.FEEDERS.filter(f => f.fault).length === ff0 && O.RING.secs.every(x => !x.fault); O.D[ls.g.id].state = 1; O.computeFlows();
+        const markt = O.MARKET.children.length <= 14;
+        return { bekijken, geenWerk, geenMS, markt }; });
+      for (const [k, v] of Object.entries(r)) assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
+  } },
   { name: 'stadsleven: weekmarkt, schoolplein, trein met overweg, bus met haltes (wacht bij een dichte overweg)', query: '?autostart&t=10&season=zomer', async run(p) {
       const r = await p.evaluate(async () => { const O = OS, tick = (s, dt = 0.1) => { for (let i = 0; i < s / dt; i++) O.cityTick(dt); };
         const zat = O.cityDay() === 6; tick(1); const markt = O.marketOn() && O.MARKET.visible && O.FIG.slice(0, 16).every(f => f.on);

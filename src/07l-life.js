@@ -21,7 +21,7 @@ function makeCar(i){const g=new THREE.Group(),body=mat({color:CAR_COL[i%CAR_COL.
   B(1.8,0.7,4.2,body,0,0.6,0);B(1.6,0.6,2.2,CMAT.glass,0,1.2,-0.2);
   for(const [x,z] of[[-0.85,1.3],[0.85,1.3],[-0.85,-1.3],[0.85,-1.3]]){const w=new THREE.Mesh(new THREE.CylinderGeometry(0.33,0.33,0.25,12),CMAT.tyre);w.rotation.z=Math.PI/2;w.position.set(x,0.33,z);g.add(w);}
   for(const x of[-0.6,0.6]){B(0.35,0.15,0.05,CMAT.head,x,0.75,2.11);B(0.35,0.12,0.05,CMAT.tail,x,0.8,-2.11);}
-  const beam=new THREE.Mesh(new THREE.PlaneGeometry(4,12),beamMat);beam.rotation.x=-Math.PI/2;beam.position.set(0,0.06,8.2);g.add(beam);
+  const beam=new THREE.Mesh(new THREE.PlaneGeometry(4,12),beamMat);beam.castShadow=false;beam.rotation.x=-Math.PI/2;beam.position.set(0,0.06,8.2);g.add(beam);
   g.traverse(o=>o.userData.dyn=true);scene.add(g);return g;}
 const CARS=Array.from({length:12},(_,i)=>{const loop=LOOPS[i%2],dir=i%4<2?1:-1,lane=laneOf(loop,dir),segs=lane.map((p,k)=>{const q=lane[(k+1)%4];return {p,q,len:Math.hypot(q[0]-p[0],q[1]-p[1])};});
   const total=segs.reduce((a,s)=>a+s.len,0);return {g:makeCar(i),segs,total,d:(i*0.37%1)*total,v:rnd(7,11),k:i/12};});

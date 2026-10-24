@@ -35,9 +35,9 @@ function stationTick(){for(const s of RING.stations){const T=s.theft,B=s.burn;
     else if(T.phase==='onveilig'&&SIM.t>=T.until){const g=T.lv&&LVG.find(x=>x.id===T.lv);if(g?.lvf?.theft){g.lvf=null;g.outFrac=0;}s.theft=null;award(15,`Aarding ${s.id} hersteld`);
       readyNotice(`${s.id}: aarding hersteld, het station is weer veilig${g?` en ${g.name} heeft weer stroom`:''}`,null);refreshAll();}}
   if(B){const iso=stIsolated(s);
-    if(B.phase==='brand'&&SIM.t>=B.arrive){B.phase='wacht';B.wait=SIM.t;pushAlarm(`Brandweer ter plaatse bij ${s.id}: maak het station en de kabels ernaartoe spanningsloos (${stNeighborSwitches(s).join(' en ')} UIT) – dan blussen we`,'crit');}
-    if(B.phase==='wacht'){if(iso){B.phase='blussen';B.until=SIM.t+rnd(15,22);award(B.wait&&SIM.t-B.wait<=10?25:10,`${s.id} spanningsloos voor de brandweer`);pushAlarm(`Brandweer: ${s.id} spanningsloos bevestigd – we blussen`,'ok');}
-      else if(SIM.t-B.wait>25){stNeighborSwitches(s).forEach(id=>{if(D[id].state===1)D[id].state=0;});computeFlows();award(-40,`Brandweer liet ${s.id} zelf afschakelen`);
+    if(B.phase==='brand'&&SIM.t>=B.arrive){B.phase='wacht';B.wait=SIM.t;B.warn=SIM.t+10;pushAlarm(`Brandweer ter plaatse bij ${s.id}: maak het station en de kabels ernaartoe spanningsloos (${stNeighborSwitches(s).join(' en ')} UIT) – dan blussen we`,'crit');}
+    if(B.phase==='wacht'){if(iso){B.phase='blussen';B.until=SIM.t+rnd(15,22);if(!B.forced)award(B.wait&&SIM.t-B.wait<=10?25:10,`${s.id} spanningsloos voor de brandweer`);pushAlarm(`Brandweer: ${s.id} spanningsloos bevestigd – we blussen`,'ok');}
+      else if(SIM.t-B.wait>25){B.forced=true;stNeighborSwitches(s).forEach(id=>{if(D[id].state===1)D[id].state=0;});computeFlows();award(-40,`Brandweer liet ${s.id} zelf afschakelen`);
         pushAlarm(`Storingsdienst: niemand schakelde – ${stNeighborSwitches(s).join(' en ')} zijn op verzoek van de brandweer afgeschakeld`,'crit');refreshAll();}
       else if(SIM.t>=B.warn){B.warn=SIM.t+10;award(-10,`Brandweer wacht bij ${s.id}`);pushAlarm(`Brandweer wacht nog steeds bij ${s.id}: ${stNeighborSwitches(s).filter(id=>D[id].state===1).join(' en ')||'het station'} nog in bedrijf`,'warn');}}
     else if(B.phase==='blussen'){if(!iso&&!B.danger){B.danger=true;incident();pushAlarm(`Brandweer: er staat weer spanning op ${s.id} terwijl wij blussen!`,'crit');}
@@ -60,7 +60,8 @@ const FIRE_CORDON=22,PARK={politie:26,brandweer:16,ploeg:30};
 function stRoadSpot(s){const sn=gisSnap(...s.pos);if(!sn)return {x:s.pos[0],z:s.pos[1],yaw:0};const a=GIS_NET.nodes[sn.a],b=GIS_NET.nodes[sn.b],yaw=Math.atan2(b.x-a.x,b.z-a.z);
   const dx=s.pos[0]-sn.x,dz=s.pos[1]-sn.z,L=Math.hypot(dx,dz)||1;return {x:sn.x+dx/L*1.7,z:sn.z+dz/L*1.7,yaw};}
 function policeModel(){const g=vGroup();vBox(g,1.8,0.75,4.3,CM.white,0,0.65,0);vBox(g,1.6,0.6,2.2,CM.glass,0,1.25,-0.2);vBox(g,1.82,0.22,4.32,CM.blue,0,0.75,0);vBox(g,1.82,0.1,4.32,CM.orange,0,0.95,0);
-  for(const x of[-0.4,0.4])vBox(g,0.5,0.15,0.25,CM.blink,x,1.62,-0.2);vWheels(g,[-0.85,0.85],[-1.3,1.3],0.33);g.visible=true;return g;}
+  for(const x of[-0.4,0.4])vBox(g,0.5,0.15,0.25,POLICE_BLINK,x,1.62,-0.2);vWheels(g,[-0.85,0.85],[-1.3,1.3],0.33);g.visible=true;return g;}
+const POLICE_BLINK=mat({color:0x0a1430,emissive:0x2a6bff,emissiveIntensity:0});
 // lint met paaltjes rond het station (marge in meters)
 function tapeAround(s,m=1.4){const b=VIEWS[s.id].box,g=new THREE.Group(),x0=b.min.x-m,x1=b.max.x+m,z0=b.min.z-m,z1=b.max.z+m,pts=[[x0,z0],[x1,z0],[x1,z1],[x0,z1]];
   for(let i=0;i<4;i++)tapeLine(g,...pts[i],...pts[(i+1)%4]);g.userData.dyn=true;scene.add(g);return g;}
@@ -77,7 +78,7 @@ function cordonUp(s){const c=VIEWS[s.id].center,R=FIRE_CORDON,rect=[c.x-R,c.z-R,
       tapeLine(g,x-px*5,z-pz*5,x+px*5,z+pz*5);
       for(const k of[-2.2,0,2.2]){const b=vBox(g,1.9,0.5,0.12,k?CM.white:CM.red,x+px*k,0.75,z+pz*k);b.rotation.y=Math.atan2(px,pz)-Math.PI/2;}}}});
   scene.add(g);CORDONS.push(rect);return {g,rect};}
-function cordonDown(cd){if(!cd)return;scene.remove(cd.g);const i=CORDONS.indexOf(cd.rect);if(i>=0)CORDONS.splice(i,1);}
+function cordonDown(cd){if(!cd)return;scene.remove(cd.g);disposeTree(cd.g);const i=CORDONS.indexOf(cd.rect);if(i>=0)CORDONS.splice(i,1);}
 // hulpdienst rijdt vanaf de rand van de stad naar het station en parkeert op afstand
 function respond(model,s,park,vmax){const c=VIEWS[s.id].center,sn=gisSnap(c.x,c.z),path=sn&&gisPath(25,560,sn.x,sn.z),r=path&&vanRoute([[25,560],...path]);
   if(!r){const p=stRoadSpot(s);model.position.set(p.x,0,p.z);model.rotation.y=p.yaw;return {g:model,arrived:true};}
@@ -95,9 +96,9 @@ function foamDrop(a,tg){const s=new THREE.Sprite(FOAM_MAT);s.scale.setScalar(0.7
 function foamLayer(s){const b=VIEWS[s.id].box,c=b.getCenter(V3()),g=new THREE.Group(),blobs=[];g.userData.dyn=true;
   for(let i=0;i<14;i++){const top=i<7,o=mesh(new THREE.SphereGeometry(1,10,6),FOAM_BLOB,g,top?rnd(b.min.x+0.4,b.max.x-0.4):c.x+(Math.random()<0.5?-1:1)*rnd(1.8,3),top?b.max.y+0.05:0.05,top?rnd(b.min.z+0.3,b.max.z-0.3):c.z+rnd(-2.2,2.2));
     o.userData.r=top?rnd(0.7,1.1):rnd(0.6,1.2);o.scale.set(0.01,0.01,0.01);o.castShadow=false;blobs.push(o);}scene.add(g);return {g,blobs};}
-function stationVisuals(dt){const run=!SIM.paused,now=performance.now();
+function stationVisuals(dt){const run=!SIM.paused,now=performance.now();POLICE_BLINK.emissiveIntensity=[...STV.values()].some(v=>v.police)&&now%300<150?6:0.2;
   for(const s of RING.stations){const T=s.theft,B=s.burn;let v=STV.get(s);
-    if(!T&&!B){if(v){[v.police?.g,v.tape,v.truck?.g,v.soot,v.foam?.g].forEach(o=>o&&scene.remove(o));(v.flames||[]).forEach(f=>scene.remove(f));cordonDown(v.cordon);STV.delete(s);}continue;}
+    if(!T&&!B){if(v){[v.police?.g,v.tape,v.truck?.g,v.soot,v.foam?.g].forEach(o=>{if(o){scene.remove(o);disposeTree(o,o===v.soot);}});(v.flames||[]).forEach(f=>{scene.remove(f);f.material.dispose();});cordonDown(v.cordon);STV.delete(s);}continue;}
     if(!v){v={};STV.set(s,v);}
     // koperdiefstal: politieauto bij het station en lint zolang het onveilig is
     if(T){if(!v.police){const p=stRoadSpot(s),g=policeModel();g.position.set(p.x,0,p.z);g.rotation.y=p.yaw;v.police={g,arrived:true};}
@@ -110,7 +111,7 @@ function stationVisuals(dt){const run=!SIM.paused,now=performance.now();
       if(!v.ploeg){v.ploeg=true;crewDispatch({box:bx,n:2,say:`Storingsdienst ${s.id}: toezicht`,park:PARK.ploeg,standOff:16,until:()=>!s.burn||s.burn.phase==='vervangen'});}
       if(B.phase!=='brand'){respondPark(v.police);respondPark(v.truck);}
       respondTick(v.police,dt,run,true);respondTick(v.truck,dt,run,true);
-      if(v.truck.bm)v.truck.bm.emissiveIntensity=now%400<200?6:0.3;CM.blink.emissiveIntensity=Math.max(CM.blink.emissiveIntensity,now%300<150?6:0.2);
+      if(v.truck.bm)v.truck.bm.emissiveIntensity=now%400<200?6:0.3;
       // afzetting en lint pas als de politie er is
       if(v.police.arrived&&!v.cordon){v.cordon=cordonUp(s);v.tape=tapeAround(s,5);}
       // vlammen en rook tot het blussen klaar is
@@ -127,5 +128,6 @@ function stationVisuals(dt){const run=!SIM.paused,now=performance.now();
           if(n&&NPCS.includes(n)&&n.state==='work'){const a=n.P.g.position.clone().setY(1.3),d=V3(c.x-a.x,0,c.z-a.z).normalize();foamDrop(a.addScaledVector(d,0.6),V3(c.x+rnd(-1.2,1.2),bx.max.y+0.3,c.z+rnd(-0.8,0.8)));}}}}}
     if(!v.soot){v.soot=mesh(new THREE.PlaneGeometry(bx.max.x-bx.min.x+0.2,bx.max.z-bx.min.z+0.2),mat({color:0x151515,roughness:1}),scene,c.x,bx.max.y+0.04,c.z);v.soot.rotation.x=-Math.PI/2;v.soot.castShadow=false;}
     // geblust: vlammen, afzetting en wagens weg; het schuim blijft liggen tot de trafo vervangen is
-    if(!burning){if(v.flames){v.flames.forEach(f=>scene.remove(f));v.flames=null;}cordonDown(v.cordon);v.cordon=null;if(v.tape){scene.remove(v.tape);v.tape=null;}
-      for(const key of['police','truck'])if(v[key]){scene.remove(v[key].g);v[key]=null;}v.crew=null;}}}
+    if(!burning){if(v.flames){v.flames.forEach(f=>{scene.remove(f);f.material.dispose();});v.flames=null;}cordonDown(v.cordon);v.cordon=null;if(v.tape){scene.remove(v.tape);disposeTree(v.tape);v.tape=null;}
+      if(v.police){scene.remove(v.police.g);disposeTree(v.police.g);v.police=null;}
+      if(v.truck&&!(v.crew||[]).some(n=>NPCS.includes(n))){scene.remove(v.truck.g);disposeTree(v.truck.g);v.truck=null;v.crew=null;}}}}
