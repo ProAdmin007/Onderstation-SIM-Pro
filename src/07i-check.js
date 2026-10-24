@@ -21,7 +21,7 @@ function checkModel(silent){const err=[],has=id=>!!D[id],SW=['cb','ds','es','lbs
 const LAYOUT_BAD={kiosk:['car','house','apt','hall','tree','road','woonerf','lamp','kk','kast','hedge','shed','parkeer'],
   car:['house','apt','hall','tree','lamp','kk','kast','hedge','shed','road','stoep'],tree:['road','woonerf','house','apt','hall','kk','kast','shed','lamp','parkeer'],
   kk:['road','woonerf','house','apt','hall','kast','shed','hedge','parkeer'],lamp:['road','woonerf','house','apt','hall','kast','shed','parkeer','hedge'],
-  house:['road','woonerf','apt','hall','parkeer','stoep'],apt:['road','woonerf','parkeer','stoep','hall'],hall:['road','woonerf','stoep'],kast:['road','woonerf','parkeer'],hedge:['road','woonerf','stoep']};
+  house:['road','woonerf','apt','hall','parkeer','stoep'],apt:['road','woonerf','parkeer','stoep','hall'],hall:['road','woonerf','stoep'],kast:['road','woonerf','parkeer'],hedge:['road','woonerf','stoep'],halte:['road','house','apt','hall','small','tree','lamp','kk','kast','kiosk','car','hedge','shed']};
 function layoutCheck(){const inWijk=o=>o.r[2]>-210&&o.r[0]<260&&o.r[3]>60&&o.r[1]<450,L=LAYOUT.filter(inWijk),out=[];
   const ov=(a,b)=>rectsOverlap(a,b,-0.05);
   for(let i=0;i<L.length;i++)for(let j=i+1;j<L.length;j++){const a=L[i],b=L[j];if(!(LAYOUT_BAD[a.kind]?.includes(b.kind)||LAYOUT_BAD[b.kind]?.includes(a.kind)))continue;

@@ -89,7 +89,7 @@ function buildRailway(){const c=cnv(256,64),g=c.getContext('2d');g.fillStyle='#6
   for(const z of[419.25,424.25])groundQuad(-2600,z-1.85,2600,z+1.85,0.03,bal,2.4);
   const rail=mat({color:0x8a8580,roughness:0.35,metalness:0.8});for(const z of[418.5,420,423.5,425])box(5200,0.16,0.08,rail,staticRoot,0,0.12,z).castShadow=false;
   // spoorwegovergang bij de hoofdweg: weg over het spoor en twee slagbomen
-  groundQuad(22,415.5,28,428.5,0.06,MAT.asphalt,6);for(const [x,z] of[[20.5,414.5],[29.5,429.5]]){cyl(0.12,0.12,1.4,MAT.galv,staticRoot,x,0.7,z,8);box(0.1,0.1,5,smMat(0xd8262c,0.5),staticRoot,x,1.3,z+(z<420?2.5:-2.5));}}
+  groundQuad(22,415.5,28,428.5,0.06,MAT.asphalt,6);for(const [x,z] of[[20.5,414.5],[29.5,429.5]])cyl(0.12,0.12,2.5,MAT.galv,staticRoot,x,1.25,z,8);}   // bomen en lichten: zie stadsleven (07xa)
 // ---- elke frame: per LS-groep aan of uit
 function updateSmall(){const h=viewHour(),night=clamp((NIGHT-0.15)*1.5,0,1);
   for(const E of SMALL){E.g??=LVG.find(g=>g.name===E.name)||false;const on=lvgLive(E.g),[a,b]=E.hours,open=a<=b?h>=a&&h<b:h>=a||h<b;

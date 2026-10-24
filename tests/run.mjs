@@ -538,6 +538,23 @@ const TESTS = [
         return { leeg, samen, klik, weg: !O.activeFaults().some(f => f.key === 'rsK23' || f.key === 'ffF6'), teller: document.querySelector('#faultCnt').textContent }; });
       for (const [k, v] of Object.entries(r)) if (k !== 'teller') assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
   } },
+  { name: 'stadsleven: weekmarkt, schoolplein, trein met overweg, bus met haltes (wacht bij een dichte overweg)', query: '?autostart&t=10&season=zomer', async run(p) {
+      const r = await p.evaluate(async () => { const O = OS, tick = (s, dt = 0.1) => { for (let i = 0; i < s / dt; i++) O.cityTick(dt); };
+        const zat = O.cityDay() === 6; tick(1); const markt = O.marketOn() && O.MARKET.visible && O.FIG.slice(0, 16).every(f => f.on);
+        // trein: sprinter laten komen; overweg dicht als hij nadert, stopt bij het station
+        const T = O.TRAIN; T.state = 'idle'; T.next = 0; tick(0.2); T.kind = 'sprinter'; T.dir = 1; T.z = 419.25; T.x = -700; T.v = 26; T.left = false; T.cars.forEach((c, i) => c.visible = i < 3);
+        let dicht = false, stopt = false; for (let i = 0; i < 900 && !stopt; i++) { O.cityTick(0.1); if (O.XING.closed) dicht = true; if (T.state === 'stopt') stopt = true; }
+        const perron = O.FIG.slice(25, 29).some(f => f.on) || stopt;
+        // bus bij de overweg: wacht zolang de bomen dicht zijn
+        const B = O.BUS; B.g ??= null; tick(0.2); B.on = true; B.idle = 0; B.v = 9; B.wait = 0; B.stops.forEach(s => s.done = true); B.d = 0;
+        let d = 0; for (; d < 200; d += 1) { const [x, z] = O.routeAt(B.r, d); if (z < 440) break; } B.d = d - 6; O.XING.k = 1; O.XING.closed = true; const d0 = B.d;
+        for (let i = 0; i < 30; i++) { O.XING.k = 1; O.driveVehicle(B, 0.1); } const wacht = O.routeAt(B.r, B.d + B.len / 2)[1] > 432.5;
+        O.XING.k = 0; for (let i = 0; i < 40; i++) O.driveVehicle(B, 0.1); const verder = B.d > d0 + 8;
+        // schoolplein op maandag in de ochtendpauze
+        O.SIM.t = (48 + 10.33) * 60; tick(1); const school = O.schoolBreak() && O.FIG.slice(32).every(f => f.on && f.s < 0.7);
+        return { zat, markt, dicht, stopt, perron, wacht, verder, school }; });
+      for (const [k, v] of Object.entries(r)) assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
+  } },
   { name: 'kabeltracés: elke kabel een route langs de straat (niet door gebouwen), röntgenblik en kabeltablet', query: '?autostart&t=13', async run(p) {
       const r = await p.evaluate(() => { const O = OS, C = O.CABLES, BL = new Set(['house', 'apt', 'hall', 'small', 'kiosk']), bad = [];
         const at = (c, d) => { for (let i = 1; i < c.pts.length; i++) { const [ax, az] = c.pts[i - 1], [bx, bz] = c.pts[i], l = Math.hypot(bx - ax, bz - az); if (d <= l) return [ax + (bx - ax) * d / l, az + (bz - az) * d / l]; d -= l; } return c.pts[c.pts.length - 1]; };
@@ -627,9 +644,9 @@ const TESTS = [
   { name: 'voetgangers lopen over de stoepen (meer overdag dan s nachts)', query: '?autostart&t=12&season=zomer', async run(p) {
       await new Promise(r => setTimeout(r, 1500));
       const r = await p.evaluate(async () => { const O = OS; O.camera.position.set(-40, 30, 200); O.controls.target.set(-40, 0, 240); O.controls.update(); await T.sleep(800);
-        const st = O.LAYOUT.filter(e => e.kind === 'stoep'), dag = O.WK.torso.count, W = O.getWalkers();
+        const st = O.LAYOUT.filter(e => e.kind === 'stoep'), dag = O.walkActive(), W = O.getWalkers();
         const off = W.slice(0, dag).filter(w => !w.cross && !st.some(e => w.x >= e.r[0] - 0.05 && w.x <= e.r[2] + 0.05 && w.z >= e.r[1] - 0.05 && w.z <= e.r[3] + 0.05)).length;
-        O.SIM.t = 3 * 60; await T.sleep(500); return { dag, off, nacht: O.WK.torso.count }; });
+        O.SIM.t = 3 * 60; await T.sleep(500); return { dag, off, nacht: O.walkActive() }; });
       assert(r.dag >= 20, `overdag maar ${r.dag} voetgangers`);
       assert(r.off === 0, `${r.off} voetgangers naast de stoep`);
       assert(r.nacht < r.dag / 3, `'s nachts nog ${r.nacht} voetgangers`);

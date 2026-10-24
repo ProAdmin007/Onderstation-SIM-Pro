@@ -467,6 +467,15 @@ Het 10 kV-net is **gecompenseerd** (Petersenspoel in het sterpunt van T1 en T3).
 - **Verlichte ramen:** 's avonds gaat het licht aan in de woningen en appartementen; laat in de nacht nog maar een paar. Elk huis hangt aan het dichtstbijzijnde MS-station: valt dat station uit, dan gaan de lichten in die buurt uit. Bij een noodaggregaat blijven ze branden.
 - **Verkeer:** een dozijn auto's rijdt rechts over de straten van beide wijken, met koplampen en een lichtbundel in het donker. In de spits rijden er meer.
 - **Voetgangers:** tot 48 mensen lopen over de stoepen van de woonwijk en het centrum en steken over bij de kruisingen; ze wijken uit voor lantaarnpalen, kasten en stations. Overdag en in de spits zijn het er meer, 's nachts en in de regen weinig. Samen kosten ze maar een paar tekenbeurten.
+- **Stadsleven:** spontane dingen die gebeuren, alleen beeld en geluid (uit te zetten met *Verkeer en buren*):
+  - **Trein:** geregeld rijdt er een trein over het spoor. De sprinter stopt bij Station Zuidwolde, waar reizigers op het perron wachten; de intercity rijdt door. Bij de overweg gaan de bomen dicht, knipperen de lichten en klinkt de bel. Bus en ambulance wachten tot de bomen weer open zijn.
+  - **Stadsbus:** rijdt van 6:00 tot 23:30 een lijn door centrum en woonwijk, met drie haltes (Station/Marktplein, Molenweg, Esdoornlaan). Bij de haltes verzamelen zich wachtenden, die instappen als de bus er is.
+  - **Vuilniswagen:** op werkdagen tussen 7:30 en 11:00 één ronde door de woonwijk, met korte stops bij de kliko's.
+  - **Pakketbezorger:** maandag tot zaterdag overdag; bij elke stop loopt de bezorger naar de voordeur en terug.
+  - **Ambulance:** rijdt af en toe met sirene en zwaailichten naar de spoedeisende hulp van het ziekenhuis, en daarna rustig terug.
+  - **Weekmarkt:** woensdag en zaterdag van 8:00 tot 13:30 op het Marktplein, met kramen onder gestreepte luifels en marktbezoekers.
+  - **Schoolplein:** op werkdagen in de pauzes rennen kinderen over het plein van basisschool De Linde.
+  - **Fietsers** rijden aan de rechterkant van de straat, en sommige voetgangers laten de hond uit.
 - **Buren:** zit een station een paar minuten zonder stroom, dan komen de buren naar buiten; 's avonds met de zaklamp van hun telefoon.
 </details>
 
