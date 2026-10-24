@@ -101,7 +101,7 @@ const cableCol=(c,st=cableState(c))=>st==='aan'?GIS_COL[c.kv===20?'aan20':c.kv==
 const mofCol=y=>y<1985?'#ff5a4a':y<2000?'#f5b335':'#5ccf72';
 
 // ---- röntgenblik (X): lintjes op straat in de kleur van de status, moffen als blokjes
-const XRAY={on:false,root:new THREE.Group(),mats:new Map(),mof:null};XRAY.root.visible=false;XRAY.root.userData.dyn=true;scene.add(XRAY.root);
+const XRAY={labels:false,on:false,root:new THREE.Group(),mats:new Map(),mof:null};XRAY.root.visible=false;XRAY.root.userData.dyn=true;scene.add(XRAY.root);
 (()=>{
   for(const c of CABLES){const w=c.kind==='ring'||c.kind==='feeder'?0.28:0.16,pos=[],idx=[];
     for(let i=1;i<c.pts.length;i++){const [ax,az]=c.pts[i-1],[bx,bz]=c.pts[i],L=Math.hypot(bx-ax,bz-az)||1,nx=-(bz-az)/L*w/2,nz=(bx-ax)/L*w/2,k=pos.length/3,y=0.2+(c.kv===0.4?0.01:0.02);
@@ -122,6 +122,7 @@ function setXray(on){XRAY.on=on??!XRAY.on;XRAY.root.visible=XRAY.on;$('#xrayBtn'
 function gisToast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2400);}
 
 // ---- kabeltablet (G): kaart rond je positie; GIS-stijl of luchtfoto
+const TAB_ZMAX=20;   // maximaal 20 pixels per meter: dan zie je de stroken in het tracé
 const TAB={on:false,style:'gis',zoom:1.6,follow:true,cx:0,cz:100,sel:null,aerial:null,layers:{ms:true,ls:true,mof:true}};
 const gisOpen=()=>TAB.on;
 function openTablet(){if(TAB.on)return;TAB.on=true;TAB.follow=true;$('#gisTab').classList.remove('hidden');TAB.zoom=Math.max(TAB.zoom,FP.on?2.2:1.6);renderTabletChrome();refreshInfo();drawTablet();}
@@ -157,7 +158,7 @@ function drawTablet(){if(!TAB.on)return;const cv=$('#gtMap'),g=cv.getContext('2d
     g.fillStyle='#b9a99a';BUILDINGS.forEach(B=>{const [a,b]=tabXY(B.x0,B.z0,cv);g.fillRect(a,b,(B.x1-B.x0)*s,(B.z1-B.z0)*s);});}
   // kabels: dikker voor MS, gestippeld als ze uit staan; de gekozen kabel met een witte rand
   for(const c of CABLES){if(!cableVisible(c))continue;const st=cableState(c);g.beginPath();c.pts.forEach(([x,z],i)=>{const [a,b]=tabXY(x,z,cv);i?g.lineTo(a,b):g.moveTo(a,b);});
-    const w=(c.kind==='ring'||c.kind==='feeder'?3.2:2)*Math.min(1.6,Math.max(0.7,s/1.4));
+    const w=(c.kind==='ring'||c.kind==='feeder'?3.2:2)*Math.min(2.6,Math.max(0.7,s/1.4));
     if(TAB.sel===c){g.strokeStyle='#ffffff';g.lineWidth=w+4;g.setLineDash([]);g.stroke();}
     g.strokeStyle=cableCol(c,st);g.lineWidth=w;g.setLineDash(st==='uit'||st==='open'?[6,4]:[]);g.globalAlpha=st==='fout'&&(performance.now()%900)<450?0.35:1;g.stroke();g.globalAlpha=1;}
   g.setLineDash([]);
@@ -174,7 +175,7 @@ function drawTablet(){if(!TAB.on)return;const cv=$('#gtMap'),g=cv.getContext('2d
   {const p=camera.position,dir=camera.getWorldDirection(_tdir),[a,b]=tabXY(p.x,p.z,cv),ang=Math.atan2(dir.x,-dir.z);g.save();g.translate(a,b);g.rotate(ang);g.fillStyle='#e8412c';g.strokeStyle='#fff';g.lineWidth=2;
     g.beginPath();g.moveTo(0,-9);g.lineTo(6,7);g.lineTo(0,3);g.lineTo(-6,7);g.closePath();g.stroke();g.fill();g.restore();}
   // schaalbalk en noordpijl
-  {const m=TAB.zoom>2?20:TAB.zoom>0.9?50:TAB.zoom>0.45?100:250,L=m*s;g.fillStyle='rgba(255,255,255,0.85)';g.fillRect(8,H-24,L+44,18);g.fillStyle='#222';g.fillRect(12,H-12,L,3);g.font='11px Arial';g.textAlign='left';g.fillText(`${m} m`,16+L,H-9);
+  {const m=TAB.zoom>9?5:TAB.zoom>4.5?10:TAB.zoom>2?20:TAB.zoom>0.9?50:TAB.zoom>0.45?100:250,L=m*s;g.fillStyle='rgba(255,255,255,0.85)';g.fillRect(8,H-24,L+44,18);g.fillStyle='#222';g.fillRect(12,H-12,L,3);g.font='11px Arial';g.textAlign='left';g.fillText(`${m} m`,16+L,H-9);
     g.textAlign='center';g.fillStyle='rgba(255,255,255,0.85)';g.fillRect(W-26,8,18,22);g.fillStyle='#222';g.font='bold 11px Arial';g.fillText('N',W-17,20);g.fillText('▲',W-17,29);}
   // dichtstbijzijnde kabel (rondlopen: waar sta ik boven?)
   if(FP.on&&!TAB.sel){const n=nearestCable(camera.position.x,camera.position.z,12);$('#gtInfo').innerHTML=n?cableCard(n.c,n.d):'<small>Geen kabel binnen 12 m. Loop over de stoep: daar liggen de kabels.</small>';}}
@@ -193,10 +194,10 @@ function renderTabletChrome(){$('#gtStyle').textContent=TAB.style==='gis'?'🛰 
 (()=>{const T=$('#gisTab'),cv=$('#gtMap');let drag=null;
   T.addEventListener('click',e=>{const b=e.target.closest('[data-gt]');if(!b)return;const a=b.dataset.gt;
     if(a==='close')closeTablet();else if(a==='style'){TAB.style=TAB.style==='gis'?'lucht':'gis';if(TAB.style==='lucht'&&LITE)gisToast('Luchtfoto niet beschikbaar in de testmodus');}
-    else if(a==='in')TAB.zoom=Math.min(5,TAB.zoom*1.4);else if(a==='out')TAB.zoom=Math.max(0.25,TAB.zoom/1.4);else if(a==='follow')TAB.follow=true;
+    else if(a==='in')TAB.zoom=Math.min(TAB_ZMAX,TAB.zoom*1.4);else if(a==='out')TAB.zoom=Math.max(0.25,TAB.zoom/1.4);else if(a==='follow')TAB.follow=true;
     renderTabletChrome();drawTablet();});
   T.addEventListener('change',e=>{const k=e.target.dataset.gl;if(k){TAB.layers[k]=e.target.checked;drawTablet();}});
-  cv.addEventListener('wheel',e=>{e.preventDefault();TAB.zoom=clamp(TAB.zoom*(e.deltaY<0?1.15:1/1.15),0.25,5);drawTablet();},{passive:false});
+  cv.addEventListener('wheel',e=>{e.preventDefault();TAB.zoom=clamp(TAB.zoom*(e.deltaY<0?1.15:1/1.15),0.25,TAB_ZMAX);drawTablet();},{passive:false});
   cv.addEventListener('pointerdown',e=>{drag={x:e.offsetX,y:e.offsetY,moved:false};});
   cv.addEventListener('pointermove',e=>{if(!drag)return;const dx=e.offsetX-drag.x,dy=e.offsetY-drag.y;if(Math.abs(dx)+Math.abs(dy)>3){drag.moved=true;TAB.follow=false;TAB.cx-=dx/TAB.zoom;TAB.cz-=dy/TAB.zoom;drag.x=e.offsetX;drag.y=e.offsetY;renderTabletChrome();drawTablet();}});
   cv.addEventListener('pointerup',e=>{const d=drag;drag=null;if(d&&d.moved)return;const r=cv.getBoundingClientRect(),[x,z]=tabWorld(e.clientX-r.left,e.clientY-r.top,cv),n=nearestCable(x,z,10/TAB.zoom+2);
@@ -208,7 +209,7 @@ addEventListener('resize',()=>TAB.on&&drawTablet());
 addEventListener('keydown',e=>{if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT'||e.ctrlKey||e.metaKey||!$('#intro').classList.contains('hidden'))return;
   if(e.code==='KeyG'){TAB.on?closeTablet():openTablet();}else if(e.code==='KeyX')setXray();});
 const XLAB=new Map(),XLAB_BG={10:'#2a6fc7',20:'#8a4fcf',0.4:'#a37a0e'};
-function xrayLabels(){if(!XRAY.on)return;const t=FP.on?camera.position:controls.target;
+function xrayLabels(){if(!XRAY.on||!XRAY.labels){XLAB.forEach(s=>s.visible=false);return;}const t=FP.on?camera.position:controls.target;
   for(const c of CABLES){if(c.far)continue;const p=cableDist(c,t.x,t.z);let s=XLAB.get(c);if(p.d>70){if(s)s.visible=false;continue;}
     if(!s){s=new THREE.Sprite(new THREE.SpriteMaterial({map:toTex(textCanvas(c.nr,{w:256,h:56,bg:XLAB_BG[c.kv]||'#555',fg:'#ffffff',font:'bold 34px Arial',border:false})),depthTest:false,transparent:true}));s.scale.set(2.6,0.57,1);s.renderOrder=7;s.userData.dyn=true;XRAY.root.add(s);XLAB.set(c,s);}
     // labels van kabels die naast elkaar liggen uit elkaar houden: verschoven langs de kabel en in hoogte
