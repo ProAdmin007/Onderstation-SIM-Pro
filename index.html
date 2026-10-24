@@ -399,9 +399,9 @@ body.previewing #tasks,body.previewing #alarms,body.previewing #faults{opacity:.
   <button data-v="6"><kbd>7</kbd>Binnen 20 kV</button>
   <button data-v="7"><kbd>8</kbd>Woonwijk</button>
   <button data-v="8"><kbd>9</kbd>Centrum &amp; Vaart</button>
-  <button data-v="9" title="F5 Ziekenhuis (±500 m westelijk)">Ziekenhuis</button>
-  <button data-v="10" title="F6 Glastuinbouw Oost (±500 m oostelijk)">Kassen</button>
-  <button data-v="11" title="G4 Waterzuivering (±700 m noordwestelijk)">RWZI</button>
+  <button data-v="9" title="F5 Ziekenhuis (±450 m westelijk, aan de rand van de stad)">Ziekenhuis</button>
+  <button data-v="10" title="F6 Glastuinbouw Oost (±250 m oostelijk)">Kassen</button>
+  <button data-v="11" title="G4 Waterzuivering (±330 m noordwestelijk)">RWZI</button>
   <button id="pvBtn" class="tool" title="Weer en tijd bekijken: klok schuiven, weer en seizoen kiezen (alleen kijken)"><kbd>T</kbd>Weer &amp; tijd</button>
   <button id="xrayBtn" class="tool" title="Röntgenblik: zie in 3D waar de kabels onder straat en stoep liggen"><kbd>X</kbd>Kabels</button>
   <button id="gisBtn" class="tool" title="Kabeltablet: kaart met alle kabels, moffen en je eigen positie"><kbd>G</kbd>Tablet</button>
@@ -4806,7 +4806,7 @@ let keysPrev=false;
 const keysOpen=()=>!$('#keys').classList.contains('hidden');
 function openKeys(){if(keysOpen())return;modalOpen('keys');if(FP.on)unlockPointer();
   $('#keys').innerHTML=`<div class="card pr"><div class="eyebrow">Hulp</div><h2>Toetsenoverzicht</h2><div class="keys-grid">${KEY_HELP.map(([h,rows])=>`<div><h4>${h}</h4><table>${rows.map(([k,t])=>`<tr><td class="kk">${k.split(' / ').map(x=>x.split(' of ').map(y=>`<kbd>${y}</kbd>`).join(' of ')).join(' / ')}</td><td>${t}</td></tr>`).join('')}</table></div>`).join('')}</div>
-    <p class="bf-desc">Alle vensters openen ook met de knoppen bovenin. Klik op een schakelaar in het SCADA-schema of in 3D voor zijn paneel.</p>
+    <p class="bf-desc">Alle vensters openen ook met de knoppen in de balk onderin. Klik op een schakelaar in het SCADA-schema of in 3D voor zijn paneel.</p>
     <div class="rep-btns"><button class="primary" data-kclose2>Sluiten <kbd>H</kbd></button></div></div>`;
   $('#keys').classList.remove('hidden');}
 function closeKeys(){$('#keys').classList.add('hidden');modalClose('keys');}

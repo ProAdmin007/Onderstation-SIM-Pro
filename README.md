@@ -9,7 +9,7 @@ Schakel als bedrijfsvoerder in SCADA, los storingen op, stuur monteurs aan en ho
 ![Three.js](https://img.shields.io/badge/Three.js-r169-049ef4?logo=threedotjs&logoColor=white)
 ![Geen installatie](https://img.shields.io/badge/installatie-niet%20nodig-3fcf72)
 ![Taal](https://img.shields.io/badge/taal-Nederlands-f0a43a)
-![Bestand](https://img.shields.io/badge/één%20HTML--bestand-±490%20kB-8d99a6)
+![Bestand](https://img.shields.io/badge/één%20HTML--bestand-±660%20kB-8d99a6)
 [![Licentie: CC BY-NC-SA 4.0](https://img.shields.io/badge/licentie-CC%20BY--NC--SA%204.0-lightgrey)](LICENSE)
 
 ![OS Zuidwolde bij avondzon met het SCADA-eénlijnschema – 3D-onderstationsimulator in de browser](docs/overzicht.jpg)
@@ -45,8 +45,9 @@ Bedoeld voor **bedrijfsvoerders en monteurs in opleiding**, studenten **elektrot
 | 👷 **Werkopdrachten** | Onderhoud met optionele **schakelbrief**, werk staken, monteurs met **portofoon**, revisies, **relaistest met testkoffer** en thermografie. |
 | 📞 **Klanten** | Telefoon met klantmeldingen, storingsbandje, **verwachte hersteltijd** doorgeven en prioriteitsklanten bellen. |
 | 📈 **Netbeheer** | **Netcongestie** en flexibel vermogen, belastingprognose, veroudering en preventief onderhoud, beveiligingsinstellingen. |
+| 🗺️ **Kabels en GIS** | Alle kabels fysiek langs de straten met moffen en aanlegjaar: **röntgenblik** in 3D, een **kabeltablet** met kaart of luchtfoto, foutplaats bepalen met de meetwagen en **graafwerk (KLIC)**. |
 | 🎓 **Leren en spelen** | 11 lessen, 17 scenario's, dag- en avonddiensten, vrij spelen met incidenten, score met cijfer, **tijdlijn en herhaling**, opslaan en verder spelen. |
-| 🌦️ **Sfeer** | Dag en nacht, vier seizoenen, weer (onweer, sneeuw, mist, hittegolf), verkeer, buren op straat bij uitval, ramen die uitgaan als het station uitvalt. |
+| 🌦️ **Sfeer** | Dag en nacht, vier seizoenen, weer (onweer, sneeuw, mist, hittegolf), ziekenhuis, kassen en kleine afnemers die zichtbaar zonder stroom zitten, **stadsleven** (trein, bus, weekmarkt, voetgangers), buren op straat bij uitval. |
 
 <a id="screenshots"></a>
 ## 📸 Screenshots
@@ -144,7 +145,7 @@ Bedoeld voor **bedrijfsvoerders en monteurs in opleiding**, studenten **elektrot
 | `B` | beveiliging | `C` | flex en congestie |
 | `O` | onderhoud | `K` | testkoffer |
 | `N` | laagspanning | `I` | instellingen |
-| `R` | storingsschrijver | `T` | weer en tijd bekijken, muisbesturing, voetgangers |
+| `R` | storingsschrijver | `T` | weer en tijd bekijken |
 | `WASD` / pijltjes | beeld schuiven | dubbelklik | daarheen vliegen |
 | `X` | röntgenblik: kabels in 3D | `G` | kabeltablet (GIS-kaart) |
 | `Ctrl+S` | opslaan | `L` / `M` | labels / geluid |
@@ -155,7 +156,8 @@ Bedoeld voor **bedrijfsvoerders en monteurs in opleiding**, studenten **elektrot
 - Druk op `H` (of `?`, of de knop *Toetsen*) voor een **overzicht van alle toetsen**.
 - Klik op een schakelaar in 3D of in het SCADA-schema en kies vervolgens IN/UIT of SLUITEN/OPENEN.
 - **Muis in het overzicht** (werkt als een 3D-kaart): links slepen schuift over de grond, rechts slepen (of `Shift` + links) draait en kantelt, scrollen zoomt naar het punt onder de muis en dubbelklik vliegt naar dat punt. `WASD` of de pijltjestoetsen schuiven ook, sneller naarmate je verder weg bent. Het beeld blijft binnen de wereld en de camera gaat nooit onder de grond. Liever de oude bediening (links draaien, rechts schuiven)? Kies *Instellingen* (`I`) → *Muis* → *Klassiek*.
-- `1`–`9` camerastandpunten (6 = binnen 10 kV, 7 = binnen 20 kV, 8 = woonwijk, 9 = centrum en De Vaart)
+- `1`–`9` camerastandpunten (6 = binnen 10 kV, 7 = binnen 20 kV, 8 = woonwijk, 9 = centrum en De Vaart); *Ziekenhuis*, *Kassen* en *RWZI* staan als knoppen in de balk onderaan
+- `X` zet de **röntgenblik** aan of uit, `G` opent de **kabeltablet**
 - `K` opent de **testkoffer** tijdens een relaistest
 - `T` opent **weer en tijd bekijken**
 - `R` opent de **storingsschrijver**
@@ -178,16 +180,16 @@ Bedoeld voor **bedrijfsvoerders en monteurs in opleiding**, studenten **elektrot
 - **Opslaan en verder spelen** (vrije dienst, dag- en avonddienst):
   - Er zijn **vier opslagplekken**: *Automatisch* (elke 2 minuten en bij het sluiten van de pagina) en **opslagplek 1–3**. Met *💾 Spel opslaan* in het pauzemenu kies je de plek; `Ctrl+S` slaat snel op in de plek waaruit je hervatte of waar je het laatst handmatig opsloeg. *Opslaan en naar hoofdmenu* bewaart je spel in *Automatisch*.
   - In het hoofdmenu staan onder *Verder spelen* alle opgeslagen spellen, met de dienst, de tijd, het seizoen, de score en wanneer je opsloeg. Elk kun je apart verwijderen.
-  - Bewaard worden: de stand van alle schakelaars, storingen, slijtage, temperaturen, de lopende werkopdracht (met je schakelbrief), weer, flex, beveiligingsinstellingen, score, statistieken en de tijdlijn.
+  - Bewaard worden: de stand van alle schakelaars, storingen, slijtage, temperaturen, de lopende werkopdracht (met je schakelbrief), weer, flex, beveiligingsinstellingen, score, statistieken en de tijdlijn, en van de kabels de moffen, het graafwerk en een bekende foutplek.
   - Reparaties en andere geplande gebeurtenissen worden bij het hervatten opnieuw ingepland. Een groot incident dat liep, wordt netjes afgerond.
   - Speel je een dienst tot het einde, dan verdwijnt het automatisch opgeslagen spel. Je eigen opslagplekken blijven bewaard.
 - **Pauzemenu (`Esc`):** hervatten, de dienst beëindigen met rapport, of de score opslaan en terug naar het hoofdmenu.
 - **Lopende storingen** (paneel boven *Meldingen & gebeurtenissen*): wat er **nu** speelt, opgebouwd uit de toestand van de installatie en niet uit het logboek. Per storing zie je sinds wanneer en hoe lang al, de status (bijvoorbeeld *fout zoeken*, *weggeschakeld – wacht op reparatie*, *reset mogelijk*) en hoeveel klanten zonder stroom zitten.
   - Kritieke storingen staan bovenaan en knipperen rood.
-  - Een groot incident staat al in de balk boven de taken; het paneel toont alleen wat er in de installatie speelt.
+  - Een groot incident staat al in de balk boven de taken; het paneel toont alleen wat er in de installatie speelt, plus aangekondigd graafwerk (KLIC) waarvoor de kabels nog niet zijn aangewezen.
   - Gevolgen staan bij de oorzaak: MS-stations die door een kabelfout in hun ring zonder stroom zitten, worden bij die kabelfout genoemd.
   - Klik op een storing om er in SCADA naartoe te gaan. Is hij opgelost, dan verdwijnt hij vanzelf. Zonder storingen staat er *✓ Geen lopende storingen*.
-- **Klaar om te schakelen:** als de storingsdienst of TenneT klaar is, of een transformator weer gereset mag worden, hoor je een oplopend klokgeluid en verschijnt een groene banner. Het betreffende veld knippert groen in SCADA en in 3D tot je het schakelt. · `spatie` pauze · `L` labels · `M` geluid · `Esc` deselecteren
+- **Klaar om te schakelen:** als de storingsdienst of TenneT klaar is, of een transformator weer gereset mag worden, hoor je een oplopend klokgeluid en verschijnt een groene banner. Het betreffende veld knippert groen in SCADA en in 3D tot je het schakelt.
 </details>
 
 <a id="het-net"></a>
@@ -245,7 +247,7 @@ Binnen staat een rij van 13 metaalomsloten schakelvelden (V-T1, F1–F3, meetvel
 <details>
 <summary><b>Belasting</b></summary>
 
-Alle afnemers liggen 25% hoger dan in eerdere versies. De velden en distributietrafo's zijn gedimensioneerd op de winterpiek met 20–25% marge. In de normale schakeltoestand blijft alles onder 90%; bij terugvoeding, uitval of een extra piek wordt het snel krap. Daar zijn het tabblad *Kabels* en de flexmarkt voor.
+De belasting is bewust stevig gekozen. De velden en distributietrafo's zijn gedimensioneerd op de winterpiek met 20–25% marge. In de normale schakeltoestand blijft alles onder 90%; bij terugvoeding, uitval of een extra piek wordt het snel krap. Daar zijn het tabblad *Kabels* en de flexmarkt voor.
 </details>
 
 ## 🛠️ Bedrijfsvoering en hulpmiddelen
@@ -278,7 +280,7 @@ Collega's in een veiligheidsvest lopen het station of de wijk in bij inspecties,
 
 Bij diensten en scenario's, niet bij vrij spelen of de lessen.
 
-bij de start geeft de operator van de vorige dienst een overdracht.
+Bij de start geeft de operator van de vorige dienst een overdracht.
   - Je ziet alle afwijkingen van de normale toestand, automatisch uit de installatie gehaald, plus het weer en de verwachte piek.
   - Bij dag- en avonddiensten begint het station met 2–3 willekeurige afwijkingen. Voorbeelden: AR van een lijn nog uit na een relaistest, het normaal-open punt verlegd, F5 tijdelijk op rail A, T3 nog op 20 kV, L2 in onderhoud, of de kassen uit tot een afgesproken tijd.
   - Open punten staan links bij je dienst; elk netjes afgehandeld punt geeft +25. Afspraken niet nakomen (bijvoorbeeld te vroeg inschakelen) kost −20.
@@ -289,7 +291,7 @@ bij de start geeft de operator van de vorige dienst een overdracht.
 
 Tabblad *Prognose*.
 
-de verwachte belasting op 10 en 20 kV voor de komende 8 uur, met seizoen en het huidige weer, afgezet tegen de capaciteit van de transformatoren in bedrijf (en met T3 erbij).
+De verwachte belasting op 10 en 20 kV voor de komende 8 uur, met seizoen en het huidige weer, afgezet tegen de capaciteit van de transformatoren in bedrijf (en met T3 erbij).
   - Je ziet de piek, het moment van overbelasting en een advies (T3 bijschakelen, kassen afschakelen), plus een N-1-tip.
   - Dreigt er binnen 1,5 uur overbelasting, dan krijg je een melding.
 </details>
@@ -333,7 +335,7 @@ Toets `C` of de knop *Flex*.
 - Een overzicht toont de zwaarst belaste kabels en transformatoren.
   - Zeven klanten hebben een flexcontract: het laadplein (slim laden), het transportbedrijf (e-trucks later laden), het koelhuis, de metaalbewerking, de batterij van het distributiecentrum, de kassen (belichting dimmen) en het zonnepark (terugregelen).
   - Je vraagt ze 25–100% terug te regelen. Na ±2 min is het actief; de vergoeding (€/MWh) gaat van je score af (1 punt per € 100). Dat is meestal veel goedkoper dan uitval.
-  - De distributietrafo's in de MS-stations zijn gedimensioneerd op hun winterpiek (2000–3150 kVA). Zit een trafo lang boven 120%, dan slaan de MS-zekeringen door; de monteur plaatst nieuwe en pas daarna mag de transformatorschakelaar weer dicht. Vanaf 105% krijg je een waarschuwing.
+  - De distributietrafo's in de MS-stations zijn gedimensioneerd op hun winterpiek (2500–4000 kVA). Zit een trafo lang boven 120%, dan slaan de MS-zekeringen door; de monteur plaatst nieuwe en pas daarna mag de transformatorschakelaar weer dicht. Vanaf 105% krijg je een waarschuwing.
 </details>
 
 <details>
@@ -455,8 +457,8 @@ Het 10 kV-net is **gecompenseerd** (Petersenspoel in het sterpunt van T1 en T3).
   - **Graafwerk (KLIC):** aannemers melden geregeld graafwerk aan, met een tijdstip en een plek die een kabel kruist. Je ziet het op de kaart en in *Lopende storingen*. Laat de kabels op tijd aanwijzen door een monteur. Doe je dat niet, dan raakt de graafmachine de kabel in de helft van de gevallen: een storing met een bekende plek en puntaftrek.
   - **Moffen en ouderdom:** kabels met oude moffen (van vóór 1990) krijgen vaker een storing, en de fout zit vaak bij zo'n mof. Op een spanningsloze kabel kun je de oude moffen preventief laten vervangen (25 min plus 10 min per mof). Breng de kabel niet onder spanning zolang de ploeg bezig is: dat is een veiligheidsincident.
 - **Grote afnemers in de wereld** (camerastandpunten *Ziekenhuis*, *Kassen* en *RWZI*, of *👁 bekijk* in het paneel Lopende storingen). Ze liggen aan de rand van de stad, elk met een eigen toegangsweg, en je ziet direct of ze stroom hebben:
-  - **Ziekenhuis** (F5, aan de westrand van de stad): verlichte afdelingen, verlicht bord, helikopterplatform, ambulances en terreinverlichting. Bij uitval brandt alleen nog wat noodverlichting en draait het **noodstroomaggregaat**, met rook en een knipperlamp.
-  - **Kassen Glastuinbouw Oost** (F6, ±300 m oostelijk): vier glazen kassen met gewas. Buiten daglicht gaat de **oranje assimilatiebelichting** aan, met een gloed die je van ver ziet. Bij uitval wordt het in één klap donker. Het ketelhuis rookt zolang er stroom is.
+  - **Ziekenhuis** (F5, ±450 m westelijk, aan de rand van de stad): verlichte afdelingen, verlicht bord, helikopterplatform, ambulances en terreinverlichting. Bij uitval brandt alleen nog wat noodverlichting en draait het **noodstroomaggregaat**, met rook en een knipperlamp.
+  - **Kassen Glastuinbouw Oost** (F6, ±250 m oostelijk): vier glazen kassen met gewas. Buiten daglicht gaat de **oranje assimilatiebelichting** aan, met een gloed die je van ver ziet. Bij uitval wordt het in één klap donker. Het ketelhuis rookt zolang er stroom is.
   - **Waterzuivering** (G4, ±330 m noordwestelijk, via de weg langs het station): nabezinktanks met een **draaiende brug**, bruisende beluchtingstanks, gistingstanks en terreinverlichting. Zonder stroom staat alles stil.
   - Alles is statisch en samengevoegd; licht loopt via oplichtende materialen in plaats van echte lampen. De drie locaties kosten ±5% extra draw calls.
 - **Kleine afnemers in de wijk:** elke LS-groep met één klant heeft een eigen gebouw met een verlicht naambord, ramen die oplichten tijdens de openingstijden en een buitenlamp. Schakel je dat LS-veld uit, of valt het MS-station uit, dan wordt het donker (een noodaggregaat houdt het aan). Ook de laadpalen kleuren groen zolang er stroom is.
@@ -506,6 +508,7 @@ Alle geluid wordt in de browser gemaakt (Web Audio) en hangt af van waar je bent
 - **Op het 110 kV-terrein:** transformatorbrom en corona-geknetter (sterker bij regen en mist).
 - **In de wijk:** verkeersgeruis, passerende auto's, vogels overdag en krekels op zomer- en lenteavonden.
 - **Overal:** wind, regen en onweer.
+- **Gebeurtenissen:** de brandbel en de sirenes van brandweer en ambulance, de bel van de spoorwegovergang en het gedreun van een passerende trein.
 </details>
 
 <a id="ontwikkelen"></a>
@@ -516,7 +519,7 @@ De broncode staat in `src/`. `build.ps1` plakt de bestanden in strikte naamvolgo
 | Bestanden | Inhoud |
 |---|---|
 | `00-head.html` | opmaak (CSS) en de HTML van alle panelen |
-| `01`–`03e` | Three.js-basis, apparatuur, terrein, wijk, weer en seizoenen, straatbeeld, grote afnemers (ziekenhuis, kassen, waterzuivering) |
+| `01`–`03f` | Three.js-basis, apparatuur, terrein, wijk, weer en seizoenen, straatbeeld, grote afnemers (ziekenhuis, kassen, waterzuivering), kleine afnemers en het spoor |
 | `04-1-net.js` | **centrale definities** (`BUSES`, `LINES`), velden, apparaten, ringen, netgraaf en belastingstromen |
 | `04-2-bediening.js` | vergrendelingen, schakelen, synchrocheck, trips, 110 kV-lijnen |
 | `04-3-trafo.js` | blokkeerrelais, omschakelaar T3, spanningsregeling, thermiek |
@@ -529,9 +532,9 @@ De broncode staat in `src/`. `build.ps1` plakt de bestanden in strikte naamvolgo
 | `04-a-relay.js` | relaisafwijkingen, werkopdracht relaistest en de metingen van de testkoffer |
 | `04-b-ls.js` | laagspanning (spanning per straat, kabelkasten, monteurs), noodaggregaten, rotatie, herstelbonus en klantcommunicatie |
 | `04-c-aardfout.js` | aardfout in het gecompenseerde 10 kV-net: U0, aanwijzingen, zoeken, dubbele aardfout |
-| `04b`–`04i` | spelmodi en score, ring, lessen, dienstoverdracht, extra scenario's, scenario's pinksterzondag en aardfout tijdens onweer |
+| `04b`–`04i` | spelmodi en score, ring, lessen, dienstoverdracht, extra scenario's, brand in het 10 kV-gebouw (`04g0-fire.js`: vlammen, brandbel, brandweer), scenario's pinksterzondag en aardfout tijdens onweer |
 | `05`–`06` | effecten, geluid, interieur, opbouw van de scène |
-| `07`–`07v` | SCADA en panelen, rondlopen, monteurs, schakelbrief, beveiligingsvenster, prognose, telefoon, tijdlijn/herhaling, modelcontrole, flex- en onderhoudsvenster, leven in de wijk, instellingen, tabblad Kabels, opslaan en hervatten, testkoffer, toetsenoverzicht, LS-venster en -tabblad, storingsschrijver, dienstrapport als PDF, paneel lopende storingen, weer en tijd bekijken |
+| `07`–`07z` | SCADA en panelen, rondlopen, monteurs, schakelbrief, beveiligingsvenster, prognose, telefoon, tijdlijn/herhaling, modelcontrole, flex- en onderhoudsvenster, leven in de wijk, instellingen, tabblad Kabels, opslaan en hervatten, testkoffer, toetsenoverzicht, LS-venster en -tabblad, storingsschrijver, dienstrapport als PDF, paneel lopende storingen, weer en tijd bekijken, muisbesturing (`07w`), voetgangers (`07x`), stadsleven (`07xa`), kabeltracés en kabeltablet (`07y`), foutplaats, graafwerk en moffen (`07z`) |
 | `08-main.js` | HUD, menu's, start en hoofdlus |
 
 **Rails, lijnen en railkeuzevelden** staan op één plek (`BUSES`, `LINES` en het register `SEL_BAYS` in `04-1-net.js`); de koppelingen, spanningsbanden, SCADA-metingen en werkopdrachten worden daarvan afgeleid. Bij het opstarten controleert `checkModel()` of alle verwijzingen naar apparaten kloppen, of elke schakelaar ergens te bedienen is en of alles in de normale toestand spanning heeft. Een fout verschijnt als consolefout, en de tests vallen er dan direct over.
@@ -550,16 +553,16 @@ Voor het bouwen draait eerst `npm run lint` (`tests/lint.mjs`), die verborgen fo
 
 De lint draait ook op GitHub vóór de tests.
 
-URL-parameters om te testen: `?autostart`, `?t=18.5` (starttijd), `?view=0..6`, `?night`, `?play=zkh|storm|piek|blackout|hitte|winter|dubbel|aanrijding|cyber|overstroming|zonnepiek|pinksteren|aardonweer|kraan|brand|evenement|laadpiek|les1…les11|day|eve|free&diff=rustig|normaal|zwaar`.
+URL-parameters om te testen: `?autostart`, `?t=18.5` (starttijd), `?view=0..11`, `?night`, `?play=zkh|storm|piek|blackout|hitte|winter|dubbel|aanrijding|cyber|overstroming|zonnepiek|pinksteren|aardonweer|kraan|brand|evenement|laadpiek|les1…les11|day|eve|free&diff=rustig|normaal|zwaar`.
 
 ## 🧪 Tests
 
-Automatische tests sturen de simulator aan in headless Chrome. Ze dekken onder meer vergrendelingen, vlamboog, reservetransformator, ringfout met terugvoeding, spanningsregelaar, schakelbrief, portofoon, de railsplitsing met railfout, het dubbelrailsysteem, beveiligingsinstellingen, werk staken, de onderhoudstypes, alle vijf de lessen, de prognose, de telefoon, de dienstoverdracht, de nieuwe scenario's, de tijdlijn met herhaling en het pauzemenu.
+Automatische tests sturen de simulator aan in headless Chrome. Ruim honderd tests dekken onder meer vergrendelingen, vlamboog, reservetransformator, ringfout met terugvoeding, spanningsregelaar, schakelbrief, portofoon, de railsplitsing met railfout, het dubbelrailsysteem, beveiligingsinstellingen, werk staken, de onderhoudstypes, alle elf lessen, de prognose, de telefoon, de dienstoverdracht, de scenario's, de tijdlijn met herhaling, opslaan en hervatten, de kabeltracés en het graafwerk, de plaatsing van alle objecten, het stadsleven en de prestatie-instellingen.
 
 ```powershell
 npm install
 npm test            # of: npm test -- ring   (alleen tests met 'ring' in de naam)
-npm run test:scenarios          # speelt alle scenario's en beide diensten volledig uit (±12 min)
+npm run test:scenarios          # speelt alle scenario's en beide diensten volledig uit (±4 min)
 npm run test:scenarios -- storm # alleen één scenario
 node tests/shots.mjs            # screenshots van de wijk met het echte 3D-beeld (map shots/)
 npm run test:stress             # 10 min vrije dienst mét 3D-code, met storingen, incidenten en klikken (NORENDER=1: zonder tekenen)
@@ -603,7 +606,7 @@ Three.js (MIT) en de lettertypen Inter en JetBrains Mono (SIL OFL) worden via ee
 <a id="english"></a>
 ## 🇬🇧 English
 
-**Onderstation Simulator** is a free, realistic **3D electrical substation simulator** that runs in your browser (Three.js, WebGL, no installation). You operate OS Zuidwolde, a fictional Dutch **110/10/20 kV substation**, through a **SCADA single-line diagram** or by walking around in first person: switch breakers and disconnectors with interlocks, restore supply after cable faults, lightning strikes and transformer trips, back-feed **10 kV ring networks**, manage **grid congestion** with flexible demand, test protection relays, dispatch field crews and mobile generators, and deal with **low-voltage** issues such as rooftop-solar overvoltage. It includes guided lessons, scenarios, 8-hour shifts with a score and replay, and an endless free mode with random incidents. The user interface is in **Dutch**.
+**Onderstation Simulator** is a free, realistic **3D electrical substation simulator** that runs in your browser (Three.js, WebGL, no installation). You operate OS Zuidwolde, a fictional Dutch **110/10/20 kV substation**, through a **SCADA single-line diagram** or by walking around in first person: switch breakers and disconnectors with interlocks, restore supply after cable faults, lightning strikes and transformer trips, back-feed **10 kV ring networks**, manage **grid congestion** with flexible demand, test protection relays, dispatch field crews and mobile generators, and deal with **low-voltage** issues such as rooftop-solar overvoltage. Every cable has a physical route under the streets, visible with an X-ray view and a GIS tablet, and the town comes alive with trains, buses, a weekly market and pedestrians. It includes guided lessons, scenarios, 8-hour shifts with a score and replay, and an endless free mode with random incidents. The user interface is in **Dutch**.
 
 **License:** [CC BY-NC-SA 4.0](LICENSE) – free to copy, share and adapt with attribution, no commercial use or resale.
 
@@ -612,7 +615,7 @@ Three.js (MIT) en de lettertypen Inter en JetBrains Mono (SIL OFL) worden via ee
 ---
 
 <div align="center">
-<sub>Gemaakt met Three.js · alles procedureel (geen modellen of texturen) · één HTML-bestand van ±490 kB</sub>
+<sub>Gemaakt met Three.js · alles procedureel (geen modellen of texturen) · één HTML-bestand van ±660 kB</sub>
 </div>
 
 ---
