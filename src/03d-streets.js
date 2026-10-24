@@ -30,17 +30,19 @@ function sidewalk(x0,z0,x1,z1,curbSide){lay('stoep',x0,z0,x1,z1);groundQuad(x0,z
   const cz=curbSide==='-'?(along?z0:x0):(along?z1:x1);
   if(along)box(x1-x0,0.12,0.18,SM.curb,staticRoot,(x0+x1)/2,0.06,cz);else box(0.18,0.12,z1-z0,SM.curb,staticRoot,cz,0.06,(z0+z1)/2);}
 // stoepen aan beide kanten van een rechte straat, met onderbrekingen bij kruisingen
-function streetSidewalks(a,b,c0,c1,horiz,gaps){const segs=[];let s=a;for(const [g0,g1] of gaps.sort((p,q)=>p[0]-q[0])){if(g0>s)segs.push([s,g0]);s=Math.max(s,g1);}if(s<b)segs.push([s,b]);
-  for(const [p,q] of segs){if(horiz){sidewalk(p,c0-2,q,c0,'+');sidewalk(p,c1,q,c1+2,'-');}else{sidewalk(c0-2,p,c0,q,'+');sidewalk(c1,p,c1+2,q,'-');}}}
+// een onderbreking geldt voor beide kanten, of alleen voor de lage ('lo') of hoge ('hi') kant: bij een T-kruising loopt de stoep aan de overkant door
+function streetSidewalks(a,b,c0,c1,horiz,gaps){for(const side of['lo','hi']){const segs=[];let s=a;
+    for(const [g0,g1] of gaps.filter(g=>!g[2]||g[2]===side).sort((p,q)=>p[0]-q[0])){if(g0>s)segs.push([s,g0]);s=Math.max(s,g1);}if(s<b)segs.push([s,b]);
+    for(const [p,q] of segs){if(side==='lo'){if(horiz)sidewalk(p,c0-2,q,c0,'+');else sidewalk(c0-2,p,c0,q,'+');}else{if(horiz)sidewalk(p,c1,q,c1+2,'-');else sidewalk(c1,p,c1+2,q,'-');}}}}
 // onderbroken middenstreep
-function centerLine(a,b,c,horiz){for(let t=a+2;t<b-3;t+=9){const m=groundQuad(horiz?t:c-0.06,horiz?c-0.06:t,horiz?t+3:c+0.06,horiz?c+0.06:t+3,0.05,SM.line,1);m.receiveShadow=true;}}
+function centerLine(a,b,c,horiz,gaps=[]){for(let t=a+2;t<b-3;t+=9){if(gaps.some(([g0,g1])=>t+3>g0&&t<g1))continue;const m=groundQuad(horiz?t:c-0.06,horiz?c-0.06:t,horiz?t+3:c+0.06,horiz?c+0.06:t+3,0.05,SM.line,1);m.receiveShadow=true;}}
 // MS-stations staan op vaste plekken: daar geen parkeerstrook of auto
 const kioskNear=(x,z,mx=4.6,mz=3.6)=>RING.stations.some(s=>Math.abs(s.pos[0]-x)<mx&&Math.abs(s.pos[1]-z)<mz);
 // strook langs x van a tot b, met openingen bij MS-stations
 function stripSegs(a,b,z0,z1){const cut=RING.stations.filter(s=>s.pos[1]>z0-3.5&&s.pos[1]<z1+3.5).map(s=>[s.pos[0]-3.4,s.pos[0]+3.4]).sort((p,q)=>p[0]-q[0]),out=[];let s=a;
   for(const [c0,c1] of cut){if(c1<a||c0>b)continue;if(c0>s)out.push([s,c0]);s=Math.max(s,c1);}if(s<b)out.push([s,b]);return out;}
 // geparkeerde auto (statisch, kijkt langs de straat)
-function parkedCar(x,z,along,i){if(kioskNear(x,z))return;const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=along?Math.PI/2+(i%2?Math.PI:0):(i%2?Math.PI:0);staticRoot.add(g);
+function parkedCar(x,z,along,i){if(kioskNear(x,z)||!layFree(along?[x-2.2,z-1,x+2.2,z+1]:[x-1,z-2.2,x+1,z+2.2],['road'],0))return;const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=along?Math.PI/2+(i%2?Math.PI:0):(i%2?Math.PI:0);staticRoot.add(g);
   box(1.8,0.7,4.2,SM.car[i%SM.car.length],g,0,0.6,0);box(1.6,0.6,2.2,SM.carGlass,g,0,1.2,-0.2);
   for(const [wx,wz] of[[-0.85,1.3],[0.85,1.3],[-0.85,-1.3],[0.85,-1.3]])cyl(0.33,0.33,0.25,SM.tyre,g,wx,0.33,wz,10).rotation.z=Math.PI/2;
   DISTRICT_RECTS.push(along?[x-2.2,z-1,x+2.2,z+1]:[x-1,z-2.2,x+1,z+2.2]);lay('car',...(along?[x-2.2,z-1,x+2.2,z+1]:[x-1,z-2.2,x+1,z+2.2]));}
@@ -84,22 +86,36 @@ function houseExtras(x0,z,n,faceSouth,W,Dp,H,v){const f=faceSouth?1:-1,len=n*W,f
       box(1.0,0.05,0.05,c,staticRoot,bx,0.62,bzz);const st=box(0.05,0.5,0.05,c,staticRoot,bx-0.18,0.55,bzz);st.rotation.z=-0.35;
       box(0.22,0.05,0.12,SM.bike,staticRoot,bx-0.26,0.84,bzz);box(0.05,0.05,0.5,SM.bike,staticRoot,bx+0.4,0.92,bzz);}}}
 
+// ---- kast langs de straat (LS-verdeelkast, kabelkast): direct achter de stoep aan de kant van de huizen, evenwijdig aan de straat,
+// met de deur naar de stoep. Staat daar iets (heg, tuinpad, boom, lantaarn), dan schuift hij langs de stoep op.
+const CURB_AVOID=['house','apt','hall','small','kiosk','hedge','shed','tree','lamp','kast','kk','car','road','woonerf','parkeer','halte','stoep','plein','laad'];
+function curbPlace(x,z,w=0.9,d=0.38){const strips=LAYOUT.filter(e=>e.kind==='stoep').map(e=>{const [x0,z0,x1,z1]=e.r,h=x1-x0>=z1-z0,cx=clamp(x,x0,x1),cz=clamp(z,z0,z1);return {e,h,dist:Math.hypot(cx-x,cz-z)};}).sort((a,b)=>a.dist-b.dist);
+  const roadAt=(px,pz)=>LAYOUT.some(o=>o.kind==='road'&&px>o.r[0]&&px<o.r[2]&&pz>o.r[1]&&pz<o.r[3]);
+  for(const s of strips.slice(0,6)){const [x0,z0,x1,z1]=s.e.r;
+    // welke kant ligt de weg? de andere kant is de achterkant van de stoep
+    const roadLow=s.h?roadAt((x0+x1)/2,z0-1.5):roadAt(x0-1.5,(z0+z1)/2),out=roadLow?1:-1,c=s.h?(roadLow?z1:z0):(roadLow?x1:x0),cc=c+out*(d/2+0.3);
+    const a0=s.h?x0:z0,a1=s.h?x1:z1,a=clamp(s.h?x:z,a0+1,a1-1),ry=s.h?(roadLow?Math.PI:0):(roadLow?-Math.PI/2:Math.PI/2);
+    for(let k=0;k<40;k++){const off=(k%2?1:-1)*Math.ceil(k/2)*1.2,aa=a+off;if(aa<a0+0.8||aa>a1-0.8)continue;
+      const px=s.h?aa:cc,pz=s.h?cc:aa,hw=(s.h?w:d)/2,hd=(s.h?d:w)/2;
+      if(layFree([px-hw,pz-hd,px+hw,pz+hd],CURB_AVOID,0.15))return {x:px,z:pz,ry,r:[px-hw,pz-hd,px+hw,pz+hd]};}}
+  return {x,z,ry:0,r:[x-w/2,z-d/2,x+w/2,z+d/2]};}
 // ---- straten aankleden
 function dressStreets(){
   // woonwijk: hoofdstraten (asfalt) met stoepen en middenstreep
-  streetSidewalks(-150,165,98,104,true,[[-102,-92],[58,68]]);streetSidewalks(-150,165,236,242,true,[[-102,-92],[58,68]]);
-  streetSidewalks(106,234,-100,-94,false,[[156,167]]);streetSidewalks(106,234,60,66,false,[]);
-  centerLine(-150,165,101,true);centerLine(-150,165,239,true);
+  // stoepen onderbroken bij de zijstraten en de hoofdweg (x 22–28); de stoepen van de zijstraten lopen door tot de rand van de rijbaan
+  streetSidewalks(-150,165,98,104,true,[[-102,-92,'hi'],[21,29],[58,68,'hi']]);streetSidewalks(-150,165,236,242,true,[[-102,-92,'lo'],[21,29],[58,68,'lo']]);
+  streetSidewalks(104,236,-100,-94,false,[[156,167]]);streetSidewalks(104,236,60,66,false,[]);
+  const X1=[[-102,-92],[20,30],[58,68]];centerLine(-150,165,101,true,X1);centerLine(-150,165,239,true,X1);
   // nieuwe woonstraat met klinkers tussen de rijen die met de voorkant naar elkaar toe staan (woonerf, geen stoep)
   // (z 157,5–165,5: MS2 staat ernaast aan de noordkant)
-  groundQuad(-94,157.5,36,165.5,0.045,SM.pavers,4);lay('woonerf',-94,157.5,36,165.5);box(130,0.12,0.18,SM.curb,staticRoot,-29,0.06,157.5);box(130,0.12,0.18,SM.curb,staticRoot,-29,0.06,165.5);
+  groundQuad(-94,157.5,36,165.5,0.045,SM.pavers,4);lay('woonerf',-94,157.5,36,165.5);for(const z of[157.5,165.5]){box(115,0.12,0.18,SM.curb,staticRoot,-36.5,0.06,z);box(7,0.12,0.18,SM.curb,staticRoot,32.5,0.06,z);}   // onderbroken bij de hoofdweg
   for(let x=-82,i=0;x<30;x+=7.5,i++)if(i%3!==1)parkedCar(x,i%2?159.4:163.6,true,i);
   for(let x=-80;x<34;x+=24)streetLight(x,157);
   for(let x=-70;x<34;x+=24)tree(x,166.6,0.75,false);
   // centrum: stoepen langs alle straten, parkeren langs de flats
-  streetSidewalks(-130,200,270,276,true,[[-66,-56],[104,114]]);streetSidewalks(-130,200,384,390,true,[[-66,-56],[104,114]]);
-  streetSidewalks(278,382,-64,-58,false,[]);streetSidewalks(278,382,106,112,false,[]);
-  centerLine(-130,200,273,true);centerLine(-130,200,387,true);
+  streetSidewalks(-130,200,270,276,true,[[-66,-56,'hi'],[21,29],[104,114,'hi']]);streetSidewalks(-130,200,384,390,true,[[-66,-56,'lo'],[21,29],[104,114,'lo']]);
+  streetSidewalks(276,384,-64,-58,false,[]);streetSidewalks(276,384,106,112,false,[]);
+  const X2=[[-66,-56],[20,30],[104,114]];centerLine(-130,200,273,true,X2);centerLine(-130,200,387,true,X2);
   // winkelstraat: parkeerstrook en een brede stoep voor de winkels; tussen de flats een parkeerterrein, achter de flats een plein van tegels
   for(const [a,b] of[[-125,-66],[-56,8]]){groundQuad(a,278,b,282.5,0.07,SM.tiles,2);   // tegels onder de strook: bij een MS-station blijft het bestraat
     for(const [p,q] of stripSegs(a,b,278,282.5)){groundQuad(p,278,q,282.5,0.09,MAT.asphalt,6);lay('parkeer',p,278,q,282.5);box(q-p,0.12,0.18,SM.curb,staticRoot,(p+q)/2,0.06,282.5);}groundQuad(a,282.5,b,291.5,0.085,SM.tiles,2);

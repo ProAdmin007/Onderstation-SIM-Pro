@@ -166,7 +166,7 @@ function aptBlock(x0,z0,x1,z1,floors){const W=x1-x0,Dz=z1-z0,H=floors*3+3.6,cx=(
   DISTRICT_RECTS.push([x0,z0-1.7,x1,z1+1.7]);}
 // straatlantaarn, gevoed uit het LS-veld openbare verlichting van het dichtstbijzijnde MS-station
 const poolTex=(()=>{const c=cnv(128),g=c.getContext('2d'),gr=g.createRadialGradient(64,64,0,64,64,64);gr.addColorStop(0,'rgba(255,214,150,0.9)');gr.addColorStop(0.45,'rgba(255,190,110,0.35)');gr.addColorStop(1,'rgba(255,170,90,0)');g.fillStyle=gr;g.fillRect(0,0,128,128);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t;})();
-function streetLight(x,z){lay('lamp',x-0.15,z-0.15,x+0.15,z+0.15);
+function streetLight(x,z){if(!layFree([x-0.3,z-0.3,x+0.3,z+0.3],['road'],0))return;lay('lamp',x-0.15,z-0.15,x+0.15,z+0.15);
   const s=RING.stations.reduce((a,b)=>Math.hypot(b.pos[0]-x,b.pos[1]-z)<Math.hypot(a.pos[0]-x,a.pos[1]-z)?b:a);
   if(!s.lampMat){s.lampMat=mat({color:0x2a2c2e,emissive:0xffd9a0,emissiveIntensity:0});s.poolMat=new THREE.MeshBasicMaterial({map:poolTex,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false,fog:false});s.lamps=0;}
   s.lamps++;cyl(0.06,0.09,7,MAT.galv,staticRoot,x,3.5,z,8);box(0.7,0.12,0.25,s.lampMat,staticRoot,x+0.3,7,z);
@@ -184,8 +184,7 @@ function buildDistrict(){
    [-140,150,5,0],[-140,185,5,1],[40,130,3,0],[40,170,3,0],[40,205,3,1],[72,220,6,1],[112,220,6,1],[72,190,6,0]].forEach(([x,z,n,s])=>houseRow(x,z,n,!!s));
   // bedrijventerrein bij MS5
   hall(100,140,30,20,8,'TRANSPORT',false,'Transportbedrijf',[0,24]);hall(145,140,30,22,9,'KOELHUIS',true,'Koelhuis',[0,24]);hall(130,175,40,18,7,'GARAGE · KANTOREN',false,'Garage en werkplaats',[7,18]);
-  // LS-verdeelkasten in de straat
-  [[-62,112],[-18,112],[-104,165],[-36,228],[52,124],[96,226],[150,114]].forEach(([x,z])=>{box(0.9,1.15,0.35,DM.green,staticRoot,x,0.6,z);lay('kast',x-0.45,z-0.18,x+0.45,z+0.18);});
+  // LS-verdeelkasten in de straat: zie hieronder (na de stoepen)
   // ---- Centrum en bedrijventerrein De Vaart (ring 2)
   groundQuad(-130,270,200,276,0.04,MAT.asphalt,6);groundQuad(-130,384,200,390,0.04,MAT.asphalt,6);
   groundQuad(-64,276,-58,384,0.04,MAT.asphalt,6);groundQuad(106,276,112,384,0.04,MAT.asphalt,6);
@@ -202,5 +201,8 @@ function buildDistrict(){
   for(let x=-120;x<190;x+=30){streetLight(x,268.5);streetLight(x+15,391.5);}
   dressStreets();
   RING.stations.forEach(kiosk);
+  // LS-verdeelkasten: direct achter de stoep, evenwijdig aan de straat (curbPlace)
+  [[-62,112],[-18,112],[-104,165],[-36,228],[52,124],[96,226],[150,114]].forEach(([x,z])=>{const p=curbPlace(x,z,0.9,0.35),g=new THREE.Group();g.position.set(p.x,0,p.z);g.rotation.y=p.ry;staticRoot.add(g);
+    box(0.9,1.15,0.35,DM.green,g,0,0.6,0);box(0.92,0.05,0.37,MAT.galvDark||MAT.galv,g,0,1.2,0);lay('kast',...p.r);});
   buildSites();
 }

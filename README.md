@@ -476,7 +476,7 @@ Het 10 kV-net is **gecompenseerd** (Petersenspoel in het sterpunt van T1 en T3).
 - **Verkeer:** een dozijn auto's rijdt rechts over de straten van beide wijken, met koplampen en een lichtbundel in het donker. In de spits rijden er meer.
 - **Voetgangers:** tot 48 mensen lopen over de stoepen van de woonwijk en het centrum en steken over bij de kruisingen; ze wijken uit voor lantaarnpalen, kasten en stations. Overdag en in de spits zijn het er meer, 's nachts en in de regen weinig. Samen kosten ze maar een paar tekenbeurten.
 - **Stadsleven:** spontane dingen die gebeuren, alleen beeld en geluid (uit te zetten met *Verkeer en buren*):
-  - **Trein:** geregeld rijdt er een trein over het spoor. De sprinter stopt bij Station Zuidwolde, waar reizigers op het perron wachten; de intercity rijdt door. Bij de overweg gaan de bomen dicht, knipperen de lichten en klinkt de bel. Bus en ambulance wachten tot de bomen weer open zijn.
+  - **Trein:** geregeld rijdt er een trein over het spoor. De sprinter stopt bij Station Zuidwolde, waar reizigers op het perron wachten; de intercity rijdt door. Bij de overweg gaan de bomen dicht, knipperen de lichten en klinkt de bel; staat de sprinter aan het perron, dan zijn ze open tot vlak voor vertrek. Bus en ambulance wachten tot de bomen weer open zijn.
   - **Stadsbus:** rijdt van 6:00 tot 23:30 een lijn door centrum en woonwijk, met drie haltes (Station/Marktplein, Molenweg, Esdoornlaan). Bij de haltes verzamelen zich wachtenden, die instappen als de bus er is.
   - **Vuilniswagen:** op werkdagen tussen 7:30 en 11:00 één ronde door de woonwijk, met korte stops bij de kliko's.
   - **Pakketbezorger:** maandag tot zaterdag overdag; bij elke stop loopt de bezorger naar de voordeur en terug.
@@ -520,7 +520,7 @@ Alle geluid wordt in de browser gemaakt (Web Audio) en hangt af van waar je bent
 <a id="ontwikkelen"></a>
 ## 🧑‍💻 Ontwikkelen
 
-De broncode staat in `src/`. `build.ps1` plakt de bestanden in strikte naamvolgorde aan elkaar tot één `index.html`.
+De broncode staat in `src/`. Geplande verbeteringen aan de architectuur staan in de [roadmap](ROADMAP.md). `build.ps1` plakt de bestanden in strikte naamvolgorde aan elkaar tot één `index.html`.
 
 | Bestanden | Inhoud |
 |---|---|

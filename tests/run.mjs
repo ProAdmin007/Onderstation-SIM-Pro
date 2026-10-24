@@ -489,6 +489,10 @@ const TESTS = [
   { name: 'plaatsing: geen object in een ander object (auto in station, boom op de weg …)', query: '?autostart', async run(p) {
       const r = await p.evaluate(() => ({ n: OS.LAYOUT.length, bad: OS.layoutCheck() }));
       assert(r.n > 500 && r.bad.length === 0, `botsingen in de wijk (${r.bad.length}): ${r.bad.slice(0, 6).join(' | ')}`);
+      const weg = await p.evaluate(() => { const L = OS.LAYOUT, roads = L.filter(e => e.kind === 'road'), stoep = L.filter(e => e.kind === 'stoep'), ov = (a, b, m = 0.05) => a[0] < b[2] - m && a[2] > b[0] + m && a[1] < b[3] - m && a[3] > b[1] + m;
+        return L.filter(e => ['tree', 'car', 'lamp', 'kast', 'kk', 'halte'].includes(e.kind) && roads.some(q => ov(e.r, q.r))).map(e => e.kind + '@' + e.r.map(v => v.toFixed(0)))
+          .concat(L.filter(e => (e.kind === 'kast' || e.kind === 'kk') && stoep.some(q => ov(e.r, q.r))).map(e => e.kind + ' op de stoep @' + e.r.map(v => v.toFixed(0)))); });
+      assert(weg.length === 0, `op de weg of de stoep: ${weg.slice(0, 6).join(' | ')}`);
   } },
   { name: 'opslaan en hervatten: moffen, graafwerk en een bekende foutplek blijven bewaard', query: '?play=free&t=11', async run(p) {
       const voor = await p.evaluate(async () => { const O = OS; O.closeHandover?.(); T.quiet(); localStorage.removeItem('osz-save-3');
@@ -555,7 +559,10 @@ const TESTS = [
         const zat = O.cityDay() === 6; tick(1); const markt = O.marketOn() && O.MARKET.visible && O.FIG.slice(0, 16).every(f => f.on);
         // trein: sprinter laten komen; overweg dicht als hij nadert, stopt bij het station
         const T = O.TRAIN; T.state = 'idle'; T.next = 0; tick(0.2); T.kind = 'sprinter'; T.dir = 1; T.z = 419.25; T.x = -700; T.v = 26; T.left = false; T.cars.forEach((c, i) => c.visible = i < 3);
-        let dicht = false, stopt = false; for (let i = 0; i < 900 && !stopt; i++) { O.cityTick(0.1); if (O.XING.closed) dicht = true; if (T.state === 'stopt') stopt = true; }
+        let dichtVoorStop = false, stopt = false; for (let i = 0; i < 900 && !stopt; i++) { O.cityTick(0.1); if (O.XING.closed) dichtVoorStop = true; if (T.state === 'stopt') stopt = true; }
+        T.wait = 14; O.cityTick(0.1); const openAanPerron = !O.XING.closed; T.wait = 8; O.cityTick(0.1); const dichtBijVertrek = O.XING.closed;
+        T.state = 'rijdt'; T.kind = 'intercity'; T.dir = -1; T.z = 424.25; T.x = 600; T.v = 36; T.left = false; T.cars.forEach(c => c.visible = true); let icDicht = false; for (let i = 0; i < 200 && !icDicht; i++) { O.cityTick(0.1); if (O.XING.closed && T.x > 30) icDicht = true; }
+        const dicht = !dichtVoorStop && openAanPerron && dichtBijVertrek && icDicht;
         const perron = O.FIG.slice(25, 29).some(f => f.on) || stopt;
         // bus bij de overweg: wacht zolang de bomen dicht zijn
         const B = O.BUS; B.g ??= null; tick(0.2); B.on = true; B.idle = 0; B.v = 9; B.wait = 0; B.stops.forEach(s => s.done = true); B.d = 0;

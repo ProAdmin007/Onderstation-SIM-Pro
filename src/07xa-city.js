@@ -91,7 +91,15 @@ function trainTick(dt){const T=TRAIN,run=!SIM.paused&&!GAME.ended;
   TRAIN_G.visible=true;TRAIN_G.position.set(T.x,0.15,T.z);TRAIN_G.rotation.y=T.dir>0?0:Math.PI;T.cars.forEach((c,i)=>c.position.x=-12-i*25);
   // dreun van de trein als hij dichtbij is
   if(run&&T.v>3){T.rumble-=dt;const d=Math.abs(camera.position.x-T.x)+Math.abs(camera.position.z-T.z);if(T.rumble<=0&&d<260){T.rumble=0.5;AudioSys.burst?.({type:'lowpass',f:180,gain:0.18*distGain(V3(T.x,1,T.z))*Math.min(1,T.v/20),dur:0.7,attack:0.2});}}}
-function xingTick(dt){const T=TRAIN,len=trainLen(),near=T.state!=='idle'&&(()=>{const head=T.x,tail=T.x-T.dir*len,lo=Math.min(head,tail),hi=Math.max(head,tail);return hi>25-320&&lo<25+90||T.state==='stopt'&&lo<25+40&&hi>25-40;})();
+// overweg (x 20–30) dicht als de trein erop staat, eraan komt en er nog overheen moet, of als hij aan het perron staat en zo vertrekt richting overweg.
+// Een sprinter die vóór de overweg stopt, laat de bomen open tot vlak voor vertrek.
+function xingNear(){const T=TRAIN;if(T.state==='idle')return false;const len=trainLen(),head=T.x,tail=T.x-T.dir*len,ahead=(25-head)*T.dir;
+  if(Math.max(head,tail)>18&&Math.min(head,tail)<32)return true;
+  if(T.state==='stopt')return T.wait<9&&ahead>0&&ahead<140;
+  if(ahead<=0||ahead>320)return false;
+  if(T.kind==='sprinter'&&!T.left){const stopHead=-35+T.dir*len/2;if((25-stopHead)*T.dir>0)return false;}   // stopt eerst bij het perron, vóór de overweg
+  return true;}
+function xingTick(dt){const near=xingNear();
   XING.closed=near;XING.k=clamp(XING.k+(near?1:-1)*dt/2.5,0,1);XING_ARMS.forEach(a=>a.p.rotation.z=a.s*Math.PI*0.47*(1-XING.k));
   const blink=near&&(performance.now()%1000)<500;XING_LAMPS[0].emissiveIntensity=near&&blink?4:0;XING_LAMPS[1].emissiveIntensity=near&&!blink?4:0;
   if(near&&!SIM.paused){XING.bell=(XING.bell||0)-dt;if(XING.bell<=0){XING.bell=0.5;const v=distGain(V3(25,2,422));if(camera.position.distanceTo(V3(25,2,422))<300)AudioSys.tone?.({f:1250,type:'triangle',gain:0.035*v,dur:0.12});}}}

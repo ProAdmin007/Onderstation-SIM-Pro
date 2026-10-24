@@ -15,9 +15,9 @@ function buildColliders(){
     let x=b.x0;[...b.doors].sort((a,c)=>a-c).forEach(dx=>{addRect(x,b.z0,dx-1.05,b.z0+t);x=dx+1.05;});addRect(x,b.z0,b.x1,b.z0+t);});
   // inrichting binnen
   addRect(-19.4,54.8,-14.0,55.7);addRect(-17.1,46.7,-13.9,47.7);addRect(13.3,54.9,17.9,55.5);addRect(16.9,47.0,18.3,48.2);addRect(47.9,54.8,51.2,55.7);
-  addRect(37.2,39.9,43.0,42.1);   // busje
+  addRect(37.4,33.4,42.6,35.8);   // busje (naast de stationsweg)
   // hek met open poort, poortvleugels opzij
-  const F=FENCE,t=0.25;addRect(F.x0,F.z0-t,F.x1,F.z0+t);addRect(F.x0-t,F.z0,F.x0+t,F.z1);addRect(F.x1-t,F.z0,F.x1+t,F.z1);
+  const F=FENCE,t=0.25;addRect(F.x0,F.z0-t,F.x1,F.z0+t);addRect(F.x0-t,F.z0,F.x0+t,F.gateW[0]);addRect(F.x0-t,F.gateW[1],F.x0+t,F.z1);addRect(F.x1-t,F.z0,F.x1+t,F.z1);
   addRect(F.x0,F.z1-t,F.gate[0],F.z1+t);addRect(F.gate[1],F.z1-t,F.x1,F.z1+t);addRect(F.gate[1],F.z1+0.2,F.gate[1]+10.2,F.z1+1.1);
   DISTRICT_RECTS.forEach(r=>addRect(...r));
 }

@@ -5,11 +5,11 @@ const KK_MAT=mat({color:0x2f5a3c,roughness:0.7}),KK_ON=mat({color:0x111111,emiss
 LS_LINKS.forEach(d=>{const sa=RING.stations.find(s=>s.id===D[d.a].bay),sb=RING.stations.find(s=>s.id===D[d.b].bay);
   let x=sa.pos[0]+(sb.pos[0]-sa.pos[0])*0.5,z=sa.pos[1]+(sb.pos[1]-sa.pos[1])*0.5;
   // vrije plek zoeken: niet op de weg, niet in een gebouw, auto, boom of lantaarn
-  const KK_AVOID=['road','woonerf','parkeer','house','apt','hall','kiosk','car','tree','lamp','kast','shed','hedge'],bad=(x,z)=>blockedAt(x,z)||!layFree([x-0.6,z-0.4,x+0.6,z+0.4],KK_AVOID,0.3);
-  for(let r=0;r<60&&bad(x,z);r++){const a=r*2.4,d=1.5+r*0.15;x+=Math.cos(a)*d;z+=Math.sin(a)*d;}
-  const root=grp(x,z),ind=mat({color:0x111111,emissive:0x30ff60,emissiveIntensity:0});root.userData.dyn=true;
+  // direct achter de stoep, evenwijdig aan de straat, deur naar de stoep
+  const pl=curbPlace(x,z,0.9,0.38);x=pl.x;z=pl.z;
+  const root=grp(x,z);root.rotation.y=pl.ry;const ind=mat({color:0x111111,emissive:0x30ff60,emissiveIntensity:0});root.userData.dyn=true;
   box(0.9,1.15,0.38,KK_MAT,root,0,0.6,0);box(0.92,0.05,0.4,MAT.galvDark,root,0,1.2,0);box(0.06,0.06,0.02,ind,root,0.3,1.0,0.2);
-  plate(d.id,root,0,0.95,0.2,0,0.34);d.pos=[x,z];lay('kk',x-0.45,z-0.2,x+0.45,z+0.2);
+  plate(d.id,root,0,0.95,0.2,0,0.34);d.pos=[x,z];lay('kk',...pl.r);
   regView(d.id,root,()=>{ind.emissiveIntensity=d.state?2.5:0;},{labelPos:V3(x,1.9,z)});});
 
 // ---- SCADA-tabblad LS (overzicht; klik op een station voor het LS-venster)

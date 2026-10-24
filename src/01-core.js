@@ -197,6 +197,8 @@ const BAKE_ZONES=[['station',-130,-130,150,90],['wijk',-160,90,215,262],['centru
 const bakeZone=(x,z)=>(BAKE_ZONES.find(q=>x>=q[1]&&x<q[3]&&z>=q[2]&&z<q[4])||[Math.floor(x/400)+','+Math.floor(z/400)])[0];
 function bakeStatic(){
   scene.updateMatrixWorld(true);
+  // gevels, ramen en borden zijn vlakken vlak vóór een blok: altijd vóór laten winnen (anders flikkeren ze tijdens het bewegen)
+  scene.traverse(o=>{if(o.isMesh&&o.geometry?.type==='PlaneGeometry')[].concat(o.material).forEach(m=>{if(m&&!m.polygonOffset){m.polygonOffset=true;m.polygonOffsetFactor=-1;m.polygonOffsetUnits=-2;}});});
   const buckets=new Map(),remove=[],bb=new THREE.Box3(),bc=new THREE.Vector3(),bs=new THREE.Vector3();
   scene.traverse(o=>{
     if(!o.isMesh||o.userData.noBake)return;
