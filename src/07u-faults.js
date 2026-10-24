@@ -33,14 +33,14 @@ function activeFaults(){const o=[],add=(key,sev,title,detail,go,cust=0)=>o.push(
     if(lo)add('ll'+s.id,'warn',`${s.id}: onderspanning`,`${lo} straat${lo>1?'en':''} onder 207 V`,{tab:'L'});
     if(s.gs?.state==='trip')add('gs'+s.id,'crit',`Noodaggregaat ${s.id} uitgevallen`,'overbelast – schakel straten af en herstart (N)',{tab:'L'});});
   stationFaults(add);   // koperdiefstal en trafobrand
-  KLIC.jobs.forEach(j=>{if(!j.marked)add('kl'+j.id,'warn',`Graafwerk bij ${j.where}: ${j.c.name}`,`${j.firm} ${j.state==='plan'?`begint ${fmtClock(j.start)}`:'graaft nu'} – ${j.order?'monteur onderweg om aan te wijzen':'laat de kabels aanwijzen (tablet G)'}`,null);});
+  KLIC.jobs.forEach(j=>{if(!j.marked)add('kl'+j.id,'warn',`Graafwerk bij ${j.where}: ${j.c.name}`,`${j.firm} ${j.state==='plan'?`begint ${fmtClock(j.start)}`:'graaft nu'} – ${j.order?'monteur onderweg om aan te wijzen':'klik om de kaart te openen'}`,{klic:j.id});});
   const now=new Set(o.map(x=>x.key));for(const k in FSEEN)if(!now.has(k))delete FSEEN[k];o.forEach(x=>{FSEEN[x.key]??=SIM.t;x.since=FSEEN[x.key];});
   return o.sort((a,b)=>(a.sev==='crit'?0:1)-(b.sev==='crit'?0:1)||a.since-b.since);}
 function renderFaults(){const el=$('#faultList');if(!el)return;const fs=activeFaults(),crit=fs.filter(f=>f.sev==='crit').length;
-  const html=fs.length?fs.map(f=>`<div class="fl ${f.sev}${f.go?' go':''}" ${f.go?`data-fgo="${f.go.tab}|${f.go.dev||''}"`:''} title="${f.go?'Klik om in SCADA te tonen':''}"><span class="tm">${fmtClock(f.since)}</span><span class="lv"></span>
+  const html=fs.length?fs.map(f=>`<div class="fl ${f.sev}${f.go?' go':''}" ${f.go?.klic?`data-fklic="${f.go.klic}"`:f.go?`data-fgo="${f.go.tab}|${f.go.dev||''}"`:''} title="${f.go?.klic?'Klik om het graafgebied op de kaart te tonen':f.go?'Klik om in SCADA te tonen':''}"><span class="tm">${fmtClock(f.since)}</span><span class="lv"></span>
       <span><b>${f.title}</b> <i>· ${Math.max(0,Math.round(SIM.t-f.since))} min</i>${f.go?.view!=null?` <button class="mini fl-view" data-fview="${f.go.view}" title="Bekijk ter plaatse">👁 bekijk</button>`:''}${f.detail||f.cust?`<br><small>${f.detail||''}${f.cust?`${f.detail?' · ':''}${f.cust.toLocaleString('nl-NL')} klant${f.cust>1?'en':''} zonder stroom`:''}</small>`:''}</span></div>`).join('')
     :'<div class="fl-none">✓ Geen lopende storingen</div>';
   if(el._h!==html){el._h=html;el.innerHTML=html;}
   const c=$('#faultCnt');c.textContent=fs.length;c.classList.toggle('bad',crit>0);$('#faults').classList.toggle('has-crit',crit>0);
   const h=$('#faults').offsetHeight;if(h!==renderFaults.h){renderFaults.h=h;document.documentElement.style.setProperty('--faultH',(h?h+8:0)+'px');}}
-$('#faultList').addEventListener('click',e=>{const v=e.target.closest('[data-fview]');if(v){const p=VIEWPOS[+v.dataset.fview];return flyTo(p[0].clone(),p[1].clone(),2.5);}const f=e.target.closest('[data-fgo]');if(!f)return;const [tab,dev]=f.dataset.fgo.split('|');setTab(tab);$('#scada').classList.remove('min');if(dev&&D[dev])selectDevice(dev);});
+$('#faultList').addEventListener('click',e=>{const k=e.target.closest('[data-fklic]');if(k)return klicFocus(KLIC.jobs.find(j=>j.id===k.dataset.fklic));const v=e.target.closest('[data-fview]');if(v){const p=VIEWPOS[+v.dataset.fview];return flyTo(p[0].clone(),p[1].clone(),2.5);}const f=e.target.closest('[data-fgo]');if(!f)return;const [tab,dev]=f.dataset.fgo.split('|');setTab(tab);$('#scada').classList.remove('min');if(dev&&D[dev])selectDevice(dev);});

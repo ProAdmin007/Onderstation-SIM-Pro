@@ -34,6 +34,10 @@ function gisRoute(P,Q,off){const c=gisPath(P[0],P[1],Q[0],Q[1]);if(!c)return [P,
   const r=[];for(const p of out){const l=r[r.length-1];if(l&&Math.hypot(l[0]-p[0],l[1]-p[1])<0.2)continue;r.push(p);}
   for(let i=r.length-2;i>0;i--){const [a,b,c2]=[r[i-1],r[i],r[i+1]];if((Math.abs(a[0]-b[0])<0.05&&Math.abs(b[0]-c2[0])<0.05)||(Math.abs(a[1]-b[1])<0.05&&Math.abs(b[1]-c2[1])<0.05))r.splice(i,1);}
   return r;}
+// tracé dat niet door gebouwen loopt: probeer de gewenste strook, anders een strook dichter bij de straat
+const GIS_BLD=['house','apt','hall','small','kiosk'];
+function routeHitsBuilding(pts){const L=polyLen(pts);for(let d=6;d<L-6;d+=1.5){const [x,z]=polyAt(pts,d);if(LAYOUT.some(e=>GIS_BLD.includes(e.kind)&&x>e.r[0]+0.2&&x<e.r[2]-0.2&&z>e.r[1]+0.2&&z<e.r[3]-0.2))return true;}return false;}
+function freeRoute(P,Q,offs){let last=null;for(const o of offs){last=gisRoute([...P],[...Q],o);if(!routeHitsBuilding(last))return last;}return last;}
 const polyLen=p=>p.reduce((a,q,i)=>i?a+Math.hypot(q[0]-p[i-1][0],q[1]-p[i-1][1]):0,0);
 function polyAt(p,d){for(let i=1;i<p.length;i++){const L=Math.hypot(p[i][0]-p[i-1][0],p[i][1]-p[i-1][1]);if(d<=L||i===p.length-1){const f=L?clamp(d/L,0,1):0;return [p[i-1][0]+(p[i][0]-p[i-1][0])*f,p[i-1][1]+(p[i][1]-p[i-1][1])*f];}d-=L;}return p[0];}
 
@@ -51,10 +55,10 @@ function rr2(a,b){return a+R_GIS()*(b-a);}
 // 10 kV ringkabels: per kabelstuk tussen twee stations (of tussen het OS en het eerste station)
 RINGS.forEach((rg,ri)=>RING.secs.filter(s=>s.ring===rg).forEach(s=>{const st=id=>RING.stations.find(x=>x.id===id);
   const P=s.a?st(s.a).pos:osExit(rg.from),Q=s.b?st(s.b).pos:osExit(rg.to);
-  addCable({id:s.id,kind:'ring',kv:10,sec:s,name:`10 kV ringkabel ${secName(s)}`,pts:gisRoute([...P],[...Q],3.6+ri*0.35)});}));
+  addCable({id:s.id,kind:'ring',kv:10,sec:s,name:`10 kV ringkabel ${secName(s)}`,pts:gisRoute([...P],[...Q],3.2+ri*0.5)});}));
 // MS-velden naar de grote afnemers; zonnepark, industrie en buitengebied lopen het kaartbeeld uit
 [['F5',()=>[SITE.zkh.x+40,SITE.zkh.z-62]],['F6',()=>[SITE.kassen.x0+6,101]],['G4',()=>[SITE.rwzi.x+10,SITE.rwzi.z+62]]].forEach(([id,q],i)=>{const f=FD(id);
-  addCable({id,kind:'feeder',kv:is20(f.bus)?20:10,f,name:`${is20(f.bus)?20:10} kV kabel ${f.cb} → ${f.name}`,pts:gisRoute(osExit(id),q(),4.3+i*0.3)});});
+  addCable({id,kind:'feeder',kv:is20(f.bus)?20:10,f,name:`${is20(f.bus)?20:10} kV kabel ${f.cb} → ${f.name}`,pts:gisRoute(osExit(id),q(),4.3+i*0.5)});});
 [['G1',[1500,47],'Zonnepark De Hoeve (±3 km)'],['G2',[-1500,47],'Industrieterrein Noord (±2,5 km)'],['G3',[1500,49],'Buitengebied Oost (±4 km)']].forEach(([id,q,to],i)=>{const f=FD(id),P=osExit(id);
   addCable({id,kind:'feeder',kv:20,f,far:to,name:`20 kV kabel ${f.cb} → ${to}`,pts:[P,[P[0],45+i],[q[0]<0?-300:600,45+i],q]});});
 // laagspanning: per LS-groep een kabel van het MS-station naar de straat of het gebouw van die groep
@@ -74,10 +78,18 @@ const LS_ANCHOR=(()=>{const A=new Map(),rows=LAYOUT.filter(e=>e.kind==='house'||
     res.forEach((g,i)=>{const r=mine[Math.floor((i+0.5)*mine.length/Math.max(1,res.length))];if(r)A.set(g.id,facadePoint(r.r));});
     s.groups.forEach(g=>{const E=SMALL.find(e=>e.name===g.name);if(!E?.pos||A.has(g.id))return;const r=rectAt(...E.pos);A.set(g.id,r?facadePoint(r):E.pos);});});return A;})();
 RING.stations.forEach(s=>s.groups.forEach((g,j)=>{if(g.kind==='ovl')return;const a=LS_ANCHOR.get(g.id)||[s.pos[0]+(j%2?40:-40),s.pos[1]+(j<2?-6:6)];
-  addCable({id:g.id,kind:'ls',kv:0.4,g,name:`LS-kabel ${g.id} ${g.name}`,pts:gisRoute([...s.pos],a,4.7+(j%3)*0.25)});}));
+  addCable({id:g.id,kind:'ls',kv:0.4,g,name:`LS-kabel ${g.id} ${g.name}`,pts:freeRoute(s.pos,a,[5.9+(j%3)*0.45,5.4,4.9,4.4])});}));
 // kabelkasten: LS-koppelkabel van beide stations naar de kast
 LS_LINKS.forEach(d=>[d.a,d.b].forEach((gid,i)=>{const s=RING.stations.find(x=>x.id===D[gid].bay);
-  addCable({id:d.id+'-'+(i?'b':'a'),kind:'kk',kv:0.4,kk:d,name:`LS-koppelkabel ${s.id} → ${d.id}`,pts:gisRoute([...s.pos],d.pos,5.2)});}));
+  addCable({id:d.id+'-'+(i?'b':'a'),kind:'kk',kv:0.4,kk:d,name:`LS-koppelkabel ${s.id} → ${d.id}`,pts:freeRoute(s.pos,d.pos,[7.3,6.6,5.6,4.6])});}));
+
+// ---- nummers: een kabelnummer per kabel, een tracénummer per sleuftraject (een straatdeel tussen twee kruisingen)
+const TRACES=new Map();GIS_NET.nodes.forEach((n,i)=>n.e.forEach(([j])=>{if(i<j&&!TRACES.has(i+'-'+j))TRACES.set(i+'-'+j,'TR-'+String(TRACES.size+1).padStart(3,'0'));}));
+const traceOf=(a,b)=>TRACES.get(Math.min(a,b)+'-'+Math.max(a,b));
+CABLES.forEach(c=>{c.nr=c.kind==='ring'?`10-${c.id}`:c.kind==='feeder'?`${c.kv}-${c.id}-01`:`LS-${c.id}`;const tr=[];
+  if(!c.far)for(let d=0;d<=c.len;d+=4){const [x,z]=polyAt(c.pts,d),sn=gisSnap(x,z);if(sn&&sn.d<8.5){const t=traceOf(sn.a,sn.b);if(t&&tr[tr.length-1]!==t)tr.push(t);}}c.traces=[...new Set(tr)];});
+// afstand van een punt tot een kabel (en het dichtstbijzijnde punt erop)
+function cableDist(c,x,z){let best={d:1e9,x:0,z:0,a:0},acc=0;for(let i=1;i<c.pts.length;i++){const [ax,az]=c.pts[i-1],[bx,bz]=c.pts[i],dx=bx-ax,dz=bz-az,L2=dx*dx+dz*dz||1,t=clamp(((x-ax)*dx+(z-az)*dz)/L2,0,1),px=ax+dx*t,pz=az+dz*t,d=Math.hypot(px-x,pz-z);if(d<best.d)best={d,x:px,z:pz,a:acc+Math.sqrt(L2)*t};acc+=Math.sqrt(L2);}return best;}
 
 // ---- status per kabel: aan, uit, fout, warm (overbelast), open (kabelkast open)
 function cableState(c){if(c.kind==='ring'){const s=c.sec;return s.fault?'fout':!EN.has(s.node)?'uit':(s.temp||0)>CABLE.max?'warm':'aan';}
@@ -91,7 +103,7 @@ const mofCol=y=>y<1985?'#ff5a4a':y<2000?'#f5b335':'#5ccf72';
 // ---- röntgenblik (X): lintjes op straat in de kleur van de status, moffen als blokjes
 const XRAY={on:false,root:new THREE.Group(),mats:new Map(),mof:null};XRAY.root.visible=false;XRAY.root.userData.dyn=true;scene.add(XRAY.root);
 (()=>{
-  for(const c of CABLES){const w=c.kind==='ring'||c.kind==='feeder'?0.8:0.55,pos=[],idx=[];
+  for(const c of CABLES){const w=c.kind==='ring'||c.kind==='feeder'?0.28:0.16,pos=[],idx=[];
     for(let i=1;i<c.pts.length;i++){const [ax,az]=c.pts[i-1],[bx,bz]=c.pts[i],L=Math.hypot(bx-ax,bz-az)||1,nx=-(bz-az)/L*w/2,nz=(bx-ax)/L*w/2,k=pos.length/3,y=0.2+(c.kv===0.4?0.01:0.02);
       pos.push(ax+nx,y,az+nz,ax-nx,y,az-nz,bx+nx,y,bz+nz,bx-nx,y,bz-nz);idx.push(k,k+2,k+1,k+1,k+2,k+3);}
     const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setIndex(idx);
@@ -112,7 +124,7 @@ function gisToast(m){const t=$('#toast');t.textContent=m;t.classList.add('show')
 // ---- kabeltablet (G): kaart rond je positie; GIS-stijl of luchtfoto
 const TAB={on:false,style:'gis',zoom:1.6,follow:true,cx:0,cz:100,sel:null,aerial:null,layers:{ms:true,ls:true,mof:true}};
 const gisOpen=()=>TAB.on;
-function openTablet(){if(TAB.on)return;TAB.on=true;TAB.follow=true;$('#gisTab').classList.remove('hidden');TAB.zoom=Math.max(TAB.zoom,FP.on?2.2:1.6);renderTabletChrome();drawTablet();}
+function openTablet(){if(TAB.on)return;TAB.on=true;TAB.follow=true;$('#gisTab').classList.remove('hidden');TAB.zoom=Math.max(TAB.zoom,FP.on?2.2:1.6);renderTabletChrome();refreshInfo();drawTablet();}
 function closeTablet(){TAB.on=false;$('#gisTab').classList.add('hidden');}
 // luchtfoto: één keer van bovenaf gerenderd (overdag, zonder mist) op het moment dat je hem voor het eerst kiest
 const AERIAL_B=[-460,-300,700,470];
@@ -151,6 +163,9 @@ function drawTablet(){if(!TAB.on)return;const cv=$('#gtMap'),g=cv.getContext('2d
   g.setLineDash([]);
   if(TAB.layers.mof&&s>0.8)for(const c of CABLES){if(!cableVisible(c))continue;for(const m of c.moffen){const [a,b]=tabXY(m.x,m.z,cv);if(a<-5||b<-5||a>W+5||b>H+5)continue;g.fillStyle=mofCol(m.year);g.strokeStyle='#222';g.lineWidth=1;g.beginPath();g.arc(a,b,3.2,0,7);g.fill();g.stroke();}}
   gisDrawExtra(g,cv);
+  if(s>=2.6){g.font='10px Arial';g.textAlign='center';g.fillStyle='rgba(70,76,84,0.85)';for(const [k,t] of TRACES){const [i,j]=k.split('-').map(Number),a=GIS_NET.nodes[i],b=GIS_NET.nodes[j],[px,py]=tabXY((a.x+b.x)/2,(a.z+b.z)/2,cv);if(px>0&&py>0&&px<W&&py<H)g.fillText(t,px,py+3);}}
+  if(s>=2){const [mx,mz]=tabWorld(W/2,H/2,cv);g.font='bold 10px Arial';g.textAlign='left';for(const c of CABLES){if(c.far||!cableVisible(c))continue;const p=cableDist(c,mx,mz),[px,py]=tabXY(p.x,p.z,cv);if(px<4||py<10||px>W-40||py>H-4)continue;
+    const w=g.measureText(c.nr).width+6;g.fillStyle='rgba(255,255,255,0.88)';g.fillRect(px+4,py-11,w,13);g.fillStyle=cableCol(c);g.fillText(c.nr,px+7,py-1);}}
   // MS-stations en kabelkasten
   g.font='bold 11px Arial';g.textAlign='center';
   RING.stations.forEach(st=>{const [a,b]=tabXY(...st.pos,cv);g.fillStyle=stationLive(st)?'#1d4f91':'#6b7177';g.fillRect(a-5,b-5,10,10);g.fillStyle='#111';g.fillText(st.id,a,b-8);});
@@ -170,7 +185,7 @@ const fmtLen=m=>m>=1000?(m/1000).toFixed(1).replace('.',',')+' km':Math.round(m)
 function cableCard(c,d){const st=cableState(c),old=c.moffen.reduce((a,m)=>Math.min(a,m.year),9999),stTxt={aan:'onder spanning',uit:'spanningsloos',fout:'storing',warm:'overbelast – te warm',open:'open (kabelkast)'}[st];
   const I=c.kind==='ring'?c.sec.I:c.kind==='feeder'?c.f.I:null;
   return `<div class="gt-card"><b style="color:${cableCol(c,st)}">■</b> <b>${c.name}</b>${d!=null?` <small>· ${d.toFixed(1).replace('.',',')} m van je af</small>`:''}<br>
-    <small>${c.type} · aangelegd ${c.year} · ${c.far?'tracé loopt het kaartbeeld uit':fmtLen(c.len)} · ${c.moffen.length} mof${c.moffen.length===1?'':'fen'}${c.moffen.length?` (oudste ${old})`:''}<br>
+    <small>Kabelnr. <b>${c.nr}</b>${c.traces?.length?` · tracé ${c.traces.slice(0,5).join(', ')}${c.traces.length>5?' …':''}`:''}<br>${c.type} · aangelegd ${c.year} · ${c.far?'tracé loopt het kaartbeeld uit':fmtLen(c.len)} · ${c.moffen.length} mof${c.moffen.length===1?'':'fen'}${c.moffen.length?` (oudste ${old})`:''}<br>
     Status: <b>${stTxt}</b>${I!=null&&st==='aan'?` · ${Math.round(I)} A`:''}</small>${gisCardExtra(c)}</div>`;}
 function renderTabletChrome(){$('#gtStyle').textContent=TAB.style==='gis'?'🛰 Luchtfoto':'🗺 Kaart';$('#gtFollow').classList.toggle('on',TAB.follow);
   $('#gisTab').classList.toggle('fp',FP.on);for(const k in TAB.layers){const b=$(`#gisTab [data-gl="${k}"]`);if(b)b.checked=TAB.layers[k];}}
@@ -185,10 +200,17 @@ function renderTabletChrome(){$('#gtStyle').textContent=TAB.style==='gis'?'🛰 
   cv.addEventListener('pointerdown',e=>{drag={x:e.offsetX,y:e.offsetY,moved:false};});
   cv.addEventListener('pointermove',e=>{if(!drag)return;const dx=e.offsetX-drag.x,dy=e.offsetY-drag.y;if(Math.abs(dx)+Math.abs(dy)>3){drag.moved=true;TAB.follow=false;TAB.cx-=dx/TAB.zoom;TAB.cz-=dy/TAB.zoom;drag.x=e.offsetX;drag.y=e.offsetY;renderTabletChrome();drawTablet();}});
   cv.addEventListener('pointerup',e=>{const d=drag;drag=null;if(d&&d.moved)return;const r=cv.getBoundingClientRect(),[x,z]=tabWorld(e.clientX-r.left,e.clientY-r.top,cv),n=nearestCable(x,z,10/TAB.zoom+2);
-    TAB.sel=n?.c||null;$('#gtInfo').innerHTML=TAB.sel?cableCard(TAB.sel):'<small>Klik op een kabel voor de gegevens. Slepen schuift de kaart, scrollen zoomt.</small>';drawTablet();});})();
+    const kj=KLIC.jobs.find(j=>Math.hypot(j.x-x,j.z-z)<KLIC_R+4/TAB.zoom);TAB.klic=kj||null;TAB.sel=kj?null:n?.c||null;refreshInfo();drawTablet();});})();
+function refreshInfo(){if(TAB.klic&&!KLIC.jobs.includes(TAB.klic))TAB.klic=null;$('#gtInfo').innerHTML=TAB.klic?klicCard(TAB.klic):TAB.sel?cableCard(TAB.sel):tabletHome();}
 $('#gisBtn')?.addEventListener('click',()=>TAB.on?closeTablet():openTablet());
 $('#xrayBtn')?.addEventListener('click',()=>setXray());
 addEventListener('resize',()=>TAB.on&&drawTablet());
 addEventListener('keydown',e=>{if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT'||e.ctrlKey||e.metaKey||!$('#intro').classList.contains('hidden'))return;
   if(e.code==='KeyG'){TAB.on?closeTablet():openTablet();}else if(e.code==='KeyX')setXray();});
-let gisT=0;function gisTick(dt){if((gisT+=dt)<0.25)return;gisT=0;gisColors();if(TAB.on){renderTabletChrome();drawTablet();}}
+const XLAB=new Map(),XLAB_BG={10:'#2a6fc7',20:'#8a4fcf',0.4:'#a37a0e'};
+function xrayLabels(){if(!XRAY.on)return;const t=FP.on?camera.position:controls.target;
+  for(const c of CABLES){if(c.far)continue;const p=cableDist(c,t.x,t.z);let s=XLAB.get(c);if(p.d>70){if(s)s.visible=false;continue;}
+    if(!s){s=new THREE.Sprite(new THREE.SpriteMaterial({map:toTex(textCanvas(c.nr,{w:256,h:56,bg:XLAB_BG[c.kv]||'#555',fg:'#ffffff',font:'bold 34px Arial',border:false})),depthTest:false,transparent:true}));s.scale.set(2.6,0.57,1);s.renderOrder=7;s.userData.dyn=true;XRAY.root.add(s);XLAB.set(c,s);}
+    // labels van kabels die naast elkaar liggen uit elkaar houden: verschoven langs de kabel en in hoogte
+    const k=CABLES.indexOf(c),[lx,lz]=polyAt(c.pts,clamp(p.a+((k%5)-2)*5,0,c.len));s.visible=true;s.position.set(lx,1.1+(k%3)*0.55,lz);}}
+let gisT=0;function gisTick(dt){if((gisT+=dt)<0.25)return;gisT=0;gisColors();xrayLabels();if(TAB.on){renderTabletChrome();drawTablet();}}

@@ -35,12 +35,19 @@ function measDone(c,F){if(faultOf(c)!==F)return;F.spot??=faultSpot(c);F.spot.kno
 
 // ---- graafwerk: KLIC-meldingen van aannemers; kabels laten aanwijzen voorkomt graafschade
 const KLIC={jobs:[],next:null,seq:0};
+const KLIC_R=8;   // straal van het graafgebied (m)
+const klicCables=j=>CABLES.filter(c=>!c.far&&cableDist(c,j.x,j.z).d<=KLIC_R);
+function klicFocus(j){if(!j)return;openTablet();TAB.follow=false;TAB.cx=j.x;TAB.cz=j.z;TAB.zoom=3.2;TAB.sel=null;TAB.klic=j;renderTabletChrome();refreshInfo();drawTablet();}
+function klicCard(j){const cs=klicCables(j);return `<div class="gt-card"><b style="color:#f08a1a">■</b> <b>Graafmelding ${j.id}</b> · ${j.firm}<br><small>${j.why} bij ${j.where} · ${j.state==='plan'?`begint om ${fmtClock(j.start)}`:'nu aan het graven'} · ${j.marked?'<b>kabels aangewezen ✓</b>':j.order?'monteur onderweg om aan te wijzen':'<b>kabels niet aangewezen</b>'}</small>
+  <div class="gt-x">In het graafgebied (${KLIC_R} m):<br>${cs.map(c=>`<span style="color:${cableCol(c)}">■</span> ${c.nr} – ${c.name}`).join('<br>')||'geen kabels'}</div>${!j.marked&&!j.order?`<div class="gt-act"><button class="mini primary" data-gact="klic:${j.id}">👷 Kabels aanwijzen</button></div>`:''}</div>`;}
+// tablet zonder keuze: de open graafmeldingen met een knop om erheen te gaan
+function tabletHome(){const js=KLIC.jobs;return (js.length?`<div class="gt-x"><b>Graafmeldingen (KLIC)</b><br>${js.map(j=>`${j.marked?'✓':'⚠'} ${j.firm} – ${j.where}, ${j.state==='plan'?fmtClock(j.start):'graaft nu'} <button class="mini" data-gact="klicgo:${j.id}">Toon</button>`).join('<br>')}</div>`:'')+'<small>Klik op een kabel of graafgebied voor de gegevens. Slepen schuift de kaart, scrollen zoomt.</small>';}
 const KLIC_FIRMS=['Bouwbedrijf Jansen','Van der Veen Infra','GWW De Vries','Glasvezel Noord','Waterbedrijf Drenthe','Hoveniersbedrijf Bakker','Rioleringsbedrijf Mulder'];
 const KLIC_WHY=['een sleuf voor glasvezel','vervanging van de riolering','een nieuwe waterleiding','het planten van straatbomen','een laadpaal-aansluiting','een warmtenet'];
 function klicNew(forceCable){const cs=CABLES.filter(c=>!c.far&&c.kind!=='kk'&&c.len>30),c=forceCable||wpick(cs,c=>c.kind==='ls'?0.5:1);
   const d=rnd(Math.min(8,c.len/3),Math.max(c.len-8,c.len*2/3)),[x,z]=polyAt(c.pts,d),st=nearestStation(x,z),start=SIM.t+rnd(25,45);
   const j={id:'KLIC'+(++KLIC.seq),c,d,x,z,firm:pick(KLIC_FIRMS),why:pick(KLIC_WHY),where:`${st.name} (${st.id})`,start,end:start+rnd(40,70),hitAt:start+rnd(8,30),state:'plan',marked:false,order:false};
-  KLIC.jobs.push(j);pushAlarm(`📋 KLIC-melding: ${j.firm} graaft vanaf ${fmtClock(j.start)} bij ${j.where} voor ${j.why}. Het graafgebied kruist ${c.name} – laat de kabels aanwijzen (tablet, G)`,'warn');drawTablet();return j;}
+  KLIC.jobs.push(j);pushAlarm(`📋 KLIC-melding: ${j.firm} graaft vanaf ${fmtClock(j.start)} bij ${j.where} voor ${j.why}. Het graafgebied kruist ${c.nr} – laat de kabels aanwijzen (klik in Lopende storingen voor de kaart)`,'warn');drawTablet();if(TAB.on&&!TAB.sel&&!TAB.klic)refreshInfo();return j;}
 function klicMark(j){if(!j||j.state==='klaar')return;if(j.marked)return deny('De kabels zijn al aangewezen');if(j.order)return deny('Er is al een monteur onderweg');
   j.order=true;const t=Math.min(rnd(8,14),Math.max(3,j.start-SIM.t-2));pushAlarm(`Monteur onderweg om ${j.c.name} aan te wijzen bij ${j.where} (±${Math.round(t)} min)`,'info');addTimer(t,()=>klicMarked(j));drawTablet();}
 function klicMarked(j){if(j.state==='klaar'||j.hit)return;j.marked=true;award(5,'Kabels aangewezen bij graafwerk');pushAlarm(`Monteur: ${j.c.name} aangewezen en gemarkeerd bij de sleuf van ${j.firm} (${j.where})`,'ok');drawTablet();}
@@ -91,13 +98,19 @@ function gisCardExtra(c){const F=faultOf(c),out=[],act=[];
   const old=c.moffen.filter(m=>m.year<1990).length;if(c.work)out.push(`🔧 Ploeg vervangt moffen (klaar ${fmtClock(c.work.until)}) – niet inschakelen!`);
   else if(old)act.push(`<button class="mini" data-gact="mof" title="Alleen op een spanningsloze kabel">🔧 ${old} oude mof${old>1?'fen':''} vervangen</button>`);
   return (out.length?`<div class="gt-x">${out.join('<br>')}</div>`:'')+(act.length?`<div class="gt-act">${act.join('')}</div>`:'');}
-$('#gtInfo').addEventListener('click',e=>{const b=e.target.closest('[data-gact]');if(!b)return;const c=TAB.sel||nearestCable(camera.position.x,camera.position.z,12)?.c;if(!c)return;const a=b.dataset.gact;
-  if(a==='meet')gisMeasure(c);else if(a==='mof')gisMofReplace(c);else if(a.startsWith('klic:'))klicMark(KLIC.jobs.find(j=>j.id===a.slice(5)));
-  $('#gtInfo').innerHTML=cableCard(c);});
+$('#gtInfo').addEventListener('click',e=>{const b=e.target.closest('[data-gact]');if(!b)return;const a=b.dataset.gact;
+  if(a.startsWith('klicgo:'))return klicFocus(KLIC.jobs.find(j=>j.id===a.slice(7)));
+  if(a.startsWith('klic:')){klicMark(KLIC.jobs.find(j=>j.id===a.slice(5)));return refreshInfo();}
+  const c=TAB.sel||nearestCable(camera.position.x,camera.position.z,12)?.c;if(!c)return;
+  if(a==='meet')gisMeasure(c);else if(a==='mof')gisMofReplace(c);
+  if(TAB.sel)refreshInfo();else $('#gtInfo').innerHTML=cableCard(c);});
 // kaart: graafwerk (oranje), bekende foutplekken (rood kruis) en werkplekken
 function gisDrawExtra(g,cv){const s=TAB.zoom,now=performance.now();
-  for(const j of KLIC.jobs){const [a,b]=tabXY(j.x,j.z,cv),r=Math.max(6,7*s);g.strokeStyle=j.marked?'#2f8a4a':'#f08a1a';g.lineWidth=2;g.setLineDash([4,3]);g.strokeRect(a-r,b-r,2*r,2*r);g.setLineDash([]);
-    g.fillStyle=j.marked?'#2f8a4a':'#f08a1a';g.font='bold 10px Arial';g.textAlign='center';g.fillText(j.state==='graaf'?'GRAAFT':'KLIC',a,b-r-3);}
+  for(const j of KLIC.jobs){const [a,b]=tabXY(j.x,j.z,cv),r=Math.max(7,KLIC_R*s),col=j.marked?'#2f8a4a':'#f08a1a',sel=TAB.klic===j;
+    g.save();g.beginPath();g.arc(a,b,r,0,7);g.fillStyle=j.marked?'rgba(47,138,74,0.16)':'rgba(240,138,26,0.2)';g.fill();g.clip();
+    for(const c of klicCables(j)){g.beginPath();c.pts.forEach(([x,z],i)=>{const [p,q]=tabXY(x,z,cv);i?g.lineTo(p,q):g.moveTo(p,q);});g.strokeStyle=col;g.lineWidth=7;g.globalAlpha=0.55;g.stroke();g.globalAlpha=1;g.strokeStyle=cableCol(c);g.lineWidth=2.5;g.stroke();}
+    g.restore();g.beginPath();g.arc(a,b,r,0,7);g.strokeStyle=col;g.lineWidth=sel?3:2;g.setLineDash([5,3]);g.stroke();g.setLineDash([]);
+    g.font='bold 11px Arial';g.textAlign='center';const lab=`${j.state==='graaf'?'GRAAFT':'KLIC'} ${j.state==='plan'?fmtClock(j.start):''}`,w=g.measureText(lab).width+8;g.fillStyle='rgba(255,255,255,0.9)';g.fillRect(a-w/2,b-r-17,w,14);g.fillStyle=col;g.fillText(lab,a,b-r-6);}
   for(const c of CABLES){const F=faultOf(c),sp=F?.spot;if(!sp?.known)continue;const [a,b]=tabXY(sp.x,sp.z,cv),k=6+2*Math.sin(now/150);g.strokeStyle='#ff2b2b';g.lineWidth=3;
     g.beginPath();g.moveTo(a-k,b-k);g.lineTo(a+k,b+k);g.moveTo(a+k,b-k);g.lineTo(a-k,b+k);g.stroke();}
   for(const c of CABLES)if(c.work){const [a,b]=tabXY(c.work.x,c.work.z,cv);g.fillStyle='#e8b81c';g.beginPath();g.arc(a,b,6,0,7);g.fill();}}
