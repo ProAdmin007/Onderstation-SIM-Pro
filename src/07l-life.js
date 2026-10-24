@@ -53,4 +53,4 @@ function updateNeighbours(dt){phoneMat.opacity=NIGHT>0.3?0.9:0;
       if(s.crowd.length&&camera.position.distanceTo(V3(s.pos[0],0,s.pos[1]))<60)pushAlarm(`Buren rond ${s.id} ${s.name} staan op straat – “Weet u wat er aan de hand is?”`,'info');}
     if(s.crowd){if(!want){s.crowdLeft=(s.crowdLeft||0)+dt;if(s.crowdLeft>4){s.crowd.forEach(p=>scene.remove(p.g));s.crowd=null;s.crowdLeft=0;}}
       else{s.crowdLeft=0;s.crowd.forEach(p=>{p.ph+=dt;p.head.rotation.y=Math.sin(p.ph*0.6)*0.5;});}}});}
-function updateLife(dt){updateCars(dt);updateNeighbours(dt);cityTick(dt);vanTick(dt);stationVisuals(dt);updateWalkers(dt);}
+function updateLife(dt){updateCars(dt);updateNeighbours(dt);cityTick(dt);vanTick(dt);stationVisuals(dt);digTick(dt);updateWalkers(dt);}

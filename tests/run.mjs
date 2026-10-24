@@ -658,7 +658,7 @@ const TESTS = [
         const c1 = O.CABLES.find(c => c.id === 'K12'), j1 = O.klicNew(c1), melding = /KLIC-melding/.test(document.querySelector('#alarmList').textContent) && O.activeFaults().some(f => f.key === 'kl' + j1.id);
         O.klicMark(j1); await T.step(16); const aangewezen = j1.marked && !O.activeFaults().some(f => f.key === 'kl' + j1.id);
         const c2 = O.CABLES.find(c => c.id === 'K45'), j2 = O.klicNew(c2); j2.start = O.SIM.t + 1; j2.hitAt = O.SIM.t + 2; const rnd0 = Math.random; Math.random = () => 0.1;
-        await T.step(4); Math.random = rnd0; const sec = c2.sec, schade = j2.hit && sec.fault && sec.located && sec.spot?.known && O.DIGS.has(j2);
+        await T.step(4); Math.random = rnd0; const sec = c2.sec, schade = j2.hit && sec.fault && sec.located && sec.spot?.known && O.DIGS.has(sec.spot) && !O.DIGS.has(j2);
         return { melding, aangewezen, schade }; });
       for (const [k, v] of Object.entries(r)) assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
   } },
