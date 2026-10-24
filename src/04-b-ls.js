@@ -53,7 +53,7 @@ function lsOrder(kind,stId,args,label){
   const here=(LS_CREW[stId]||-99)>SIM.t-15||LS_ORDERS.some(o=>o.st===stId),travel=kind==='gs'?rnd(15,25):here?rnd(1.5,3):rnd(7,11);
   const o={id:++lsSeq,kind,st:stId,args:args||{},at:SIM.t+travel,label};LS_ORDERS.push(o);
   pushAlarm(`Monteur ${here?'ter plaatse bij':'onderweg naar'} ${stId}: ${label} (±${Math.round(travel)} min)`,'op');
-  const p=lsPlace(o);if(p.box&&!LITE)crewDispatch({box:p.box,n:1,say:label,from:p.from,until:()=>!LS_ORDERS.includes(o)&&SIM.t>o.at+4});
+  const p=lsPlace(o),st=RING.stations.find(s=>s.id===stId);if(p.box&&!LITE)crewDispatch({box:p.box,n:1,say:label,from:p.from,tow:kind==='gs'?st:null,until:()=>!LS_ORDERS.includes(o)&&SIM.t>o.at+4});
   renderLS?.();return o;}
 // LS-schakelaar bedienen vanaf afstand: een monteur doet het
 function lsSwitchOrder(id,to){const d=D[id];if(!d||d.state===to)return;

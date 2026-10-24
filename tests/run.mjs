@@ -604,6 +604,17 @@ const TESTS = [
         return { bekijken, geenWerk, geenMS, markt }; });
       for (const [k, v] of Object.entries(r)) assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
   } },
+  { name: 'noodaggregaat op een aanhanger achter het busje, in het gras naast het station; busje parkeert op de stoep', query: '?autostart&t=13', async run(p) {
+      const r = await p.evaluate(async () => { const O = OS; T.quiet(); const s = O.RING.stations.find(x => x.id === 'MS2'); O.D['MS2-L'].state = 0; O.D['MS2-R'].state = 0; O.computeFlows();
+        const V = O.crewDispatch({ box: O.VIEWS.MS2.box, n: 1, say: 'noodaggregaat', tow: s, until: () => !!window.__gsKlaar }), aanhanger = !!V && !!V.trailer && V.tow === s && !O.GSV.has(s);
+        for (let i = 0; i < 900 && V.state === 'heen'; i++) O.vanTick(0.1); for (let i = 0; i < 30; i++) O.vanTick(0.1);
+        const g = O.GSV.get(s), ag = !!g && !V.trailer, gp = g?.g.position, BAD = ['road', 'stoep', 'house', 'apt', 'hall', 'kiosk', 'hedge', 'shed', 'woonerf'];
+        const gras = !!gp && !O.LAYOUT.some(e => BAD.includes(e.kind) && gp.x > e.r[0] && gp.x < e.r[2] && gp.z > e.r[1] && gp.z < e.r[3]) && Math.hypot(gp.x - O.VIEWS.MS2.center.x, gp.z - O.VIEWS.MS2.center.z) < 14;
+        const vp = V.g.position, stoep = O.LAYOUT.some(e => e.kind === 'stoep' && vp.x > e.r[0] - 0.3 && vp.x < e.r[2] + 0.3 && vp.z > e.r[1] - 0.3 && vp.z < e.r[3] + 0.3) && !O.LAYOUT.some(e => e.kind === 'road' && vp.x > e.r[0] + 0.3 && vp.x < e.r[2] - 0.3 && vp.z > e.r[1] + 0.3 && vp.z < e.r[3] - 0.3);
+        window.__gsKlaar = true; s.gs = null; s.genset = false; O.gensetTick(0.1); const weg = !O.GSV.has(s);
+        return { aanhanger, ag, gras, stoep, weg }; });
+      for (const [k, v] of Object.entries(r)) assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
+  } },
   { name: 'stadsleven: weekmarkt, schoolplein, trein met overweg, bus met haltes (wacht bij een dichte overweg)', query: '?autostart&t=10&season=zomer', async run(p) {
       const r = await p.evaluate(async () => { const O = OS, tick = (s, dt = 0.1) => { for (let i = 0; i < s / dt; i++) O.cityTick(dt); };
         const zat = O.cityDay() === 6; tick(1); const markt = O.marketOn() && O.MARKET.visible && O.FIG.slice(0, 16).every(f => f.on);

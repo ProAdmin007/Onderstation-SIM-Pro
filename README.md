@@ -278,7 +278,7 @@ Monteurs hebben een naam en melden zich bij aankomst en als het werk klaar is. W
 
 Collega's in een veiligheidsvest komen bij inspecties, werkopdrachten en storingen, en vertrekken weer als het werk klaar is.
   - Werk op het stationsterrein: ze lopen vanaf de poort naar het werk.
-  - Werk buiten het hek (MS-stations, kabels, LS-storingen, zekeringen, aggregaten): ze rijden met een **storingsbusje** vanaf het onderstation over de wegen erheen, parkeren met knipperende zwaailamp bij het werk en lopen het laatste stuk. Zijn ze klaar, dan stappen ze in en rijdt het busje terug. Bij een dichte spoorwegovergang wacht het busje.
+  - Werk buiten het hek (MS-stations, kabels, LS-storingen, zekeringen, aggregaten): ze rijden met een **storingsbusje** vanaf het onderstation over de wegen erheen, parkeren met knipperende zwaailamp **op de stoep** bij het werk (op een vrije plek, zodat auto's er nog langs kunnen) en lopen het laatste stuk. Zijn ze klaar, dan stappen ze in en rijdt het busje terug. Bij een dichte spoorwegovergang wacht het busje.
 </details>
 
 <details>
@@ -328,7 +328,7 @@ Toets `N`, de knop *LS* of het SCADA-tabblad *LS*.
 
 Klantminuten blijven tellen, maar je kunt met acties punten terugverdienen:
   - **Herstelbonus:** elke klant die na een storing weer stroom krijgt, levert punten op; sneller herstel levert meer op, en prioriteitsklanten geven extra. Wie je zelf afschakelde, telt niet mee.
-  - **Noodaggregaten:** drie aggregaatsets van 2 × 1600 kVA. Stuur er een naar een spanningsloos MS-station (±15–25 min). De monteur opent `MSx-T` en het aggregaat voedt de LS-velden die IN staan. Eén set kan altijd alle huizen van een station voeden, ook op een koude winteravond. Met bedrijven, laadplein of school erbij kan het te veel worden: houd het onder 2 × 1600 kVA (schakel zo nodig groepen af), anders valt het uit. Is het MS-net terug, laat het dan afkoppelen: de monteur sluit `MSx-T` weer.
+  - **Noodaggregaten:** drie aggregaatsets van 2 × 1600 kVA. Stuur er een naar een spanningsloos MS-station (±15–25 min). Het storingsbusje brengt het aggregaat op een aanhanger en zet het in het gras naast het station; zolang het draait komt er rook uit de uitlaat en hoor je de dieselmotor als je in de buurt bent. De monteur opent `MSx-T` en het aggregaat voedt de LS-velden die IN staan. Eén set kan altijd alle huizen van een station voeden, ook op een koude winteravond. Met bedrijven, laadplein of school erbij kan het te veel worden: houd het onder 2 × 1600 kVA (schakel zo nodig groepen af), anders valt het uit. Is het MS-net terug, laat het dan afkoppelen: de monteur sluit `MSx-T` weer.
   - **Rotatie:** is er te weinig transformatorcapaciteit (een 110/10 kV-trafo boven 88%), dan tellen klanten die je zelf afschakelt de eerste 45 minuten maar half. Schakel je ze binnen 10–75 minuten weer in (rouleren), dan krijg je punten. Na 45 minuten krijg je een waarschuwing.
   - **Klanten informeren:** geef per uitgevallen gebied een **verwachte hersteltijd** door (+10 binnen 10 min); haal je die, dan krijg je punten, ben je later, dan kost het punten. **Bel prioriteitsklanten** (ziekenhuis, RWZI, huisartsenpost) als ze zonder stroom zitten (+20 binnen 10 min).
 </details>
