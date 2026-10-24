@@ -139,7 +139,8 @@ function readyNotice(text,id,cond){pushAlarm(text,'ok');AudioSys.ready();
   const n=$('#notice');n.innerHTML=`<b>✓ Klaar om te schakelen</b><span>${text}</span>`;n.classList.remove('show');void n.offsetWidth;n.classList.add('show');
   clearTimeout(n._t);n._t=setTimeout(()=>n.classList.remove('show'),8000);if(id)READY.set(id,cond||(()=>true));updateSLD();updateLabels(true);}
 let alarmCount=0;
-function pushAlarm(text,level='info'){
+let ALARM_CRIT=0;   // aantal kritieke meldingen (doorspoelen stopt bij een nieuwe)
+function pushAlarm(text,level='info'){if(level==='crit')ALARM_CRIT++;
   recEvent(SIM.t,level,text);
   alarmCount++;const el=document.createElement('div');el.className=`al ${level} new`;
   el.innerHTML=`<span class="tm">${fmtClock(SIM.t)}</span><span class="lv"></span><span>${text}</span>`;

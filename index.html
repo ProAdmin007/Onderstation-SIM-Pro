@@ -318,6 +318,7 @@ body.fp #torch.on{display:block}
 #gisTab .gt-leg{display:flex;gap:10px;flex-wrap:wrap;font-size:11px;color:#b9c2cc;margin:2px 4px 6px}#gisTab .gt-leg i{display:inline-block;width:14px;height:4px;border-radius:2px;vertical-align:middle;margin-right:3px}
 #gtInfo{min-height:42px;max-height:30vh;overflow:auto;font-size:12.5px;line-height:1.45;padding:6px 6px 2px;border-top:1px solid #333a42}#gtInfo .gt-x{margin-top:5px;font-size:12px;color:#dfe5ea}#gtInfo .gt-act{margin-top:6px;display:flex;gap:6px;flex-wrap:wrap}
 #gisTab button.on{outline:2px solid var(--accent,#3d9bff)}
+.wx{cursor:pointer}#wxSkip{margin-left:-6px;padding:2px 7px}.pv-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;width:100%}.pv-l{font-size:11px;color:var(--muted);min-width:34px}.pv-ff{font-family:var(--mono);font-size:12.5px}.pv-note{color:var(--muted);font-size:11px}
 #pvBar{position:fixed;left:434px;bottom:96px;z-index:14;display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;padding:10px 14px;width:min(480px,calc(100vw - 446px))}#pvBar.hidden{display:none}
 .pv-t b{display:block;font-size:13px}.pv-t span{font-size:11px;color:var(--muted)}.pv-time{display:flex;align-items:center;gap:8px}.pv-time input{width:230px;accent-color:var(--accent)}.pv-time b{font-family:var(--mono);font-size:14px;min-width:44px}
 .pv-wx{display:flex;gap:3px}.pv-wx .on{background:var(--accent);color:#1a1206;border-color:var(--accent)}#pvBar select{background:#0b0f14;color:var(--text);border:1px solid var(--line);border-radius:6px;padding:3px 6px;font:inherit}
@@ -361,7 +362,7 @@ body.previewing #tasks,body.previewing #alarms,body.previewing #faults{opacity:.
     <div><div class="t">OS Zuidwolde</div><div class="s">110/10/20 kV · Bedrijfsvoering</div></div>
   </div>
   <div class="clock"><div id="clock">09:00</div><div id="date">za 3 okt</div></div>
-  <div id="wx" class="wx" title="Weer en buitentemperatuur"></div>
+  <div id="wx" class="wx" title="Weer en buitentemperatuur – klik voor weer en tijd (T)"></div><button id="wxSkip" class="mini hidden" title="Bui laten overtrekken">⏭</button>
   <div class="speed" id="speed">
     <button data-s="0" title="Pauze (spatie)">❚❚</button>
     <button data-s="1">1×</button>
@@ -1298,13 +1299,13 @@ function buildDistrict(){
 // ============================================================ seizoenen en weer
 const SEASONS={
   lente:{name:'Lente',date:new Date(2026,3,18),rise:6.6,set:20.6,maxEl:45,az:[80,280],amb:[11,6],pv:0.85,
-    load:{res:0.98,city:1.0,ind:1,hosp:1,green:0.9},wx:{helder:4,bewolkt:3,regen:3,onweer:1,mist:1}},
+    load:{res:0.98,city:1.0,ind:1,hosp:1,green:0.9},wx:{helder:5,bewolkt:4,regen:1.4,onweer:0.25,mist:1}},
   zomer:{name:'Zomer',date:new Date(2026,6,18),rise:5.6,set:21.9,maxEl:59,az:[55,305],amb:[21,7],pv:1.0,
-    load:{res:0.88,city:1.1,ind:1.05,hosp:1.08,green:0.7},wx:{helder:6,bewolkt:2,regen:2,onweer:2,hitte:2}},
+    load:{res:0.88,city:1.1,ind:1.05,hosp:1.08,green:0.7},wx:{helder:7,bewolkt:3,regen:0.9,onweer:0.35,hitte:1.5}},
   herfst:{name:'Herfst',date:new Date(2026,9,3),rise:7.85,set:19.2,maxEl:33,az:[105,255],amb:[11,5],pv:0.6,
-    load:{res:1.0,city:1,ind:1,hosp:1,green:1},wx:{helder:3,bewolkt:4,regen:4,onweer:1,mist:2}},
+    load:{res:1.0,city:1,ind:1,hosp:1,green:1},wx:{helder:3,bewolkt:5,regen:2,onweer:0.25,mist:2}},
   winter:{name:'Winter',date:new Date(2026,0,15),rise:8.7,set:16.9,maxEl:15,az:[125,235],amb:[3,3],pv:0.25,
-    load:{res:1.22,city:1.12,ind:1.02,hosp:1.05,green:1.15},wx:{helder:3,bewolkt:4,regen:2,sneeuw:3,mist:2}}};
+    load:{res:1.22,city:1.12,ind:1.02,hosp:1.05,green:1.15},wx:{helder:3,bewolkt:5,regen:1.1,sneeuw:2,mist:2}}};
 let SEASON=SEASONS.zomer;   // standaard: zomer
 const WX_TYPES={
   helder:{icon:'☀',name:'Helder',cloud:0.1},bewolkt:{icon:'☁',name:'Bewolkt',cloud:0.75},
@@ -1313,7 +1314,9 @@ const WX_TYPES={
   hitte:{icon:'🔥',name:'Hittegolf',cloud:0,dT:8}};
 const WX={type:'bewolkt',lock:false,next:0,cur:{cloud:0.5,rain:0,snow:0,thunder:0,fog:0,dT:0},cover:0};
 function setSeason(id){SEASON=SEASONS[id]||SEASONS.zomer;lastEnvElev=-999;}
-function setWeather(type,lock=false,instant=false){const t=WX_TYPES[type]||WX_TYPES.helder;WX.type=type;WX.lock=lock;WX.next=SIM.t+rnd(90,240);
+// natte periodes (regen, onweer, sneeuw) duren korter dan droge
+const wxSpan=type=>['regen','onweer','sneeuw'].includes(type)?rnd(40,100):rnd(90,240);
+function setWeather(type,lock=false,instant=false){const t=WX_TYPES[type]||WX_TYPES.helder;WX.type=type;WX.lock=lock;WX.next=SIM.t+wxSpan(type);
   if(instant){Object.assign(WX.cur,{cloud:t.cloud,rain:t.rain||0,snow:t.snow||0,thunder:t.thunder||0,fog:t.fog||0,dT:t.dT||0});WX.cover=t.snow?0.8:0;}lastEnvElev=-999;}
 function pickWeather(){const w=SEASON.wx;let tot=0;for(const k in w)tot+=w[k];let r=Math.random()*tot;for(const k in w){r-=w[k];if(r<=0)return k;}return 'helder';}
 const ambient=(h=hourOf())=>SEASON.amb[0]+SEASON.amb[1]*Math.sin((h-9)/24*2*Math.PI)+WX.cur.dT-WX.cur.cloud*2;
@@ -1321,7 +1324,7 @@ const isDark=(h,m=0.3)=>h<SEASON.rise-m||h>SEASON.set+m;
 // belastingfactor per soort afnemer: seizoen, en extra verwarming bij kou
 const seasonMul=kind=>(SEASON.load[kind]??1)*(kind==='res'?1+Math.max(0,(5-ambient())/40):1)*(kind==='city'||kind==='ind'?1+Math.max(0,(ambient()-24)/60):1);
 function weatherTick(dm){
-  if(!WX.lock&&SIM.t>=WX.next){const n=pickWeather();WX.next=SIM.t+rnd(90,240);if(n!==WX.type){setWeather(n);pushAlarm(`KNMI: ${WX_TYPES[n].name.toLowerCase()} op komst`,'info');}}
+  if(!WX.lock&&SIM.t>=WX.next){const n=pickWeather();WX.next=SIM.t+wxSpan(n);if(n!==WX.type){setWeather(n);pushAlarm(`KNMI: ${WX_TYPES[n].name.toLowerCase()} op komst`,'info');}}
   const t=WX_TYPES[WX.type],k=1-Math.exp(-dm/20);
   for(const key of['cloud','rain','snow','thunder','fog','dT'])WX.cur[key]+=((t[key]||0)-WX.cur[key])*k;
   WX.cover=clamp(WX.cover+(WX.cur.snow>0.3?dm/120:-dm/(ambient()>2?120:600)),0,1);   // sneeuwdek groeit en smelt
@@ -3211,7 +3214,7 @@ let INC_WATER=null;
 const INCIDENTS=[
   {id:'zkh',name:'Kabelstoring ziekenhuis en trip T1',desc:'Een mofstoring in de kabel naar het ziekenhuis en tegelijk spreekt de beveiliging van T1 aan.',w:1,dur:45,
     ok:()=>canFeeder('F5')&&!D.T1.blocked&&D['T1-Q0'].state===1,start(){feederFault('F5',14);trafoFault('T1');}},
-  {id:'storm',name:'Onweersbuien boven Drenthe',desc:'Een onweersfront trekt over de lijnen: reken op blikseminslagen en kabelstoringen.',w:2,dur:60,ok:()=>!isSeason('winter')||Math.random()<0.3,
+  {id:'storm',name:'Onweersbuien boven Drenthe',desc:'Een onweersfront trekt over de lijnen: reken op blikseminslagen en kabelstoringen.',w:0.3,dur:60,ok:()=>!isSeason('winter')||Math.random()<0.3,
     start(){setWeather('onweer',false);[4,11,19,27,38].forEach((m,i)=>addTimer(m+rnd(0,4),()=>INC.active?.def.id==='storm'&&(i%2?feederFault():lineFault())));}},
   {id:'dubbel',name:'Twee kabelfouten in de woonwijk',desc:'Graafwerk op twee plekken: twee kabelfouten in de ring van de woonwijk tegelijk.',w:1,dur:70,ok:()=>canRing(),
     start(){const sec=id=>RING.secs.find(s=>s.id===id);ringFault(FD('F3'),sec('K12'),35);ringFault(FD('F4'),sec('K45'),65);}},
@@ -3759,7 +3762,8 @@ function readyNotice(text,id,cond){pushAlarm(text,'ok');AudioSys.ready();
   const n=$('#notice');n.innerHTML=`<b>✓ Klaar om te schakelen</b><span>${text}</span>`;n.classList.remove('show');void n.offsetWidth;n.classList.add('show');
   clearTimeout(n._t);n._t=setTimeout(()=>n.classList.remove('show'),8000);if(id)READY.set(id,cond||(()=>true));updateSLD();updateLabels(true);}
 let alarmCount=0;
-function pushAlarm(text,level='info'){
+let ALARM_CRIT=0;   // aantal kritieke meldingen (doorspoelen stopt bij een nieuwe)
+function pushAlarm(text,level='info'){if(level==='crit')ALARM_CRIT++;
   recEvent(SIM.t,level,text);
   alarmCount++;const el=document.createElement('div');el.className=`al ${level} new`;
   el.innerHTML=`<span class="tm">${fmtClock(SIM.t)}</span><span class="lv"></span><span>${text}</span>`;
@@ -4602,14 +4606,14 @@ function renderSettings(){if(!setOpen())return;
     <div class="st-tgs">${tog('env','Omgevingslicht volgt de zon','Herberekent de lichtreflecties als de zon beweegt (zwaar op trage computers)')}${tog('life','Verkeer en buren in de wijk')}${tog('particles','Regen en sneeuw')}${tog('autoRes','Resolutie automatisch verlagen bij haperen','Haalt de computer de beeldfrequentie niet, dan gaat de resolutie vanzelf een stapje omlaag (tot 60%)')}${tog('meter','Toon beelden per seconde')}</div>
     <div class="mh">Weer en seizoen</div>
     <div class="st-row"><span>Muis</span><div class="seg"><button data-mouse="kaart" class="${MOUSE_MODE==='kaart'?'on':''}" title="Links slepen schuift, rechts slepen draait (zoals een online kaart)">🗺 Kaart</button><button data-mouse="klassiek" class="${MOUSE_MODE==='klassiek'?'on':''}" title="Links slepen draait, rechts slepen schuift">↻ Klassiek</button></div></div>
-    <div class="st-row"><span>Bekijken</span><div class="seg"><button data-pvopen title="Klok schuiven en weer kiezen om te kijken, zonder dat de simulatie meeloopt">🌤 Weer en tijd bekijken <kbd>T</kbd></button></div></div>
+    <div class="st-row"><span>Weer en tijd</span><div class="seg"><button data-pvopen title="Weer kiezen, een bui laten overtrekken, de tijd doorspoelen of alleen bekijken">🌤 Weer en tijd <kbd>T</kbd></button></div></div>
     <div class="st-row"><span>Weer</span><div class="seg">${Object.entries(WX_TYPES).map(([k,t])=>`<button data-wx="${k}" class="${WX.lock&&WX.type===k?'on':''}" title="${t.name}">${t.icon} ${t.name}</button>`).join('')}<button data-wx="auto" class="${WX.lock?'':'on'}">🔄 Automatisch</button></div></div>
     <div class="st-row"><span>Seizoen</span><div class="seg">${Object.entries(SEASONS).map(([k,s])=>`<button data-season="${k}" class="${SEASON===s?'on':''}">${s.name}</button>`).join('')}</div></div>
     <p class="bf-desc">Het weer verandert geleidelijk (direct: dubbelklik). Automatisch laat het weer vanzelf wisselen. Een ander seizoen verandert ook de datum, de zon, de temperatuur en de belasting.${MODES[GAME.mode]?.scen?' <b class="warnc">Let op: in een scenario kan dit de opgave makkelijker of moeilijker maken.</b>':''}</p>
     <div class="mh">Geluid</div>${['master',...AUDIO_BUSES].map(vol).join('')}
     <div class="st-tgs"><label class="st-tog"><input type="checkbox" data-mute ${AudioSys.muted?'checked':''}><span>Geluid uit (M)</span></label></div>
     <div class="rep-btns"><button class="primary" data-sclose>Sluiten <kbd>I</kbd></button><button data-sreset>Standaardwaarden</button></div></div>`;}
-$('#settings').addEventListener('click',e=>{const mm=e.target.closest('[data-mouse]');if(mm){setMouseMode(mm.dataset.mouse);return renderSettings();}if(e.target.closest('[data-pvopen]')){closeSettings();return openPreview();}if(e.target.closest('[data-sclose]')||e.target.id==='settings')return closeSettings();
+$('#settings').addEventListener('click',e=>{const mm=e.target.closest('[data-mouse]');if(mm){setMouseMode(mm.dataset.mouse);return renderSettings();}if(e.target.closest('[data-pvopen]')){closeSettings();return openWT();}if(e.target.closest('[data-sclose]')||e.target.id==='settings')return closeSettings();
   const g=e.target.closest('[data-g]');if(g){const [k,v]=g.dataset.g.split(':');return setGfx(k,k==='fps'?+v:v);}
   const w=e.target.closest('[data-wx]');if(w){const k=w.dataset.wx;if(k==='auto'){WX.lock=false;WX.next=SIM.t;pushAlarm('Weer: weer automatisch wisselen','op');}else{setWeather(k,true,e.detail>1);pushAlarm(`Weer ingesteld: ${WX_TYPES[k].icon} ${WX_TYPES[k].name}`,'op');}updateSky(hourOf());renderSettings();return;}
   const s=e.target.closest('[data-season]');if(s){setSeason(s.dataset.season);GAME.season=s.dataset.season;applySnowCover?.();updateSky(hourOf());refreshAll();updateHUD();pushAlarm(`Seizoen: ${SEASON.name}`,'op');renderSettings();return;}
@@ -5055,33 +5059,78 @@ function renderFaults(){const el=$('#faultList');if(!el)return;const fs=activeFa
 $('#faultList').addEventListener('click',e=>{const v=e.target.closest('[data-fview]');if(v){const p=VIEWPOS[+v.dataset.fview];return flyTo(p[0].clone(),p[1].clone(),2.5);}const f=e.target.closest('[data-fgo]');if(!f)return;const [tab,dev]=f.dataset.fgo.split('|');setTab(tab);$('#scada').classList.remove('min');if(dev&&D[dev])selectDevice(dev);});
 
 
-// ============================================================ weer en tijd bekijken (toets T): klok schuiven, weer en seizoen kiezen – alleen visueel
-// De simulatie staat stil en rekent door op de echte tijd; bij terugkeren staan weer en seizoen weer zoals ze waren.
-let PV_LAPSE=false;
-const pvOpen=()=>!!PREVIEW;
-function openPreview(){if(PREVIEW)return;if(!$('#intro').classList.contains('hidden'))return;
+// ============================================================ weer en tijd (toets T)
+// Tijdens de simulatie: het échte weer kiezen (of automatisch laten wisselen), een bui laten overtrekken en de tijd doorspoelen.
+// Doorspoelen laat de simulatie in kleine stappen snel vooruitlopen: alle gebeurtenissen gebeuren gewoon, en bij een nieuwe storing stopt het.
+// 'Alleen bekijken': klok, weer en seizoen schuiven om te kijken; de simulatie staat dan stil en alles komt terug zoals het was.
+let PV_LAPSE=false,WT_OPEN=false,WT_SIG='',WT_T=0;
+const FF={to:null,crit:0};
+const pvOpen=()=>WT_OPEN;
+const wetNow=()=>['regen','onweer','sneeuw'].includes(WX.type)||WX.cur.rain>0.3||WX.cur.thunder>0.3||WX.cur.snow>0.3;
+const wtMode=()=>MODES[GAME.mode]||{};
+const wtWeatherOk=()=>!wtMode().les&&!wtMode().scen;   // in lessen en scenario's hoort het weer bij de opdracht
+const wtTimeOk=()=>!wtMode().les&&!GAME.ended;
+function openWT(){if(WT_OPEN)return;if(!$('#intro').classList.contains('hidden'))return;WT_OPEN=true;WT_SIG='';renderWT();$('#pvBar').classList.remove('hidden');}
+function closeWT(){if(PREVIEW)closePreview();WT_OPEN=false;$('#pvBar').classList.add('hidden');}
+// ---- alleen bekijken
+function openPreview(){if(PREVIEW)return;if(!$('#intro').classList.contains('hidden'))return;ffStop();WT_OPEN=true;
   PREVIEW={h:hourOf(),wx:JSON.parse(JSON.stringify({type:WX.type,lock:WX.lock,next:WX.next,cur:WX.cur,cover:WX.cover})),season:Object.keys(SEASONS).find(k=>SEASONS[k]===SEASON)};
-  modalOpen('preview');if(FP.on)unlockPointer();PV_LAPSE=false;renderPreview();$('#pvBar').classList.remove('hidden');document.body.classList.add('previewing');}
+  modalOpen('preview');if(FP.on)unlockPointer();PV_LAPSE=false;WT_SIG='';renderWT();$('#pvBar').classList.remove('hidden');document.body.classList.add('previewing');}
 function closePreview(){if(!PREVIEW)return;const p=PREVIEW;PREVIEW=null;PV_LAPSE=false;
   Object.assign(WX,{type:p.wx.type,lock:p.wx.lock,next:p.wx.next,cover:p.wx.cover});Object.assign(WX.cur,p.wx.cur);
   if(SEASONS[p.season]!==SEASON){setSeason(p.season);applySnowCover?.();}
-  lastEnvElev=-999;updateSky(hourOf());computeFlows();refreshAll();
-  $('#pvBar').classList.add('hidden');document.body.classList.remove('previewing');modalClose('preview');}
+  lastEnvElev=-999;updateSky(hourOf());computeFlows();refreshAll();document.body.classList.remove('previewing');modalClose('preview');WT_SIG='';renderWT();}
+// ---- het échte weer
+function setRealWeather(k){if(!wtWeatherOk())return deny('In lessen en scenario\'s hoort het weer bij de opdracht');setWeather(k,true,false);pushAlarm(`Weer ingesteld: ${WX_TYPES[k].name.toLowerCase()} (verandert geleidelijk)`,'op');renderWT();}
+function autoWeather(){WX.lock=false;WX.next=SIM.t+rnd(20,60);pushAlarm('Weer wisselt weer automatisch','op');renderWT();}
+function skipRain(){if(!wtWeatherOk())return deny('In lessen en scenario\'s hoort het weer bij de opdracht');if(!wetNow())return deny('Het is droog');
+  const dry=Object.keys(SEASON.wx).filter(k=>!['regen','onweer','sneeuw'].includes(k)),n=dry.includes('bewolkt')?'bewolkt':dry[0]||'helder';
+  setWeather(n,false,false);WX.next=SIM.t+rnd(120,240);WX.cur.rain*=0.15;WX.cur.thunder=0;WX.cur.snow*=0.3;
+  pushAlarm('⏭ De bui trekt over – het wordt droog','op');renderWT();updateHUD();}
+// ---- doorspoelen tot een tijdstip (speltijd in minuten)
+function ffStart(min){if(!wtTimeOk())return deny('Doorspoelen kan niet tijdens een les');if(PREVIEW)closePreview();
+  FF.to=(FF.to??SIM.t)+min;if(GAME.endT)FF.to=Math.min(FF.to,GAME.endT);FF.crit=ALARM_CRIT;if(SIM.paused&&!menuOpen?.())SIM.paused=false;renderWT();}
+function ffStop(why){if(FF.to==null)return;FF.to=null;if(why)pushAlarm(`⏩ Doorspoelen gestopt om ${fmtClock(SIM.t)}: ${why}`,'warn');renderWT();}
+// in de hoofdlus in plaats van één gewone simulatiestap: zoveel kleine stappen als in het tijdbudget passen
+function ffTick(){const end=performance.now()+(LITE?40:9),step=0.25*60/SIM.speed;
+  while(FF.to!=null&&SIM.t<FF.to&&performance.now()<end){if(SIM.paused||GAME.ended)return ffStop(GAME.ended?'de dienst is afgelopen':null);simStep(step);
+    if(ALARM_CRIT>FF.crit)return ffStop('er is een storing');}
+  if(FF.to!=null&&SIM.t>=FF.to){FF.to=null;pushAlarm(`⏩ Doorgespoeld tot ${fmtClock(SIM.t)}`,'op');renderWT();}}
+// ---- venster
 const pvClock=h=>`${String(Math.floor(h)).padStart(2,'0')}:${String(Math.floor((h%1)*60)).padStart(2,'0')}`;
-function renderPreview(){if(!PREVIEW)return;const cur=Object.keys(SEASONS).find(k=>SEASONS[k]===SEASON);
-  $('#pvBar').innerHTML=`<div class="pv-t"><b>🌤 Weer en tijd bekijken</b><span>alleen kijken · de simulatie staat stil</span></div>
+function renderWT(){if(!WT_OPEN)return;const el=$('#pvBar');
+  if(PREVIEW){const cur=Object.keys(SEASONS).find(k=>SEASONS[k]===SEASON);
+    el.innerHTML=`<div class="pv-t"><b>👁 Alleen bekijken</b><span>de simulatie staat stil · bij terugkeren is alles weer zoals het was</span></div>
     <div class="pv-time"><button class="mini" data-pv="lapse" title="Tijd versneld laten lopen">${PV_LAPSE?'⏸':'▶'}</button><input type="range" min="0" max="24" step="0.0833" value="${PREVIEW.h.toFixed(3)}" data-pvh><b id="pvClock">${pvClock(PREVIEW.h)}</b></div>
     <div class="pv-wx">${Object.entries(WX_TYPES).map(([k,t])=>`<button class="mini ${WX.type===k?'on':''}" data-pvwx="${k}" title="${t.name}">${t.icon}</button>`).join('')}</div>
     <select data-pvs>${Object.entries(SEASONS).map(([k,s])=>`<option value="${k}" ${k===cur?'selected':''}>${s.name}</option>`).join('')}</select>
-    <button class="primary" data-pv="close">Terug naar de dienst <kbd>T</kbd></button>`;}
-function previewTick(dt){if(!PREVIEW||!PV_LAPSE)return;PREVIEW.h=(PREVIEW.h+dt*1.5)%24;const r=$('#pvBar [data-pvh]');if(r)r.value=PREVIEW.h.toFixed(3);$('#pvClock').textContent=pvClock(PREVIEW.h);}
+    <button class="primary" data-pv="back">Terug naar de dienst</button>`;return;}
+  const wOk=wtWeatherOk(),tOk=wtTimeOk();WT_SIG=wtSig();
+  el.innerHTML=`<div class="pv-t"><b>🌤 Weer en tijd</b><span id="wtNow">${wtNowText()}</span></div>
+    <div class="pv-row"><span class="pv-l">Weer</span><div class="pv-wx">${Object.entries(WX_TYPES).map(([k,t])=>`<button class="mini ${WX.type===k&&WX.lock?'on':''}" data-wt="${k}" title="${t.name}" ${wOk?'':'disabled'}>${t.icon}</button>`).join('')}</div>
+      <button class="mini ${WX.lock?'':'on'}" data-wt="auto" title="Het weer wisselt vanzelf" ${wOk?'':'disabled'}>🔄 Automatisch</button>
+      ${wetNow()&&wOk?'<button class="mini primary" data-wt="skip" title="Regen, onweer of sneeuw laten overtrekken">⏭ Bui laten overtrekken</button>':''}</div>
+    <div class="pv-row"><span class="pv-l">Tijd</span>${FF.to!=null?`<b class="pv-ff">⏩ doorspoelen tot ${fmtClock(FF.to)}…</b><button class="mini" data-ff="stop">⏹ Stop</button>`
+      :[[15,'+15 min'],[60,'+1 uur'],[180,'+3 uur']].map(([m,l])=>`<button class="mini" data-ff="${m}" ${tOk?'':'disabled'} title="De simulatie snel laten doorlopen; stopt bij een nieuwe storing">⏩ ${l}</button>`).join('')}</div>
+    ${wOk?'':'<small class="pv-note">In lessen en scenario\'s hoort het weer bij de opdracht.</small>'}
+    <div class="pv-row"><button class="mini" data-pv="view" title="Klok, weer en seizoen schuiven om te kijken; de simulatie staat dan stil">👁 Alleen bekijken…</button>
+      <button class="primary" data-pv="close">Sluiten <kbd>T</kbd></button></div>`;}
+const wtSig=()=>[WX.type,WX.lock,wetNow(),FF.to,wtWeatherOk(),wtTimeOk()].join();
+const wtNowText=()=>`${fmtClock(SIM.t)} · ${WX_TYPES[WX.type].name}${WX.lock?' (vast)':''} · ${Math.round(ambient())} °C`;
+// elke frame: versneld bekijken; het venster bijwerken als er iets veranderd is
+function previewTick(dt){if(PREVIEW&&PV_LAPSE){PREVIEW.h=(PREVIEW.h+dt*1.5)%24;const r=$('#pvBar [data-pvh]');if(r)r.value=PREVIEW.h.toFixed(3);$('#pvClock').textContent=pvClock(PREVIEW.h);}
+  if(WT_OPEN&&!PREVIEW&&(WT_T+=dt)>0.4){WT_T=0;if(wtSig()!==WT_SIG)renderWT();else{const n=$('#wtNow');if(n)n.textContent=wtNowText();}}}
 $('#pvBar').addEventListener('input',e=>{if(!PREVIEW)return;if(e.target.matches('[data-pvh]')){PREVIEW.h=+e.target.value;$('#pvClock').textContent=pvClock(PREVIEW.h);updateSky(PREVIEW.h);}});
 $('#pvBar').addEventListener('change',e=>{if(!PREVIEW)return;const s=e.target.closest('[data-pvs]');if(s){setSeason(s.value);applySnowCover?.();updateSky(PREVIEW.h);}});
-$('#pvBar').addEventListener('click',e=>{if(!PREVIEW)return;const b=e.target.closest('[data-pv]');
-  if(b?.dataset.pv==='close')return closePreview();if(b?.dataset.pv==='lapse'){PV_LAPSE=!PV_LAPSE;return renderPreview();}
-  const w=e.target.closest('[data-pvwx]');if(w){setWeather(w.dataset.pvwx,true,true);applySnowCover?.();updateSky(PREVIEW.h);renderPreview();}});
-$('#pvBtn').addEventListener('click',()=>PREVIEW?closePreview():openPreview());
-addEventListener('keydown',e=>{if(e.target.tagName==='INPUT'&&e.target.type!=='range'||e.target.tagName==='SELECT'||e.ctrlKey||e.metaKey)return;if((e.key==='t'||e.key==='T')&&$('#intro').classList.contains('hidden'))PREVIEW?closePreview():openPreview();});
+$('#pvBar').addEventListener('click',e=>{const b=e.target.closest('[data-pv],[data-wt],[data-ff],[data-pvwx]');if(!b)return;const d=b.dataset;
+  if(d.pv==='close')return closeWT();if(d.pv==='view')return openPreview();if(d.pv==='back')return closePreview();if(d.pv==='lapse'){PV_LAPSE=!PV_LAPSE;return renderWT();}
+  if(d.pvwx&&PREVIEW){setWeather(d.pvwx,true,true);applySnowCover?.();updateSky(PREVIEW.h);return renderWT();}
+  if(d.wt==='auto')return autoWeather();if(d.wt==='skip')return skipRain();if(d.wt)return setRealWeather(d.wt);
+  if(d.ff==='stop')return ffStop();if(d.ff)return ffStart(+d.ff);});
+$('#pvBtn').addEventListener('click',()=>WT_OPEN?closeWT():openWT());
+$('#wx').addEventListener('click',()=>WT_OPEN?closeWT():openWT());
+$('#wxSkip').addEventListener('click',e=>{e.stopPropagation();skipRain();});
+addEventListener('keydown',e=>{if(e.target.tagName==='INPUT'&&e.target.type!=='range'||e.target.tagName==='SELECT'||e.ctrlKey||e.metaKey)return;if((e.key==='t'||e.key==='T')&&$('#intro').classList.contains('hidden'))WT_OPEN?closeWT():openWT();});
 
 
 // ============================================================ muisbesturing in het overzicht: als een 3D-kaart
@@ -5698,7 +5747,7 @@ function gisDrawExtra(g,cv){const s=TAB.zoom,now=performance.now();
 // ============================================================ HUD + bediening
 function updateHUD(){
   $('#clock').textContent=fmtClock(SIM.t);
-  $('#wx').textContent=wxLabel();
+  $('#wx').textContent=wxLabel();$('#wxSkip').classList.toggle('hidden',!(wetNow()&&wtWeatherOk()));
   const dt=new Date(SEASON.date.getTime()+Math.floor(SIM.t/1440)*864e5);
   $('#date').textContent=dt.toLocaleDateString('nl-NL',{weekday:'short',day:'numeric',month:'short'})+(SIM.paused&&!$('#intro').classList.contains('hidden')?'':SIM.paused?' · PAUZE':'');
   $('#kOff').textContent=SIM.off.toLocaleString('nl-NL');$('#kpiOff').classList.toggle('bad',SIM.off>0);
@@ -5718,7 +5767,7 @@ addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;
   else if(e.code==='KeyP'){if($('#intro').classList.contains('hidden'))setSpeed(0);}
   else if(e.key==='l'||e.key==='L')document.body.classList.toggle('nolabels');
   else if(e.key==='m'||e.key==='M')$('#mute').click();
-  else if(e.key==='Escape'){if(GAME.handover?.open)closeHandover();else if(setOpen())closeSettings();else if(flexOpen())closeFlex();else if(assOpen())closeAssets();else if(kitOpen())closeKit();else if(keysOpen())closeKeys();else if(lsOpen())closeLS();else if(recOpen())closeRec();else if(gisOpen())closeTablet();else if(protOpen())closeProt();else if(slotsOpen())closeSlots();else if(pvOpen())closePreview();else if(menuOpen()){if(performance.now()-menuAt>350)closeMenu();}else if(SEL&&!document.pointerLockElement)selectDevice(null);else openMenu();}});
+  else if(e.key==='Escape'){if(GAME.handover?.open)closeHandover();else if(setOpen())closeSettings();else if(flexOpen())closeFlex();else if(assOpen())closeAssets();else if(kitOpen())closeKit();else if(keysOpen())closeKeys();else if(lsOpen())closeLS();else if(recOpen())closeRec();else if(gisOpen())closeTablet();else if(protOpen())closeProt();else if(slotsOpen())closeSlots();else if(pvOpen())closeWT();else if(menuOpen()){if(performance.now()-menuAt>350)closeMenu();}else if(SEL&&!document.pointerLockElement)selectDevice(null);else openMenu();}});
 // ---------- SCADA-zoom
 let SLDZ=1;try{SLDZ=+localStorage.getItem('osz-sldz')||1;}catch(e){}
 function setZoom(z){SLDZ=clamp(Math.round(z*4)/4,0.75,2.5);document.documentElement.style.setProperty('--sldz',SLDZ);$('#zVal').textContent=Math.round(SLDZ*100)+'%';$('#scada .zoom').title='Zoom '+Math.round(SLDZ*100)+'% – Ctrl + scrollwiel of + / −';try{localStorage.setItem('osz-sldz',SLDZ);}catch(e){}}
@@ -5769,7 +5818,7 @@ else{renderMenu();$('#intro').classList.remove('hidden');controls.autoRotate=tru
 if(params.has('night'))updateSky(22);
 if(params.has('view')){const v=VIEWPOS[+params.get('view')];camera.position.copy(v[0]);controls.target.copy(v[1]);controls.autoRotate=false;controls.update();}
 
-window.OS={VANS,vanTick,crewDispatch,crewSpawn,routeAt,driveVehicle,walkActive:()=>WALK_ACTIVE,BUS,GARB,PARCEL,AMB,TRAIN,XING,HALTES,MARKET,FIG,CY,cityDay,marketOn,schoolBreak,cityTick,measDone,cableCard,isoSwitches,KLIC,klicNew,klicMark,klicHit,gisMeasure,gisMofReplace,faultOf,cableOf,cableRisk,DIGS,CABLES,GIS_NET,gisRoute,cableState,setXray,XRAY,TAB,openTablet,closeTablet,drawTablet,nearestCable,DYN,fpsTick,fireTick,WK,getWalkers:()=>WALKERS,getStrips:()=>WSTRIPS,fireStart,fireDouse,fireStop,GENSET,gsCap,SMALL,lvgLive,updateSmall,setMouseMode,getMouseMode:()=>MOUSE_MODE,cameraKeys,OVK,openPreview,closePreview,viewHour,getPreview:()=>PREVIEW,VIEWPOS,SITE,updateSites,SLD,activeFaults,renderFaults,reportPDF,listSaves,openSlots,closeSlots,SAVE_SLOTS,layoutCheck,LAYOUT,FREC,fltRec,openRec,closeRec,renderRec,selectivity,protSelect,feederT,incT,incOf,shortCircuit,EF,earthFault,efTick,efRails,efU0,railsCoupled,controls,tripBreaker,CONS,LS_LINKS,LS_ORDERS,GENSET,lsTick,lsOrder,lsSwitchOrder,lsExec,gsSend,gsOff,gsRestart,tapOrder,setEta,callPrio,lsAreas,PRIO,openLS,closeLS,renderLS,lvVolt,stationLoads,shedFactor,failP,manualP,phoneTick,refreshDevPanel,updateSLD,openKeys,closeKeys,KEY_HELP,RELAY_BAYS,relayTask,relayDue,relayDefect,initRelays,kitTests,kitMeasure,kitVerdict,kitRun,openKit,closeKit,saveGame,readSave,deleteSave,resumeGame,canSave,specOf,CABLE,soilT,FD,meppelFault,linkTick,tabAlarms,updateTabAlarms,renderTasks,INC,INCIDENTS,startIncident,endIncident,incidentTick,setTab,renderCables,GFX,setGfx,applyGfx,openSettings,closeSettings,WX_TYPES,renderer,scene,FIRE,CARS,updateWindows,updateLife,stationLive,cbMaintTask,worstCb,cond,breakerFails,CB_IDS,FLEX,setFlex,flexTick,congestion,openFlex,closeFlex,checkModel,homeBus,BUSES,SEL_BAYS,TORCH,setTorch,HO_POOL,handoverTick,REC,RP,startReplay,stopReplay,analyse,stationDamage,closeHandover,deviations,PHONE,lvFault,callFrom,phoneAnswer,dispatchLV,LVG,forecast,progAdvice,PROG,startTask:(k,...a)=>{TASK={relayTask,cbMaintTask,railTask,railBTask,stationTask,thermoTask,ringTask,feederTask,lineTask,reserveTask}[k](...a);TASK.i=0;TASK.code='WV-TEST';briefInit(TASK);renderTasks();},SIM,D,LESSONS,lessonGo,selectDevice,abortTask,railTask,stationTask,thermoTask,nearDev,VIEWS,PROT,setProt,openProt,closeProt,busFault,BUSF,RINGS,task:()=>TASK,briefSubmit,briefCheck,briefWatch,actKey,taskActs,crewNear,boxOf:id=>VIEWS[id]&&VIEWS[id].box,AudioSys,updateAudio,WX,setWeather,setSeason,SEASONS,ambient,enterKiosk,ROOMS,blockedAt,RING,NPCS,crewDispatch,ringFault,FP,enterFP,exitFP,pickCenter,camera,camInside,setRatio,setTab,GAME,MODES,applyMode,endGame,EN:()=>EN,FLOW,operate,tapStep,setAVR,resetLockout,toggleAR,regulate,computeFlows,randomEvent,lineFault,feederFault,trafoFault,offerTask,simStep,FEEDERS};
+window.OS={updateHUD,pushAlarm,FF,ffStart,ffStop,skipRain,openWT,closeWT,setRealWeather,autoWeather,pickWeather,wetNow,ALARM:()=>ALARM_CRIT,VANS,vanTick,crewDispatch,crewSpawn,routeAt,driveVehicle,walkActive:()=>WALK_ACTIVE,BUS,GARB,PARCEL,AMB,TRAIN,XING,HALTES,MARKET,FIG,CY,cityDay,marketOn,schoolBreak,cityTick,measDone,cableCard,isoSwitches,KLIC,klicNew,klicMark,klicHit,gisMeasure,gisMofReplace,faultOf,cableOf,cableRisk,DIGS,CABLES,GIS_NET,gisRoute,cableState,setXray,XRAY,TAB,openTablet,closeTablet,drawTablet,nearestCable,DYN,fpsTick,fireTick,WK,getWalkers:()=>WALKERS,getStrips:()=>WSTRIPS,fireStart,fireDouse,fireStop,GENSET,gsCap,SMALL,lvgLive,updateSmall,setMouseMode,getMouseMode:()=>MOUSE_MODE,cameraKeys,OVK,openPreview,closePreview,viewHour,getPreview:()=>PREVIEW,VIEWPOS,SITE,updateSites,SLD,activeFaults,renderFaults,reportPDF,listSaves,openSlots,closeSlots,SAVE_SLOTS,layoutCheck,LAYOUT,FREC,fltRec,openRec,closeRec,renderRec,selectivity,protSelect,feederT,incT,incOf,shortCircuit,EF,earthFault,efTick,efRails,efU0,railsCoupled,controls,tripBreaker,CONS,LS_LINKS,LS_ORDERS,GENSET,lsTick,lsOrder,lsSwitchOrder,lsExec,gsSend,gsOff,gsRestart,tapOrder,setEta,callPrio,lsAreas,PRIO,openLS,closeLS,renderLS,lvVolt,stationLoads,shedFactor,failP,manualP,phoneTick,refreshDevPanel,updateSLD,openKeys,closeKeys,KEY_HELP,RELAY_BAYS,relayTask,relayDue,relayDefect,initRelays,kitTests,kitMeasure,kitVerdict,kitRun,openKit,closeKit,saveGame,readSave,deleteSave,resumeGame,canSave,specOf,CABLE,soilT,FD,meppelFault,linkTick,tabAlarms,updateTabAlarms,renderTasks,INC,INCIDENTS,startIncident,endIncident,incidentTick,setTab,renderCables,GFX,setGfx,applyGfx,openSettings,closeSettings,WX_TYPES,renderer,scene,FIRE,CARS,updateWindows,updateLife,stationLive,cbMaintTask,worstCb,cond,breakerFails,CB_IDS,FLEX,setFlex,flexTick,congestion,openFlex,closeFlex,checkModel,homeBus,BUSES,SEL_BAYS,TORCH,setTorch,HO_POOL,handoverTick,REC,RP,startReplay,stopReplay,analyse,stationDamage,closeHandover,deviations,PHONE,lvFault,callFrom,phoneAnswer,dispatchLV,LVG,forecast,progAdvice,PROG,startTask:(k,...a)=>{TASK={relayTask,cbMaintTask,railTask,railBTask,stationTask,thermoTask,ringTask,feederTask,lineTask,reserveTask}[k](...a);TASK.i=0;TASK.code='WV-TEST';briefInit(TASK);renderTasks();},SIM,D,LESSONS,lessonGo,selectDevice,abortTask,railTask,stationTask,thermoTask,nearDev,VIEWS,PROT,setProt,openProt,closeProt,busFault,BUSF,RINGS,task:()=>TASK,briefSubmit,briefCheck,briefWatch,actKey,taskActs,crewNear,boxOf:id=>VIEWS[id]&&VIEWS[id].box,AudioSys,updateAudio,WX,setWeather,setSeason,SEASONS,ambient,enterKiosk,ROOMS,blockedAt,RING,NPCS,crewDispatch,ringFault,FP,enterFP,exitFP,pickCenter,camera,camInside,setRatio,setTab,GAME,MODES,applyMode,endGame,EN:()=>EN,FLOW,operate,tapStep,setAVR,resetLockout,toggleAR,regulate,computeFlows,randomEvent,lineFault,feederFault,trafoFault,offerTask,simStep,FEEDERS};
 const clock=new THREE.Clock();let hudT=0,skyT=0,progT=0;
 let liteAcc=0,shadowT=0,hudStep=4;
 // schaduwkaart alleen opnieuw tekenen als er op het stationsterrein iets beweegt (scheiders, monteurs, brandweer); anders 2× per seconde voor de zon.
@@ -5781,7 +5830,7 @@ function frame(){
   // (en in het spel bij een ingestelde maximale beeldfrequentie)
   const raw=clock.getDelta(),cap=LITE?1/15:GFX.fps?1/GFX.fps:0;liteAcc+=raw;if(cap&&liteAcc<cap*0.9)return;
   const dt=Math.min(0.1,liteAcc);liteAcc=0;fpsTick(dt);
-  simStep(dt);
+  if(FF.to!=null)ffTick();else simStep(dt);
   for(const v of Object.values(VIEWS))if(v.update)v.update(dt);
   for(let i=FX.length-1;i>=0;i--)if(!FX[i].update(dt))FX.splice(i,1);
   ROTORS.forEach(r=>r.r.rotation.z+=r.s*dt);

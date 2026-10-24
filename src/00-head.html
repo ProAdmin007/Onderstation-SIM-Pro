@@ -318,6 +318,7 @@ body.fp #torch.on{display:block}
 #gisTab .gt-leg{display:flex;gap:10px;flex-wrap:wrap;font-size:11px;color:#b9c2cc;margin:2px 4px 6px}#gisTab .gt-leg i{display:inline-block;width:14px;height:4px;border-radius:2px;vertical-align:middle;margin-right:3px}
 #gtInfo{min-height:42px;max-height:30vh;overflow:auto;font-size:12.5px;line-height:1.45;padding:6px 6px 2px;border-top:1px solid #333a42}#gtInfo .gt-x{margin-top:5px;font-size:12px;color:#dfe5ea}#gtInfo .gt-act{margin-top:6px;display:flex;gap:6px;flex-wrap:wrap}
 #gisTab button.on{outline:2px solid var(--accent,#3d9bff)}
+.wx{cursor:pointer}#wxSkip{margin-left:-6px;padding:2px 7px}.pv-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;width:100%}.pv-l{font-size:11px;color:var(--muted);min-width:34px}.pv-ff{font-family:var(--mono);font-size:12.5px}.pv-note{color:var(--muted);font-size:11px}
 #pvBar{position:fixed;left:434px;bottom:96px;z-index:14;display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;padding:10px 14px;width:min(480px,calc(100vw - 446px))}#pvBar.hidden{display:none}
 .pv-t b{display:block;font-size:13px}.pv-t span{font-size:11px;color:var(--muted)}.pv-time{display:flex;align-items:center;gap:8px}.pv-time input{width:230px;accent-color:var(--accent)}.pv-time b{font-family:var(--mono);font-size:14px;min-width:44px}
 .pv-wx{display:flex;gap:3px}.pv-wx .on{background:var(--accent);color:#1a1206;border-color:var(--accent)}#pvBar select{background:#0b0f14;color:var(--text);border:1px solid var(--line);border-radius:6px;padding:3px 6px;font:inherit}
@@ -361,7 +362,7 @@ body.previewing #tasks,body.previewing #alarms,body.previewing #faults{opacity:.
     <div><div class="t">OS Zuidwolde</div><div class="s">110/10/20 kV · Bedrijfsvoering</div></div>
   </div>
   <div class="clock"><div id="clock">09:00</div><div id="date">za 3 okt</div></div>
-  <div id="wx" class="wx" title="Weer en buitentemperatuur"></div>
+  <div id="wx" class="wx" title="Weer en buitentemperatuur – klik voor weer en tijd (T)"></div><button id="wxSkip" class="mini hidden" title="Bui laten overtrekken">⏭</button>
   <div class="speed" id="speed">
     <button data-s="0" title="Pauze (spatie)">❚❚</button>
     <button data-s="1">1×</button>

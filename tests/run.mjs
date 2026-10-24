@@ -682,15 +682,29 @@ const TESTS = [
         return { aan, uit }; });
       assert(Object.values(r.aan).every(Boolean) && Object.values(r.uit).every(Boolean), `afnemers tonen hun toestand niet: ${JSON.stringify(r)}`);
   } },
+  { name: 'weer en tijd tijdens de simulatie: weer kiezen, bui laten overtrekken, doorspoelen (stopt bij een storing), minder regen', query: '?autostart&t=11&season=zomer', async run(p) {
+      const r = await p.evaluate(async () => { const O = OS; T.quiet(); O.openWT(); const bar = document.querySelector('#pvBar'), click = sel => bar.querySelector(sel).click();
+        click('[data-wt="onweer"]'); const gekozen = O.WX.type === 'onweer' && O.WX.lock && !O.SIM.paused;
+        O.setWeather('onweer', true, true); O.updateHUD(); const knop = !document.querySelector('#wxSkip').classList.contains('hidden');
+        O.openWT(); O.closeWT(); O.openWT(); click('[data-wt="skip"]'); const over = !O.wetNow() && !O.WX.lock && O.WX.cur.thunder === 0;
+        click('[data-wt="auto"]'); const auto = !O.WX.lock;
+        const t0 = O.SIM.t; click('[data-ff="60"]'); for (let i = 0; i < 200 && O.FF.to != null; i++) await T.sleep(50); const door = O.SIM.t >= t0 + 59.9 && O.SIM.t < t0 + 62 && O.FF.to == null;
+        O.ffStart(180); const t1 = O.SIM.t; await T.sleep(100); O.pushAlarm('test: storing', 'crit'); for (let i = 0; i < 40 && O.FF.to != null; i++) await T.sleep(50); const stop = O.FF.to == null && O.SIM.t < t1 + 170;
+        // minder regen en onweer in de zomer
+        let nat = 0; for (let i = 0; i < 20000; i++) if (['regen', 'onweer'].includes(O.pickWeather())) nat++;
+        O.closeWT(); return { gekozen, knop, over, auto, door, stop, nat: nat / 20000 < 0.12 ? true : nat / 20000 }; });
+      for (const [k, v] of Object.entries(r)) assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
+  } },
   { name: 'weer en tijd bekijken: klok schuiven en weer kiezen zonder de simulatie te raken', query: '?autostart&t=11&season=zomer', async run(p) {
       await p.keyboard.press('t');
-      const r = await p.evaluate(() => { const O = OS, t0 = O.SIM.t, wx0 = O.WX.type, load0 = O.FLOW.load, open = !!O.getPreview() && O.SIM.paused && !document.querySelector('#pvBar').classList.contains('hidden');
+      const r = await p.evaluate(() => { const O = OS, venster = !document.querySelector('#pvBar').classList.contains('hidden') && !O.getPreview() && !O.SIM.paused; document.querySelector('#pvBar [data-pv="view"]').click();
+        const t0 = O.SIM.t, wx0 = O.WX.type, open = venster && !!O.getPreview() && O.SIM.paused;
         const sl = document.querySelector('#pvBar [data-pvh]'); sl.value = '22'; sl.dispatchEvent(new Event('input', { bubbles: true }));
         document.querySelector('#pvBar [data-pvwx="sneeuw"]').click(); const se = document.querySelector('#pvBar [data-pvs]'); se.value = 'winter'; se.dispatchEvent(new Event('change', { bubbles: true }));
         const kijk = Math.abs(O.viewHour() - 22) < 0.1 && Math.abs(O.SIM.t - t0) < 0.01 && O.WX.type === 'sneeuw';
         O.computeFlows(); const simEcht = Math.abs((O.SIM.t / 60) % 24 - 11) < 0.1;
-        O.closePreview();
-        return { open, kijk, simEcht, terug: O.WX.type === wx0 && Math.abs(O.viewHour() - O.SIM.t / 60 % 24) < 0.01 && !O.getPreview(), seizoen: O.GAME.season === 'zomer', loopt: !O.SIM.paused, dicht: document.querySelector('#pvBar').classList.contains('hidden') }; });
+        document.querySelector('#pvBar [data-pv="back"]').click(); const nogOpen = !document.querySelector('#pvBar').classList.contains('hidden'); O.closeWT();
+        return { open, kijk, simEcht, nogOpen, terug: O.WX.type === wx0 && Math.abs(O.viewHour() - O.SIM.t / 60 % 24) < 0.01 && !O.getPreview(), seizoen: O.GAME.season === 'zomer', loopt: !O.SIM.paused, dicht: document.querySelector('#pvBar').classList.contains('hidden') }; });
       for (const [k, v] of Object.entries(r)) assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
   } },
   { name: 'muisbesturing overzicht: kaart/klassiek, zoomen naar de muis, toetsen schuiven, grenzen, dubbelklik', query: '?autostart&t=11', async run(p) {

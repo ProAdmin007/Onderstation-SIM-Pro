@@ -68,7 +68,7 @@ Bedoeld voor **bedrijfsvoerders en monteurs in opleiding**, studenten **elektrot
 - **Vrije dienst:** eindeloos spelen. Storingen komen hier vaker dan in een dienst, en af en toe slaat er een **groot incident** uit de scenario's toe.
   - De eerste komt na 1–2 uur, daarna één per paar uur. Welke het wordt is willekeurig, maar het moet passen bij het moment:
     - kabelstoring ziekenhuis met trip T1;
-    - onweersbuien;
+    - onweersbuien (zeldzaam);
     - twee kabelfouten in de woonwijk;
     - kapotte ventilatoren van T1 (zomermiddag);
     - aanrijding van een MS-station;
@@ -145,7 +145,7 @@ Bedoeld voor **bedrijfsvoerders en monteurs in opleiding**, studenten **elektrot
 | `B` | beveiliging | `C` | flex en congestie |
 | `O` | onderhoud | `K` | testkoffer |
 | `N` | laagspanning | `I` | instellingen |
-| `R` | storingsschrijver | `T` | weer en tijd bekijken |
+| `R` | storingsschrijver | `T` | weer en tijd (echt weer, doorspoelen) |
 | `WASD` / pijltjes | beeld schuiven | dubbelklik | daarheen vliegen |
 | `X` | röntgenblik: kabels in 3D | `G` | kabeltablet (GIS-kaart) |
 | `Ctrl+S` | opslaan | `L` / `M` | labels / geluid |
@@ -159,7 +159,7 @@ Bedoeld voor **bedrijfsvoerders en monteurs in opleiding**, studenten **elektrot
 - `1`–`9` camerastandpunten (6 = binnen 10 kV, 7 = binnen 20 kV, 8 = woonwijk, 9 = centrum en De Vaart); *Ziekenhuis*, *Kassen* en *RWZI* staan als knoppen in de balk onderaan
 - `X` zet de **röntgenblik** aan of uit, `G` opent de **kabeltablet**
 - `K` opent de **testkoffer** tijdens een relaistest
-- `T` opent **weer en tijd bekijken**
+- `T` opent **weer en tijd** (of klik op het weer in de bovenbalk)
 - `R` opent de **storingsschrijver**
 - `N` opent het **LS-venster**: LS-velden, kabelkasten, noodaggregaten en klanten informeren
 - **Rondlopen (first person):** druk op `V` of op de knop *Rondlopen*.
@@ -173,7 +173,11 @@ Bedoeld voor **bedrijfsvoerders en monteurs in opleiding**, studenten **elektrot
   - **Prestaties:** voorinstelling Laag / Midden / Hoog, of zelf: resolutie (40–100%), schaduwen (uit/laag/hoog), maximaal 30, 60 of onbeperkt beelden per seconde, omgevingslicht dat de zon volgt, verkeer en buren, regen en sneeuw, en een beeldenteller. Op een trage computer of laptop: kies *Laag*.
   - **Automatische resolutie** (standaard aan): haalt de computer de beeldfrequentie niet, dan gaat de resolutie vanzelf in stapjes omlaag (tot 60%) en bij ruimte weer omhoog. Met de beeldmeter aan zie je het percentage naast de fps.
   - Onder de motorkap: de statische wereld is per zone samengevoegd (station, woonwijk, centrum, grote afnemers), zodat de grafische kaart alleen tekent wat in beeld is. De schaduwkaart wordt alleen opnieuw berekend als er op het stationsterrein iets beweegt (schakelaars, monteurs, brandweer), en de schermen in het gebouw alleen als je in de buurt bent. Het paneelwerk is verdeeld over opeenvolgende beelden, zodat er geen periodieke hapering is.
-  - **Weer en tijd bekijken** (toets `T`, de knop *Weer & tijd*, of in de instellingen): schuif de klok over het hele etmaal, laat de tijd versneld lopen (▶) en kies weer en seizoen, om te zien hoe de wereld eruitziet. Alleen kijken: de simulatie staat stil en rekent op de echte tijd, en SCADA blijft de echte situatie tonen. Met *Terug naar de dienst* (of `T`/`Esc`) staan klok, weer en seizoen weer zoals ze waren.
+  - **Weer en tijd** (toets `T`, de knop *Weer & tijd*, een klik op het weer in de bovenbalk, of in de instellingen). De simulatie loopt gewoon door:
+    - **Weer:** kies het échte weer (helder, bewolkt, regen, onweer, sneeuw, mist of hittegolf; het verandert geleidelijk) of laat het met *🔄 Automatisch* vanzelf wisselen. In lessen en scenario's hoort het weer bij de opdracht en ligt het vast.
+    - **⏭ Bui laten overtrekken:** regen, onweer of sneeuw is direct voorbij. Deze knop staat ook naast het weer in de bovenbalk zolang het nat is.
+    - **Doorspoelen** (+15 min, +1 uur, +3 uur): de simulatie loopt in kleine stappen snel vooruit. Alles gebeurt gewoon, ook storingen, en bij een nieuwe storing stopt het doorspoelen vanzelf. Niet tijdens een les; in een dienst niet voorbij het einde.
+    - **👁 Alleen bekijken:** schuif de klok over het hele etmaal, laat de tijd versneld lopen (▶) en kies weer en seizoen, om te zien hoe de wereld eruitziet. De simulatie staat dan stil en SCADA blijft de echte situatie tonen; met *Terug naar de dienst* staan klok, weer en seizoen weer zoals ze waren.
   - **Weer en seizoen:** zet het weer zelf op helder, bewolkt, regen, onweer, sneeuw, mist of hittegolf (geleidelijk; dubbelklik = direct), of laat het automatisch wisselen. Ook het seizoen kun je tijdens het spelen veranderen.
   - **Geluid:** hoofdvolume plus vier kanalen: omgeving (brom, verkeer, vogels, regen), schakelen (vermogenschakelaars, motoren, vlambogen), meldingen en alarmen, en telefoon.
   - Alles wordt in de browser bewaard.
@@ -492,7 +496,7 @@ Het 10 kV-net is **gecompenseerd** (Petersenspoel in het sterpunt van T1 en T3).
   - de belasting (winter: verwarming, zomer: airco);
   - de opbrengst van het zonnepark;
   - de schakeltijden van kassen en straatverlichting.
-- **Weer:** helder, bewolkt, regen, onweer, mist, sneeuw (met sneeuwdek) en hittegolf, wisselend tijdens een dienst. Het weer beïnvloedt:
+- **Weer:** helder, bewolkt, regen, onweer, mist, sneeuw (met sneeuwdek) en hittegolf, wisselend tijdens een dienst. Meestal is het droog: regen en zeker onweer komen niet vaak voor, en een bui duurt korter (40–100 minuten) dan een droge periode (1,5–4 uur). Het weer beïnvloedt:
   - lucht en zicht;
   - neerslag;
   - transformatortemperaturen;

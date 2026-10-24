@@ -2,13 +2,13 @@
 // ============================================================ seizoenen en weer
 const SEASONS={
   lente:{name:'Lente',date:new Date(2026,3,18),rise:6.6,set:20.6,maxEl:45,az:[80,280],amb:[11,6],pv:0.85,
-    load:{res:0.98,city:1.0,ind:1,hosp:1,green:0.9},wx:{helder:4,bewolkt:3,regen:3,onweer:1,mist:1}},
+    load:{res:0.98,city:1.0,ind:1,hosp:1,green:0.9},wx:{helder:5,bewolkt:4,regen:1.4,onweer:0.25,mist:1}},
   zomer:{name:'Zomer',date:new Date(2026,6,18),rise:5.6,set:21.9,maxEl:59,az:[55,305],amb:[21,7],pv:1.0,
-    load:{res:0.88,city:1.1,ind:1.05,hosp:1.08,green:0.7},wx:{helder:6,bewolkt:2,regen:2,onweer:2,hitte:2}},
+    load:{res:0.88,city:1.1,ind:1.05,hosp:1.08,green:0.7},wx:{helder:7,bewolkt:3,regen:0.9,onweer:0.35,hitte:1.5}},
   herfst:{name:'Herfst',date:new Date(2026,9,3),rise:7.85,set:19.2,maxEl:33,az:[105,255],amb:[11,5],pv:0.6,
-    load:{res:1.0,city:1,ind:1,hosp:1,green:1},wx:{helder:3,bewolkt:4,regen:4,onweer:1,mist:2}},
+    load:{res:1.0,city:1,ind:1,hosp:1,green:1},wx:{helder:3,bewolkt:5,regen:2,onweer:0.25,mist:2}},
   winter:{name:'Winter',date:new Date(2026,0,15),rise:8.7,set:16.9,maxEl:15,az:[125,235],amb:[3,3],pv:0.25,
-    load:{res:1.22,city:1.12,ind:1.02,hosp:1.05,green:1.15},wx:{helder:3,bewolkt:4,regen:2,sneeuw:3,mist:2}}};
+    load:{res:1.22,city:1.12,ind:1.02,hosp:1.05,green:1.15},wx:{helder:3,bewolkt:5,regen:1.1,sneeuw:2,mist:2}}};
 let SEASON=SEASONS.zomer;   // standaard: zomer
 const WX_TYPES={
   helder:{icon:'☀',name:'Helder',cloud:0.1},bewolkt:{icon:'☁',name:'Bewolkt',cloud:0.75},
@@ -17,7 +17,9 @@ const WX_TYPES={
   hitte:{icon:'🔥',name:'Hittegolf',cloud:0,dT:8}};
 const WX={type:'bewolkt',lock:false,next:0,cur:{cloud:0.5,rain:0,snow:0,thunder:0,fog:0,dT:0},cover:0};
 function setSeason(id){SEASON=SEASONS[id]||SEASONS.zomer;lastEnvElev=-999;}
-function setWeather(type,lock=false,instant=false){const t=WX_TYPES[type]||WX_TYPES.helder;WX.type=type;WX.lock=lock;WX.next=SIM.t+rnd(90,240);
+// natte periodes (regen, onweer, sneeuw) duren korter dan droge
+const wxSpan=type=>['regen','onweer','sneeuw'].includes(type)?rnd(40,100):rnd(90,240);
+function setWeather(type,lock=false,instant=false){const t=WX_TYPES[type]||WX_TYPES.helder;WX.type=type;WX.lock=lock;WX.next=SIM.t+wxSpan(type);
   if(instant){Object.assign(WX.cur,{cloud:t.cloud,rain:t.rain||0,snow:t.snow||0,thunder:t.thunder||0,fog:t.fog||0,dT:t.dT||0});WX.cover=t.snow?0.8:0;}lastEnvElev=-999;}
 function pickWeather(){const w=SEASON.wx;let tot=0;for(const k in w)tot+=w[k];let r=Math.random()*tot;for(const k in w){r-=w[k];if(r<=0)return k;}return 'helder';}
 const ambient=(h=hourOf())=>SEASON.amb[0]+SEASON.amb[1]*Math.sin((h-9)/24*2*Math.PI)+WX.cur.dT-WX.cur.cloud*2;
@@ -25,7 +27,7 @@ const isDark=(h,m=0.3)=>h<SEASON.rise-m||h>SEASON.set+m;
 // belastingfactor per soort afnemer: seizoen, en extra verwarming bij kou
 const seasonMul=kind=>(SEASON.load[kind]??1)*(kind==='res'?1+Math.max(0,(5-ambient())/40):1)*(kind==='city'||kind==='ind'?1+Math.max(0,(ambient()-24)/60):1);
 function weatherTick(dm){
-  if(!WX.lock&&SIM.t>=WX.next){const n=pickWeather();WX.next=SIM.t+rnd(90,240);if(n!==WX.type){setWeather(n);pushAlarm(`KNMI: ${WX_TYPES[n].name.toLowerCase()} op komst`,'info');}}
+  if(!WX.lock&&SIM.t>=WX.next){const n=pickWeather();WX.next=SIM.t+wxSpan(n);if(n!==WX.type){setWeather(n);pushAlarm(`KNMI: ${WX_TYPES[n].name.toLowerCase()} op komst`,'info');}}
   const t=WX_TYPES[WX.type],k=1-Math.exp(-dm/20);
   for(const key of['cloud','rain','snow','thunder','fog','dT'])WX.cur[key]+=((t[key]||0)-WX.cur[key])*k;
   WX.cover=clamp(WX.cover+(WX.cur.snow>0.3?dm/120:-dm/(ambient()>2?120:600)),0,1);   // sneeuwdek groeit en smelt

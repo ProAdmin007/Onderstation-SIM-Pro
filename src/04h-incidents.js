@@ -8,7 +8,7 @@ let INC_WATER=null;
 const INCIDENTS=[
   {id:'zkh',name:'Kabelstoring ziekenhuis en trip T1',desc:'Een mofstoring in de kabel naar het ziekenhuis en tegelijk spreekt de beveiliging van T1 aan.',w:1,dur:45,
     ok:()=>canFeeder('F5')&&!D.T1.blocked&&D['T1-Q0'].state===1,start(){feederFault('F5',14);trafoFault('T1');}},
-  {id:'storm',name:'Onweersbuien boven Drenthe',desc:'Een onweersfront trekt over de lijnen: reken op blikseminslagen en kabelstoringen.',w:2,dur:60,ok:()=>!isSeason('winter')||Math.random()<0.3,
+  {id:'storm',name:'Onweersbuien boven Drenthe',desc:'Een onweersfront trekt over de lijnen: reken op blikseminslagen en kabelstoringen.',w:0.3,dur:60,ok:()=>!isSeason('winter')||Math.random()<0.3,
     start(){setWeather('onweer',false);[4,11,19,27,38].forEach((m,i)=>addTimer(m+rnd(0,4),()=>INC.active?.def.id==='storm'&&(i%2?feederFault():lineFault())));}},
   {id:'dubbel',name:'Twee kabelfouten in de woonwijk',desc:'Graafwerk op twee plekken: twee kabelfouten in de ring van de woonwijk tegelijk.',w:1,dur:70,ok:()=>canRing(),
     start(){const sec=id=>RING.secs.find(s=>s.id===id);ringFault(FD('F3'),sec('K12'),35);ringFault(FD('F4'),sec('K45'),65);}},
