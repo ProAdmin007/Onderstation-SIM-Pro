@@ -49,6 +49,7 @@ const gsLoad=s=>s.groups.reduce((a,g)=>a+(D[g.id].state===1?Math.max(0,g.demand|
 const LS_ORDERS=[],LS_CREW={};let lsSeq=0;
 function lsPlace(o){const s=RING.stations.find(x=>x.id===o.st);return s?{box:VIEWS[s.id]?.box,from:V3(s.pos[0]+6,0,s.pos[1]-8)}:{};}
 function lsOrder(kind,stId,args,label){
+  {const st=RING.stations.find(s=>s.id===stId);if(st?.theft?.phase==='onveilig'||(st?.burn&&st.burn.phase!=='vervangen')){if(kind==='gs')GENSET.busy=Math.max(0,GENSET.busy-1);return deny(st.theft?`${stId} is niet veilig (aardingskoper gestolen) – de monteur mag er niet in`:`${stId} brandt – wacht tot de brandweer klaar is`);}}
   const here=(LS_CREW[stId]||-99)>SIM.t-15||LS_ORDERS.some(o=>o.st===stId),travel=kind==='gs'?rnd(15,25):here?rnd(1.5,3):rnd(7,11);
   const o={id:++lsSeq,kind,st:stId,args:args||{},at:SIM.t+travel,label};LS_ORDERS.push(o);
   pushAlarm(`Monteur ${here?'ter plaatse bij':'onderweg naar'} ${stId}: ${label} (±${Math.round(travel)} min)`,'op');

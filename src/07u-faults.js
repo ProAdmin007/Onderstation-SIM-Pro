@@ -27,11 +27,12 @@ function activeFaults(){const o=[],add=(key,sev,title,detail,go,cust=0)=>o.push(
   RING.stations.forEach(s=>{const go={tab:'R',dev:s.id},off=offOf(s.groups);
     if(s.damaged)add('sd'+s.id,'crit',`${s.id} ${s.name} beschadigd`,s.damaged,go,off);
     else if(s.fuse)add('sf'+s.id,'warn',`${s.id}: zekeringen doorgeslagen`,'monteur onderweg met nieuwe zekeringen',go,off);
-    else if(!stationLive(s)&&s.unplanned&&!told.has(s.ring))add('sx'+s.id,'warn',`${s.id} ${s.name} spanningsloos`,'',go,off);
+    else if(!stationLive(s)&&s.unplanned&&!told.has(s.ring)&&!s.burn)add('sx'+s.id,'warn',`${s.id} ${s.name} spanningsloos`,'',go,off);
     const hi=s.groups.filter(g=>g.U>U_MAX).length,lo=s.groups.filter(g=>g.U>0&&g.U<U_MIN).length;
     if(hi)add('lh'+s.id,'warn',`${s.id}: overspanning`,`${hi} straat${hi>1?'en':''} boven 253 V – verlaag de vaste trap (N)`,{tab:'L'});
     if(lo)add('ll'+s.id,'warn',`${s.id}: onderspanning`,`${lo} straat${lo>1?'en':''} onder 207 V`,{tab:'L'});
     if(s.gs?.state==='trip')add('gs'+s.id,'crit',`Noodaggregaat ${s.id} uitgevallen`,'overbelast – schakel straten af en herstart (N)',{tab:'L'});});
+  stationFaults(add);   // koperdiefstal en trafobrand
   KLIC.jobs.forEach(j=>{if(!j.marked)add('kl'+j.id,'warn',`Graafwerk bij ${j.where}: ${j.c.name}`,`${j.firm} ${j.state==='plan'?`begint ${fmtClock(j.start)}`:'graaft nu'} – ${j.order?'monteur onderweg om aan te wijzen':'laat de kabels aanwijzen (tablet G)'}`,null);});
   const now=new Set(o.map(x=>x.key));for(const k in FSEEN)if(!now.has(k))delete FSEEN[k];o.forEach(x=>{FSEEN[x.key]??=SIM.t;x.since=FSEEN[x.key];});
   return o.sort((a,b)=>(a.sev==='crit'?0:1)-(b.sev==='crit'?0:1)||a.since-b.since);}

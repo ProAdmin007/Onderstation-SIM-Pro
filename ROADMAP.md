@@ -19,7 +19,7 @@ Spoor C bouwt op A en B; spoor D maakt A, B en C eenvoudiger. Binnen elk spoor s
 |---|---|---|---|---|
 | A1 | Slimme meters: storingen en spanning per adres | OSE | klein | ⏳ gepland |
 | A2 | Distributieautomatisering (FLISR) | OSE | middel | ⏳ gepland |
-| A3 | Nieuwe storingen: nulbreuk, koperdiefstal, brandende trafo | OSE | klein | ⏳ gepland |
+| A3 | Nieuwe storingen: nulbreuk, koperdiefstal, brandende trafo | OSE | klein | 🔄 deels klaar: koperdiefstal en trafobrand ✅, nulbreuk gepland |
 | A4 | Werkvergunningen en rollen (NEN 3140/3840, VIAG) | OSE | middel | ⏳ gepland |
 | A5 | Storingskaart en communicatie | OSE | klein | ⏳ gepland |
 | B1 | Aansluitaanvragen en netuitbreiding | AM | groot | ⏳ gepland |
@@ -48,6 +48,8 @@ LS-storingen komen nu alleen via de telefoon binnen. Met slimme meters krijg je 
 Een deel van de MS-stations krijgt op afstand bedienbare schakelaars en kortsluitmelders in SCADA. Bij een kabelfout wordt de fout dan automatisch gevonden, geïsoleerd en teruggevoed (*Fault Location, Isolation and Service Restoration*), binnen een minuut in plaats van een half uur. Zonder automatisering blijft het handwerk zoals nu. Welke stations geautomatiseerd worden, is een AM-keuze (zie B2).
 
 ### A3. Nieuwe storingen
+
+*Koperdiefstal en de brandende distributietrafo zijn klaar (zie de README); de nulbreuk volgt nog.*
 
 - **Nulbreuk** in een LS-kabel: gevaarlijke over- en onderspanning bij klanten, kapotte apparaten en een melding met spoed. Snel afschakelen en de kabel repareren.
 - **Koperdiefstal of vandalisme** in een MS-station: aarding weg, het station niet veilig te betreden tot de monteur het heeft hersteld.

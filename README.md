@@ -39,7 +39,7 @@ Bedoeld voor **bedrijfsvoerders en monteurs in opleiding**, studenten **elektrot
 | | |
 |---|---|
 | 🔌 **Echt schakelen** | 110/10/20 kV met lijnvelden, transformatoren, dubbelrail, railkoppelingen, aardschakelaars en **vergrendelingen**, synchrocheck, AVR en trappenschakelaars. |
-| ⚡ **Storingen** | Blikseminslag met AR, kabelfouten met kortsluitverklikkers, **aardfouten** (U0, zoeken door te schakelen), trafotrips (relais 86), railfouten, weigerende schakelaars (50BF) en grote incidenten zoals brand, kraan of black-out. |
+| ⚡ **Storingen** | Blikseminslag met AR, kabelfouten met kortsluitverklikkers, **aardfouten** (U0, zoeken door te schakelen), trafotrips (relais 86), railfouten, weigerende schakelaars (50BF), **koperdiefstal** en een **brandende distributietrafo** in een MS-station, en grote incidenten zoals brand, kraan of black-out. |
 | 🏘️ **10 kV-ringen** | Negen MS-stations met normaal-open punten, terugvoeden, **kabeltemperatuur** per sectie en een koppelkabel naar **OS Meppel** van een andere netbeheerder. |
 | 🏠 **Laagspanning** | LS-velden per straat, **kabelkasten** tussen stations, **zonnepanelen** met overspanning, vaste trappen, **noodaggregaten**, alles lokaal of via een monteur. |
 | 👷 **Werkopdrachten** | Onderhoud met optionele **schakelbrief**, werk staken, monteurs met **portofoon**, revisies, **relaistest met testkoffer** en thermografie. |
@@ -438,7 +438,9 @@ Het 10 kV-net is **gecompenseerd** (Petersenspoel in het sterpunt van T1 en T3).
 
 - Een scheider (Q1/Q9) schakel je alleen als de vermogenschakelaar (Q0) van hetzelfde veld UIT staat. Doe je dat met de vergrendelingen uit, dan ontstaat er een vlamboog.
 - Sluit een aardschakelaar (Q8) alleen op een spanningsloze lijn.
-- Willekeurige storingen: blikseminslag op een lijn, kabelfouten, LS-storingen (alleen via de telefoon te vinden), transformatortrips (hooguit één keer per trafo per dienst) en af en toe een **railfout**. Bij een railfout schakelt de railbeveiliging alle velden van één railhelft af; die helft blijft spanningsloos tot de monteur klaar is. Inschakelen op de rail geeft een nieuwe trip.
+- Willekeurige storingen: blikseminslag op een lijn, kabelfouten, LS-storingen (alleen via de telefoon te vinden), transformatortrips (hooguit één keer per trafo per dienst) en af en toe een **railfout**, **koperdiefstal** of **trafobrand** in een MS-station (zie hieronder). Bij een railfout schakelt de railbeveiliging alle velden van één railhelft af; die helft blijft spanningsloos tot de monteur klaar is. Inschakelen op de rail geeft een nieuwe trip.
+- **Koperdiefstal in een MS-station:** het inbraakalarm gaat af en een monteur en de politie gaan kijken. Is het aardingskoper gestolen, dan is het station afgezet en niet veilig: niet lokaal schakelen en geen LS-opdrachten tot de aarding hersteld is (±1–1,5 uur); via SCADA mag wel. Soms is er ook een stuk LS-kabel weg en zit een straat zonder stroom.
+- **Brandende distributietrafo:** de trafozekeringen slaan door, de straten van het station vallen uit en er komen vlammen uit het dak. De brandweer rijdt met sirene naar het station en blust pas als het station én de kabels ernaartoe spanningsloos zijn. Het station zelf is niet bedienbaar, dus open de lastscheiders bij de buren en voed de rest van de ring terug via het normaal-open punt. Spanning terugzetten tijdens het blussen is een veiligheidsincident; doet niemand iets, dan schakelt de storingsdienst na 25 minuten zelf af (−40). Na het blussen mag de ring weer dicht, maar de trafo wordt 2–3 uur vervangen: voed de klanten tot die tijd met een noodaggregaat of via een kabelkast.
 - Werkopdrachten (alleen als de uitgangssituatie normaal is):
   - lijnveld vrijschakelen en aarden;
   - kabelwerk aan een veld of een ringkabel;

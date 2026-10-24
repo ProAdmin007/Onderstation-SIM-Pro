@@ -554,6 +554,33 @@ const TESTS = [
         return { lopend, busje, gereden, uit, terug, weg: !O.VANS.includes(V) }; });
       for (const [k, v] of Object.entries(r)) assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
   } },
+  { name: 'koperdiefstal in een MS-station: inbraak, onveilig (niet lokaal schakelen, SCADA wel), aarding hersteld', query: '?autostart&t=10', async run(p) {
+      const r = await p.evaluate(async () => { const O = OS; T.quiet(); const s = O.RING.stations.find(x => x.id === 'MS2'); O.copperTheft(s);
+        const melding = s.theft?.phase === 'melding' && O.activeFaults().some(f => f.key === 'thMS2');
+        s.theft.until = O.SIM.t + 1; const rnd0 = Math.random; Math.random = () => 0.2; await T.step(2); Math.random = rnd0;
+        const onveilig = s.theft?.phase === 'onveilig' && O.activeFaults().some(f => f.key === 'thMS2' && f.sev === 'crit'), lv = !!s.theft.lv && O.LVG.find(g => g.id === s.theft.lv).lvf?.theft;
+        const g = s.groups.find(x => x.kind === 'res' && x.id !== s.theft.lv), st0 = O.D[g.id].state; O.operate(g.id, 0, { crew: true }); const lsGeweigerd = O.D[g.id].state === st0;
+        const blokLokaal = !!O.stationBlock(s, 'MS2-L', 0, true), scada = !O.stationBlock(s, 'MS2-L', 0, false);
+        s.theft.until = O.SIM.t + 1; await T.step(2); const klaar = !s.theft && !O.LVG.some(x => x.lvf?.theft);
+        return { melding, onveilig, lv, lsGeweigerd, blokLokaal, scada, klaar }; });
+      for (const [k, v] of Object.entries(r)) assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
+  } },
+  { name: 'brandende distributietrafo: straten uit, brandweer blust pas spanningsloos, incident bij terugschakelen, trafo vervangen', query: '?autostart&t=10', async run(p) {
+      const r = await p.evaluate(async () => { const O = OS; T.quiet(); const s = O.RING.stations.find(x => x.id === 'MS2'); O.trafoFire(s); O.computeFlows();
+        const uit = O.D['MS2-T'].state === 0 && !O.stationLive(s) && !!s.burn;
+        O.operate('MS2-L', 0); const nietBedienbaar = O.D['MS2-L'].state === 1;
+        s.burn.arrive = O.SIM.t; await T.step(1); const wacht = s.burn.phase === 'wacht';
+        const sw = O.stNeighborSwitches(s); for (const id of sw) await T.op(id, 0); await T.step(1);
+        const blust = s.burn.phase === 'blussen' && O.stIsolated(s);
+        const inc0 = O.SIM.incidents; O.D[sw[0]].state = 1; O.computeFlows(); await T.step(1); const incident = O.SIM.incidents > inc0; O.D[sw[0]].state = 0; O.computeFlows();
+        s.burn.until = O.SIM.t; await T.step(1); const vervangen = s.burn?.phase === 'vervangen';
+        O.operate('MS2-T', 1); const tDicht = O.D['MS2-T'].state === 0;
+        s.burn.until = O.SIM.t; await T.step(1); const klaar = !s.burn;
+        // niemand reageert: na 25 minuten schakelt de storingsdienst zelf af
+        const s2 = O.RING.stations.find(x => x.id === 'MS8'); O.trafoFire(s2); s2.burn.arrive = O.SIM.t; await T.step(1); s2.burn.wait = O.SIM.t - 26; await T.step(1); const auto = s2.burn.phase === 'blussen' || O.stIsolated(s2);
+        return { uit, nietBedienbaar, wacht, blust, incident, vervangen, tDicht, klaar, auto }; });
+      for (const [k, v] of Object.entries(r)) assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
+  } },
   { name: 'stadsleven: weekmarkt, schoolplein, trein met overweg, bus met haltes (wacht bij een dichte overweg)', query: '?autostart&t=10&season=zomer', async run(p) {
       const r = await p.evaluate(async () => { const O = OS, tick = (s, dt = 0.1) => { for (let i = 0; i < s / dt; i++) O.cityTick(dt); };
         const zat = O.cityDay() === 6; tick(1); const markt = O.marketOn() && O.MARKET.visible && O.FIG.slice(0, 16).every(f => f.on);
