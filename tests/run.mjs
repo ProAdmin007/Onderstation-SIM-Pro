@@ -626,6 +626,20 @@ const TESTS = [
         return { knop, nieuw, box, actueel, eigen, fout }; });
       for (const [k, v] of Object.entries(r)) assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
   } },
+  { name: 'begeleiding: railfout uitgelegd met stappen die zichzelf afvinken, railfout zichtbaar in SCADA', query: '?autostart&t=13', async run(p) {
+      const r = await p.evaluate(async () => { const O = OS; T.quiet(); O.setCoach(true);
+        O.renderCoach(); const rustig = !document.querySelector('#coach').classList.contains('hidden') && /Begeleiding/.test(document.querySelector('#coach').textContent);
+        O.busFault('RB', 120); O.updateSLD(); O.renderCoach();
+        const c = O.coachCards().find(x => x.key === 'bfRB'), kaart = !!c && /Wat gebeurt er/i.test(document.querySelector('#coach').textContent);
+        const scada = [...document.querySelectorAll('#sld [data-n="RB"]')].some(e => e.classList.contains('busfault')) && /RAILFOUT rail B/.test(document.querySelector('#sld').textContent);
+        const st = () => c.steps.map(x => x.done()), voor = st();
+        // velden van rail B overzetten naar rail A
+        for (const f of ['F4', 'F5', 'F6']) { O.D[f + '-QB'].state = 0; O.D[f + '-QA'].state = 1; } O.computeFlows(); const na = st();
+        for (const f of ['F4', 'F5', 'F6']) await T.op('V-' + f, 1); const aan = st();
+        O.setCoach(false); const dicht = document.querySelector('#coach').classList.contains('hidden');
+        return { rustig, kaart, scada, overzetten: !voor[2] && na[2], inschakelen: aan[3], dicht }; });
+      for (const [k, v] of Object.entries(r)) assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
+  } },
   { name: 'stadsleven: weekmarkt, schoolplein, trein met overweg, bus met haltes (wacht bij een dichte overweg)', query: '?autostart&t=10&season=zomer', async run(p) {
       const r = await p.evaluate(async () => { const O = OS, tick = (s, dt = 0.1) => { for (let i = 0; i < s / dt; i++) O.cityTick(dt); };
         const zat = O.cityDay() === 6; tick(1); const markt = O.marketOn() && O.MARKET.visible && O.FIG.slice(0, 16).every(f => f.on);

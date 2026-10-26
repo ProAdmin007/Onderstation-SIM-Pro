@@ -37,13 +37,13 @@ function buildSLD(){
   o=out[10];top();bay('T1',160,-1,'V-T1','RAB');bay('T3',330,1,'V-T3','RAB');
   W(20,RA_Y,452,RA_Y,'RA','w bus');W(20,RB_Y,452,RB_Y,'RB','w bus');CB('V-K',230,412,null);T(240,400,'V-K','start','dl');
   T(14,RA_Y+3,'A','end','dl');T(14,RB_Y+3,'B','end','dl');T(20,398,'10 kV RAIL A','start','dl');M('RA',98,398,'start');T(452,398,'RAIL B','end','dl');M('RB',412,398,'end');
-  M('ef10',237,104,'middle','bad');
+  M('ef10',237,104,'middle','bad');M('bf10',237,118,'middle','bad');
   W(196,RA_Y,196,426,'RA');ES('RA-Q8',196,438,'');W(264,RB_Y,264,426,'RB');ES('RB-Q8',264,438,'');
   [['F1',35],['F2',82],['F3',128],['F4',285],['F5',395],['F6',440]].forEach(([id,x])=>feeder(F(id),x));
   // tabblad 20 kV
   o=out[20];top();bay('T2',160,-1,'W-T2','RC');bay('T3',330,1,'W-T3','RD');
   W(20,420,222,420,'RC','w bus');W(238,420,452,420,'RD','w bus');CB('W-K',230,420,null);T(230,442,'W-K','middle','dl');
-  T(20,412,'20 kV RAIL C1','start','dl');M('RC',104,412,'start');T(452,412,'RAIL C2','end','dl');M('RD',405,412,'end');
+  M('bf20',237,118,'middle','bad');T(20,412,'20 kV RAIL C1','start','dl');M('RC',104,412,'start');T(452,412,'RAIL C2','end','dl');M('RD',405,412,'end');
   W(200,420,200,428,'RC');ES('RC-Q8',200,440,'');W(262,420,262,428,'RD');ES('RD-Q8',262,440,'');
   [['G1',45],['G2',110],['G3',370],['G4',430]].forEach(([id,x])=>feeder(F(id),x));
   // tabblad Ring: alle 10 kV-ringen onder elkaar
@@ -107,7 +107,7 @@ function updateTabAlarms(){const a=tabAlarms();document.querySelectorAll('#sldTa
     b.classList.toggle('alarm',on);const tip=on?`Storing: ${l.slice(0,4).join(', ')}${l.length>4?` (+${l.length-4})`:''}`:'';if(b._tip!==tip){b._tip=tip;b.title=tip||b.dataset.tip0;}});}
 function setTab(t){SLD.tab=t;if(t==='P')setTimeout(renderProg);if(t==='K')setTimeout(renderCables);if(t==='L')setTimeout(renderLSTab);document.querySelectorAll('#sld [data-tab]').forEach(g=>g.style.display=g.dataset.tab===t?'':'none');
   document.querySelectorAll('#sldTabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));}
-function nodeClass(n){if(ER.has(n))return 'earth';if(!EN.has(n))return 'dead';const v=lvl(n);return v===110?'hv':v===20?'mv20':v<1?'lv':'mv';}
+function nodeClass(n){if(BUSF[n])return 'busfault';if(ER.has(n))return 'earth';if(!EN.has(n))return 'dead';const v=lvl(n);return v===110?'hv':v===20?'mv20':v<1?'lv':'mv';}
 function setM(k,txt,cls){(SLD.meas[k]||[]).forEach(el=>{el.textContent=txt;if(cls)el.setAttribute('class',cls);});}
 function updateSLD(){
   SLD.nodes.forEach(el=>el.setAttribute('class',el.dataset.c+' '+nodeClass(el.dataset.n)));
@@ -127,6 +127,7 @@ function updateSLD(){
   FEEDERS.filter(f=>f.ring).forEach(f=>setM('fa'+f.id,`V-${f.id} · rail ${BUS_BAND[railOf(f.sel)]?.[2]||'–'} · ${Math.round(D[f.cb].I)} A`));
   RING.secs.forEach(s=>setM('flt'+s.id,s.fault?'⚡':''));
   const ef=efRails(),efTxt=ef.length?`⏚ AARDFOUT · U0 ${fx(efU0())} kV · rail ${ef.map(b=>BUSES[b].nm).join('+')} · ${Math.round(efAge())} min`:'';setM('ef10',efTxt);setM('efR',efTxt);
+  const bfTxt=bs=>{const f=bs.filter(b=>BUSF[b]);return f.length?`⚡ RAILFOUT rail ${f.map(b=>BUSES[b].nm).join(' + ')} · wacht op monteur`:'';};setM('bf10',bfTxt(['RA','RB']));setM('bf20',bfTxt(['RC','RD']));
   FEEDERS.forEach(f=>setM('efi'+f.id,EF.on&&EF.on.ind[f.id]&&EN.has(f.node)?'⏚':''));
   setM('mpst',SIM.meppel.avail?`in bedrijf · ${fx(FLOW.U.MP,2)} kV`:'STORING',SIM.meppel.avail?'mh':'bad');setM('lnk',D['MS5-K'].state&&EN.has('MP3')?`nu ${fx(FD('MP3').P)} MW`:'open','mh');
   updateTabAlarms();
