@@ -115,15 +115,29 @@ function coachIdle(){const tips=[];if(TASK)tips.push('Er staat een werkopdracht 
   tips.push('Kabels met oude moffen geven vaker storing; op een spanningsloze kabel kun je ze preventief laten vervangen (kabeltablet G).');
   return `<div class="cc idle"><b>✓ Alles in orde</b><p>Er zijn geen storingen. Zodra er iets gebeurt, legt de begeleiding hier uit wat er aan de hand is en wat je kunt doen.</p><ul>${tips.map(t=>`<li>${t}</li>`).join('')}</ul></div>`;}
 function coachHtml(){const cs=coachCards();
-  return `<div class="cc-head"><b>🧭 Begeleiding</b><span>${cs.length?`${cs.length} situatie${cs.length>1?'s':''}`:'rustig'}</span><button class="mini" data-cc="close" title="Sluiten (U)">✕</button></div>`+(cs.length?cs.map(c=>{const st=c.steps.map(s=>({t:s.t,ok:!!s.done()})),first=st.findIndex(s=>!s.ok);
+  return `<div class="cc-head" title="Sleep om te verplaatsen · dubbelklik zet terug · hoek rechtsonder: groter of kleiner"><b>🧭 Begeleiding</b><span>${cs.length?`${cs.length} situatie${cs.length>1?'s':''}`:'rustig'}</span><button class="mini" data-cc="close" title="Sluiten (U)">✕</button></div>`+(cs.length?cs.map(c=>{const st=c.steps.map(s=>({t:s.t,ok:!!s.done()})),first=st.findIndex(s=>!s.ok);
     return `<div class="cc ${c.sev}"><div class="cc-t"><b>${c.title}</b>${c.go?`<button class="mini" data-ccgo="${c.key}">Toon</button>`:''}</div>
       <p><span class="cc-l">Wat gebeurt er?</span> ${c.what}</p><p><span class="cc-l">Waarom?</span> ${c.why}</p>
       ${st.length?`<span class="cc-l">Wat moet je doen?</span><ol>${st.map((s,i)=>`<li class="${s.ok?'ok':i===first?'now':''}">${s.ok?'✓ ':''}${s.t}</li>`).join('')}</ol>`:''}</div>`;}).join(''):coachIdle());}
 function renderCoach(){const el=$('#coach');if(!el)return;$('#coachBtn')?.classList.toggle('on',COACH.on);
   const cs=COACH.on||!coachOk()?null:coachCards(),n=cs?cs.filter(c=>c.sev==='crit').length:0;$('#coachBtn')?.classList.toggle('coach-new',!COACH.on&&n>0);
-  if(!COACH.on||!coachOk()){el.classList.add('hidden');return;}el.classList.remove('hidden');const h=coachHtml();if(el._h!==h){el._h=h;el.innerHTML=h;}}
+  if(!COACH.on||!coachOk()){el.classList.add('hidden');return;}el.classList.remove('hidden');const h=coachHtml();if(el._h!==h){const sc=el.scrollTop;el._h=h;el.innerHTML=h;el.scrollTop=sc;}if(!COACH.placed){COACH.placed=true;coachRestore();}}
 function setCoach(on){COACH.on=on??!COACH.on;try{localStorage.setItem('osz-coach',COACH.on?'1':'0');}catch(e){}renderCoach();}
 const coachOpen=()=>COACH.on&&coachOk();
+// ---- verslepen (aan de kop) en vergroten/verkleinen (hoek rechtsonder); positie en grootte worden onthouden
+function coachSaveBox(){const el=$('#coach');if(el.classList.contains('hidden'))return;const r=el.getBoundingClientRect();try{localStorage.setItem('osz-coachbox',JSON.stringify({x:Math.round(r.left),y:Math.round(r.top),w:Math.round(r.width),h:Math.round(r.height)}));}catch(e){}}
+function coachClamp(){const el=$('#coach'),r=el.getBoundingClientRect();if(!r.width)return;const x=clamp(r.left,0,innerWidth-Math.min(r.width,120)),y=clamp(r.top,0,innerHeight-40);el.style.left=x+'px';el.style.top=y+'px';}
+function coachRestore(){const el=$('#coach');let b=null;try{b=JSON.parse(localStorage.getItem('osz-coachbox')||'null');}catch(e){}
+  if(b){el.style.left=b.x+'px';el.style.top=b.y+'px';el.style.width=b.w+'px';el.style.height=b.h+'px';}coachClamp();}
+function coachReset(){const el=$('#coach');['left','top','width','height'].forEach(k=>el.style[k]='');try{localStorage.removeItem('osz-coachbox');}catch(e){}}
+(()=>{const el=$('#coach');let drag=null;
+  el.addEventListener('pointerdown',e=>{const h=e.target.closest('.cc-head');if(!h||e.target.closest('button'))return;const r=el.getBoundingClientRect();drag={dx:e.clientX-r.left,dy:e.clientY-r.top};el.classList.add('dragging');h.setPointerCapture?.(e.pointerId);e.preventDefault();});
+  addEventListener('pointermove',e=>{if(!drag)return;el.style.left=clamp(e.clientX-drag.dx,0,innerWidth-120)+'px';el.style.top=clamp(e.clientY-drag.dy,0,innerHeight-40)+'px';});
+  addEventListener('pointerup',()=>{if(!drag)return;drag=null;el.classList.remove('dragging');coachSaveBox();});
+  el.addEventListener('dblclick',e=>{if(e.target.closest('.cc-head')&&!e.target.closest('button')){coachReset();coachClamp();}});
+  // na vergroten of verkleinen met de hoek: grootte bewaren
+  let t=0;new ResizeObserver(()=>{clearTimeout(t);t=setTimeout(coachSaveBox,300);}).observe(el);
+  addEventListener('resize',coachClamp);})();
 $('#coach').addEventListener('click',e=>{if(e.target.closest('[data-cc="close"]'))return setCoach(false);const b=e.target.closest('[data-ccgo]');if(!b)return;const c=coachCards().find(x=>x.key===b.dataset.ccgo);if(!c?.go)return;
   if(c.go.klic)return klicFocus(KLIC.jobs.find(j=>j.id===c.go.klic));setTab(c.go.tab);$('#scada').classList.remove('min');if(c.go.dev&&D[c.go.dev])selectDevice(c.go.dev);});
 $('#coachBtn').addEventListener('click',()=>setCoach());
