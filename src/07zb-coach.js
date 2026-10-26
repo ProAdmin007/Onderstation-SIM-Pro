@@ -3,7 +3,8 @@
 // Leest de toestand van de installatie (net als Lopende storingen) en geeft per situatie uitleg met stappen die zichzelf afvinken.
 // Alleen uitleg: het verandert niets aan het spel en kost geen punten.
 const COACH={on:false,shown:new Set()};
-try{COACH.on=localStorage.getItem('osz-coach')==='1';}catch(e){}
+// eerste keer opgestart (nog geen keuze bewaard): begeleiding aan; daarna geldt wat de speler kiest. Niet in de testmodus.
+try{const v=localStorage.getItem('osz-coach');if(v===null&&!LITE){COACH.on=true;localStorage.setItem('osz-coach','1');}else COACH.on=v==='1';}catch(e){}
 const coachOk=()=>!MODES[GAME.mode]?.les;   // lessen hebben hun eigen uitleg
 const railNm=b=>BUSES[b]?.nm||b;
 const dsOn=id=>D[id]?.state===1;

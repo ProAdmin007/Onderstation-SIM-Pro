@@ -6092,7 +6092,7 @@ function gisDrawExtra(g,cv){const s=TAB.zoom,now=performance.now();
 // ============================================================ updatecontrole in het hoofdmenu: is er op GitHub een nieuwere versie?
 // De build zet een vingerafdruk in BUILD_ID (tests/stamp.mjs) en houdt version.json bij met eerdere versies.
 // Staat onze versie bij de eerdere versies op GitHub, dan is er een update; staat hij er niet in, dan is het eigen (nieuwer) werk.
-const BUILD_ID='7956b51dc928';
+const BUILD_ID='c59096c94005';
 const UPD_REPO='https://github.com/ProAdmin007/Onderstation-SIM-Pro';
 const UPD_URL='https://raw.githubusercontent.com/ProAdmin007/Onderstation-SIM-Pro/main/version.json';
 // toestand van de controle: idle, bezig, actueel, nieuw, eigen of fout
@@ -6135,7 +6135,8 @@ document.addEventListener('click',e=>{if(e.target.closest('[data-upd="install"]'
 // Leest de toestand van de installatie (net als Lopende storingen) en geeft per situatie uitleg met stappen die zichzelf afvinken.
 // Alleen uitleg: het verandert niets aan het spel en kost geen punten.
 const COACH={on:false,shown:new Set()};
-try{COACH.on=localStorage.getItem('osz-coach')==='1';}catch(e){}
+// eerste keer opgestart (nog geen keuze bewaard): begeleiding aan; daarna geldt wat de speler kiest. Niet in de testmodus.
+try{const v=localStorage.getItem('osz-coach');if(v===null&&!LITE){COACH.on=true;localStorage.setItem('osz-coach','1');}else COACH.on=v==='1';}catch(e){}
 const coachOk=()=>!MODES[GAME.mode]?.les;   // lessen hebben hun eigen uitleg
 const railNm=b=>BUSES[b]?.nm||b;
 const dsOn=id=>D[id]?.state===1;
