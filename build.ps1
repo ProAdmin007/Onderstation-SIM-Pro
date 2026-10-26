@@ -9,4 +9,7 @@ node (Join-Path $PSScriptRoot 'tests/lint.mjs') --build
 if ($LASTEXITCODE -ne 0) { Write-Host 'index.html niet gebouwd – los eerst de lintmeldingen op' -ForegroundColor Red; exit 1 }
 $out = ($parts | ForEach-Object { [IO.File]::ReadAllText($_.FullName) }) -join "`n"
 [IO.File]::WriteAllText((Join-Path $PSScriptRoot 'index.html'), $out, (New-Object Text.UTF8Encoding $false))
+# versie-stempel in index.html en version.json bijwerken (voor de updatecontrole in het hoofdmenu)
+node (Join-Path $PSScriptRoot 'tests/stamp.mjs')
+if ($LASTEXITCODE -ne 0) { exit 1 }
 Write-Host "index.html gebouwd uit $($parts.Count) delen"

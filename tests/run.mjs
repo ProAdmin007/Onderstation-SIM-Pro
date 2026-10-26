@@ -615,6 +615,17 @@ const TESTS = [
         return { aanhanger, ag, gras, stoep, weg }; });
       for (const [k, v] of Object.entries(r)) assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
   } },
+  { name: 'updateknop in het hoofdmenu: nieuwe versie op GitHub laat de knop knipperen, eigen of actuele versie niet', query: '?menu', async run(p) {
+      const r = await p.evaluate(async () => { const O = OS, url = v => URL.createObjectURL(new Blob([JSON.stringify(v)], { type: 'application/json' })), btn = () => document.querySelector('#updBtn');
+        const knop = !!btn() && /versie [0-9a-f]{12}/.test(document.querySelector('#updWrap').textContent);
+        await O.checkUpdate(url({ build: 'aaaaaaaaaaaa', date: '2026-11-01', previous: [O.BUILD_ID] })); const nieuw = O.UPD.state === 'nieuw' && btn().classList.contains('upd-new');
+        btn().click(); const box = !!document.querySelector('.upd-box a[href$="main.zip"]');
+        await O.checkUpdate(url({ build: O.BUILD_ID, date: '2026-10-26', previous: [] })); const actueel = O.UPD.state === 'actueel' && !btn().classList.contains('upd-new');
+        await O.checkUpdate(url({ build: 'bbbbbbbbbbbb', date: '2026-10-20', previous: ['cccccccccccc'] })); const eigen = O.UPD.state === 'eigen' && !btn().classList.contains('upd-new');
+        await O.checkUpdate('data:application/json,geen-json'); const fout = O.UPD.state === 'fout';
+        return { knop, nieuw, box, actueel, eigen, fout }; });
+      for (const [k, v] of Object.entries(r)) assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
+  } },
   { name: 'stadsleven: weekmarkt, schoolplein, trein met overweg, bus met haltes (wacht bij een dichte overweg)', query: '?autostart&t=10&season=zomer', async run(p) {
       const r = await p.evaluate(async () => { const O = OS, tick = (s, dt = 0.1) => { for (let i = 0; i < s / dt; i++) O.cityTick(dt); };
         const zat = O.cityDay() === 6; tick(1); const markt = O.marketOn() && O.MARKET.visible && O.FIG.slice(0, 16).every(f => f.on);

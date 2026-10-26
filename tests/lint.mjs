@@ -8,6 +8,7 @@ import path from 'path';
 import os from 'os';
 import { execFileSync } from 'child_process';
 import { fileURLToPath } from 'url';
+import { stamp } from './stamp.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SRC = path.join(ROOT, 'src');
@@ -80,7 +81,7 @@ if (!problems.some(p => p.includes('syntaxfout'))) {
 if (!process.argv.includes('--build')) {
   const parts = fs.readdirSync(SRC).filter(f => /\.(html|js)$/.test(f)).sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
   const norm = s => s.replace(/\r\n/g, '\n');
-  const want = norm(parts.map(f => fs.readFileSync(path.join(SRC, f), 'utf8')).join('\n'));
+  const want = stamp(norm(parts.map(f => fs.readFileSync(path.join(SRC, f), 'utf8')).join('\n')));   // met het versie-stempel (tests/stamp.mjs)
   if (norm(fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8')) !== want) problems.push('index.html loopt niet gelijk met src/ – bouw opnieuw met npm run build');
 }
 
