@@ -619,7 +619,7 @@ const TESTS = [
       const r = await p.evaluate(async () => { const O = OS, url = v => URL.createObjectURL(new Blob([JSON.stringify(v)], { type: 'application/json' })), btn = () => document.querySelector('#updBtn');
         const knop = !!btn() && /versie [0-9a-f]{12}/.test(document.querySelector('#updWrap').textContent);
         await O.checkUpdate(url({ build: 'aaaaaaaaaaaa', date: '2026-11-01', previous: [O.BUILD_ID] })); const nieuw = O.UPD.state === 'nieuw' && btn().classList.contains('upd-new');
-        btn().click(); const box = !!document.querySelector('.upd-box a[href$="main.zip"]');
+        btn().click(); const box = !!document.querySelector('.upd-box [data-upd="install"]');
         await O.checkUpdate(url({ build: O.BUILD_ID, date: '2026-10-26', previous: [] })); const actueel = O.UPD.state === 'actueel' && !btn().classList.contains('upd-new');
         await O.checkUpdate(url({ build: 'bbbbbbbbbbbb', date: '2026-10-20', previous: ['cccccccccccc'] })); const eigen = O.UPD.state === 'eigen' && !btn().classList.contains('upd-new');
         await O.checkUpdate('data:application/json,geen-json'); const fout = O.UPD.state === 'fout';
@@ -638,6 +638,23 @@ const TESTS = [
         for (const f of ['F4', 'F5', 'F6']) await T.op('V-' + f, 1); const aan = st();
         O.setCoach(false); const dicht = document.querySelector('#coach').classList.contains('hidden');
         return { rustig, kaart, scada, overzetten: !voor[2] && na[2], inschakelen: aan[3], dicht }; });
+      for (const [k, v] of Object.entries(r)) assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
+  } },
+  { name: 'update installeren: nieuwe index.html ophalen, opslaan via het opslagvenster en herstarten; anders downloaden', query: '?menu', async run(p) {
+      const r = await p.evaluate(async () => { const O = OS, html = "<html><title>OS Zuidwolde</title><script>const BUILD_ID='abcdefabcdef';</script></html>";
+        const url = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
+        // Chrome/Edge: opslagvenster (nagebootst), daarna herstart
+        let geschreven = '', herstart = false; window.showSaveFilePicker = async () => ({ createWritable: async () => ({ write: async b => { geschreven = await b.text(); }, close: async () => {} }) });
+        O.UPD.reload = () => { herstart = true; }; await O.installUpdate(url); await new Promise(r => setTimeout(r, 900));
+        const opgeslagen = geschreven === html && herstart && localStorage.getItem('osz-upd-expect') === 'abcdefabcdef'; localStorage.removeItem('osz-upd-expect');
+        // annuleren in het venster
+        window.showSaveFilePicker = async () => { throw new DOMException('weg', 'AbortError'); }; await O.installUpdate(url); const geannuleerd = /geannuleerd/.test(O.UPD.msg);
+        // andere browsers: gewone download
+        delete window.showSaveFilePicker; let dl = null; const orig = HTMLAnchorElement.prototype.click; HTMLAnchorElement.prototype.click = function () { dl = this.download; };
+        await O.installUpdate(url); HTMLAnchorElement.prototype.click = orig; const download = dl === 'index.html' && /gedownload/.test(O.UPD.msg);
+        // ongeldig bestand wordt geweigerd
+        await O.installUpdate(URL.createObjectURL(new Blob(['<html>iets anders</html>']))); const geweigerd = /geen geldige versie/.test(O.UPD.msg);
+        return { opgeslagen, geannuleerd, download, geweigerd }; });
       for (const [k, v] of Object.entries(r)) assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
   } },
   { name: 'stadsleven: weekmarkt, schoolplein, trein met overweg, bus met haltes (wacht bij een dichte overweg)', query: '?autostart&t=10&season=zomer', async run(p) {
