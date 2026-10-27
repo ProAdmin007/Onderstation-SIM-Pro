@@ -640,21 +640,25 @@ const TESTS = [
         return { rustig, kaart, scada, overzetten: !voor[2] && na[2], inschakelen: aan[3], dicht }; });
       for (const [k, v] of Object.entries(r)) assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
   } },
-  { name: 'update installeren: nieuwe index.html ophalen, opslaan via het opslagvenster en herstarten; anders downloaden', query: '?menu', async run(p) {
+  { name: 'update installeren: één keer het bestand aanwijzen, daarna direct overschrijven en herstarten; ander bestand geweigerd; anders downloaden', query: '?menu', async run(p) {
       const r = await p.evaluate(async () => { const O = OS, html = "<html><title>OS Zuidwolde</title><script>const BUILD_ID='abcdefabcdef';</script></html>";
-        const url = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
-        // Chrome/Edge: opslagvenster (nagebootst), daarna herstart
-        let geschreven = '', herstart = false; window.showSaveFilePicker = async () => ({ createWritable: async () => ({ write: async b => { geschreven = await b.text(); }, close: async () => {} }) });
-        O.UPD.reload = () => { herstart = true; }; await O.installUpdate(url); await new Promise(r => setTimeout(r, 900));
-        const opgeslagen = geschreven === html && herstart && localStorage.getItem('osz-upd-expect') === 'abcdefabcdef'; localStorage.removeItem('osz-upd-expect');
-        // annuleren in het venster
-        window.showSaveFilePicker = async () => { throw new DOMException('weg', 'AbortError'); }; await O.installUpdate(url); const geannuleerd = /geannuleerd/.test(O.UPD.msg);
-        // andere browsers: gewone download
-        delete window.showSaveFilePicker; let dl = null; const orig = HTMLAnchorElement.prototype.click; HTMLAnchorElement.prototype.click = function () { dl = this.download; };
+        const url = URL.createObjectURL(new Blob([html], { type: 'text/html' })), mem = new Map(); O.UPD.store = { get: async k => mem.get(k), set: async (k, v) => mem.set(k, v), del: async k => mem.delete(k) };
+        let inhoud = "<title>OS Zuidwolde</title> BUILD_ID='111111111111'", vragen = 0, kiezen = 0, herstart = 0;
+        const handle = { getFile: async () => ({ text: async () => inhoud }), queryPermission: async () => 'prompt', requestPermission: async () => { vragen++; return 'granted'; },
+          createWritable: async () => ({ write: async b => { inhoud = await b.text(); }, close: async () => {} }) };
+        window.showOpenFilePicker = async () => { kiezen++; return [handle]; }; O.UPD.reload = () => { herstart++; };
+        await O.installUpdate(url); await new Promise(r => setTimeout(r, 900));
+        const eerste = kiezen === 1 && inhoud === html && herstart === 1 && mem.has('gameFile') && localStorage.getItem('osz-upd-expect') === 'abcdefabcdef';
+        await O.installUpdate(url); await new Promise(r => setTimeout(r, 900)); const tweede = kiezen === 1 && herstart === 2;   // geen venster meer
+        // verkeerd bestand: geweigerd
+        mem.clear(); inhoud = '<html>mijn vakantiefoto\'s</html>'; await O.installUpdate(url); const geweigerd = /niet de simulator/.test(O.UPD.msg) && inhoud.includes('vakantie');
+        // annuleren
+        window.showOpenFilePicker = async () => { throw new DOMException('weg', 'AbortError'); }; await O.installUpdate(url); const geannuleerd = /geannuleerd/.test(O.UPD.msg);
+        // andere browsers: download
+        delete window.showOpenFilePicker; let dl = null; const orig = HTMLAnchorElement.prototype.click; HTMLAnchorElement.prototype.click = function () { dl = this.download; };
         await O.installUpdate(url); HTMLAnchorElement.prototype.click = orig; const download = dl === 'index.html' && /gedownload/.test(O.UPD.msg);
-        // ongeldig bestand wordt geweigerd
-        await O.installUpdate(URL.createObjectURL(new Blob(['<html>iets anders</html>']))); const geweigerd = /geen geldige versie/.test(O.UPD.msg);
-        return { opgeslagen, geannuleerd, download, geweigerd }; });
+        await O.installUpdate(URL.createObjectURL(new Blob(['<html>iets anders</html>']))); const ongeldig = /geen geldige versie/.test(O.UPD.msg); localStorage.removeItem('osz-upd-expect');
+        return { eerste, tweede, geweigerd, geannuleerd, download, ongeldig }; });
       for (const [k, v] of Object.entries(r)) assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
   } },
   { name: 'stadsleven: weekmarkt, schoolplein, trein met overweg, bus met haltes (wacht bij een dichte overweg)', query: '?autostart&t=10&season=zomer', async run(p) {
