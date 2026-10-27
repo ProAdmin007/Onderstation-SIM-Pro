@@ -2,7 +2,7 @@
 
 De simulator richt zich nu vooral op **Onderhoud en Storingen Elektra (OSE)**: schakelen, storingen oplossen, monteurs aansturen en het onderhoud aan de installatie. Een netbeheerder (DSO) doet meer dan dat. **Asset Management (AM)** beslist over aansluitingen, uitbreiding van het net, vervangingen en het budget, en legt verantwoording af over de kwaliteit van het net.
 
-Deze roadmap heeft vier sporen:
+Deze roadmap heeft vijf sporen:
 
 | Spoor | Waar het over gaat | Tijdschaal |
 |---|---|---|
@@ -10,8 +10,9 @@ Deze roadmap heeft vier sporen:
 | **B. AM** | het net op lange termijn: aanvragen, investeringen, budget, kwaliteit | maanden tot jaren |
 | **C. Carrièremodus** | groeien van monteur via bedrijfsvoerder naar asset manager | meerdere jaren spelen |
 | **D. Techniek** | de code makkelijk uitbreidbaar houden | doorlopend |
+| **E. Opleiding en bereik** | trainen in groepen, eigen scenario's, meer spelers bereiken | per onderdeel |
 
-Spoor C bouwt op A en B; spoor D maakt A, B en C eenvoudiger. Binnen elk spoor staan de onderdelen op volgorde van nut.
+Spoor C bouwt op A en B; spoor D maakt A, B, C en E eenvoudiger. Binnen elk spoor staan de onderdelen op volgorde van nut.
 
 ## Overzicht
 
@@ -32,6 +33,12 @@ Spoor C bouwt op A en B; spoor D maakt A, B en C eenvoudiger. Binnen elk spoor s
 | D2 | Inschrijven op de lussen | techniek | klein | ⏳ gepland |
 | D3 | Leesbare code | techniek | doorlopend | 🔄 doorlopend |
 | D4 | Exportlijst automatiseren | techniek | klein | ⏳ gepland |
+| E1 | Opgeslagen spellen exporteren en importeren | opleiding | klein | ⏳ gepland |
+| E2 | Instructeursmodus | opleiding | middel | ⏳ gepland |
+| E3 | Scenario-editor | opleiding | middel | ⏳ gepland |
+| E4 | Beoordeling met de begeleiding | opleiding | klein | ⏳ gepland |
+| E5 | Tablet en telefoon | bereik | middel | ⏳ gepland |
+| E6 | Engelse taal | bereik | middel | ⏳ gepland |
 
 ---
 
@@ -159,6 +166,13 @@ Nieuwe functies passen er al goed in, dankzij de centrale registers (net, afneme
 
 **Aanpak.** Begin met de kabelstoringen (ring en veld), daarna lijnen, trafo's en de LS-opdrachten. `resumeTimers()` krimpt per stap, tot hij weg kan.
 
+**Risico's (middel).** Dit raakt het hart van de storingsafhandeling.
+
+- *Ander gedrag*: reparatietijden of de volgorde van meldingen kunnen ongemerkt veranderen. Vangnet: de tests met vaste seeds, de scenariobot en de balansrun (`BALANCE=1`) vóór en na vergelijken.
+- *Oude opgeslagen spellen*: die hebben nog geen takenlijst. Nodig: `SAVE_V` naar 3 met een omzetting in `SAVE_MIGRATE` die de taken afleidt uit de opgeslagen toestand (zoals `resumeTimers()` nu doet), plus een test die een versie-2-spel hervat.
+- *Twee systemen tegelijk*: tijdens de overgang bestaan losse `addTimer`-aanroepen en benoemde taken naast elkaar. Daarom per storingssoort in één keer omzetten, en alleen beeld- en geluidseffecten als losse timer laten.
+- *Herhaling (replay)*: die zet de toestand terug uit momentopnamen; geplande taken moeten daar buiten blijven.
+
 ### D2. Inschrijven op de lussen
 
 **Probleem.** Elk nieuw onderdeel (stadsleven, storingsbusjes, kabeltablet, brand …) moet met de hand worden toegevoegd aan de hoofdlus (`08-main.js`), de simulatiestap (`04-7-simloop.js`) of `updateLife()`. Vergeet je dat, dan doet het onderdeel niets, en de volgorde staat verspreid over meerdere plekken.
@@ -171,6 +185,12 @@ Nieuwe functies passen er al goed in, dankzij de centrale registers (net, afneme
 De lussen roepen alles aan wat zich heeft ingeschreven, in een vaste en zichtbare volgorde.
 
 **Resultaat.** Een nieuw onderdeel is één nieuw bestand dat zichzelf aanmeldt. De hoofdlus hoeft niet meer te worden aangepast.
+
+**Risico's (laag).**
+
+- *Volgorde*: sommige onderdelen hangen van elkaar af, bijvoorbeeld eerst `computeFlows()` en dan pas de beveiliging, of eerst de toestand en dan het beeld. Een expliciete volgorde per inschrijving (`onSim('beveiliging', fn, {na: 'stroom'})` of een nummer) voorkomt verrassingen.
+- *Fout in één onderdeel*: die mag de rest niet stilzetten. De lus vangt per onderdeel fouten af en meldt welk onderdeel faalde (zoals de hoofdlus nu al doet).
+- *Doorspoelen en testmodus*: onderdelen moeten aangeven of ze in de simulatietijd draaien (ook tijdens doorspoelen) of alleen in echte tijd (beeld).
 
 ### D3. Leesbare code
 
@@ -189,6 +209,34 @@ De lussen roepen alles aan wat zich heeft ingeschreven, in een vaste en zichtbar
 **Oplossing.** De lijst automatisch laten opbouwen tijdens het bouwen: `build.ps1` verzamelt alle functies en registers op het hoogste niveau en zet die in `window.OS`. Optioneel alleen in een testbuild.
 
 **Resultaat.** Geen vergeten exports meer, en de hoofdlus wordt korter.
+
+---
+
+## E. Opleiding en bereik
+
+### E1. Opgeslagen spellen exporteren en importeren
+
+Opgeslagen spellen, highscores en instellingen staan nu alleen in de browser (localStorage). *Browsergegevens wissen* maakt alles weg, en een andere browser of computer ziet ze niet. Met **exporteren** sla je alles op als één bestand; met **importeren** zet je het terug, ook op een andere computer. Handig als back-up en om een spel aan een instructeur te geven.
+
+### E2. Instructeursmodus
+
+Voor groepstrainingen. De trainer heeft een eigen paneel om tijdens een dienst **storingen klaar te zetten of direct te starten** (een railfout op B, een kabelfout tussen MS2 en MS3, een trafotrip), het weer te veranderen en te pauzeren. Achteraf bespreek je samen de tijdlijn en de herhaling. Bouwt voort op de bestaande storingsfuncties en de begeleiding.
+
+### E3. Scenario-editor
+
+Zelf scenario's maken zonder code: een begintoestand (seizoen, tijd, weer, afwijkingen), storingen op vaste tijdstippen en doelen ("ziekenhuis binnen 15 minuten terug"). Opslaan als bestand en delen met collega's.
+
+### E4. Beoordeling met de begeleiding
+
+Het dienstrapport laat per storing zien welke stappen van de begeleiding je deed, in welke volgorde en hoe snel, en waar je afweek. Een goede aanvulling op de leermomenten die er nu al zijn.
+
+### E5. Tablet en telefoon
+
+Aanraakbediening (slepen, knijpen om te zoomen, tikken om te schakelen) en een indeling voor kleine schermen, met inklapbare panelen en SCADA op volledig scherm.
+
+### E6. Engelse taal
+
+De interface, meldingen, lessen en begeleiding vertalen, met een taalkeuze in de instellingen. Vraagt eerst dat alle teksten op één plek komen te staan.
 
 ---
 
