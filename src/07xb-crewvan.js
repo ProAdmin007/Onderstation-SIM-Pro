@@ -24,34 +24,37 @@ function crewDispatch(o){if(!o?.box)return;const c=o.box.getCenter(V3());
   if(o.kind==='fire'||o.walk||!outsideFence(c))return crewSpawn(o);
   const sn=gisSnap(c.x,c.z),path=sn&&gisPath(VAN_DEPOT[0],VAN_DEPOT[1],sn.x,sn.z),r=path&&vanRoute([VAN_DEPOT,...path]);
   if(!r)return crewSpawn(o);
-  const V={tow:o.tow||null,trailer:null,g:serviceVanModel(),r,pts:[VAN_DEPOT,...path],d:0,v:0,vmax:12,wait:0,stops:[],len:5.6,o,state:'heen',npcs:[],emergency:!!o.park,stopAt:routeStopAt(r,c,o.park)};VANS.push(V);
+  const V={tow:o.tow||null,trailer:null,g:(o.model||serviceVanModel)(),r,pts:[VAN_DEPOT,...path],d:0,v:0,vmax:12,wait:0,stops:[],len:5.6,o,state:'heen',npcs:[],emergency:!!o.park,stopAt:routeStopAt(r,c,o.park)};VANS.push(V);
   if(V.tow){V.trailer=gensetModel(true);V.trailer.position.set(0,0,-5.9);V.g.add(V.trailer);}
   const [x,z,yaw]=routeAt(r,0);V.g.position.set(x,0,z);V.g.rotation.y=yaw;return V;}
 function vanTick(dt){const run=!SIM.paused&&!GAME.ended,blink=(performance.now()%700)<350;
   for(let i=VANS.length-1;i>=0;i--){const V=VANS[i],o=V.o;
     if(V.state==='heen'){if(o.until?.()){vanBack(V);continue;}if(V.stopAt<V.r.total&&!V.stops.length)V.stops=[{d:V.stopAt,dur:1e9}];driveVehicle(V,run?dt:0);
       if(V.d>=V.stopAt-0.3){V.state='werk';const pk=vanParkSpot(V),[x,z,yaw]=routeAt(V.r,pk.d),nx=-Math.cos(yaw),nz=Math.sin(yaw);   // stoepkant
-        V.d=pk.d;V.base=[x,z];V.pn=[nx,nz];V.side=0;V.curb=pk.curb;V.parked=true;driveVehicle(V,0);
+        V.d=pk.d;V.base=[x,z];V.pn=[nx,nz];V.side=0;V.curb=pk.curb;V.parked=true;driveVehicle(V,0);V.parkedAt=SIM.t;
+        o.onPark?.(V,x+nx*pk.curb,z+nz*pk.curb,V.g.rotation.y);
         if(V.trailer&&V.tow){V.g.remove(V.trailer);disposeTree(V.trailer);V.trailer=null;gensetPlace(V.tow);}
-        V.npcs=crewSpawn({...o,from:V3(x+nx*(VAN_CURB+1.8),0,z+nz*(VAN_CURB+1.8))})||[];if(!V.npcs.length)vanBack(V);}}
-    else if(V.state==='werk'){V.side=Math.min(V.curb,V.side+(run?dt:0)*1.6);V.g.position.set(V.base[0]+V.pn[0]*V.side,0.1*V.side/VAN_CURB,V.base[1]+V.pn[1]*V.side);
+        const cs=pk.curb+Math.sign(pk.curb||1)*1.8;V.npcs=crewSpawn({...o,from:V3(x+nx*cs,0,z+nz*cs)})||[];if(!V.npcs.length)vanBack(V);}}
+    else if(V.state==='werk'){V.side+=clamp(V.curb-V.side,-(run?dt:0)*1.6,(run?dt:0)*1.6);V.g.position.set(V.base[0]+V.pn[0]*V.side,Math.abs(V.side-V.curb)<0.3?0.1:0,V.base[1]+V.pn[1]*V.side);
       if(!V.npcs.some(n=>NPCS.includes(n)))vanBack(V);}
-    else if(V.state==='terug'){driveVehicle(V,run?dt:0);if(V.side>0){V.side=Math.max(0,V.side-(run?dt:0)*2);const p=V.g.position;p.x+=V.pn[0]*V.side;p.z+=V.pn[1]*V.side;p.y=V.side>5.2?0.1:0;}if(V.d>=V.r.total-0.3){scene.remove(V.g);disposeTree(V.g);VANS.splice(i,1);continue;}}
+    else if(V.state==='terug'){driveVehicle(V,run?dt:0);if(V.side){V.side-=clamp(V.side,-(run?dt:0)*2,(run?dt:0)*2);const p=V.g.position;p.x+=V.pn[0]*V.side;p.z+=V.pn[1]*V.side;p.y=0;}if(V.d>=V.r.total-0.3){scene.remove(V.g);disposeTree(V.g);VANS.splice(i,1);continue;}}
     V.beacon=V.state==='werk'||V.state==='heen';}
   VAN_BEACON.emissiveIntensity=VANS.some(V=>V.beacon)&&blink?5:0.3;}
-function vanBack(V){const back=V.pts.slice().reverse(),r=vanRoute(back);if(!r){scene.remove(V.g);disposeTree(V.g);VANS.splice(VANS.indexOf(V),1);return;}
+function vanBack(V){V.o.onLeave?.(V);const back=V.pts.slice().reverse(),r=vanRoute(back);if(!r){scene.remove(V.g);disposeTree(V.g);VANS.splice(VANS.indexOf(V),1);return;}
   // eerst keren: begin op het punt waar het busje nu staat
   V.r=r;V.d=Math.min(routeNear(r,V.g.position.x,V.g.position.z),r.total);V.v=0;V.wait=0;V.stops=[];V.state='terug';
   // van de stoep af: de terugweg ligt op de andere rijstrook (±3,4 m verder)
-  if(V.parked&&V.side>0)V.side=V.side+3.4;else V.side=0;}
+  if(V.parked&&V.side)V.side=V.side+3.4;else V.side=0;}
 // het busje staat helemaal op de stoep (4,2 m uit het midden van de weg), zodat auto's erlangs kunnen
 const VAN_CURB=2.5;
 // vrije plek op de stoep: vanaf het stoppunt terug langs de route (dan vooruit), niet tegen een station, lantaarn, kast, boom of halte
 const VAN_AVOID=['kiosk','lamp','kast','kk','tree','halte','house','apt','hall','small','shed','hedge','aggregaat','car'];
 function vanParkSpot(V){const r=V.r,free=(d,curb)=>{const [x,z,yaw]=routeAt(r,d),nx=-Math.cos(yaw),nz=Math.sin(yaw),px=x+nx*curb,pz=z+nz*curb,al=Math.abs(Math.sin(yaw))>0.5;
-    const rc=al?[px-2.9,pz-1.05,px+2.9,pz+1.05]:[px-1.05,pz-2.9,px+1.05,pz+2.9],onStoep=curb>0&&LAYOUT.some(e=>e.kind==='stoep'&&(al?px-2.8>=e.r[0]&&px+2.8<=e.r[2]&&pz>=e.r[1]&&pz<=e.r[3]:pz-2.8>=e.r[1]&&pz+2.8<=e.r[3]&&px>=e.r[0]&&px<=e.r[2]));
+    const rc=al?[px-2.9,pz-1.05,px+2.9,pz+1.05]:[px-1.05,pz-2.9,px+1.05,pz+2.9],onStoep=curb!==0&&LAYOUT.some(e=>e.kind==='stoep'&&(al?px-2.8>=e.r[0]&&px+2.8<=e.r[2]&&pz>=e.r[1]&&pz<=e.r[3]:pz-2.8>=e.r[1]&&pz+2.8<=e.r[3]&&px>=e.r[0]&&px<=e.r[2]));
     return onStoep&&layFree(rc,VAN_AVOID,0.1);};
-  for(const curb of[VAN_CURB,1.9])for(let k=0;k<=30;k++)for(const sg of[-1,1]){const d=V.stopAt+sg*k*1.5;if(d<6||d>V.r.total)continue;if(free(d,curb))return {d,curb};}
+  const tg=V.o.box.getCenter(V3()),[sx,sz,sy]=routeAt(r,V.stopAt),left=(-Math.cos(sy))*(tg.x-sx)+Math.sin(sy)*(tg.z-sz)<0,
+    curbs=left?[-VAN_CURB-3.4,-VAN_CURB-2.8,VAN_CURB,1.9]:[VAN_CURB,1.9,-VAN_CURB-3.4,-VAN_CURB-2.8];
+  for(const curb of curbs)for(let k=0;k<=30;k++)for(const sg of[-1,1]){const d=V.stopAt+sg*k*1.5;if(d<6||d>V.r.total)continue;if(free(d,curb))return {d,curb};}
   return {d:V.stopAt,curb:0};}
 
 // ---- noodaggregaat: op een aanhanger achter het busje; ter plaatse in het gras naast het station, met rook en motorgeluid

@@ -97,11 +97,11 @@ function clearIncident(id){GAME.flags.scadaDown=false;$('#scada').classList.remo
 function resumeTimers(){
   RING.stations.forEach(s=>{if(s.theft)crewDispatch({box:VIEWS[s.id].box,n:1,say:`Inbraak ${s.id}: schade opnemen`,until:()=>!s.theft});
     if(s.burn?.phase==='vervangen')crewDispatch({box:VIEWS[s.id].box,n:2,say:`Trafo ${s.id} vervangen`,until:()=>!s.burn});});
-  FEEDERS.forEach(f=>{if(!f.fault)return;const F=f.fault,c=cableOf(f);if(F.spot?.known)digStart(F.spot);if(F.meas&&!F.spot?.known)addTimer(rnd(2,5),()=>measDone(c,F));
+  FEEDERS.forEach(f=>{if(!f.fault)return;const F=f.fault,c=cableOf(f);if(F.spot?.known)digStart(F.spot);if(F.meas&&!F.spot?.known){measVan(c,F);addTimer(rnd(2,5),()=>measDone(c,F));}
     const repair=()=>{F.repairAt=F.repairAt>SIM.t?F.repairAt:SIM.t+rnd(25,55);addTimer(F.repairAt-SIM.t,()=>feederRepair(f));};
     if(f.fault.stage==='search')addTimer(rnd(4,10),()=>{if(!f.fault)return;f.fault.stage='isolated';f.outFrac=f.fault.frac;readyNotice(`Storingsdienst: fout in ${f.id} ${f.name} gevonden en weggeschakeld – ${f.cb} mag weer IN`,f.cb,()=>!D[f.cb].state);repair();});else repair();});
   RING.secs.forEach(s=>{if(!s.fault)return;if(!s.located)addTimer(rnd(4,10),()=>{if(s.fault){s.located=true;pushAlarm(`Storingsdienst: kabelfout gevonden tussen ${secName(s)} – isoleer de kabel en voed terug via het normaal-open punt`,'info');}});
-    if(s.spot?.known)digStart(s.spot);if(s.meas&&!s.spot?.known)addTimer(rnd(2,5),()=>measDone(cableOf(s),s));
+    if(s.spot?.known)digStart(s.spot);if(s.meas&&!s.spot?.known){measVan(cableOf(s),s);addTimer(rnd(2,5),()=>measDone(cableOf(s),s));}
     s.repairAt=s.repairAt>SIM.t?s.repairAt:SIM.t+rnd(30,70);addTimer(s.repairAt-SIM.t,()=>ringRepair(s));});
   LINES.forEach(L=>{const ln=SIM.lines[L];if(!ln.avail&&!ln.maint)addTimer(rnd(8,20),()=>lineRestore(L));
     if(ln.maint&&ln.avail)addTimer(3,()=>{if(ln.maint&&ln.avail){ln.avail=false;ln.reason='vrijgeschakeld voor werkzaamheden';pushAlarm(`TenneT: lijn ${L} spanningsloos – aarden toegestaan`,'info');}});});

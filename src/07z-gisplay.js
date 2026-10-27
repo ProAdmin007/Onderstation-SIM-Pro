@@ -26,13 +26,38 @@ function gisMeasure(c){const F=faultOf(c);if(!F||c.kind==='ls')return deny('Deze
   if(c.kind==='feeder'&&F.stage==='search')return deny('De storingsdienst zoekt nog – wacht tot de fout is weggeschakeld');
   if(F.spot?.known)return deny('De foutplaats is al bekend');if(F.meas)return deny('De meetwagen is al onderweg');
   if(c.kind==='ring'){const open=isoSwitches(c.sec).filter(id=>D[id].state===1);if(open.length||EN.has(c.sec.node))return deny(`Meten kan alleen op een geïsoleerde kabel: open eerst ${open.join(' en ')||'de lastscheiders aan beide kanten'}`);}
-  F.meas=SIM.t;const t=rnd(6,10);pushAlarm(`Meetwagen onderweg naar ${c.name}: foutplaatsbepaling met de reflectiemeter (±${Math.round(t)} min)`,'info');
+  F.meas=SIM.t;measVan(c,F);const t=rnd(6,10);pushAlarm(`Meetwagen onderweg naar ${c.name}: foutplaatsbepaling met de reflectiemeter (±${Math.round(t)} min)`,'info');
   addTimer(t,()=>measDone(c,F));drawTablet();}
-function measDone(c,F){if(faultOf(c)!==F)return;F.spot??=faultSpot(c);F.spot.known=true;const rest=rnd(28,42);
+// de meetwagen bij een meting (niet opgeslagen: alleen beeld); de meting is pas klaar als de wagen er een paar minuten staat
+const MEAS_VAN=new WeakMap();
+function measDone(c,F){if(faultOf(c)!==F)return;const V=MEAS_VAN.get(F);if(V&&VANS.includes(V)&&SIM.t<F.meas+40&&(V.state==='heen'||SIM.t<(V.parkedAt??1e9)+4))return addTimer(1,()=>measDone(c,F));F.spot??=faultSpot(c);F.spot.known=true;const rest=rnd(28,42);
   if((F.repairAt??1e9)>SIM.t+rest){F.repairAt=SIM.t+rest;addTimer(rest,()=>c.kind==='ring'?ringRepair(c.sec):feederRepair(c.f));}
   award(10,'Foutplaats bepaald');digStart(F.spot);
   pushAlarm(`Meetwagen: fout in ${c.name} op ${Math.round(F.spot.d)} m vanaf ${spotFrom(c)}${F.spot.mof?' – bij een oude mof':''}. De graafploeg gaat direct naar de plek (reparatie ±${Math.round(rest)} min)`,'ok');}
 
+// ---- kabelmeetwagen: rijdt naar het meetpunt (station aan de kabel, of het eind bij de klant), parkeert op de stoep met open achterdeuren;
+// een technicus sluit de meetkabel aan in het station, een tweede bedient de reflectiemeter achter in de wagen
+const MV={red:mat({color:0xc81f2a,roughness:0.5}),orange:mat({color:0xf07a14,roughness:0.6}),screen:mat({color:0x0a2a1a,emissive:0x2cff8a,emissiveIntensity:1.2}),table:mat({color:0x3a3d42,roughness:0.6})};
+let MV_SIGN=null;
+function measVanModel(){const g=vGroup();vBox(g,2.0,2.5,4.8,CM.white,0,1.55,-0.5);vBox(g,2.0,1.4,1.4,CM.white,0,1.05,2.5);vBox(g,2.02,0.6,0.9,CM.glass,0,1.95,1.9);
+  vBox(g,2.02,0.3,4.82,MV.red,0,1.0,-0.5);cyl(0.04,0.04,2.2,MAT.galv,g,0.6,3.9,-1.6,6);vBox(g,0.6,0.08,0.3,MAT.galv,g,0.6,4.9,-1.6);
+  const sm=MV_SIGN??=new THREE.MeshBasicMaterial({map:signTex('KABELMEETWAGEN','#ffffff','#c81f2a',1024,128,'bold 80px Arial')});
+  for(const s of[-1,1]){const p=new THREE.Mesh(new THREE.PlaneGeometry(3.4,0.42),sm);p.position.set(s*1.02,1.75,-0.6);p.rotation.y=s*Math.PI/2;g.add(p);}
+  for(const x of[-0.7,0.7])vBox(g,0.3,0.15,0.05,CM.head,x,0.95,3.21);vWheels(g,[-0.9,0.9],[-1.9,2.2],0.38);g.visible=true;return g;}
+function measPoint(c){if(c.kind==='ring'){const st=RING.stations.find(x=>x.id===(c.sec.a||c.sec.b));if(st)return VIEWS[st.id].box;}
+  const p=c.pts[c.pts.length-1];return new THREE.Box3(V3(p[0]-1,0,p[1]-1),V3(p[0]+1,2.5,p[1]+1));}
+function measVan(c,F){if(LITE)return;const box=measPoint(c),tgt=box.getCenter(V3());
+  const V=crewDispatch({box,n:1,say:'Meettechnicus: meetkabel aansluiten',model:measVanModel,until:()=>faultOf(c)!==F||!!F.spot?.known,
+    onPark:(V,x,z,yaw)=>{const g=new THREE.Group();g.userData.dyn=true;const fx=Math.sin(yaw),fz=Math.cos(yaw),rx=x-fx*3.0,rz=z-fz*3.0;
+      // open achterdeuren, tafeltje met de reflectiemeter, de technicus erachter en de meetkabel naar het station
+      for(const s of[-1,1]){const d=vBox(g,0.05,2.2,0.95,CM.white,rx+fz*s*1.3,1.35,rz-fx*s*1.3);d.rotation.y=yaw+s*0.35;}
+      const tx=rx-fx*1.0,tz=rz-fz*1.0;vBox(g,0.9,0.05,0.6,MV.table,tx,0.85,tz);for(const s of[-1,1])vBox(g,0.05,0.85,0.05,MV.table,tx+fz*s*0.4,0.42,tz-fx*s*0.4);
+      const scr=vBox(g,0.42,0.3,0.05,MV.screen,tx,1.05,tz);scr.rotation.y=yaw;
+      const P=makePerson(4);g.add(P.g);P.g.position.set(tx-fx*0.8,0,tz-fz*0.8);P.g.rotation.y=yaw;P.armL.rotation.x=P.armR.rotation.x=-0.7;
+      const L=Math.hypot(tgt.x-rx,tgt.z-rz),cab=vBox(g,0.07,0.07,L,MV.orange,(rx+tgt.x)/2,0.05,(rz+tgt.z)/2);cab.rotation.y=Math.atan2(tgt.x-rx,tgt.z-rz);cab.castShadow=false;
+      scene.add(g);V.extra=g;},
+    onLeave:V=>{if(V.extra){scene.remove(V.extra);disposeTree(V.extra);V.extra=null;}}});
+  if(V&&VANS.includes(V))MEAS_VAN.set(F,V);}
 // ---- graafwerk: KLIC-meldingen van aannemers; kabels laten aanwijzen voorkomt graafschade
 const KLIC={jobs:[],next:null,seq:0};
 const KLIC_R=8;   // straal van het graafgebied (m)

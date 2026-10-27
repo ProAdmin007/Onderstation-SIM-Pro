@@ -4870,11 +4870,11 @@ function clearIncident(id){GAME.flags.scadaDown=false;$('#scada').classList.remo
 function resumeTimers(){
   RING.stations.forEach(s=>{if(s.theft)crewDispatch({box:VIEWS[s.id].box,n:1,say:`Inbraak ${s.id}: schade opnemen`,until:()=>!s.theft});
     if(s.burn?.phase==='vervangen')crewDispatch({box:VIEWS[s.id].box,n:2,say:`Trafo ${s.id} vervangen`,until:()=>!s.burn});});
-  FEEDERS.forEach(f=>{if(!f.fault)return;const F=f.fault,c=cableOf(f);if(F.spot?.known)digStart(F.spot);if(F.meas&&!F.spot?.known)addTimer(rnd(2,5),()=>measDone(c,F));
+  FEEDERS.forEach(f=>{if(!f.fault)return;const F=f.fault,c=cableOf(f);if(F.spot?.known)digStart(F.spot);if(F.meas&&!F.spot?.known){measVan(c,F);addTimer(rnd(2,5),()=>measDone(c,F));}
     const repair=()=>{F.repairAt=F.repairAt>SIM.t?F.repairAt:SIM.t+rnd(25,55);addTimer(F.repairAt-SIM.t,()=>feederRepair(f));};
     if(f.fault.stage==='search')addTimer(rnd(4,10),()=>{if(!f.fault)return;f.fault.stage='isolated';f.outFrac=f.fault.frac;readyNotice(`Storingsdienst: fout in ${f.id} ${f.name} gevonden en weggeschakeld – ${f.cb} mag weer IN`,f.cb,()=>!D[f.cb].state);repair();});else repair();});
   RING.secs.forEach(s=>{if(!s.fault)return;if(!s.located)addTimer(rnd(4,10),()=>{if(s.fault){s.located=true;pushAlarm(`Storingsdienst: kabelfout gevonden tussen ${secName(s)} – isoleer de kabel en voed terug via het normaal-open punt`,'info');}});
-    if(s.spot?.known)digStart(s.spot);if(s.meas&&!s.spot?.known)addTimer(rnd(2,5),()=>measDone(cableOf(s),s));
+    if(s.spot?.known)digStart(s.spot);if(s.meas&&!s.spot?.known){measVan(cableOf(s),s);addTimer(rnd(2,5),()=>measDone(cableOf(s),s));}
     s.repairAt=s.repairAt>SIM.t?s.repairAt:SIM.t+rnd(30,70);addTimer(s.repairAt-SIM.t,()=>ringRepair(s));});
   LINES.forEach(L=>{const ln=SIM.lines[L];if(!ln.avail&&!ln.maint)addTimer(rnd(8,20),()=>lineRestore(L));
     if(ln.maint&&ln.avail)addTimer(3,()=>{if(ln.maint&&ln.avail){ln.avail=false;ln.reason='vrijgeschakeld voor werkzaamheden';pushAlarm(`TenneT: lijn ${L} spanningsloos – aarden toegestaan`,'info');}});});
@@ -5567,34 +5567,37 @@ function crewDispatch(o){if(!o?.box)return;const c=o.box.getCenter(V3());
   if(o.kind==='fire'||o.walk||!outsideFence(c))return crewSpawn(o);
   const sn=gisSnap(c.x,c.z),path=sn&&gisPath(VAN_DEPOT[0],VAN_DEPOT[1],sn.x,sn.z),r=path&&vanRoute([VAN_DEPOT,...path]);
   if(!r)return crewSpawn(o);
-  const V={tow:o.tow||null,trailer:null,g:serviceVanModel(),r,pts:[VAN_DEPOT,...path],d:0,v:0,vmax:12,wait:0,stops:[],len:5.6,o,state:'heen',npcs:[],emergency:!!o.park,stopAt:routeStopAt(r,c,o.park)};VANS.push(V);
+  const V={tow:o.tow||null,trailer:null,g:(o.model||serviceVanModel)(),r,pts:[VAN_DEPOT,...path],d:0,v:0,vmax:12,wait:0,stops:[],len:5.6,o,state:'heen',npcs:[],emergency:!!o.park,stopAt:routeStopAt(r,c,o.park)};VANS.push(V);
   if(V.tow){V.trailer=gensetModel(true);V.trailer.position.set(0,0,-5.9);V.g.add(V.trailer);}
   const [x,z,yaw]=routeAt(r,0);V.g.position.set(x,0,z);V.g.rotation.y=yaw;return V;}
 function vanTick(dt){const run=!SIM.paused&&!GAME.ended,blink=(performance.now()%700)<350;
   for(let i=VANS.length-1;i>=0;i--){const V=VANS[i],o=V.o;
     if(V.state==='heen'){if(o.until?.()){vanBack(V);continue;}if(V.stopAt<V.r.total&&!V.stops.length)V.stops=[{d:V.stopAt,dur:1e9}];driveVehicle(V,run?dt:0);
       if(V.d>=V.stopAt-0.3){V.state='werk';const pk=vanParkSpot(V),[x,z,yaw]=routeAt(V.r,pk.d),nx=-Math.cos(yaw),nz=Math.sin(yaw);   // stoepkant
-        V.d=pk.d;V.base=[x,z];V.pn=[nx,nz];V.side=0;V.curb=pk.curb;V.parked=true;driveVehicle(V,0);
+        V.d=pk.d;V.base=[x,z];V.pn=[nx,nz];V.side=0;V.curb=pk.curb;V.parked=true;driveVehicle(V,0);V.parkedAt=SIM.t;
+        o.onPark?.(V,x+nx*pk.curb,z+nz*pk.curb,V.g.rotation.y);
         if(V.trailer&&V.tow){V.g.remove(V.trailer);disposeTree(V.trailer);V.trailer=null;gensetPlace(V.tow);}
-        V.npcs=crewSpawn({...o,from:V3(x+nx*(VAN_CURB+1.8),0,z+nz*(VAN_CURB+1.8))})||[];if(!V.npcs.length)vanBack(V);}}
-    else if(V.state==='werk'){V.side=Math.min(V.curb,V.side+(run?dt:0)*1.6);V.g.position.set(V.base[0]+V.pn[0]*V.side,0.1*V.side/VAN_CURB,V.base[1]+V.pn[1]*V.side);
+        const cs=pk.curb+Math.sign(pk.curb||1)*1.8;V.npcs=crewSpawn({...o,from:V3(x+nx*cs,0,z+nz*cs)})||[];if(!V.npcs.length)vanBack(V);}}
+    else if(V.state==='werk'){V.side+=clamp(V.curb-V.side,-(run?dt:0)*1.6,(run?dt:0)*1.6);V.g.position.set(V.base[0]+V.pn[0]*V.side,Math.abs(V.side-V.curb)<0.3?0.1:0,V.base[1]+V.pn[1]*V.side);
       if(!V.npcs.some(n=>NPCS.includes(n)))vanBack(V);}
-    else if(V.state==='terug'){driveVehicle(V,run?dt:0);if(V.side>0){V.side=Math.max(0,V.side-(run?dt:0)*2);const p=V.g.position;p.x+=V.pn[0]*V.side;p.z+=V.pn[1]*V.side;p.y=V.side>5.2?0.1:0;}if(V.d>=V.r.total-0.3){scene.remove(V.g);disposeTree(V.g);VANS.splice(i,1);continue;}}
+    else if(V.state==='terug'){driveVehicle(V,run?dt:0);if(V.side){V.side-=clamp(V.side,-(run?dt:0)*2,(run?dt:0)*2);const p=V.g.position;p.x+=V.pn[0]*V.side;p.z+=V.pn[1]*V.side;p.y=0;}if(V.d>=V.r.total-0.3){scene.remove(V.g);disposeTree(V.g);VANS.splice(i,1);continue;}}
     V.beacon=V.state==='werk'||V.state==='heen';}
   VAN_BEACON.emissiveIntensity=VANS.some(V=>V.beacon)&&blink?5:0.3;}
-function vanBack(V){const back=V.pts.slice().reverse(),r=vanRoute(back);if(!r){scene.remove(V.g);disposeTree(V.g);VANS.splice(VANS.indexOf(V),1);return;}
+function vanBack(V){V.o.onLeave?.(V);const back=V.pts.slice().reverse(),r=vanRoute(back);if(!r){scene.remove(V.g);disposeTree(V.g);VANS.splice(VANS.indexOf(V),1);return;}
   // eerst keren: begin op het punt waar het busje nu staat
   V.r=r;V.d=Math.min(routeNear(r,V.g.position.x,V.g.position.z),r.total);V.v=0;V.wait=0;V.stops=[];V.state='terug';
   // van de stoep af: de terugweg ligt op de andere rijstrook (±3,4 m verder)
-  if(V.parked&&V.side>0)V.side=V.side+3.4;else V.side=0;}
+  if(V.parked&&V.side)V.side=V.side+3.4;else V.side=0;}
 // het busje staat helemaal op de stoep (4,2 m uit het midden van de weg), zodat auto's erlangs kunnen
 const VAN_CURB=2.5;
 // vrije plek op de stoep: vanaf het stoppunt terug langs de route (dan vooruit), niet tegen een station, lantaarn, kast, boom of halte
 const VAN_AVOID=['kiosk','lamp','kast','kk','tree','halte','house','apt','hall','small','shed','hedge','aggregaat','car'];
 function vanParkSpot(V){const r=V.r,free=(d,curb)=>{const [x,z,yaw]=routeAt(r,d),nx=-Math.cos(yaw),nz=Math.sin(yaw),px=x+nx*curb,pz=z+nz*curb,al=Math.abs(Math.sin(yaw))>0.5;
-    const rc=al?[px-2.9,pz-1.05,px+2.9,pz+1.05]:[px-1.05,pz-2.9,px+1.05,pz+2.9],onStoep=curb>0&&LAYOUT.some(e=>e.kind==='stoep'&&(al?px-2.8>=e.r[0]&&px+2.8<=e.r[2]&&pz>=e.r[1]&&pz<=e.r[3]:pz-2.8>=e.r[1]&&pz+2.8<=e.r[3]&&px>=e.r[0]&&px<=e.r[2]));
+    const rc=al?[px-2.9,pz-1.05,px+2.9,pz+1.05]:[px-1.05,pz-2.9,px+1.05,pz+2.9],onStoep=curb!==0&&LAYOUT.some(e=>e.kind==='stoep'&&(al?px-2.8>=e.r[0]&&px+2.8<=e.r[2]&&pz>=e.r[1]&&pz<=e.r[3]:pz-2.8>=e.r[1]&&pz+2.8<=e.r[3]&&px>=e.r[0]&&px<=e.r[2]));
     return onStoep&&layFree(rc,VAN_AVOID,0.1);};
-  for(const curb of[VAN_CURB,1.9])for(let k=0;k<=30;k++)for(const sg of[-1,1]){const d=V.stopAt+sg*k*1.5;if(d<6||d>V.r.total)continue;if(free(d,curb))return {d,curb};}
+  const tg=V.o.box.getCenter(V3()),[sx,sz,sy]=routeAt(r,V.stopAt),left=(-Math.cos(sy))*(tg.x-sx)+Math.sin(sy)*(tg.z-sz)<0,
+    curbs=left?[-VAN_CURB-3.4,-VAN_CURB-2.8,VAN_CURB,1.9]:[VAN_CURB,1.9,-VAN_CURB-3.4,-VAN_CURB-2.8];
+  for(const curb of curbs)for(let k=0;k<=30;k++)for(const sg of[-1,1]){const d=V.stopAt+sg*k*1.5;if(d<6||d>V.r.total)continue;if(free(d,curb))return {d,curb};}
   return {d:V.stopAt,curb:0};}
 
 // ---- noodaggregaat: op een aanhanger achter het busje; ter plaatse in het gras naast het station, met rook en motorgeluid
@@ -6010,13 +6013,38 @@ function gisMeasure(c){const F=faultOf(c);if(!F||c.kind==='ls')return deny('Deze
   if(c.kind==='feeder'&&F.stage==='search')return deny('De storingsdienst zoekt nog – wacht tot de fout is weggeschakeld');
   if(F.spot?.known)return deny('De foutplaats is al bekend');if(F.meas)return deny('De meetwagen is al onderweg');
   if(c.kind==='ring'){const open=isoSwitches(c.sec).filter(id=>D[id].state===1);if(open.length||EN.has(c.sec.node))return deny(`Meten kan alleen op een geïsoleerde kabel: open eerst ${open.join(' en ')||'de lastscheiders aan beide kanten'}`);}
-  F.meas=SIM.t;const t=rnd(6,10);pushAlarm(`Meetwagen onderweg naar ${c.name}: foutplaatsbepaling met de reflectiemeter (±${Math.round(t)} min)`,'info');
+  F.meas=SIM.t;measVan(c,F);const t=rnd(6,10);pushAlarm(`Meetwagen onderweg naar ${c.name}: foutplaatsbepaling met de reflectiemeter (±${Math.round(t)} min)`,'info');
   addTimer(t,()=>measDone(c,F));drawTablet();}
-function measDone(c,F){if(faultOf(c)!==F)return;F.spot??=faultSpot(c);F.spot.known=true;const rest=rnd(28,42);
+// de meetwagen bij een meting (niet opgeslagen: alleen beeld); de meting is pas klaar als de wagen er een paar minuten staat
+const MEAS_VAN=new WeakMap();
+function measDone(c,F){if(faultOf(c)!==F)return;const V=MEAS_VAN.get(F);if(V&&VANS.includes(V)&&SIM.t<F.meas+40&&(V.state==='heen'||SIM.t<(V.parkedAt??1e9)+4))return addTimer(1,()=>measDone(c,F));F.spot??=faultSpot(c);F.spot.known=true;const rest=rnd(28,42);
   if((F.repairAt??1e9)>SIM.t+rest){F.repairAt=SIM.t+rest;addTimer(rest,()=>c.kind==='ring'?ringRepair(c.sec):feederRepair(c.f));}
   award(10,'Foutplaats bepaald');digStart(F.spot);
   pushAlarm(`Meetwagen: fout in ${c.name} op ${Math.round(F.spot.d)} m vanaf ${spotFrom(c)}${F.spot.mof?' – bij een oude mof':''}. De graafploeg gaat direct naar de plek (reparatie ±${Math.round(rest)} min)`,'ok');}
 
+// ---- kabelmeetwagen: rijdt naar het meetpunt (station aan de kabel, of het eind bij de klant), parkeert op de stoep met open achterdeuren;
+// een technicus sluit de meetkabel aan in het station, een tweede bedient de reflectiemeter achter in de wagen
+const MV={red:mat({color:0xc81f2a,roughness:0.5}),orange:mat({color:0xf07a14,roughness:0.6}),screen:mat({color:0x0a2a1a,emissive:0x2cff8a,emissiveIntensity:1.2}),table:mat({color:0x3a3d42,roughness:0.6})};
+let MV_SIGN=null;
+function measVanModel(){const g=vGroup();vBox(g,2.0,2.5,4.8,CM.white,0,1.55,-0.5);vBox(g,2.0,1.4,1.4,CM.white,0,1.05,2.5);vBox(g,2.02,0.6,0.9,CM.glass,0,1.95,1.9);
+  vBox(g,2.02,0.3,4.82,MV.red,0,1.0,-0.5);cyl(0.04,0.04,2.2,MAT.galv,g,0.6,3.9,-1.6,6);vBox(g,0.6,0.08,0.3,MAT.galv,g,0.6,4.9,-1.6);
+  const sm=MV_SIGN??=new THREE.MeshBasicMaterial({map:signTex('KABELMEETWAGEN','#ffffff','#c81f2a',1024,128,'bold 80px Arial')});
+  for(const s of[-1,1]){const p=new THREE.Mesh(new THREE.PlaneGeometry(3.4,0.42),sm);p.position.set(s*1.02,1.75,-0.6);p.rotation.y=s*Math.PI/2;g.add(p);}
+  for(const x of[-0.7,0.7])vBox(g,0.3,0.15,0.05,CM.head,x,0.95,3.21);vWheels(g,[-0.9,0.9],[-1.9,2.2],0.38);g.visible=true;return g;}
+function measPoint(c){if(c.kind==='ring'){const st=RING.stations.find(x=>x.id===(c.sec.a||c.sec.b));if(st)return VIEWS[st.id].box;}
+  const p=c.pts[c.pts.length-1];return new THREE.Box3(V3(p[0]-1,0,p[1]-1),V3(p[0]+1,2.5,p[1]+1));}
+function measVan(c,F){if(LITE)return;const box=measPoint(c),tgt=box.getCenter(V3());
+  const V=crewDispatch({box,n:1,say:'Meettechnicus: meetkabel aansluiten',model:measVanModel,until:()=>faultOf(c)!==F||!!F.spot?.known,
+    onPark:(V,x,z,yaw)=>{const g=new THREE.Group();g.userData.dyn=true;const fx=Math.sin(yaw),fz=Math.cos(yaw),rx=x-fx*3.0,rz=z-fz*3.0;
+      // open achterdeuren, tafeltje met de reflectiemeter, de technicus erachter en de meetkabel naar het station
+      for(const s of[-1,1]){const d=vBox(g,0.05,2.2,0.95,CM.white,rx+fz*s*1.3,1.35,rz-fx*s*1.3);d.rotation.y=yaw+s*0.35;}
+      const tx=rx-fx*1.0,tz=rz-fz*1.0;vBox(g,0.9,0.05,0.6,MV.table,tx,0.85,tz);for(const s of[-1,1])vBox(g,0.05,0.85,0.05,MV.table,tx+fz*s*0.4,0.42,tz-fx*s*0.4);
+      const scr=vBox(g,0.42,0.3,0.05,MV.screen,tx,1.05,tz);scr.rotation.y=yaw;
+      const P=makePerson(4);g.add(P.g);P.g.position.set(tx-fx*0.8,0,tz-fz*0.8);P.g.rotation.y=yaw;P.armL.rotation.x=P.armR.rotation.x=-0.7;
+      const L=Math.hypot(tgt.x-rx,tgt.z-rz),cab=vBox(g,0.07,0.07,L,MV.orange,(rx+tgt.x)/2,0.05,(rz+tgt.z)/2);cab.rotation.y=Math.atan2(tgt.x-rx,tgt.z-rz);cab.castShadow=false;
+      scene.add(g);V.extra=g;},
+    onLeave:V=>{if(V.extra){scene.remove(V.extra);disposeTree(V.extra);V.extra=null;}}});
+  if(V&&VANS.includes(V))MEAS_VAN.set(F,V);}
 // ---- graafwerk: KLIC-meldingen van aannemers; kabels laten aanwijzen voorkomt graafschade
 const KLIC={jobs:[],next:null,seq:0};
 const KLIC_R=8;   // straal van het graafgebied (m)
@@ -6164,7 +6192,7 @@ function gisDrawExtra(g,cv){const s=TAB.zoom,now=performance.now();
 // ============================================================ updatecontrole in het hoofdmenu: is er op GitHub een nieuwere versie?
 // De build zet een vingerafdruk in BUILD_ID (tests/stamp.mjs) en houdt version.json bij met eerdere versies.
 // Staat onze versie bij de eerdere versies op GitHub, dan is er een update; staat hij er niet in, dan is het eigen (nieuwer) werk.
-const BUILD_ID='3b57a67d0405';
+const BUILD_ID='0a39ad2d1bf2';
 const UPD_REPO='https://github.com/ProAdmin007/Onderstation-SIM-Pro';
 const UPD_URL='https://raw.githubusercontent.com/ProAdmin007/Onderstation-SIM-Pro/main/version.json';
 // toestand van de controle: idle, bezig, actueel, nieuw, eigen of fout
@@ -6441,7 +6469,7 @@ else{renderMenu();$('#intro').classList.remove('hidden');controls.autoRotate=tru
 if(params.has('night'))updateSky(22);
 if(params.has('view')){const v=VIEWPOS[+params.get('view')];camera.position.copy(v[0]);controls.target.copy(v[1]);controls.autoRotate=false;controls.update();}
 
-window.OS={coachRestore,coachReset,installUpdate,COACH,coachCards,setCoach,renderCoach,checkUpdate,UPD,BUILD_ID,GSV,gensetTick,gensetSpot,digStart,klicHit,digTick,digHit,MARKS,setSpeed,klicFocus,klicCard,klicCables,tabletHome,refreshInfo,XLAB,TRACES,cableDist,stationVisuals,cityRoute,CORDONS,inCordon,copperTheft,trafoFire,stationTick,stationBlock,stIsolated,stNeighborSwitches,STV,updateHUD,pushAlarm,FF,ffStart,ffStop,skipRain,openWT,closeWT,setRealWeather,autoWeather,pickWeather,wetNow,ALARM:()=>ALARM_CRIT,VANS,vanTick,crewDispatch,crewSpawn,routeAt,driveVehicle,walkActive:()=>WALK_ACTIVE,BUS,GARB,PARCEL,AMB,TRAIN,XING,HALTES,MARKET,FIG,CY,cityDay,marketOn,schoolBreak,cityTick,measDone,cableCard,isoSwitches,KLIC,klicNew,klicMark,klicHit,gisMeasure,gisMofReplace,faultOf,cableOf,cableRisk,DIGS,CABLES,GIS_NET,gisRoute,cableState,setXray,XRAY,TAB,openTablet,closeTablet,drawTablet,nearestCable,DYN,fpsTick,fireTick,WK,getWalkers:()=>WALKERS,getStrips:()=>WSTRIPS,fireStart,fireDouse,fireStop,GENSET,gsCap,SMALL,lvgLive,updateSmall,setMouseMode,getMouseMode:()=>MOUSE_MODE,cameraKeys,OVK,openPreview,closePreview,viewHour,getPreview:()=>PREVIEW,VIEWPOS,SITE,updateSites,SLD,activeFaults,renderFaults,reportPDF,listSaves,openSlots,closeSlots,SAVE_SLOTS,layoutCheck,LAYOUT,FREC,fltRec,openRec,closeRec,renderRec,selectivity,protSelect,feederT,incT,incOf,shortCircuit,EF,earthFault,efTick,efRails,efU0,railsCoupled,controls,tripBreaker,CONS,LS_LINKS,LS_ORDERS,GENSET,lsTick,lsOrder,lsSwitchOrder,lsExec,gsSend,gsOff,gsRestart,tapOrder,setEta,callPrio,lsAreas,PRIO,openLS,closeLS,renderLS,lvVolt,stationLoads,shedFactor,failP,manualP,phoneTick,refreshDevPanel,updateSLD,openKeys,closeKeys,KEY_HELP,RELAY_BAYS,relayTask,relayDue,relayDefect,initRelays,kitTests,kitMeasure,kitVerdict,kitRun,openKit,closeKit,saveGame,readSave,deleteSave,resumeGame,canSave,specOf,CABLE,soilT,FD,meppelFault,linkTick,tabAlarms,updateTabAlarms,renderTasks,INC,INCIDENTS,startIncident,endIncident,incidentTick,setTab,renderCables,GFX,setGfx,applyGfx,openSettings,closeSettings,WX_TYPES,renderer,scene,FIRE,CARS,updateWindows,updateLife,stationLive,cbMaintTask,worstCb,cond,breakerFails,CB_IDS,FLEX,setFlex,flexTick,congestion,openFlex,closeFlex,checkModel,homeBus,BUSES,SEL_BAYS,TORCH,setTorch,HO_POOL,handoverTick,REC,RP,startReplay,stopReplay,analyse,stationDamage,closeHandover,deviations,PHONE,lvFault,callFrom,phoneAnswer,dispatchLV,LVG,forecast,progAdvice,PROG,startTask:(k,...a)=>{TASK={relayTask,cbMaintTask,railTask,railBTask,stationTask,thermoTask,ringTask,feederTask,lineTask,reserveTask}[k](...a);TASK.i=0;TASK.code='WV-TEST';briefInit(TASK);renderTasks();},SIM,D,LESSONS,lessonGo,selectDevice,abortTask,railTask,stationTask,thermoTask,nearDev,VIEWS,PROT,setProt,openProt,closeProt,busFault,BUSF,RINGS,task:()=>TASK,briefSubmit,briefCheck,briefWatch,actKey,taskActs,crewNear,boxOf:id=>VIEWS[id]&&VIEWS[id].box,AudioSys,updateAudio,WX,setWeather,setSeason,SEASONS,ambient,enterKiosk,ROOMS,blockedAt,RING,NPCS,crewDispatch,ringFault,FP,enterFP,exitFP,pickCenter,camera,camInside,setRatio,setTab,GAME,MODES,applyMode,endGame,EN:()=>EN,FLOW,operate,tapStep,setAVR,resetLockout,toggleAR,regulate,computeFlows,randomEvent,lineFault,feederFault,trafoFault,offerTask,simStep,FEEDERS};
+window.OS={measVan,MEAS_VAN,coachRestore,coachReset,installUpdate,COACH,coachCards,setCoach,renderCoach,checkUpdate,UPD,BUILD_ID,GSV,gensetTick,gensetSpot,digStart,klicHit,digTick,digHit,MARKS,setSpeed,klicFocus,klicCard,klicCables,tabletHome,refreshInfo,XLAB,TRACES,cableDist,stationVisuals,cityRoute,CORDONS,inCordon,copperTheft,trafoFire,stationTick,stationBlock,stIsolated,stNeighborSwitches,STV,updateHUD,pushAlarm,FF,ffStart,ffStop,skipRain,openWT,closeWT,setRealWeather,autoWeather,pickWeather,wetNow,ALARM:()=>ALARM_CRIT,VANS,vanTick,crewDispatch,crewSpawn,routeAt,driveVehicle,walkActive:()=>WALK_ACTIVE,BUS,GARB,PARCEL,AMB,TRAIN,XING,HALTES,MARKET,FIG,CY,cityDay,marketOn,schoolBreak,cityTick,measDone,cableCard,isoSwitches,KLIC,klicNew,klicMark,klicHit,gisMeasure,gisMofReplace,faultOf,cableOf,cableRisk,DIGS,CABLES,GIS_NET,gisRoute,cableState,setXray,XRAY,TAB,openTablet,closeTablet,drawTablet,nearestCable,DYN,fpsTick,fireTick,WK,getWalkers:()=>WALKERS,getStrips:()=>WSTRIPS,fireStart,fireDouse,fireStop,GENSET,gsCap,SMALL,lvgLive,updateSmall,setMouseMode,getMouseMode:()=>MOUSE_MODE,cameraKeys,OVK,openPreview,closePreview,viewHour,getPreview:()=>PREVIEW,VIEWPOS,SITE,updateSites,SLD,activeFaults,renderFaults,reportPDF,listSaves,openSlots,closeSlots,SAVE_SLOTS,layoutCheck,LAYOUT,FREC,fltRec,openRec,closeRec,renderRec,selectivity,protSelect,feederT,incT,incOf,shortCircuit,EF,earthFault,efTick,efRails,efU0,railsCoupled,controls,tripBreaker,CONS,LS_LINKS,LS_ORDERS,GENSET,lsTick,lsOrder,lsSwitchOrder,lsExec,gsSend,gsOff,gsRestart,tapOrder,setEta,callPrio,lsAreas,PRIO,openLS,closeLS,renderLS,lvVolt,stationLoads,shedFactor,failP,manualP,phoneTick,refreshDevPanel,updateSLD,openKeys,closeKeys,KEY_HELP,RELAY_BAYS,relayTask,relayDue,relayDefect,initRelays,kitTests,kitMeasure,kitVerdict,kitRun,openKit,closeKit,saveGame,readSave,deleteSave,resumeGame,canSave,specOf,CABLE,soilT,FD,meppelFault,linkTick,tabAlarms,updateTabAlarms,renderTasks,INC,INCIDENTS,startIncident,endIncident,incidentTick,setTab,renderCables,GFX,setGfx,applyGfx,openSettings,closeSettings,WX_TYPES,renderer,scene,FIRE,CARS,updateWindows,updateLife,stationLive,cbMaintTask,worstCb,cond,breakerFails,CB_IDS,FLEX,setFlex,flexTick,congestion,openFlex,closeFlex,checkModel,homeBus,BUSES,SEL_BAYS,TORCH,setTorch,HO_POOL,handoverTick,REC,RP,startReplay,stopReplay,analyse,stationDamage,closeHandover,deviations,PHONE,lvFault,callFrom,phoneAnswer,dispatchLV,LVG,forecast,progAdvice,PROG,startTask:(k,...a)=>{TASK={relayTask,cbMaintTask,railTask,railBTask,stationTask,thermoTask,ringTask,feederTask,lineTask,reserveTask}[k](...a);TASK.i=0;TASK.code='WV-TEST';briefInit(TASK);renderTasks();},SIM,D,LESSONS,lessonGo,selectDevice,abortTask,railTask,stationTask,thermoTask,nearDev,VIEWS,PROT,setProt,openProt,closeProt,busFault,BUSF,RINGS,task:()=>TASK,briefSubmit,briefCheck,briefWatch,actKey,taskActs,crewNear,boxOf:id=>VIEWS[id]&&VIEWS[id].box,AudioSys,updateAudio,WX,setWeather,setSeason,SEASONS,ambient,enterKiosk,ROOMS,blockedAt,RING,NPCS,crewDispatch,ringFault,FP,enterFP,exitFP,pickCenter,camera,camInside,setRatio,setTab,GAME,MODES,applyMode,endGame,EN:()=>EN,FLOW,operate,tapStep,setAVR,resetLockout,toggleAR,regulate,computeFlows,randomEvent,lineFault,feederFault,trafoFault,offerTask,simStep,FEEDERS};
 const clock=new THREE.Clock();let hudT=0,skyT=0,progT=0;
 let liteAcc=0,shadowT=0,hudStep=4;
 // dieptebuffer: in het overzicht schuift de near-plane mee met de kijkafstand, zodat gevels op afstand niet flikkeren
