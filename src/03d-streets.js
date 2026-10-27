@@ -88,7 +88,7 @@ function houseExtras(x0,z,n,faceSouth,W,Dp,H,v){const f=faceSouth?1:-1,len=n*W,f
 
 // ---- kast langs de straat (LS-verdeelkast, kabelkast): direct achter de stoep aan de kant van de huizen, evenwijdig aan de straat,
 // met de deur naar de stoep. Staat daar iets (heg, tuinpad, boom, lantaarn), dan schuift hij langs de stoep op.
-const CURB_AVOID=['house','apt','hall','small','kiosk','hedge','shed','tree','lamp','kast','kk','car','road','woonerf','parkeer','halte','stoep','plein','laad'];
+const CURB_AVOID=['truck','house','apt','hall','small','kiosk','hedge','shed','tree','lamp','kast','kk','car','road','woonerf','parkeer','halte','stoep','plein','laad'];
 function curbPlace(x,z,w=0.9,d=0.38){const strips=LAYOUT.filter(e=>e.kind==='stoep').map(e=>{const [x0,z0,x1,z1]=e.r,h=x1-x0>=z1-z0,cx=clamp(x,x0,x1),cz=clamp(z,z0,z1);return {e,h,dist:Math.hypot(cx-x,cz-z)};}).sort((a,b)=>a.dist-b.dist);
   const roadAt=(px,pz)=>LAYOUT.some(o=>o.kind==='road'&&px>o.r[0]&&px<o.r[2]&&pz>o.r[1]&&pz<o.r[3]);
   for(const s of strips.slice(0,6)){const [x0,z0,x1,z1]=s.e.r;

@@ -200,6 +200,7 @@ function buildDistrict(){
     smallPlane(2.4,1.2,sm,104.5,4.4,291.8,Math.PI);smallPlane(2.4,1.2,sm,104.5,4.4,292.2,0);}
   for(let x=-120;x<190;x+=30){streetLight(x,268.5);streetLight(x+15,391.5);}
   dressStreets();
+  buildIndustry();   // bedrijventerreinen aankleden (03g-industry.js)
   RING.stations.forEach(kiosk);
   // LS-verdeelkasten: direct achter de stoep, evenwijdig aan de straat (curbPlace)
   [[-62,112],[-18,112],[-104,165],[-36,228],[52,124],[96,226],[150,114]].forEach(([x,z])=>{const p=curbPlace(x,z,0.9,0.35),g=new THREE.Group();g.position.set(p.x,0,p.z);g.rotation.y=p.ry;staticRoot.add(g);
