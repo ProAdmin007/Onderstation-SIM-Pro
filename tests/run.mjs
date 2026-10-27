@@ -661,6 +661,15 @@ const TESTS = [
         return { eerste, tweede, geweigerd, geannuleerd, download, ongeldig }; });
       for (const [k, v] of Object.entries(r)) assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
   } },
+  { name: 'meetwagen rukt automatisch uit zodra de kabelfout gevonden en geïsoleerd is (instelling), en niet als hij uit staat', query: '?autostart&t=10', async run(p) {
+      const r = await p.evaluate(async () => { const O = OS; T.quiet(); const sec = O.RING.secs.find(s => s.id === 'K23'), f = O.FEEDERS.find(x => x.id === 'F3');
+        O.setAutoMeet(true); O.ringFault(f, sec, 200); sec.located = true; await T.step(2); const nietGeisoleerd = !sec.meas;
+        O.isoSwitches(sec).forEach(id => O.D[id].state = 0); O.computeFlows(); await T.step(2); const auto = !!sec.meas;
+        const sec2 = O.RING.secs.find(s => s.id === 'K78'); O.setAutoMeet(false); O.ringFault(O.FEEDERS.find(x => x.id === 'F1'), sec2, 200); sec2.located = true;
+        O.isoSwitches(sec2).forEach(id => O.D[id].state = 0); O.computeFlows(); await T.step(3); const uit = !sec2.meas; O.setAutoMeet(true);
+        return { nietGeisoleerd, auto, uit }; });
+      for (const [k, v] of Object.entries(r)) assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
+  } },
   { name: 'stadsleven: weekmarkt, schoolplein, trein met overweg, bus met haltes (wacht bij een dichte overweg)', query: '?autostart&t=10&season=zomer', async run(p) {
       const r = await p.evaluate(async () => { const O = OS, tick = (s, dt = 0.1) => { for (let i = 0; i < s / dt; i++) O.cityTick(dt); };
         const zat = O.cityDay() === 6; tick(1); const markt = O.marketOn() && O.MARKET.visible && O.FIG.slice(0, 16).every(f => f.on);

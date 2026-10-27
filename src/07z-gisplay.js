@@ -21,12 +21,15 @@ function feederRepair(f){const F=f.fault;if(!F||SIM.t+0.05<F.repairAt)return;con
 function gisAfterRepair(c,sp){if(!c||!sp)return;digStop(sp);if(sp.known||sp.mof){const i=c.moffen.findIndex(m=>Math.abs(m.d-sp.d)<1);if(i>=0)c.moffen.splice(i,1);c.moffen.push({d:sp.d,x:sp.x,z:sp.z,year:GIS_YEAR});c.moffen.sort((a,b)=>a.d-b.d);buildMofMesh();}}
 
 // ---- foutplaatsbepaling: meetwagen met reflectiemeter op een spanningsloze kabel
-function gisMeasure(c){const F=faultOf(c);if(!F||c.kind==='ls')return deny('Deze kabel heeft geen MS-storing om in te meten');
-  if(c.kind==='ring'&&!c.sec.located)return deny('Eerst moet duidelijk zijn wélke kabel het is: de storingsdienst leest de verklikkers');
-  if(c.kind==='feeder'&&F.stage==='search')return deny('De storingsdienst zoekt nog – wacht tot de fout is weggeschakeld');
-  if(F.spot?.known)return deny('De foutplaats is al bekend');if(F.meas)return deny('De meetwagen is al onderweg');
-  if(c.kind==='ring'){const open=isoSwitches(c.sec).filter(id=>D[id].state===1);if(open.length||EN.has(c.sec.node))return deny(`Meten kan alleen op een geïsoleerde kabel: open eerst ${open.join(' en ')||'de lastscheiders aan beide kanten'}`);}
-  F.meas=SIM.t;measVan(c,F);const t=rnd(6,10);pushAlarm(`Meetwagen onderweg naar ${c.name}: foutplaatsbepaling met de reflectiemeter (±${Math.round(t)} min)`,'info');
+// kan er nu gemeten worden? (null = ja, anders de reden)
+function measBlock(c){const F=faultOf(c);if(!F||c.kind==='ls')return 'Deze kabel heeft geen MS-storing om in te meten';
+  if(c.kind==='ring'&&!c.sec.located)return 'Eerst moet duidelijk zijn wélke kabel het is: de storingsdienst leest de verklikkers';
+  if(c.kind==='feeder'&&F.stage==='search')return 'De storingsdienst zoekt nog – wacht tot de fout is weggeschakeld';
+  if(F.spot?.known)return 'De foutplaats is al bekend';if(F.meas)return 'De meetwagen is al onderweg';
+  if(c.kind==='ring'){const open=isoSwitches(c.sec).filter(id=>D[id].state===1);if(open.length||EN.has(c.sec.node))return `Meten kan alleen op een geïsoleerde kabel: open eerst ${open.join(' en ')||'de lastscheiders aan beide kanten'}`;}
+  return null;}
+function gisMeasure(c,auto=false){const why=measBlock(c);if(why)return auto?null:deny(why);const F=faultOf(c);
+  F.meas=SIM.t;measVan(c,F);const t=rnd(6,10);pushAlarm(`Meetwagen ${auto?'rukt automatisch uit':'onderweg'} naar ${c.name}: foutplaatsbepaling met de reflectiemeter (±${Math.round(t)} min)`,'info');
   addTimer(t,()=>measDone(c,F));drawTablet();}
 // de meetwagen bij een meting (niet opgeslagen: alleen beeld); de meting is pas klaar als de wagen er een paar minuten staat
 const MEAS_VAN=new WeakMap();
@@ -100,7 +103,11 @@ function gisWorkTick(){for(const c of CABLES){const w=c.work;if(!w)continue;
   if(['aan','warm'].includes(cableState(c))){digStop(w);c.work=null;incident();pushAlarm(`Montageploeg: ${c.name} kwam onder spanning terwijl wij aan de moffen werkten!`,'crit');continue;}
   if(SIM.t>=w.until){digStop(w);c.work=null;c.moffen.forEach(m=>{if(m.year<1990)m.year=GIS_YEAR;});buildMofMesh();award(4*w.n,'Oude moffen preventief vervangen');
     pushAlarm(`Montageploeg: ${w.n} mof${w.n>1?'fen':''} in ${c.name} vervangen – de kabel mag weer in bedrijf`,'ok');drawTablet();}}}
-function gisSimTick(){klicTick();gisWorkTick();}
+// automatisch uitrukken (instelling): zodra een MS-kabelfout gevonden en de kabel geïsoleerd of weggeschakeld is
+let AUTO_MEET=true;try{AUTO_MEET=localStorage.getItem('osz-automeet')!=='0';}catch(e){}
+function setAutoMeet(on){AUTO_MEET=!!on;try{localStorage.setItem('osz-automeet',AUTO_MEET?'1':'0');}catch(e){}}
+function autoMeasure(){if(!AUTO_MEET||MODES[GAME.mode]?.les)return;for(const c of CABLES)if((c.kind==='ring'||c.kind==='feeder')&&faultOf(c)&&!measBlock(c))gisMeasure(c,true);}
+function gisSimTick(){klicTick();gisWorkTick();autoMeasure();}
 
 // ---- graafplek in 3D: graafmachine die echt graaft (giek, steel en bak), groeiende sleuf en grondhoop, afzetting en grondwerkers
 // Bij graafschade: vlamboog met vonken en rook, de machine stopt met de giek omhoog, de grondwerkers rennen weg en de geraakte kabel ligt zwartgeblakerd in de sleuf.
