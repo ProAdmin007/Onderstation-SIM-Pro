@@ -10,7 +10,8 @@ const UPD={state:'idle',remote:null,open:false,auto:false,msg:'',busy:false,relo
 const UPD_HTML='https://raw.githubusercontent.com/ProAdmin007/Onderstation-SIM-Pro/main/index.html';
 // na een installatie: is de nieuwe versie echt geladen? (staat in de browseropslag tot de volgende start)
 (()=>{let exp=null;try{exp=localStorage.getItem('osz-upd-expect');localStorage.removeItem('osz-upd-expect');}catch(e){}
-  if(!exp)return;UPD.open=true;if(exp!==BUILD_ID)UPD_DB.del('gameFile').catch(()=>{});UPD.msg=exp===BUILD_ID?`✓ Bijgewerkt naar versie ${BUILD_ID}. Veel plezier!`:'Het bijgewerkte bestand is niet het bestand dat nu draait. Open dat bestand, of installeer opnieuw en wijs dan de <code>index.html</code> aan waarmee je het spel opent.';})();
+  if(!exp)return;UPD.open=true;setTimeout(()=>{if(UPD.state!=='nieuw'){UPD.msg='';UPD.open=false;renderUpdate();}},30000);   // melding na een halve minuut weg
+  if(exp!==BUILD_ID)UPD_DB.del('gameFile').catch(()=>{});UPD.msg=exp===BUILD_ID?`✓ Bijgewerkt naar versie ${BUILD_ID}. Veel plezier!`:'Het bijgewerkte bestand is niet het bestand dat nu draait. Open dat bestand, of installeer opnieuw en wijs dan de <code>index.html</code> aan waarmee je het spel opent.';})();
 // ---- het bestand van het spel onthouden (Chrome/Edge): één keer aanwijzen, daarna schrijft de update er direct overheen
 // De koppeling (FileSystemFileHandle) staat in IndexedDB; de browser vraagt zo nodig toestemming om het bestand te wijzigen.
 const UPD_DB={open:()=>new Promise((ok,no)=>{const q=indexedDB.open('osz-update',1);q.onupgradeneeded=()=>q.result.createObjectStore('kv');q.onsuccess=()=>ok(q.result);q.onerror=()=>no(q.error);}),
@@ -48,7 +49,7 @@ async function checkUpdate(url=UPD_URL){if(UPD.state==='bezig')return;UPD.state=
 function updateHtml(){const v=UPD.remote,d=v?.date?new Date(v.date).toLocaleDateString('nl-NL',{day:'numeric',month:'long',year:'numeric'}):'';
   const label={idle:'🔄 Controleer op update',bezig:'⏳ Controleren…',actueel:'✓ Je hebt de nieuwste versie',nieuw:'⬆ Nieuwe versie beschikbaar!',eigen:'✓ Eigen versie (nog niet op GitHub)',fout:'⚠ Controle mislukt – opnieuw proberen'}[UPD.state];
   return `<div class="upd-row"><button id="updBtn" class="mini ${UPD.state==='nieuw'?'upd-new':''}" title="Vergelijkt deze versie met die op GitHub">${label}</button>
-    <span class="upd-v">versie ${BUILD_ID}${v&&UPD.state==='nieuw'?` · nieuw op GitHub: ${v.build} (${d})`:''}</span></div>
+    <span class="upd-v" title="Versie-ID van dit bestand. Het spel vergelijkt hem bij het openen van het menu met de versie op GitHub; is er een nieuwere, dan knippert de knop en installeer je hem met één klik.">versie ${BUILD_ID}${v&&UPD.state==='nieuw'?` · nieuw op GitHub: ${v.build} (${d})`:''}</span></div>
     ${UPD.open&&(UPD.state==='nieuw'||UPD.msg)?`<div class="upd-box">${UPD.state==='nieuw'?`<b>Er staat een nieuwere versie op GitHub</b> (${d}).<br><small>${window.showOpenFilePicker?'Het spel haalt de nieuwe <code>index.html</code> op, schrijft hem over het huidige bestand heen en herstart meteen. De eerste keer wijs je één keer de <code>index.html</code> van het spel aan; daarna gaat het vanzelf (de browser vraagt hooguit om toestemming).':'Het spel downloadt de nieuwe <code>index.html</code>. Zet die over de oude heen en open hem.'} Je opgeslagen spellen blijven bewaard.</small>
       <div class="upd-act"><button class="mini primary" data-upd="install" ${UPD.busy?'disabled':''}>${window.showOpenFilePicker?'⬇ Nieuwe versie installeren':'⬇ Download index.html'}</button><a class="mini" href="${UPD_REPO}/commits/main" target="_blank" rel="noopener">Wat is er nieuw?</a></div>`:''}
       ${UPD.msg?`<div class="upd-msg">${UPD.msg}</div>`:''}</div>`:''}`;}
