@@ -661,6 +661,12 @@ const TESTS = [
         return { eerste, tweede, geweigerd, geannuleerd, download, ongeldig }; });
       for (const [k, v] of Object.entries(r)) assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
   } },
+  { name: 'aanwijzen: gebouwen zonder apparaat (serverruimte) geven geen fout bij hover en rondlopen', query: '?autostart&t=11', async run(p) {
+      const r = await p.evaluate(() => { const O = OS, c = O.VIEWS.SRV.center; O.camera.position.set(c.x, c.y + 40, c.z + 25); O.camera.lookAt(c); O.camera.updateMatrixWorld();
+        const v = c.clone().project(O.camera), x = (v.x + 1) / 2 * innerWidth, y = (1 - v.y) / 2 * innerHeight; let fout = null, id;
+        try { id = O.pickAt(x, y); } catch (e) { fout = e.message; } return { fout, id: id ?? null }; });
+      assert(!r.fout && r.id !== 'SRV', `aanwijzen gaat mis: ${JSON.stringify(r)}`);
+  } },
   { name: 'meetwagen rukt automatisch uit zodra de kabelfout gevonden en geïsoleerd is (instelling), en niet als hij uit staat', query: '?autostart&t=10', async run(p) {
       const r = await p.evaluate(async () => { const O = OS; T.quiet(); const sec = O.RING.secs.find(s => s.id === 'K23'), f = O.FEEDERS.find(x => x.id === 'F3');
         O.setAutoMeet(true); O.ringFault(f, sec, 200); sec.located = true; await T.step(2); const nietGeisoleerd = !sec.meas;

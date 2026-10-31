@@ -55,7 +55,7 @@ function exitFP(){
 }
 function toggleFP(){FP.on?exitFP():enterFP();}
 function pickCenter(){camera.updateMatrixWorld();ray.setFromCamera(new THREE.Vector2(0,0),camera);ray.far=REACH;const ins=camInside();
-  const hits=ray.intersectObjects(pickables,false).filter(h=>h.object.userData.inside===ins);ray.far=Infinity;if(!hits.length)return null;
+  const hits=ray.intersectObjects(pickables,false).filter(h=>h.object.userData.inside===ins&&D[h.object.userData.devId]);ray.far=Infinity;if(!hits.length)return null;
   const d0=hits[0].distance;return hits.filter(h=>h.distance<d0+2.5).sort((a,b)=>a.object.userData.vol-b.object.userData.vol)[0].object.userData.devId;}
 function actionLabel(d){if(d.type==='cb'||d.type==='lvs')return d.state?'UIT schakelen':'IN schakelen';if(['ds','es','lbs'].includes(d.type))return d.state?'openen':'sluiten';return null;}
 function updateFP(dt){

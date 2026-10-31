@@ -282,7 +282,7 @@ function updateLabels(force){const w=innerWidth,h=innerHeight,ins=camInside();
     if(c!==L.cls||force){L.cls=c;L.el.className='lbl '+c;}}}
 const ray=new THREE.Raycaster(),ndc=new THREE.Vector2();
 function pickAt(cx,cy){ndc.set(cx/innerWidth*2-1,-(cy/innerHeight)*2+1);ray.setFromCamera(ndc,camera);
-  const ins=camInside();const hits=ray.intersectObjects(pickables,false).filter(h=>h.object.userData.inside===ins);if(!hits.length)return null;const d0=hits[0].distance;
+  const ins=camInside();const hits=ray.intersectObjects(pickables,false).filter(h=>h.object.userData.inside===ins&&D[h.object.userData.devId]);if(!hits.length)return null;const d0=hits[0].distance;
   return hits.filter(h=>h.distance<d0+8).sort((a,b)=>a.object.userData.vol-b.object.userData.vol)[0].object.userData.devId;}
 let downXY=null,hoverId=null,moveEv=null;
 renderer.domElement.addEventListener('pointerdown',e=>{downXY=[e.clientX,e.clientY];fly=null;});
