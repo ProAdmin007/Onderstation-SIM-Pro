@@ -295,9 +295,10 @@ function updateHover(){if(FP.on||!moveEv)return;const e=moveEv;moveEv=null;const
   else tt.style.display='none';}
 
 // ============================================================ camera
+const VIEWPOS_SRV=[V3(-27.6,1.9,47.4),V3(-37,1.4,51.2)];   // serverruimte (index 12)
 const VIEWPOS=[[V3(100,52,118),V3(22,3,8)],[V3(-4,13,-2),V3(-30,5,-22)],[V3(88,17,14),V3(32,3,32)],[V3(64,11,32),V3(30,3,50)],[V3(22.1,215,34),V3(22,0,10)],
   [V3(-2.2,2.5,47.6),V3(0.4,1.6,54.2)],[V3(58.8,2.5,47.6),V3(61.4,1.6,54.2)],[V3(30,95,330),V3(10,0,175)],[V3(40,90,470),V3(30,0,330)],
-  [V3(-250,48,172),V3(-295,6,307)],[V3(410,85,-40),V3(440,4,190)],[V3(-160,70,-270),V3(-300,2,-140)]];   // ziekenhuis, kassen, waterzuivering
+  [V3(-250,48,172),V3(-295,6,307)],[V3(410,85,-40),V3(440,4,190)],[V3(-160,70,-270),V3(-300,2,-140)],VIEWPOS_SRV];   // ziekenhuis, kassen, waterzuivering
 let fly=null;
 function flyTo(pos,target,dur=1.5){if(FP.on)exitFP();fly={t:0,dur,p0:camera.position.clone(),t0:controls.target.clone(),p1:pos,t1:target};controls.autoRotate=false;}
 function fmtClock(t){const m=((t%1440)+1440)%1440;return `${String(Math.floor(m/60)).padStart(2,'0')}:${String(Math.floor(m%60)).padStart(2,'0')}`;}

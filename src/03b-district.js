@@ -134,8 +134,9 @@ function kiosk(s){
   cyl(0.08,0.08,0.55,IM.redPaint,root,-2.2,Y+0.3,1.2,14);
   for(let k=0;k<3;k++)rod(V3(-hw+KT+0.02,Y+1.6,-0.2+k*0.25),V3(-hw+KT+0.02,Y+0.9,-0.1+k*0.25),0.02,mat({color:0x5aa02c,roughness:0.6}),root,5);
   const po=mesh(new THREE.PlaneGeometry(0.55,0.75),mat({map:posterTex(),roughness:0.7}),root,-hw+KT+0.01,Y+1.4,0.75);po.rotation.y=Math.PI/2;po.castShadow=false;
+  kioskRTU(root,Y,KH,wrect);   // RTU-kast met LTE en glasvezel (05c-servers.js)
 }
-function updateKioskLight(){KUPD.forEach(f=>f());const i=camInside(),r=i&&ROOMS[i-1];if(r&&r.kiosk){kioskLight.position.set((r.x0+r.x1)/2,r.y1-0.3,(r.z0+r.z1)/2);kioskLight.intensity=22;}else kioskLight.intensity=0;}
+function updateKioskLight(){KUPD.forEach(f=>f());const i=camInside(),r=i&&ROOMS[i-1];if(r&&(r.kiosk||r.id==='SRV')){kioskLight.position.set((r.x0+r.x1)/2,r.y1-0.3,(r.z0+r.z1)/2);kioskLight.distance=r.kiosk?7:16;kioskLight.intensity=r.kiosk?22:110;}else kioskLight.intensity=0;}
 function enterKiosk(id){const r=ROOMS.find(r=>r.kioskId===id);if(!r)return;FP.last={x:r.cx,z:r.cz,yaw:r.yaw,pitch:-0.08};
   if(FP.on){FP.pos.set(r.cx,0,r.cz);FP.yaw=r.yaw;FP.pitch=-0.08;}else enterFP();if(SEL)selectDevice(null);}
 

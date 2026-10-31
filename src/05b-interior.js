@@ -1,6 +1,6 @@
 
 // ============================================================ MS-gebouwen: interieur (10 kV en 20 kV)
-const ROOMS=BUILDINGS.map((b,i)=>({idx:i+1,x0:b.x0+0.3,x1:b.x1-0.3,z0:b.z0+0.3,z1:b.z1-0.3,y0:0.45,y1:5.18,doors:b.doors}));
+const ROOMS=BUILDINGS.map((b,i)=>({idx:i+1,id:b.id,x0:b.x0+0.3,x1:b.x1-0.3,z0:b.z0+0.3,z1:b.z1-0.3,y0:0.45,y1:5.18,doors:b.doors}));
 const IN=ROOMS[0];
 const camInside=()=>{const p=camera.position;const r=ROOMS.find(r=>p.x>r.x0&&p.x<r.x1&&p.z>r.z0&&p.z<r.z1&&p.y<r.y1);return r?r.idx:0;};
 const IM={
@@ -83,7 +83,7 @@ function buildRoomShell(r){
   r.doors.forEach(x=>{box(2.1,2.65,0.05,MAT.door,staticRoot,x,Y+1.32,r.z0+0.03);box(0.04,0.04,0.12,MAT.trim,staticRoot,x+0.15,Y+1.2,r.z0+0.1);});
   box(W-0.6,0.04,0.012,MAT.copper,staticRoot,cx,Y+0.4,r.z0+0.02);
   for(let x=r.x0+4;x<r.x1-2;x+=6)for(const z of[49,53]){box(1.4,0.06,0.22,IM.led,staticRoot,x,r.y1-0.35,z);for(const s of[-0.6,0.6])rod(V3(x+s,r.y1-0.32,z),V3(x+s,r.y1,z),0.006,MAT.galv,staticRoot,4);}
-  for(let x=r.x0+W/6;x<r.x1;x+=W/3){const l=new THREE.PointLight(0xf4f2ea,70,9,2);l.position.set(x,r.y1-0.5,51);scene.add(l);}
+  if(r.id!=='SRV')for(let x=r.x0+W/6;x<r.x1;x+=W/3){const l=new THREE.PointLight(0xf4f2ea,70,9,2);l.position.set(x,r.y1-0.5,51);scene.add(l);}   // serverruimte: verplaatsbare lamp (zie updateKioskLight)
   r.doors.forEach(x=>{cyl(0.08,0.08,0.55,IM.redPaint,staticRoot,x+1.6,Y+0.3,r.z0+0.15,14);cyl(0.03,0.03,0.08,MAT.black,staticRoot,x+1.6,Y+0.61,r.z0+0.15,8);});
 }
 function buildPanelRow(panels,cx,room){
@@ -123,6 +123,7 @@ function buildInterior(){
   for(const x of[13.4,17.8])for(const z of[54.95,55.45])rod(V3(x,Y,z),V3(x,Y+1.5,z),0.02,MAT.galvDark,staticRoot,6);
   plate('ACCU 110 V DC',staticRoot,15.6,Y+1.75,54.9,Math.PI,0.6);
   // eigenbedrijfstransformator
+  buildServerRoom(ROOMS.find(r=>r.id==='SRV'));
   box(1.3,1.7,1.0,MAT.trafo,staticRoot,17.6,Y+0.85,47.6);iplane(0.9,0.7,MAT.louvre,17.6,Y+1.0,48.11,0);plate('EB 10/0,4 kV',staticRoot,17.6,Y+1.55,48.11,0,0.5);
 }
 // alleen schermen in de buurt van de camera, en alleen als er iets veranderd is (elke upload naar de GPU kost tijd)

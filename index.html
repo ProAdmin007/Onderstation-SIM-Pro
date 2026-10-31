@@ -415,6 +415,7 @@ body.previewing #tasks,body.previewing #alarms,body.previewing #faults{opacity:.
   <button data-v="9" title="F5 Ziekenhuis (±450 m westelijk, aan de rand van de stad)">Ziekenhuis</button>
   <button data-v="10" title="F6 Glastuinbouw Oost (±250 m oostelijk)">Kassen</button>
   <button data-v="11" title="G4 Waterzuivering (±330 m noordwestelijk)">RWZI</button>
+  <button data-v="12" title="Serverruimte met de SCADA-servers op het onderstation">Serverruimte</button>
   <button id="pvBtn" class="tool" title="Weer en tijd bekijken: klok schuiven, weer en seizoen kiezen (alleen kijken)"><kbd>T</kbd>Weer &amp; tijd</button>
   <button id="xrayBtn" class="tool" title="Röntgenblik: zie in 3D waar de kabels onder straat en stoep liggen"><kbd>X</kbd>Kabels</button>
   <button id="gisBtn" class="tool" title="Kabeltablet: kaart met alle kabels, moffen en je eigen positie"><kbd>G</kbd>Tablet</button>
@@ -994,7 +995,8 @@ function buildFence(){
 }
 
 const BUILDINGS=[{id:'MS',x0:-20,x1:20,z0:46,z1:56,doors:[-14,-6,6],label:'OS ZUIDWOLDE  ·  10 kV'},
-  {id:'MS20',x0:46,x1:76,z0:46,z1:56,doors:[51,59,69],label:'OS ZUIDWOLDE  ·  20 kV'}];
+  {id:'MS20',x0:46,x1:76,z0:46,z1:56,doors:[51,59,69],label:'OS ZUIDWOLDE  ·  20 kV'},
+  {id:'SRV',x0:-42,x1:-26,z0:46,z1:55.5,doors:[-36],label:'SCADA · SERVERS'}];
 function buildBuilding({id,x0,x1,z0,z1,doors,label}){
   const H=5.2,root=grp(),bt=C.brick,W=x1-x0,Dz=z1-z0,cx=(x0+x1)/2,cz=(z0+z1)/2;
   const brick=(len)=>{const t=toTex(bt,len/1.76,H/1.5);return mat({map:t,bumpMap:toTex(bt,len/1.76,H/1.5,false),bumpScale:0.8,roughness:0.88});};
@@ -1013,8 +1015,10 @@ function buildBuilding({id,x0,x1,z0,z1,doors,label}){
   for(let x=x0+3;x<x1-2;x+=W/6){const lv=mesh(new THREE.PlaneGeometry(1.2,0.8),MAT.louvre,root,x,3.6,z1+0.01);lv.castShadow=false;}
   [x0+W*0.42,x0+W*0.82].forEach(x=>{const lv=mesh(new THREE.PlaneGeometry(1.2,0.8),MAT.louvre,root,x,4.1,z0-0.01);lv.rotation.y=Math.PI;lv.castShadow=false;});
   box(1.1,2.3,0.08,MAT.door,root,x1-6,1.6,z1+0.05);box(2,0.1,1.2,MAT.trim,root,x1-6,3.0,z1+0.6);
+  if(id==='SRV'){for(let i=0;i<2;i++){box(1.0,0.9,0.45,MAT.cabinet,root,x1+0.45,0.7,z0+2+i*1.4);cyl(0.32,0.32,0.05,MAT.black,root,x1+0.68,0.75,z0+2+i*1.4,14).rotation.z=Math.PI/2;}   // buitendelen koeling
+    cyl(0.05,0.05,3,MAT.galv,root,x0+2,H+1.6,z1-1.5,6);box(0.5,0.08,0.08,MAT.galv,root,x0+2,H+2.8,z1-1.5);cyl(0.1,0.1,0.3,MAT.white,root,x0+3.2,H+0.4,z1-1.5,10);}   // LTE-mast en GPS-antenne
   const nb=toTex(textCanvas(label,{w:1024,h:128,bg:'#1d2b45',fg:'#ffffff',font:'bold 64px Arial',border:false}));
-  const sg=mesh(new THREE.PlaneGeometry(6,0.75),mat({map:nb,roughness:0.5}),root,doors[1]+3.6,4.4,z0-0.02);sg.rotation.y=Math.PI;sg.castShadow=false;
+  const sg=mesh(new THREE.PlaneGeometry(6,0.75),mat({map:nb,roughness:0.5}),root,doors.length>1?doors[1]+3.6:cx+3.5,4.4,z0-0.02);sg.rotation.y=Math.PI;sg.castShadow=false;
   regView(id,root,null,{labelPos:V3(cx,H+1.6,cz)});
 }
 
@@ -1246,8 +1250,9 @@ function kiosk(s){
   cyl(0.08,0.08,0.55,IM.redPaint,root,-2.2,Y+0.3,1.2,14);
   for(let k=0;k<3;k++)rod(V3(-hw+KT+0.02,Y+1.6,-0.2+k*0.25),V3(-hw+KT+0.02,Y+0.9,-0.1+k*0.25),0.02,mat({color:0x5aa02c,roughness:0.6}),root,5);
   const po=mesh(new THREE.PlaneGeometry(0.55,0.75),mat({map:posterTex(),roughness:0.7}),root,-hw+KT+0.01,Y+1.4,0.75);po.rotation.y=Math.PI/2;po.castShadow=false;
+  kioskRTU(root,Y,KH,wrect);   // RTU-kast met LTE en glasvezel (05c-servers.js)
 }
-function updateKioskLight(){KUPD.forEach(f=>f());const i=camInside(),r=i&&ROOMS[i-1];if(r&&r.kiosk){kioskLight.position.set((r.x0+r.x1)/2,r.y1-0.3,(r.z0+r.z1)/2);kioskLight.intensity=22;}else kioskLight.intensity=0;}
+function updateKioskLight(){KUPD.forEach(f=>f());const i=camInside(),r=i&&ROOMS[i-1];if(r&&(r.kiosk||r.id==='SRV')){kioskLight.position.set((r.x0+r.x1)/2,r.y1-0.3,(r.z0+r.z1)/2);kioskLight.distance=r.kiosk?7:16;kioskLight.intensity=r.kiosk?22:110;}else kioskLight.intensity=0;}
 function enterKiosk(id){const r=ROOMS.find(r=>r.kioskId===id);if(!r)return;FP.last={x:r.cx,z:r.cz,yaw:r.yaw,pitch:-0.08};
   if(FP.on){FP.pos.set(r.cx,0,r.cz);FP.yaw=r.yaw;FP.pitch=-0.08;}else enterFP();if(SEL)selectDevice(null);}
 
@@ -3536,7 +3541,7 @@ function updateRain(dt){updateSnow(dt);const r=RAIN;r.ls.visible=WX.cur.rain>0.0
 
 
 // ============================================================ MS-gebouwen: interieur (10 kV en 20 kV)
-const ROOMS=BUILDINGS.map((b,i)=>({idx:i+1,x0:b.x0+0.3,x1:b.x1-0.3,z0:b.z0+0.3,z1:b.z1-0.3,y0:0.45,y1:5.18,doors:b.doors}));
+const ROOMS=BUILDINGS.map((b,i)=>({idx:i+1,id:b.id,x0:b.x0+0.3,x1:b.x1-0.3,z0:b.z0+0.3,z1:b.z1-0.3,y0:0.45,y1:5.18,doors:b.doors}));
 const IN=ROOMS[0];
 const camInside=()=>{const p=camera.position;const r=ROOMS.find(r=>p.x>r.x0&&p.x<r.x1&&p.z>r.z0&&p.z<r.z1&&p.y<r.y1);return r?r.idx:0;};
 const IM={
@@ -3619,7 +3624,7 @@ function buildRoomShell(r){
   r.doors.forEach(x=>{box(2.1,2.65,0.05,MAT.door,staticRoot,x,Y+1.32,r.z0+0.03);box(0.04,0.04,0.12,MAT.trim,staticRoot,x+0.15,Y+1.2,r.z0+0.1);});
   box(W-0.6,0.04,0.012,MAT.copper,staticRoot,cx,Y+0.4,r.z0+0.02);
   for(let x=r.x0+4;x<r.x1-2;x+=6)for(const z of[49,53]){box(1.4,0.06,0.22,IM.led,staticRoot,x,r.y1-0.35,z);for(const s of[-0.6,0.6])rod(V3(x+s,r.y1-0.32,z),V3(x+s,r.y1,z),0.006,MAT.galv,staticRoot,4);}
-  for(let x=r.x0+W/6;x<r.x1;x+=W/3){const l=new THREE.PointLight(0xf4f2ea,70,9,2);l.position.set(x,r.y1-0.5,51);scene.add(l);}
+  if(r.id!=='SRV')for(let x=r.x0+W/6;x<r.x1;x+=W/3){const l=new THREE.PointLight(0xf4f2ea,70,9,2);l.position.set(x,r.y1-0.5,51);scene.add(l);}   // serverruimte: verplaatsbare lamp (zie updateKioskLight)
   r.doors.forEach(x=>{cyl(0.08,0.08,0.55,IM.redPaint,staticRoot,x+1.6,Y+0.3,r.z0+0.15,14);cyl(0.03,0.03,0.08,MAT.black,staticRoot,x+1.6,Y+0.61,r.z0+0.15,8);});
 }
 function buildPanelRow(panels,cx,room){
@@ -3659,6 +3664,7 @@ function buildInterior(){
   for(const x of[13.4,17.8])for(const z of[54.95,55.45])rod(V3(x,Y,z),V3(x,Y+1.5,z),0.02,MAT.galvDark,staticRoot,6);
   plate('ACCU 110 V DC',staticRoot,15.6,Y+1.75,54.9,Math.PI,0.6);
   // eigenbedrijfstransformator
+  buildServerRoom(ROOMS.find(r=>r.id==='SRV'));
   box(1.3,1.7,1.0,MAT.trafo,staticRoot,17.6,Y+0.85,47.6);iplane(0.9,0.7,MAT.louvre,17.6,Y+1.0,48.11,0);plate('EB 10/0,4 kV',staticRoot,17.6,Y+1.55,48.11,0,0.5);
 }
 // alleen schermen in de buurt van de camera, en alleen als er iets veranderd is (elke upload naar de GPU kost tijd)
@@ -3681,6 +3687,67 @@ function drawPanelScreens(){const cp=camera.position;
     const t=el.textContent;g.fillText(t.length>56?t.slice(0,55)+'…':t,18,64+i*28);});
   b.t.needsUpdate=true;
 }
+
+
+// ============================================================ SCADA-infrastructuur: serverruimte op het onderstation en een RTU-kast in elk MS-station
+// De serverruimte (gebouw SRV) heeft twee rijen racks met de SCADA-servers, een UPS met accu's, koeling, gasblussing en een bedienplek.
+// In elk MS-station hangt een RTU-kast met LTE-router en glasvezelaansluiting; de LEDs knipperen en worden rood als SCADA wegvalt.
+function ledCanvas(rows=14){const c=cnv(64,256),g=c.getContext('2d');g.fillStyle='#000';g.fillRect(0,0,64,256);
+  for(let i=0;i<rows;i++){const y=6+i*(250/rows);for(let k=0;k<5;k++)if(R()<0.6){g.fillStyle=R()<0.85?'#3cff7a':'#ffb030';g.fillRect(40+k*4,y,2,2);}g.fillStyle='#2a7cff';if(R()<0.4)g.fillRect(8,y+1,2,2);}
+  const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.colorSpace=THREE.SRGBColorSpace;return t;}
+function rackCanvas(rows=14){const c=cnv(64,256),g=c.getContext('2d');g.fillStyle='#16181b';g.fillRect(0,0,64,256);
+  for(let i=0;i<rows;i++){const y=4+i*(250/rows),h=250/rows-3;g.fillStyle=i%5===4?'#2a2d31':'#23262a';g.fillRect(4,y,56,h);g.fillStyle='#0d0e10';for(let k=0;k<6;k++)g.fillRect(8+k*4,y+2,2,h-4);}
+  const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t;}
+const SRV={ledTex:ledCanvas(),t:0};
+const SVM={rack:mat({map:rackCanvas(),roughness:0.6,metalness:0.3}),body:mat({color:0x1a1c1f,roughness:0.6,metalness:0.4}),
+  led:new THREE.MeshBasicMaterial({map:SRV.ledTex,transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,color:0xffffff}),
+  tile:mat({map:(()=>{const c=cnv(128),g=c.getContext('2d');g.fillStyle='#c9ccce';g.fillRect(0,0,128,128);g.strokeStyle='#9da2a6';g.lineWidth=3;g.strokeRect(1,1,126,126);
+    g.fillStyle='#b4b9bc';for(let i=0;i<40;i++)g.fillRect(20+(i%8)*12,20+Math.floor(i/8)*20,4,4);return toTex(c,1,1);})(),roughness:0.7}),
+  crac:mat({color:0xe8e9e6,roughness:0.5}),ups:mat({color:0x2c2f33,roughness:0.5,metalness:0.3}),gas:mat({color:0xb51e22,roughness:0.4,metalness:0.3}),
+  tray:mat({color:0x9aa1a6,roughness:0.5,metalness:0.6}),fiber:mat({color:0xf2c419,roughness:0.6}),
+  rtu:mat({map:(()=>{const c=cnv(160,200),g=c.getContext('2d');g.fillStyle='#d8dbdc';g.fillRect(0,0,160,200);g.fillStyle='#8a9196';for(const y of[40,100,160])g.fillRect(8,y,144,5);
+    const mod=(x,y,w,col,t)=>{g.fillStyle=col;g.fillRect(x,y-26,w,24);g.fillStyle='#fff';g.font='bold 9px Arial';g.fillText(t,x+2,y-14);};
+    mod(10,40,40,'#1d3f7a','RTU');mod(52,40,22,'#4b5258','I/O');mod(76,40,22,'#4b5258','I/O');mod(100,40,22,'#4b5258','I/O');mod(124,40,26,'#3b6e3b','24V');
+    mod(10,100,60,'#f2f2ee','');g.fillStyle='#1d2b45';g.font='bold 11px Arial';g.fillText('LTE-ROUTER',13,88);mod(80,100,70,'#2a2d31','FIREWALL');
+    g.fillStyle='#f2c419';g.fillRect(10,124,140,28);g.fillStyle='#1d2b45';g.font='bold 11px Arial';g.fillText('GLASVEZEL · ODF',30,142);
+    g.fillStyle='#2a2d31';g.fillRect(10,166,140,26);g.fillStyle='#fff';g.font='bold 10px Arial';g.fillText('ACCU 24 V · 4 UUR',30,183);return toTex(c);})(),roughness:0.6}),
+  rtuOk:mat({color:0x0a2a14,emissive:0x2cff6a,emissiveIntensity:2}),rtuLte:mat({color:0x0a1430,emissive:0x2a8bff,emissiveIntensity:2}),rtuFo:mat({color:0x2a1a00,emissive:0xffa21a,emissiveIntensity:2})};
+// breed bordje voor lange opschriften (het standaardplaatje is voor korte codes)
+const WSIGN=new Map();
+function wsign(text,parent,x,y,z,ry,w){const m=WSIGN.get(text)||WSIGN.set(text,mat({map:signTex(text,'#f3f3ee','#1d2b45',1024,128,'bold 72px Arial'),roughness:0.5})).get(text);
+  const o=mesh(new THREE.PlaneGeometry(w,w/8),m,parent,x,y,z);o.rotation.y=ry;o.castShadow=false;return o;}
+// ---- RTU-kast in een MS-station (aanroep vanuit kiosk(); lokale coördinaten van het station, kast aan de binnenkant van de voorwand)
+function kioskRTU(root,Y,KH,wrect){const x=0.15,zf=1.45,d=0.26,z=zf-d/2,h=0.9,y=Y+1.35;
+  box(0.72,h,d,MAT.cabinet,root,x,y,z);const fp=mesh(new THREE.PlaneGeometry(0.64,0.8),SVM.rtu,root,x,y,z-d/2-0.006);fp.rotation.y=Math.PI;fp.castShadow=false;
+  [[SVM.rtuOk,-0.24],[SVM.rtuLte,-0.18],[SVM.rtuFo,-0.12]].forEach(([m,dx])=>box(0.025,0.025,0.01,m,root,x+dx,y+0.34,z-d/2-0.012));
+  for(const s of[-1,1])cyl(0.012,0.012,0.22,MAT.black,root,x-0.12+s*0.06,y+h/2+0.11,z,6);   // antennes van de LTE-router
+  rod(V3(x+0.2,y+h/2,z),V3(x+0.2,Y+KH,z),0.012,MAT.black,root,5);cyl(0.035,0.035,0.55,MAT.white,root,x+0.2,Y+KH+0.47,z,8);   // kabel naar de LTE-antenne op het dak
+  rod(V3(x+0.28,Y+0.02,z+0.05),V3(x+0.28,y-h/2,z+0.05),0.025,SVM.fiber,root,6);rod(V3(x+0.2,Y+0.02,z+0.05),V3(x+0.2,y-h/2,z+0.05),0.02,MAT.cable,root,6);   // glasvezel en voeding uit de vloer
+  wsign('RTU · SCADA',root,x,y+h/2+0.08,z-d/2-0.01,Math.PI,0.6);wrect(x-0.4,zf-d-0.05,x+0.4,zf);}
+// ---- serverruimte: gebouw SRV (zie BUILDINGS), aangeroepen vanuit buildInterior()
+function buildServerRoom(r){if(!r)return;const Y=r.y0,cx=(r.x0+r.x1)/2;
+  groundQuad(r.x0+0.2,r.z0+0.2,r.x1-0.2,r.z1-0.2,Y+0.02,SVM.tile,0.6);   // computervloer
+  // twee rijen racks met een koude gang ertussen (fronten naar de gang)
+  const names=['SCADA A','SCADA B','HISTORIAN','FRONT-END','FIREWALL','NETWERK','GLASVEZEL ODF','LTE-GATEWAY','TIJD · GPS'],x0=r.x0+1.4;
+  for(const [rz,face] of[[49.75,1],[52.65,-1]])names.forEach((nm,i)=>{const x=x0+i*0.64;box(0.6,2.05,1.0,SVM.body,staticRoot,x,Y+1.05,rz);
+    const f=mesh(new THREE.PlaneGeometry(0.54,1.9),SVM.rack,staticRoot,x,Y+1.05,rz+face*0.505);f.rotation.y=face>0?0:Math.PI;f.castShadow=false;
+    const l=mesh(new THREE.PlaneGeometry(0.54,1.9),SVM.led,staticRoot,x,Y+1.05,rz+face*0.51);l.rotation.y=f.rotation.y;l.castShadow=false;l.renderOrder=2;
+    plate(face>0?nm:names[(i+3)%names.length],staticRoot,x,Y+2.2,rz+face*0.51,face>0?0:Math.PI,0.5);});
+  const rowEnd=x0+names.length*0.64;DISTRICT_RECTS.push([x0-0.35,49.2,rowEnd,50.3],[x0-0.35,52.1,rowEnd,53.2]);
+  // kabelgoten boven de racks met gele glasvezelgoten
+  for(const z of[49.75,52.65]){box(rowEnd-x0+0.4,0.06,0.4,SVM.tray,staticRoot,(x0+rowEnd)/2-0.3,Y+2.6,z);box(rowEnd-x0+0.4,0.08,0.12,SVM.fiber,staticRoot,(x0+rowEnd)/2-0.3,Y+2.67,z+0.08);}
+  // UPS met accukasten, koeling (CRAC), gasblussing en een bedienplek bij de deur
+  const ux=rowEnd+1.2;for(let i=0;i<3;i++)box(0.8,1.9,0.9,SVM.ups,staticRoot,ux+i*0.85,Y+0.95,r.z1-0.55);wsign('UPS · 2 × 40 kVA',staticRoot,ux+0.85,Y+2.1,r.z1-1.01,Math.PI,1.6);
+  DISTRICT_RECTS.push([ux-0.45,r.z1-1.05,ux+2.15,r.z1]);
+  box(0.9,2.0,2.2,SVM.crac,staticRoot,r.x1-0.5,Y+1.0,51.2);wsign('KOELING',staticRoot,r.x1-0.96,Y+1.75,51.2,-Math.PI/2,1.2);DISTRICT_RECTS.push([r.x1-1.0,50.0,r.x1,52.4]);
+  for(let i=0;i<3;i++)cyl(0.13,0.13,1.5,SVM.gas,staticRoot,r.x0+0.3+i*0.3,Y+0.75,r.z1-0.3,12);wsign('INERGEN · GASBLUSSING',staticRoot,r.x0+0.6,Y+1.75,r.z1-0.47,Math.PI,1.2);
+  const dx=r.x1-2.6,dz=r.z0+0.9;box(1.6,0.05,0.7,IM.wood,staticRoot,dx,Y+0.75,dz);for(const s of[-0.7,0.7])box(0.05,0.73,0.6,MAT.galvDark,staticRoot,dx+s,Y+0.37,dz);DISTRICT_RECTS.push([dx-0.85,dz-0.4,dx+0.85,dz+0.4]);
+  if(deskScreens)deskScreens.forEach((s,i)=>{const x=dx-0.38+i*0.76;box(0.7,0.43,0.04,MAT.black,staticRoot,x,Y+1.18,dz-0.25);iplane(0.64,0.4,new THREE.MeshBasicMaterial({map:s.t}),x,Y+1.18,dz-0.228,0);});
+  wsign('SCADA · SERVERRUIMTE',staticRoot,cx,Y+3.1,r.z1-0.02,Math.PI,3.2);}
+// ---- elke frame: LEDs knipperen (patroon verschuift); rood als de SCADA-verbinding is weggevallen (cyberaanval)
+function serverTick(dt){SRV.t+=dt;if(SRV.t<0.22)return;SRV.t=0;const down=SCADA_DOWN();
+  SRV.ledTex.offset.y=Math.floor(Math.random()*8)/8;SVM.led.color.setHex(down?0xff3030:0xffffff);
+  const b=performance.now()%1000<500;SVM.rtuOk.emissive.setHex(down?0xff2020:0x2cff6a);SVM.rtuOk.emissiveIntensity=b?2.5:0.6;SVM.rtuLte.emissiveIntensity=down?0:(Math.random()<0.5?2.5:0.5);SVM.rtuFo.emissiveIntensity=down?0:Math.random()<0.6?2.5:0.6;}
 
 
 // ============================================================ station opbouwen
@@ -4034,9 +4101,10 @@ function updateHover(){if(FP.on||!moveEv)return;const e=moveEv;moveEv=null;const
   else tt.style.display='none';}
 
 // ============================================================ camera
+const VIEWPOS_SRV=[V3(-27.6,1.9,47.4),V3(-37,1.4,51.2)];   // serverruimte (index 12)
 const VIEWPOS=[[V3(100,52,118),V3(22,3,8)],[V3(-4,13,-2),V3(-30,5,-22)],[V3(88,17,14),V3(32,3,32)],[V3(64,11,32),V3(30,3,50)],[V3(22.1,215,34),V3(22,0,10)],
   [V3(-2.2,2.5,47.6),V3(0.4,1.6,54.2)],[V3(58.8,2.5,47.6),V3(61.4,1.6,54.2)],[V3(30,95,330),V3(10,0,175)],[V3(40,90,470),V3(30,0,330)],
-  [V3(-250,48,172),V3(-295,6,307)],[V3(410,85,-40),V3(440,4,190)],[V3(-160,70,-270),V3(-300,2,-140)]];   // ziekenhuis, kassen, waterzuivering
+  [V3(-250,48,172),V3(-295,6,307)],[V3(410,85,-40),V3(440,4,190)],[V3(-160,70,-270),V3(-300,2,-140)],VIEWPOS_SRV];   // ziekenhuis, kassen, waterzuivering
 let fly=null;
 function flyTo(pos,target,dur=1.5){if(FP.on)exitFP();fly={t:0,dur,p0:camera.position.clone(),t0:controls.target.clone(),p1:pos,t1:target};controls.autoRotate=false;}
 function fmtClock(t){const m=((t%1440)+1440)%1440;return `${String(Math.floor(m/60)).padStart(2,'0')}:${String(Math.floor(m%60)).padStart(2,'0')}`;}
@@ -6200,7 +6268,7 @@ function gisDrawExtra(g,cv){const s=TAB.zoom,now=performance.now();
 // ============================================================ updatecontrole in het hoofdmenu: is er op GitHub een nieuwere versie?
 // De build zet een vingerafdruk in BUILD_ID (tests/stamp.mjs) en houdt version.json bij met eerdere versies.
 // Staat onze versie bij de eerdere versies op GitHub, dan is er een update; staat hij er niet in, dan is het eigen (nieuwer) werk.
-const BUILD_ID='a2cf34993d9e';
+const BUILD_ID='6c76df340357';
 const UPD_REPO='https://github.com/ProAdmin007/Onderstation-SIM-Pro';
 const UPD_URL='https://raw.githubusercontent.com/ProAdmin007/Onderstation-SIM-Pro/main/version.json';
 // toestand van de controle: idle, bezig, actueel, nieuw, eigen of fout
@@ -6477,7 +6545,7 @@ else{renderMenu();$('#intro').classList.remove('hidden');controls.autoRotate=tru
 if(params.has('night'))updateSky(22);
 if(params.has('view')){const v=VIEWPOS[+params.get('view')];camera.position.copy(v[0]);controls.target.copy(v[1]);controls.autoRotate=false;controls.update();}
 
-window.OS={setAutoMeet,measBlock,measVan,MEAS_VAN,coachRestore,coachReset,installUpdate,COACH,coachCards,setCoach,renderCoach,checkUpdate,UPD,BUILD_ID,GSV,gensetTick,gensetSpot,digStart,klicHit,digTick,digHit,MARKS,setSpeed,klicFocus,klicCard,klicCables,tabletHome,refreshInfo,XLAB,TRACES,cableDist,stationVisuals,cityRoute,CORDONS,inCordon,copperTheft,trafoFire,stationTick,stationBlock,stIsolated,stNeighborSwitches,STV,updateHUD,pushAlarm,FF,ffStart,ffStop,skipRain,openWT,closeWT,setRealWeather,autoWeather,pickWeather,wetNow,ALARM:()=>ALARM_CRIT,VANS,vanTick,crewDispatch,crewSpawn,routeAt,driveVehicle,walkActive:()=>WALK_ACTIVE,BUS,GARB,PARCEL,AMB,TRAIN,XING,HALTES,MARKET,FIG,CY,cityDay,marketOn,schoolBreak,cityTick,measDone,cableCard,isoSwitches,KLIC,klicNew,klicMark,klicHit,gisMeasure,gisMofReplace,faultOf,cableOf,cableRisk,DIGS,CABLES,GIS_NET,gisRoute,cableState,setXray,XRAY,TAB,openTablet,closeTablet,drawTablet,nearestCable,DYN,fpsTick,fireTick,WK,getWalkers:()=>WALKERS,getStrips:()=>WSTRIPS,fireStart,fireDouse,fireStop,GENSET,gsCap,SMALL,lvgLive,updateSmall,setMouseMode,getMouseMode:()=>MOUSE_MODE,cameraKeys,OVK,openPreview,closePreview,viewHour,getPreview:()=>PREVIEW,VIEWPOS,SITE,updateSites,SLD,activeFaults,renderFaults,reportPDF,listSaves,openSlots,closeSlots,SAVE_SLOTS,layoutCheck,LAYOUT,FREC,fltRec,openRec,closeRec,renderRec,selectivity,protSelect,feederT,incT,incOf,shortCircuit,EF,earthFault,efTick,efRails,efU0,railsCoupled,controls,tripBreaker,CONS,LS_LINKS,LS_ORDERS,GENSET,lsTick,lsOrder,lsSwitchOrder,lsExec,gsSend,gsOff,gsRestart,tapOrder,setEta,callPrio,lsAreas,PRIO,openLS,closeLS,renderLS,lvVolt,stationLoads,shedFactor,failP,manualP,phoneTick,refreshDevPanel,updateSLD,openKeys,closeKeys,KEY_HELP,RELAY_BAYS,relayTask,relayDue,relayDefect,initRelays,kitTests,kitMeasure,kitVerdict,kitRun,openKit,closeKit,saveGame,readSave,deleteSave,resumeGame,canSave,specOf,CABLE,soilT,FD,meppelFault,linkTick,tabAlarms,updateTabAlarms,renderTasks,INC,INCIDENTS,startIncident,endIncident,incidentTick,setTab,renderCables,GFX,setGfx,applyGfx,openSettings,closeSettings,WX_TYPES,renderer,scene,FIRE,CARS,updateWindows,updateLife,stationLive,cbMaintTask,worstCb,cond,breakerFails,CB_IDS,FLEX,setFlex,flexTick,congestion,openFlex,closeFlex,checkModel,homeBus,BUSES,SEL_BAYS,TORCH,setTorch,HO_POOL,handoverTick,REC,RP,startReplay,stopReplay,analyse,stationDamage,closeHandover,deviations,PHONE,lvFault,callFrom,phoneAnswer,dispatchLV,LVG,forecast,progAdvice,PROG,startTask:(k,...a)=>{TASK={relayTask,cbMaintTask,railTask,railBTask,stationTask,thermoTask,ringTask,feederTask,lineTask,reserveTask}[k](...a);TASK.i=0;TASK.code='WV-TEST';briefInit(TASK);renderTasks();},SIM,D,LESSONS,lessonGo,selectDevice,abortTask,railTask,stationTask,thermoTask,nearDev,VIEWS,PROT,setProt,openProt,closeProt,busFault,BUSF,RINGS,task:()=>TASK,briefSubmit,briefCheck,briefWatch,actKey,taskActs,crewNear,boxOf:id=>VIEWS[id]&&VIEWS[id].box,AudioSys,updateAudio,WX,setWeather,setSeason,SEASONS,ambient,enterKiosk,ROOMS,blockedAt,RING,NPCS,crewDispatch,ringFault,FP,enterFP,exitFP,pickCenter,camera,camInside,setRatio,setTab,GAME,MODES,applyMode,endGame,EN:()=>EN,FLOW,operate,tapStep,setAVR,resetLockout,toggleAR,regulate,computeFlows,randomEvent,lineFault,feederFault,trafoFault,offerTask,simStep,FEEDERS};
+window.OS={SVM,serverTick,setAutoMeet,measBlock,measVan,MEAS_VAN,coachRestore,coachReset,installUpdate,COACH,coachCards,setCoach,renderCoach,checkUpdate,UPD,BUILD_ID,GSV,gensetTick,gensetSpot,digStart,klicHit,digTick,digHit,MARKS,setSpeed,klicFocus,klicCard,klicCables,tabletHome,refreshInfo,XLAB,TRACES,cableDist,stationVisuals,cityRoute,CORDONS,inCordon,copperTheft,trafoFire,stationTick,stationBlock,stIsolated,stNeighborSwitches,STV,updateHUD,pushAlarm,FF,ffStart,ffStop,skipRain,openWT,closeWT,setRealWeather,autoWeather,pickWeather,wetNow,ALARM:()=>ALARM_CRIT,VANS,vanTick,crewDispatch,crewSpawn,routeAt,driveVehicle,walkActive:()=>WALK_ACTIVE,BUS,GARB,PARCEL,AMB,TRAIN,XING,HALTES,MARKET,FIG,CY,cityDay,marketOn,schoolBreak,cityTick,measDone,cableCard,isoSwitches,KLIC,klicNew,klicMark,klicHit,gisMeasure,gisMofReplace,faultOf,cableOf,cableRisk,DIGS,CABLES,GIS_NET,gisRoute,cableState,setXray,XRAY,TAB,openTablet,closeTablet,drawTablet,nearestCable,DYN,fpsTick,fireTick,WK,getWalkers:()=>WALKERS,getStrips:()=>WSTRIPS,fireStart,fireDouse,fireStop,GENSET,gsCap,SMALL,lvgLive,updateSmall,setMouseMode,getMouseMode:()=>MOUSE_MODE,cameraKeys,OVK,openPreview,closePreview,viewHour,getPreview:()=>PREVIEW,VIEWPOS,SITE,updateSites,SLD,activeFaults,renderFaults,reportPDF,listSaves,openSlots,closeSlots,SAVE_SLOTS,layoutCheck,LAYOUT,FREC,fltRec,openRec,closeRec,renderRec,selectivity,protSelect,feederT,incT,incOf,shortCircuit,EF,earthFault,efTick,efRails,efU0,railsCoupled,controls,tripBreaker,CONS,LS_LINKS,LS_ORDERS,GENSET,lsTick,lsOrder,lsSwitchOrder,lsExec,gsSend,gsOff,gsRestart,tapOrder,setEta,callPrio,lsAreas,PRIO,openLS,closeLS,renderLS,lvVolt,stationLoads,shedFactor,failP,manualP,phoneTick,refreshDevPanel,updateSLD,openKeys,closeKeys,KEY_HELP,RELAY_BAYS,relayTask,relayDue,relayDefect,initRelays,kitTests,kitMeasure,kitVerdict,kitRun,openKit,closeKit,saveGame,readSave,deleteSave,resumeGame,canSave,specOf,CABLE,soilT,FD,meppelFault,linkTick,tabAlarms,updateTabAlarms,renderTasks,INC,INCIDENTS,startIncident,endIncident,incidentTick,setTab,renderCables,GFX,setGfx,applyGfx,openSettings,closeSettings,WX_TYPES,renderer,scene,FIRE,CARS,updateWindows,updateLife,stationLive,cbMaintTask,worstCb,cond,breakerFails,CB_IDS,FLEX,setFlex,flexTick,congestion,openFlex,closeFlex,checkModel,homeBus,BUSES,SEL_BAYS,TORCH,setTorch,HO_POOL,handoverTick,REC,RP,startReplay,stopReplay,analyse,stationDamage,closeHandover,deviations,PHONE,lvFault,callFrom,phoneAnswer,dispatchLV,LVG,forecast,progAdvice,PROG,startTask:(k,...a)=>{TASK={relayTask,cbMaintTask,railTask,railBTask,stationTask,thermoTask,ringTask,feederTask,lineTask,reserveTask}[k](...a);TASK.i=0;TASK.code='WV-TEST';briefInit(TASK);renderTasks();},SIM,D,LESSONS,lessonGo,selectDevice,abortTask,railTask,stationTask,thermoTask,nearDev,VIEWS,PROT,setProt,openProt,closeProt,busFault,BUSF,RINGS,task:()=>TASK,briefSubmit,briefCheck,briefWatch,actKey,taskActs,crewNear,boxOf:id=>VIEWS[id]&&VIEWS[id].box,AudioSys,updateAudio,WX,setWeather,setSeason,SEASONS,ambient,enterKiosk,ROOMS,blockedAt,RING,NPCS,crewDispatch,ringFault,FP,enterFP,exitFP,pickCenter,camera,camInside,setRatio,setTab,GAME,MODES,applyMode,endGame,EN:()=>EN,FLOW,operate,tapStep,setAVR,resetLockout,toggleAR,regulate,computeFlows,randomEvent,lineFault,feederFault,trafoFault,offerTask,simStep,FEEDERS};
 const clock=new THREE.Clock();let hudT=0,skyT=0,progT=0;
 let liteAcc=0,shadowT=0,hudStep=4;
 // dieptebuffer: in het overzicht schuift de near-plane mee met de kijkafstand, zodat gevels op afstand niet flikkeren
@@ -6509,7 +6577,7 @@ function frame(){
     else if(k===1){if(!LITE)drawPanelScreens();renderTasks();updateStreetLights();updateWindows();}
     else if(k===2){renderFaults();renderCoach();progTick();if(progT%4===0)renderProg();}
     else if(progT%2===0){renderCables();renderLSTab();if(lsOpen()&&progT%4===0)renderLS();}}
-  if(!LITE){updateHover();updateLabels();}if(GFX.particles)updateRain(dt);else RAIN.ls.visible=SNOW.p.visible=false;updateNPCs(dt);updateKioskLight();updateHotspot();phoneTick(dt);replayTick(dt);updateLife(dt);fireTick(dt);gisTick(dt);updateSites(dt);updateSmall();
+  if(!LITE){updateHover();updateLabels();}if(GFX.particles)updateRain(dt);else RAIN.ls.visible=SNOW.p.visible=false;updateNPCs(dt);updateKioskLight();updateHotspot();phoneTick(dt);replayTick(dt);updateLife(dt);fireTick(dt);gisTick(dt);serverTick(dt);updateSites(dt);updateSmall();
   let off=null;if(shake>0.01){off=V3((Math.random()-0.5)*shake,(Math.random()-0.5)*shake,(Math.random()-0.5)*shake);camera.position.add(off);shake*=Math.pow(0.02,dt);}
   // en het 3D-beeld helemaal niet tekenen: zonder grafische kaart kost één beeld ±2 kernseconden software-grafiek,
   // terwijl de tests alleen de simulatie en de panelen controleren (aanwijzen gaat met raycasting, niet met pixels)

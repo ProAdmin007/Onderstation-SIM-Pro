@@ -65,7 +65,8 @@ function buildFence(){
 }
 
 const BUILDINGS=[{id:'MS',x0:-20,x1:20,z0:46,z1:56,doors:[-14,-6,6],label:'OS ZUIDWOLDE  ·  10 kV'},
-  {id:'MS20',x0:46,x1:76,z0:46,z1:56,doors:[51,59,69],label:'OS ZUIDWOLDE  ·  20 kV'}];
+  {id:'MS20',x0:46,x1:76,z0:46,z1:56,doors:[51,59,69],label:'OS ZUIDWOLDE  ·  20 kV'},
+  {id:'SRV',x0:-42,x1:-26,z0:46,z1:55.5,doors:[-36],label:'SCADA · SERVERS'}];
 function buildBuilding({id,x0,x1,z0,z1,doors,label}){
   const H=5.2,root=grp(),bt=C.brick,W=x1-x0,Dz=z1-z0,cx=(x0+x1)/2,cz=(z0+z1)/2;
   const brick=(len)=>{const t=toTex(bt,len/1.76,H/1.5);return mat({map:t,bumpMap:toTex(bt,len/1.76,H/1.5,false),bumpScale:0.8,roughness:0.88});};
@@ -84,8 +85,10 @@ function buildBuilding({id,x0,x1,z0,z1,doors,label}){
   for(let x=x0+3;x<x1-2;x+=W/6){const lv=mesh(new THREE.PlaneGeometry(1.2,0.8),MAT.louvre,root,x,3.6,z1+0.01);lv.castShadow=false;}
   [x0+W*0.42,x0+W*0.82].forEach(x=>{const lv=mesh(new THREE.PlaneGeometry(1.2,0.8),MAT.louvre,root,x,4.1,z0-0.01);lv.rotation.y=Math.PI;lv.castShadow=false;});
   box(1.1,2.3,0.08,MAT.door,root,x1-6,1.6,z1+0.05);box(2,0.1,1.2,MAT.trim,root,x1-6,3.0,z1+0.6);
+  if(id==='SRV'){for(let i=0;i<2;i++){box(1.0,0.9,0.45,MAT.cabinet,root,x1+0.45,0.7,z0+2+i*1.4);cyl(0.32,0.32,0.05,MAT.black,root,x1+0.68,0.75,z0+2+i*1.4,14).rotation.z=Math.PI/2;}   // buitendelen koeling
+    cyl(0.05,0.05,3,MAT.galv,root,x0+2,H+1.6,z1-1.5,6);box(0.5,0.08,0.08,MAT.galv,root,x0+2,H+2.8,z1-1.5);cyl(0.1,0.1,0.3,MAT.white,root,x0+3.2,H+0.4,z1-1.5,10);}   // LTE-mast en GPS-antenne
   const nb=toTex(textCanvas(label,{w:1024,h:128,bg:'#1d2b45',fg:'#ffffff',font:'bold 64px Arial',border:false}));
-  const sg=mesh(new THREE.PlaneGeometry(6,0.75),mat({map:nb,roughness:0.5}),root,doors[1]+3.6,4.4,z0-0.02);sg.rotation.y=Math.PI;sg.castShadow=false;
+  const sg=mesh(new THREE.PlaneGeometry(6,0.75),mat({map:nb,roughness:0.5}),root,doors.length>1?doors[1]+3.6:cx+3.5,4.4,z0-0.02);sg.rotation.y=Math.PI;sg.castShadow=false;
   regView(id,root,null,{labelPos:V3(cx,H+1.6,cz)});
 }
 
