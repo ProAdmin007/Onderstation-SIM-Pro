@@ -1,7 +1,9 @@
 {
-  "build": "aaba6cf0f4c9",
+  "build": "bda8cb2c9967",
   "date": "2026-10-31",
   "previous": [
+    "b717f6dee2e0",
+    "aaba6cf0f4c9",
     "cc45e675aa27",
     "fbce7f9ed97c",
     "037e2088f828",
@@ -131,6 +133,10 @@
     "aaba6cf0f4c9": {
       "date": "2026-10-31",
       "text": "Echter vuur met veel rook (ook binnen), brandweer blust en herstelploeg maakt het datacenter weer, geluid pauzeert mee, straatlantaarns geven echt licht, datacenterbrand minder vaak"
+    },
+    "bda8cb2c9967": {
+      "date": "2026-10-31",
+      "text": "Lopen naar OS Meppel en bellen met Netbeheer Noord om daar lokaal aan onze velden te schakelen; straatlantaarns knipperen niet meer; standpunten in één menu in de onderste balk"
     }
   }
 }

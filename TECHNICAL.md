@@ -112,7 +112,7 @@ Alle `.js`-bestanden delen **één module-scope**. Er zijn geen imports tussen d
 | `03b-district.js` | Woonwijk, MS-stations (`kiosk`), straatverlichting, `DISTRICT_RECTS` |
 | `03c-weather.js` | Seizoenen, weertypen, `WX`, `weatherTick` |
 | `03d-streets.js` … `03g-industry.js` | Straatbeeld, grote afnemers (ziekenhuis, kassen, RWZI), kleine afnemers, bedrijventerrein |
-| `03h-meppel.js` | OS Meppel (alleen beeld) aan de noordkant van de stad. `buildMeppel()` gebruikt dezelfde bouwers als Zuidwolde in lokale coördinaten, zet de apparaten in hun stand, haalt registraties en klikvakken weg en draait en verplaatst alles in één groep. Eigen samenvoegzone `meppel`; `meppelLod()` verbergt op meer dan 280 m de fijne delen. De inrit zoekt het grootste gat in de bomenrij. |
+| `03h-meppel.js` | OS Meppel (alleen beeld) aan de noordkant van de stad. `buildMeppel()` gebruikt dezelfde bouwers als Zuidwolde in lokale coördinaten, zet de apparaten in hun stand, haalt registraties en klikvakken weg en draait en verplaatst alles in één groep. Eigen samenvoegzone `meppel`; `meppelLod()` verbergt op meer dan 280 m de fijne delen. De inrit zoekt het grootste gat in de bomenrij. Het 10 kV-gebouw heeft een ruimte in `ROOMS` (`meppel:true`) met panelen via `buildPanel`; de velden `M-MP1`–`M-MP3` en `MP-TR` blijven bedienbaar en krijgen na het draaien wereldcoördinaten. Toegang: `MP_ACCESS`, `mpAllowed()`, `callMeppel()`; deuren met `locked` en `MEPPEL.lockRects` in `blockedAt`; `operate()` weigert lokaal schakelen aan `MEP_IDS` zonder toestemming. |
 | `04-1-net.js` | `SIM`, rails, lijnen, voeders, apparaten `D`, ringen, LS-groepen, netgraaf, `EN`/`ER`, `computeFlows` |
 | `04-2-bediening.js` | `operate()`, vergrendelingen, trips, 110 kV-lijnen |
 | `04-3-trafo.js` | Trappenschakelaar en AVR, oliemodel, uitschakelrelais 86, omschakelbare T3 |
@@ -537,7 +537,7 @@ Opties: `tow` (aggregaat op aanhanger, in het gras gezet met rook en geluid), `m
 - **Vensters:** beveiliging (`07e`), flex (`07j`), onderhoud (`07k`), testkoffer (`07p`), toetsen (`07q`), LS (`07r`), storingsschrijver (`07s`), opslaan (`07o`), instellingen (`07m`), weer en tijd (`07v`) en telefoon (`07g`). Vensters gebruiken `modalOpen`/`modalClose`, die het spel pauzeren en de vorige toestand terugzetten.
 - **Kabeltablet (`07y-gis.js`, `G`):** GIS-kaart of luchtfoto met kabels, tracés, moffen, KLIC-meldingen en foutplaats. Röntgenblik in 3D met `X`.
 - **Begeleiding (`07zb-coach.js`, `U`):** `coachCards()` leidt uit de toestand af wat er speelt en wat je kunt doen. Het venster is versleepbaar en schaalbaar.
-- **Camerastandpunten:** `VIEWPOS[0..12]` (toetsen 1–9 en knoppen) en `flyTo()`.
+- **Camerastandpunten:** `VIEWPOS[0..13]` (toetsen 1–9 en het uitklapmenu *Standpunt* in de onderste balk, `#viewMenu`) en `flyTo()`.
 
 ---
 

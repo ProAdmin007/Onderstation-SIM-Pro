@@ -240,6 +240,8 @@ body:not(.fp) #fpHint{display:none!important}
 kbd{font-family:var(--mono);font-size:11px;background:rgba(255,255,255,.12);border:1px solid var(--line2);border-radius:4px;padding:0 5px}
 body.fp:not(.fplocked) #fpPause{display:flex;position:fixed;left:50%;top:84px;transform:translateX(-50%);align-items:center;gap:10px;background:rgba(13,17,22,.9);border:1px solid var(--accent);border-radius:10px;padding:8px 16px;z-index:7;pointer-events:none;font-size:12.5px}
 #fpPause b{font-size:13px;color:var(--accent)}#fpPause .k{color:var(--muted);font-size:12px;font-family:var(--mono)}
+.vwrap{position:relative}#viewMenu{position:absolute;left:0;bottom:calc(100% + 8px);display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:8px;min-width:330px;background:var(--panel,rgba(16,20,26,.96));border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.45);z-index:30}
+#viewMenu.hidden{display:none}#viewMenu button{text-align:left}#viewMenu kbd{display:inline!important}
 #views .walk,#views .tool{background:rgba(240,164,58,.14);border-color:rgba(240,164,58,.4)}
 #views .tool.on{background:var(--accent);color:#1a1206;border-color:var(--accent)}
 body.fp #views .walk{background:var(--accent);color:#1a1206;font-weight:700}
@@ -405,20 +407,23 @@ body.previewing #tasks,body.previewing #alarms,body.previewing #faults{opacity:.
 </aside>
 <div id="devpanel" class="panel hidden"></div>
 <nav id="views" class="panel">
-  <button data-v="0"><kbd>1</kbd>Overzicht</button>
-  <button data-v="1"><kbd>2</kbd>Lijnvelden</button>
-  <button data-v="2"><kbd>3</kbd>Transformatoren</button>
-  <button data-v="3"><kbd>4</kbd>MS-gebouwen</button>
-  <button data-v="4"><kbd>5</kbd>Vogelvlucht</button>
-  <button data-v="5"><kbd>6</kbd>Binnen 10 kV</button>
-  <button data-v="6"><kbd>7</kbd>Binnen 20 kV</button>
-  <button data-v="7"><kbd>8</kbd>Woonwijk</button>
-  <button data-v="8"><kbd>9</kbd>Centrum &amp; Vaart</button>
-  <button data-v="9" title="F5 Ziekenhuis (±450 m westelijk, aan de rand van de stad)">Ziekenhuis</button>
-  <button data-v="10" title="F6 Glastuinbouw Oost (±250 m oostelijk)">Kassen</button>
-  <button data-v="11" title="G4 Waterzuivering (±330 m noordwestelijk)">RWZI</button>
-  <button data-v="12" title="Datacenter met de SCADA-servers op het onderstation">Datacenter</button>
-  <button data-v="13" title="OS Meppel van Netbeheer Noord, aan de noordkant van de stad">OS Meppel</button>
+  <div class="vwrap"><button id="viewBtn" class="tool" title="Camerastandpunten: onderstation, wijk, sites, datacenter en OS Meppel (toetsen 1–9)">📷 Standpunt ▾</button>
+   <div id="viewMenu" class="hidden">
+    <button data-v="0"><kbd>1</kbd>Overzicht</button>
+    <button data-v="1"><kbd>2</kbd>Lijnvelden</button>
+    <button data-v="2"><kbd>3</kbd>Transformatoren</button>
+    <button data-v="3"><kbd>4</kbd>MS-gebouwen</button>
+    <button data-v="4"><kbd>5</kbd>Vogelvlucht</button>
+    <button data-v="5"><kbd>6</kbd>Binnen 10 kV</button>
+    <button data-v="6"><kbd>7</kbd>Binnen 20 kV</button>
+    <button data-v="7"><kbd>8</kbd>Woonwijk</button>
+    <button data-v="8"><kbd>9</kbd>Centrum &amp; Vaart</button>
+    <button data-v="9" title="F5 Ziekenhuis (±450 m westelijk, aan de rand van de stad)">Ziekenhuis</button>
+    <button data-v="10" title="F6 Glastuinbouw Oost (±250 m oostelijk)">Kassen</button>
+    <button data-v="11" title="G4 Waterzuivering (±330 m noordwestelijk)">RWZI</button>
+    <button data-v="12" title="Datacenter met de SCADA-servers op het onderstation">Datacenter</button>
+    <button data-v="13" title="OS Meppel van Netbeheer Noord, aan de noordkant van de stad">OS Meppel</button>
+   </div></div>
   <button id="pvBtn" class="tool" title="Weer en tijd bekijken: klok schuiven, weer en seizoen kiezen (alleen kijken)"><kbd>T</kbd>Weer &amp; tijd</button>
   <button id="xrayBtn" class="tool" title="Röntgenblik: zie in 3D waar de kabels onder straat en stoep liggen"><kbd>X</kbd>Kabels</button>
   <button id="gisBtn" class="tool" title="Kabeltablet: kaart met alle kabels, moffen en je eigen positie"><kbd>G</kbd>Tablet</button>

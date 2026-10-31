@@ -84,6 +84,7 @@ function buildSLD(){
   W(350,324,350,420,'MP3');DS('MS5-K',350,432,'MS5-K',1);W(350,443,350,470,'M5');W(350,470,60,470,'M5');
   o.push(`<g class="golink" data-goto="R"><rect class="hit" x="56" y="474" width="250" height="18" rx="4"/><text x="60" y="486" class="fs mh">⇄ naar MS5 Bedrijvenpark Zuid (ring woonwijk) ›</text></g>`);T(338,384,'koppelkabel','end','fs dl');T(338,397,'max. 4 MW','end','fs dl');M('lnk',338,410,'end','mh');
   T(235,516,'MS5-K is normaal open. Sluiten mag alleen als de','middle','fs dl');T(235,529,'ringkant spanningsloos is: dan voedt Meppel MS5 terug.','middle','fs dl');T(235,542,'Parallel met Netbeheer Noord is niet toegestaan.','middle','fs dl');
+  o.push(`<g class="golink" data-call="mp"><rect class="hit" x="110" y="552" width="250" height="18" rx="4"/><text x="235" y="564" text-anchor="middle" class="fs mh">📞 Bel Netbeheer Noord voor toegang tot OS Meppel ›</text></g>`);
   const svg=$('#sld');svg.innerHTML=`<g data-tab="10">${out[10].join('')}</g><g data-tab="20" style="display:none">${out[20].join('')}</g><g data-tab="R" style="display:none">${out.R.join('')}</g><g data-tab="P" style="display:none"><g id="progG"></g></g><g data-tab="K" style="display:none"><g id="cabG"></g></g><g data-tab="L" style="display:none"><g id="lsG"></g></g><g data-tab="M" style="display:none">${out.M.join('')}</g>`;
   SLD.nodes=[...svg.querySelectorAll('[data-n]')];SLD.byNode={};SLD.nodes.forEach(el=>(SLD.byNode[el.dataset.n]??=[]).push(el));
   svg.querySelectorAll('.dev').forEach(el=>{const id=el.dataset.id,tab=el.closest('[data-tab]').dataset.tab;(SLD.devs[id]??=[]).push(el);(SLD.devTab[id]??=new Set()).add(tab);
@@ -233,7 +234,7 @@ function renderDevPanel(){
     ctl=`<div class="swlist">${ids.map(id=>`<div class="swr"><span><b>${id.slice(s.id.length+1)}</b>${D[id].type==='lvs'?D[id].lvg.name:D[id].label}</span><button class="b1" data-op="${id}:1">${D[id].type==='lvs'?'IN':'DICHT'}</button><button class="b0" data-op="${id}:0">${D[id].type==='lvs'?'UIT':'OPEN'}</button></div>`).join('')}</div>`+
       `<div class="dp-ctl gsctl"><button data-act="gs" title="Een monteur brengt een noodaggregaat op een aanhanger en sluit het aan op het LS-rek">⚡ Aggregaat sturen</button><button data-act="gsoff">Afkoppelen</button><button data-act="gsrestart">Herstarten</button></div>`;}
   else if(d.type==='tr')ctl=`<div class="dp-ctl"><button data-act="avr"></button><button data-act="tap-1" title="Trap lager">▼ trap</button><button data-act="tap1" title="Trap hoger">▲ trap</button></div>`;
-  const sub=[];if(VIEWS[SEL])sub.push(`<button data-act="fly">Bekijk in 3D</button>`);if(d.type==='bld')sub.push(`<button data-act="inside">Ga naar binnen</button>`);if(d.type==='bld'||VIEWS[SEL]?.inside)sub.push(`<button data-act="scada">Toon in SCADA</button>`);
+  const sub=[];if(MEP_IDS.has(SEL)||SEL==='MP-TR')sub.push(`<button data-act="callmp" title="Toestemming vragen om in OS Meppel lokaal aan onze velden te schakelen">📞 Bel Netbeheer Noord</button>`);if(VIEWS[SEL])sub.push(`<button data-act="fly">Bekijk in 3D</button>`);if(d.type==='bld')sub.push(`<button data-act="inside">Ga naar binnen</button>`);if(d.type==='bld'||VIEWS[SEL]?.inside)sub.push(`<button data-act="scada">Toon in SCADA</button>`);
   if(d.type==='tr')sub.push(`<button data-act="reset">Reset blokkeerrelais 86</button>`);
   if(d.type==='tr'||d.line||(d.feeder&&!d.feeder.gen))sub.push(`<button data-act="prot">Beveiligingsinstellingen</button>`);
   if(d.type==='kiosk')sub.push(`<button data-act="kin">Naar binnen (rondlopen)</button>`,`<button data-act="lvsend">Monteur sturen (LS-storing)</button>`);
@@ -261,7 +262,7 @@ function refreshDevPanel(){if(!SEL)return;const p=$('#devpanel'),d=D[SEL];
 $('#devpanel').addEventListener('click',e=>{const op=e.target.closest('[data-op]');if(op){const [id,v]=op.dataset.op.split(':');operate(id,+v);return;}
   const b=e.target.closest('[data-act]');if(!b||b.disabled)return;const a=b.dataset.act;
   if(a==='1'||a==='0')operate(SEL,+a);else if(a==='x')selectDevice(null);else if(a==='fly')flyToDevice(SEL);else if(a==='inside'){const v=VIEWPOS[SEL==='MS20'?6:5];flyTo(v[0].clone(),v[1].clone(),2);}
-  else if(a.startsWith('ratio'))setRatio(a.slice(5));else if(a==='kin')enterKiosk(SEL);else if(a==='gs')gsSend(D[SEL].st);else if(a==='gsoff')gsOff(D[SEL].st);else if(a==='gsrestart')gsRestart(D[SEL].st);else if(a==='lvsend')dispatchLV(SEL);
+  else if(a.startsWith('ratio'))setRatio(a.slice(5));else if(a==='kin')enterKiosk(SEL);else if(a==='callmp')callMeppel();else if(a==='gs')gsSend(D[SEL].st);else if(a==='gsoff')gsOff(D[SEL].st);else if(a==='gsrestart')gsRestart(D[SEL].st);else if(a==='lvsend')dispatchLV(SEL);
   else if(a==='avr')setAVR(SEL,D[SEL].avr==='auto'?'hand':'auto');else if(a.startsWith('tap'))tapStep(SEL,+a.slice(3));
   else if(a==='reset')resetLockout(SEL);else if(a==='prot')openProt();else if(a==='ar')toggleAR(D[SEL].line);else if(a.startsWith('sel:'))selectDevice(a.slice(4));
   else if(a==='scada'){$('#scada').classList.remove('min');$('#scada').animate([{boxShadow:'0 0 0 3px #f0a43a'},{boxShadow:'0 0 0 0 transparent'}],{duration:900});}});

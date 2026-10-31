@@ -137,7 +137,7 @@ function kiosk(s){
   const po=mesh(new THREE.PlaneGeometry(0.55,0.75),mat({map:posterTex(),roughness:0.7}),root,-hw+KT+0.01,Y+1.4,0.75);po.rotation.y=Math.PI/2;po.castShadow=false;
   kioskRTU(root,Y,KH,wrect);   // RTU-kast met LTE en glasvezel (05c-servers.js)
 }
-function updateKioskLight(){KUPD.forEach(f=>f());const i=camInside(),r=i&&ROOMS[i-1];if(r&&(r.kiosk||r.id==='SRV')){kioskLight.position.set((r.x0+r.x1)/2,r.y1-0.3,(r.z0+r.z1)/2);kioskLight.distance=r.kiosk?7:16;kioskLight.intensity=r.kiosk?22:110;}else kioskLight.intensity=0;}
+function updateKioskLight(){KUPD.forEach(f=>f());const i=camInside(),r=i&&ROOMS[i-1];if(r&&(r.kiosk||r.id==='SRV'||r.meppel)){kioskLight.position.set((r.x0+r.x1)/2,r.y1-0.3,(r.z0+r.z1)/2);kioskLight.distance=r.kiosk?7:16;kioskLight.intensity=r.kiosk?22:110;}else kioskLight.intensity=0;}
 function enterKiosk(id){const r=ROOMS.find(r=>r.kioskId===id);if(!r)return;FP.last={x:r.cx,z:r.cz,yaw:r.yaw,pitch:-0.08};
   if(FP.on){FP.pos.set(r.cx,0,r.cz);FP.yaw=r.yaw;FP.pitch=-0.08;}else enterFP();if(SEL)selectDevice(null);}
 
@@ -183,7 +183,7 @@ function streetLight(x,z){if(!layFree([x-0.3,z-0.3,x+0.3,z+0.3],['road'],0))retu
     s.coneMat=coneMatOf();s.haloPos=[];s.lamps=0;s.lampOff=(s.pos[0]*7.3+s.pos[1]*3.1)%1*0.06;}
   s.lamps++;LAMPS.n++;const [dx,dz]=lampDir(x,z),H=6.2,ax=x+dx*1.45,az=z+dz*1.45,al=dx!==0;
   // defecte lamp: eigen materialen zodat hij los van de rest kan flikkeren
-  let lm=s.lampMat,pm=s.poolMat,hz=s.haloPos;if(LAMPS.n%23===7){lm=s.lampMat.clone();pm=s.poolMat.clone();const d={s,lm,pm,halo:[]};LAMPS.defect.push(d);hz=d.halo;}
+  const lm=s.lampMat,pm=s.poolMat,hz=s.haloPos;
   // voet met mastluik, getrapte mast, gebogen uithouder en een plat LED-armatuur met lichtgevende onderkant
   cyl(0.11,0.13,0.55,MAT.galvDark,staticRoot,x,0.28,z,10);box(0.07,0.24,0.02,MAT.galv,staticRoot,x-dx*0.1,0.32,z-dz*0.1);
   cyl(0.055,0.085,H-0.3,MAT.galv,staticRoot,x,0.55+(H-0.85)/2,z,8);

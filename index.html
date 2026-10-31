@@ -240,6 +240,8 @@ body:not(.fp) #fpHint{display:none!important}
 kbd{font-family:var(--mono);font-size:11px;background:rgba(255,255,255,.12);border:1px solid var(--line2);border-radius:4px;padding:0 5px}
 body.fp:not(.fplocked) #fpPause{display:flex;position:fixed;left:50%;top:84px;transform:translateX(-50%);align-items:center;gap:10px;background:rgba(13,17,22,.9);border:1px solid var(--accent);border-radius:10px;padding:8px 16px;z-index:7;pointer-events:none;font-size:12.5px}
 #fpPause b{font-size:13px;color:var(--accent)}#fpPause .k{color:var(--muted);font-size:12px;font-family:var(--mono)}
+.vwrap{position:relative}#viewMenu{position:absolute;left:0;bottom:calc(100% + 8px);display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:8px;min-width:330px;background:var(--panel,rgba(16,20,26,.96));border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.45);z-index:30}
+#viewMenu.hidden{display:none}#viewMenu button{text-align:left}#viewMenu kbd{display:inline!important}
 #views .walk,#views .tool{background:rgba(240,164,58,.14);border-color:rgba(240,164,58,.4)}
 #views .tool.on{background:var(--accent);color:#1a1206;border-color:var(--accent)}
 body.fp #views .walk{background:var(--accent);color:#1a1206;font-weight:700}
@@ -405,20 +407,23 @@ body.previewing #tasks,body.previewing #alarms,body.previewing #faults{opacity:.
 </aside>
 <div id="devpanel" class="panel hidden"></div>
 <nav id="views" class="panel">
-  <button data-v="0"><kbd>1</kbd>Overzicht</button>
-  <button data-v="1"><kbd>2</kbd>Lijnvelden</button>
-  <button data-v="2"><kbd>3</kbd>Transformatoren</button>
-  <button data-v="3"><kbd>4</kbd>MS-gebouwen</button>
-  <button data-v="4"><kbd>5</kbd>Vogelvlucht</button>
-  <button data-v="5"><kbd>6</kbd>Binnen 10 kV</button>
-  <button data-v="6"><kbd>7</kbd>Binnen 20 kV</button>
-  <button data-v="7"><kbd>8</kbd>Woonwijk</button>
-  <button data-v="8"><kbd>9</kbd>Centrum &amp; Vaart</button>
-  <button data-v="9" title="F5 Ziekenhuis (±450 m westelijk, aan de rand van de stad)">Ziekenhuis</button>
-  <button data-v="10" title="F6 Glastuinbouw Oost (±250 m oostelijk)">Kassen</button>
-  <button data-v="11" title="G4 Waterzuivering (±330 m noordwestelijk)">RWZI</button>
-  <button data-v="12" title="Datacenter met de SCADA-servers op het onderstation">Datacenter</button>
-  <button data-v="13" title="OS Meppel van Netbeheer Noord, aan de noordkant van de stad">OS Meppel</button>
+  <div class="vwrap"><button id="viewBtn" class="tool" title="Camerastandpunten: onderstation, wijk, sites, datacenter en OS Meppel (toetsen 1–9)">📷 Standpunt ▾</button>
+   <div id="viewMenu" class="hidden">
+    <button data-v="0"><kbd>1</kbd>Overzicht</button>
+    <button data-v="1"><kbd>2</kbd>Lijnvelden</button>
+    <button data-v="2"><kbd>3</kbd>Transformatoren</button>
+    <button data-v="3"><kbd>4</kbd>MS-gebouwen</button>
+    <button data-v="4"><kbd>5</kbd>Vogelvlucht</button>
+    <button data-v="5"><kbd>6</kbd>Binnen 10 kV</button>
+    <button data-v="6"><kbd>7</kbd>Binnen 20 kV</button>
+    <button data-v="7"><kbd>8</kbd>Woonwijk</button>
+    <button data-v="8"><kbd>9</kbd>Centrum &amp; Vaart</button>
+    <button data-v="9" title="F5 Ziekenhuis (±450 m westelijk, aan de rand van de stad)">Ziekenhuis</button>
+    <button data-v="10" title="F6 Glastuinbouw Oost (±250 m oostelijk)">Kassen</button>
+    <button data-v="11" title="G4 Waterzuivering (±330 m noordwestelijk)">RWZI</button>
+    <button data-v="12" title="Datacenter met de SCADA-servers op het onderstation">Datacenter</button>
+    <button data-v="13" title="OS Meppel van Netbeheer Noord, aan de noordkant van de stad">OS Meppel</button>
+   </div></div>
   <button id="pvBtn" class="tool" title="Weer en tijd bekijken: klok schuiven, weer en seizoen kiezen (alleen kijken)"><kbd>T</kbd>Weer &amp; tijd</button>
   <button id="xrayBtn" class="tool" title="Röntgenblik: zie in 3D waar de kabels onder straat en stoep liggen"><kbd>X</kbd>Kabels</button>
   <button id="gisBtn" class="tool" title="Kabeltablet: kaart met alle kabels, moffen en je eigen positie"><kbd>G</kbd>Tablet</button>
@@ -1279,7 +1284,7 @@ function kiosk(s){
   const po=mesh(new THREE.PlaneGeometry(0.55,0.75),mat({map:posterTex(),roughness:0.7}),root,-hw+KT+0.01,Y+1.4,0.75);po.rotation.y=Math.PI/2;po.castShadow=false;
   kioskRTU(root,Y,KH,wrect);   // RTU-kast met LTE en glasvezel (05c-servers.js)
 }
-function updateKioskLight(){KUPD.forEach(f=>f());const i=camInside(),r=i&&ROOMS[i-1];if(r&&(r.kiosk||r.id==='SRV')){kioskLight.position.set((r.x0+r.x1)/2,r.y1-0.3,(r.z0+r.z1)/2);kioskLight.distance=r.kiosk?7:16;kioskLight.intensity=r.kiosk?22:110;}else kioskLight.intensity=0;}
+function updateKioskLight(){KUPD.forEach(f=>f());const i=camInside(),r=i&&ROOMS[i-1];if(r&&(r.kiosk||r.id==='SRV'||r.meppel)){kioskLight.position.set((r.x0+r.x1)/2,r.y1-0.3,(r.z0+r.z1)/2);kioskLight.distance=r.kiosk?7:16;kioskLight.intensity=r.kiosk?22:110;}else kioskLight.intensity=0;}
 function enterKiosk(id){const r=ROOMS.find(r=>r.kioskId===id);if(!r)return;FP.last={x:r.cx,z:r.cz,yaw:r.yaw,pitch:-0.08};
   if(FP.on){FP.pos.set(r.cx,0,r.cz);FP.yaw=r.yaw;FP.pitch=-0.08;}else enterFP();if(SEL)selectDevice(null);}
 
@@ -1325,7 +1330,7 @@ function streetLight(x,z){if(!layFree([x-0.3,z-0.3,x+0.3,z+0.3],['road'],0))retu
     s.coneMat=coneMatOf();s.haloPos=[];s.lamps=0;s.lampOff=(s.pos[0]*7.3+s.pos[1]*3.1)%1*0.06;}
   s.lamps++;LAMPS.n++;const [dx,dz]=lampDir(x,z),H=6.2,ax=x+dx*1.45,az=z+dz*1.45,al=dx!==0;
   // defecte lamp: eigen materialen zodat hij los van de rest kan flikkeren
-  let lm=s.lampMat,pm=s.poolMat,hz=s.haloPos;if(LAMPS.n%23===7){lm=s.lampMat.clone();pm=s.poolMat.clone();const d={s,lm,pm,halo:[]};LAMPS.defect.push(d);hz=d.halo;}
+  const lm=s.lampMat,pm=s.poolMat,hz=s.haloPos;
   // voet met mastluik, getrapte mast, gebogen uithouder en een plat LED-armatuur met lichtgevende onderkant
   cyl(0.11,0.13,0.55,MAT.galvDark,staticRoot,x,0.28,z,10);box(0.07,0.24,0.02,MAT.galv,staticRoot,x-dx*0.1,0.32,z-dz*0.1);
   cyl(0.055,0.085,H-0.3,MAT.galv,staticRoot,x,0.55+(H-0.85)/2,z,8);
@@ -1855,6 +1860,15 @@ function buildIndustry(){
 // zodat bakeStatic alles samenvoegt. Alleen de deuren van het gebouw blijven bewegen. Aanroep vanuit 06-build.js na buildDistrict().
 const MEPPEL={cx:80,cz:505,x0:46,x1:114,z0:451,z1:547};
 const MPM={};
+// ---- toegang: OS Meppel is van Netbeheer Noord. Lokaal schakelen aan onze velden mag pas na toestemming (bellen); tot dan zit de deur op slot
+const MEP_IDS=new Set(['M-MP1','M-MP2','M-MP3','MP1-Q8','MP2-Q8','MP3-Q8']),MP_ACCESS={until:-1,pending:false,warned:false};
+const mpAllowed=()=>SIM.t<MP_ACCESS.until;
+const nearMeppelDoor=()=>FP.on&&(MEPPEL.doorPts||[]).some(d=>Math.hypot(FP.pos.x-d.x,FP.pos.z-d.z)<4.5);
+function callMeppel(){if(MP_ACCESS.pending)return;if(mpAllowed())return pushAlarm(`Je hebt al toestemming van Netbeheer Noord tot ${fmtClock(MP_ACCESS.until)}`,'info');
+  MP_ACCESS.pending=true;AudioSys.ring?.();pushAlarm('📞 Je belt de bedrijfsvoering van Netbeheer Noord: toegang tot OS Meppel om aan onze velden MP1–MP3 te schakelen','op');
+  addTimer(rnd(1,2.5),()=>{MP_ACCESS.pending=false;if(!SIM.meppel.avail){pushAlarm('Netbeheer Noord: "We hebben zelf een storing in OS Meppel – nu geen toegang. Bel over een kwartier terug."','warn');return;}
+    MP_ACCESS.until=SIM.t+90;MP_ACCESS.warned=false;readyNotice(`Netbeheer Noord: "Akkoord. Je mag OS Meppel in en aan jullie velden MP1–MP3 schakelen tot ${fmtClock(MP_ACCESS.until)}. Meld je af als je klaar bent."`,null);});}
+function meppelAccessTick(){if(MP_ACCESS.until>0&&!mpAllowed()&&!MP_ACCESS.warned){MP_ACCESS.warned=true;pushAlarm('Toestemming van Netbeheer Noord voor OS Meppel is verlopen – bel opnieuw als je daar nog moet schakelen','info');}}
 // detailniveau: op afstand alleen de grote delen van Meppel tekenen (portalen, trafo's, gebouw, terrein en hek)
 function meppelLod(){if(!MPM.fine){const keep=[MAT.lattice,MAT.trafo,MAT.trafoDark,MAT.roof,MAT.gravel,MAT.concrete,MAT.concreteDark,MPM.fence];
     const plates=new Set(plateCache.values());
@@ -1887,6 +1901,14 @@ function buildMeppel(){const M=MEPPEL,P=Math.PI;
     PH.forEach((p,i)=>{wire(V3(bx+p,BUSY-0.07,BUSZ[i]),q1.A[i],0.35);wire(q1.B[i],q0.low[i],0.12);wire(q0.top[i],ct.A[i],0.12);wire(ct.B[i],tr.hv[i],0.5);wire(sa.top[i],tr.hv[i],0.25);});});
   // 10 kV-gebouw met de uitgaande velden; deuren en naambord aan de terreinkant
   buildBuilding({id:'MPB',x0:-22,x1:18,z0:43,z1:52,doors:[-14,10],label:'OS MEPPEL  ·  10 kV'});
+  // binnen: de 10 kV-ruimte met de velden van Netbeheer Noord en onze uitgaande velden MP1–MP3 (lokaal bedienbaar met toestemming)
+  const room={idx:ROOMS.length+1,id:'MPB',meppel:true,x0:M.cx-17.7,x1:M.cx+21.7,z0:M.cz-51.7,z1:M.cz-43.3,y0:0.45,y1:5.18,doors:[]};ROOMS.push(room);M.room=room;
+  groundQuad(-21.7,43.3,17.7,51.7,0.455,IM.floor,4);iplane(39.4,4.73,IM.plaster,-2,2.815,51.69,P);iplane(8.4,4.73,IM.plaster,-21.69,2.815,47.5,P/2);iplane(8.4,4.73,IM.plaster,17.69,2.815,47.5,-P/2);
+  for(const [a,b] of[[-21.7,-15.1],[-12.9,8.9],[11.1,17.7]])iplane(b-a,4.73,IM.plaster,(a+b)/2,2.815,43.31,0);for(const d of[-14,10])iplane(2.2,2.18,IM.plaster,d,4.09,43.31,0);
+  iplane(39.4,8.4,IM.ceiling,-2,5.17,47.5,0,P/2);for(const x of[-16,-6,4,14])box(1.4,0.06,0.22,IM.led,staticRoot,x,4.83,47.5);
+  {const PN=[{title:'TR 101'},{id:'MP-TR',kind:'inc',node:'MP'},{title:'Meppel-W'},{title:'Reserve'},{id:'M-MP1',kind:'feed',node:'MP1'},{id:'M-MP2',kind:'feed',node:'MP2'},{id:'M-MP3',kind:'feed',node:'MP3'},{title:'TR 102'}];
+    const bp=new Set(scene.children);PN.forEach((p,i)=>buildPanel(i,p,{cx:-4,n:PN.length,room}));scene.children.filter(o=>!bp.has(o)).forEach(o=>o.position.z-=4);
+    groundQuad(-7.8,48.7,-0.2,50.15,0.463,IM.rubber,2);wsign('UITGAANDE VELDEN OS ZUIDWOLDE',staticRoot,-5.2,3.3,51.66,P,2.6);wsign('NETBEHEER NOORD',staticRoot,-1.6,3.3,51.66,P,1.6);}
   // hek met poort aan de weg (lokale +x), en terreinverlichting
   MPM.fence??=(()=>{const t=toTex(C.chain);t.repeat.set(1,1);return mat({map:t,alphaTest:0.45,side:THREE.DoubleSide,metalness:0.6,roughness:0.45,color:0xcfd4d6});})();
   const H=2.4,fence=(ax,az,bx,bz)=>{const Ln=Math.hypot(bx-ax,bz-az);if(Ln<0.5)return;const g=new THREE.PlaneGeometry(Ln,H),uv=g.attributes.uv;for(let i=0;i<uv.count;i++)uv.setXY(i,uv.getX(i)*Ln/0.11,uv.getY(i)*H/0.11);
@@ -1895,20 +1917,30 @@ function buildMeppel(){const M=MEPPEL,P=Math.PI;
   fence(-34,-42,34,-42);fence(-34,-42,-34,54);fence(-34,54,34,54);fence(34,54,34,gz+3.4);fence(34,gz-3.4,34,-42);for(const z of[gz-3.4,gz+3.4])box(0.25,2.8,0.25,MAT.galvDark,staticRoot,34,1.4,z);
   for(const [x,z] of[[-30,-38],[30,-38],[-30,34],[30,34]]){cyl(0.08,0.12,9,MAT.galv,staticRoot,x,4.5,z,8);box(0.7,0.25,0.5,MAT.lamp,staticRoot,x,9.1,z);}
   // ---- apparaten in de juiste stand zetten (scheiders dicht, aarding open), daarna registraties en klikvakken weghalen
-  const newViews=Object.keys(VIEWS).filter(k=>!before.views.has(k)),tmp=[];
+  const KEEPV=new Set(['M-MP1','M-MP2','M-MP3','MP-TR']),newViews=Object.keys(VIEWS).filter(k=>!before.views.has(k)&&!KEEPV.has(k)),tmp=[];
   for(const k of newViews)for(const id of[k,k.replace(/-Q9$/,'-Q8')])if(!D[id]){D[id]={id,state:/-Q8$/.test(id)?0:1,fans:false,a:'',busy:false};tmp.push(id);}
   for(let i=0;i<6;i++)newViews.forEach(k=>VIEWS[k].update?.(3));
   tmp.forEach(id=>delete D[id]);newViews.forEach(k=>delete VIEWS[k]);
-  const picks=pickables.splice(before.pick);picks.forEach(p=>scene.remove(p));
+  const picks=pickables.splice(before.pick);picks.forEach(p=>{if(KEEPV.has(p.userData.devId))pickables.push(p);else scene.remove(p);});
   // ---- alles in één groep, gedraaid en op zijn plek
   const grpM=new THREE.Group();grpM.position.set(M.cx,0,M.cz);grpM.rotation.y=P;
   scene.children.filter(o=>!before.scene.has(o)).forEach(o=>{scene.remove(o);grpM.add(o);});
   staticRoot.children.filter(o=>!before.st.has(o)).forEach(o=>{staticRoot.remove(o);grpM.add(o);});
   staticRoot.add(grpM);grpM.updateMatrixWorld(true);
   // bewegende delen vastzetten (worden dan samengevoegd), behalve de deurbladen; deur- en tredeposities naar de wereld
-  const doors=DOORS.slice(before.doors),keep=new Set(doors.flatMap(d=>d.leaves.map(l=>l.g)));
+  const doors=DOORS.slice(before.doors),keep=new Set(doors.flatMap(d=>d.leaves.map(l=>l.g)));KEEPV.forEach(id=>VIEWS[id]?.root.traverse(o=>keep.add(o)));
   grpM.traverse(o=>{if(o.userData.dyn&&!keep.has(o))o.userData.dyn=false;});
-  doors.forEach(d=>{d.p=grpM.localToWorld(d.p.clone());});
+  doors.forEach(d=>{d.p=grpM.localToWorld(d.p.clone());d.locked=()=>!mpAllowed();});M.doorPts=doors.map(d=>d.p);
+  // de bedienbare velden: kijkpunten en vakken naar de wereld (ze zijn 4 m naar voren geschoven en daarna gedraaid)
+  KEEPV.forEach(id=>{const v=VIEWS[id];if(!v)return;v.root.updateMatrixWorld(true);v.box=new THREE.Box3().setFromObject(v.root);v.center=v.box.getCenter(V3());
+    for(const k of['labelPos','arcPos','flyPos','flyTarget'])if(v[k])v[k]=grpM.localToWorld(v[k].clone().setZ(v[k].z-4));});
+  // botsvlakken voor rondlopen: hek met poort, velden, trafo's, gebouwmuren met deuren (deuren op slot zonder toestemming), panelen
+  const RX=(...r)=>DISTRICT_RECTS.push(r),g0=M.gate[0],g1=M.gate[1];
+  RX(M.x0,M.z0-0.1,M.x1,M.z0+0.1);RX(M.x0,M.z1-0.1,M.x1,M.z1+0.1);RX(M.x1-0.1,M.z0,M.x1+0.1,M.z1);RX(M.x0-0.1,M.z0,M.x0+0.1,g0);RX(M.x0-0.1,g1,M.x0+0.1,M.z1);
+  for(const bx of[M.cx-14,M.cx+14]){RX(bx-4,M.cz+5,bx+4,M.cz+38.5);RX(bx-5.6,M.cz-35,bx+5.6,M.cz-5);}
+  const wx0=M.cx-22,wx1=M.cx+22,wz0=M.cz-52,wz1=M.cz-43;RX(wx0,wz0,wx1,wz0+0.3);RX(wx0,wz0,wx0+0.3,wz1);RX(wx1-0.3,wz0,wx1,wz1);
+  const dxs=[M.cx+14,M.cx-10].sort((a,b)=>a-b);let xc=wx0;dxs.forEach(d=>{RX(xc,wz1-0.3,d-1.05,wz1);xc=d+1.05;});RX(xc,wz1-0.3,wx1,wz1);
+  M.lockRects=dxs.map(d=>[d-1.05,wz1-0.4,d+1.05,wz1+0.1]);RX(M.cx-0.8,wz0+0.3,M.cx+7.2,wz0+2.1);
   for(let i=before.steps;i<STEPS.length;i++){const s=STEPS[i],a=grpM.localToWorld(V3(s[0],0,s[1])),b=grpM.localToWorld(V3(s[2],0,s[3]));STEPS[i]=[Math.min(a.x,b.x),Math.min(a.z,b.z),Math.max(a.x,b.x),Math.max(a.z,b.z),s[4]];}
   LAYOUT.splice(before.lay);
   // inrit vanaf de hoofdweg (in wereldcoördinaten)
@@ -2124,6 +2156,7 @@ function operate(id,to,opts={}){
   const dst=d.bay&&RING.stations.find(s=>s.id===d.bay);if(dst&&dst.damaged)return deny(`${dst.id} is beschadigd (${dst.damaged}) – niet bedienbaar. Isoleer vanaf het buurstation.`);
   {const msg=stationBlock(dst,id,to,d.type==='lvs'||localOk(id));if(msg)return deny(msg);}   // koperdiefstal, trafobrand
   if(d.type==='lvs'&&!opts.crew&&!localOk(id))return lsSwitchOrder(id,to);   // LS: lokaal of via een monteur
+  if(MEP_IDS.has(id)&&localOk(id)&&!mpAllowed())return deny('Geen toestemming van Netbeheer Noord om in OS Meppel te schakelen – bel eerst (knop in het veldpaneel of F bij de deur)');
   if(!scadaReach(id)&&!localOk(id))return deny('SCADA-verbinding verbroken – loop erheen (V) en bedien lokaal aan het veld');
   if(to===1&&/-T$/.test(id)&&RING.stations.find(s=>s.id+'-T'===id)?.fuse)return deny('Zekeringen nog niet vervangen – wacht op de monteur');
   if(d.busy)return deny('Bediening loopt nog…');
@@ -4260,6 +4293,7 @@ function buildSLD(){
   W(350,324,350,420,'MP3');DS('MS5-K',350,432,'MS5-K',1);W(350,443,350,470,'M5');W(350,470,60,470,'M5');
   o.push(`<g class="golink" data-goto="R"><rect class="hit" x="56" y="474" width="250" height="18" rx="4"/><text x="60" y="486" class="fs mh">⇄ naar MS5 Bedrijvenpark Zuid (ring woonwijk) ›</text></g>`);T(338,384,'koppelkabel','end','fs dl');T(338,397,'max. 4 MW','end','fs dl');M('lnk',338,410,'end','mh');
   T(235,516,'MS5-K is normaal open. Sluiten mag alleen als de','middle','fs dl');T(235,529,'ringkant spanningsloos is: dan voedt Meppel MS5 terug.','middle','fs dl');T(235,542,'Parallel met Netbeheer Noord is niet toegestaan.','middle','fs dl');
+  o.push(`<g class="golink" data-call="mp"><rect class="hit" x="110" y="552" width="250" height="18" rx="4"/><text x="235" y="564" text-anchor="middle" class="fs mh">📞 Bel Netbeheer Noord voor toegang tot OS Meppel ›</text></g>`);
   const svg=$('#sld');svg.innerHTML=`<g data-tab="10">${out[10].join('')}</g><g data-tab="20" style="display:none">${out[20].join('')}</g><g data-tab="R" style="display:none">${out.R.join('')}</g><g data-tab="P" style="display:none"><g id="progG"></g></g><g data-tab="K" style="display:none"><g id="cabG"></g></g><g data-tab="L" style="display:none"><g id="lsG"></g></g><g data-tab="M" style="display:none">${out.M.join('')}</g>`;
   SLD.nodes=[...svg.querySelectorAll('[data-n]')];SLD.byNode={};SLD.nodes.forEach(el=>(SLD.byNode[el.dataset.n]??=[]).push(el));
   svg.querySelectorAll('.dev').forEach(el=>{const id=el.dataset.id,tab=el.closest('[data-tab]').dataset.tab;(SLD.devs[id]??=[]).push(el);(SLD.devTab[id]??=new Set()).add(tab);
@@ -4409,7 +4443,7 @@ function renderDevPanel(){
     ctl=`<div class="swlist">${ids.map(id=>`<div class="swr"><span><b>${id.slice(s.id.length+1)}</b>${D[id].type==='lvs'?D[id].lvg.name:D[id].label}</span><button class="b1" data-op="${id}:1">${D[id].type==='lvs'?'IN':'DICHT'}</button><button class="b0" data-op="${id}:0">${D[id].type==='lvs'?'UIT':'OPEN'}</button></div>`).join('')}</div>`+
       `<div class="dp-ctl gsctl"><button data-act="gs" title="Een monteur brengt een noodaggregaat op een aanhanger en sluit het aan op het LS-rek">⚡ Aggregaat sturen</button><button data-act="gsoff">Afkoppelen</button><button data-act="gsrestart">Herstarten</button></div>`;}
   else if(d.type==='tr')ctl=`<div class="dp-ctl"><button data-act="avr"></button><button data-act="tap-1" title="Trap lager">▼ trap</button><button data-act="tap1" title="Trap hoger">▲ trap</button></div>`;
-  const sub=[];if(VIEWS[SEL])sub.push(`<button data-act="fly">Bekijk in 3D</button>`);if(d.type==='bld')sub.push(`<button data-act="inside">Ga naar binnen</button>`);if(d.type==='bld'||VIEWS[SEL]?.inside)sub.push(`<button data-act="scada">Toon in SCADA</button>`);
+  const sub=[];if(MEP_IDS.has(SEL)||SEL==='MP-TR')sub.push(`<button data-act="callmp" title="Toestemming vragen om in OS Meppel lokaal aan onze velden te schakelen">📞 Bel Netbeheer Noord</button>`);if(VIEWS[SEL])sub.push(`<button data-act="fly">Bekijk in 3D</button>`);if(d.type==='bld')sub.push(`<button data-act="inside">Ga naar binnen</button>`);if(d.type==='bld'||VIEWS[SEL]?.inside)sub.push(`<button data-act="scada">Toon in SCADA</button>`);
   if(d.type==='tr')sub.push(`<button data-act="reset">Reset blokkeerrelais 86</button>`);
   if(d.type==='tr'||d.line||(d.feeder&&!d.feeder.gen))sub.push(`<button data-act="prot">Beveiligingsinstellingen</button>`);
   if(d.type==='kiosk')sub.push(`<button data-act="kin">Naar binnen (rondlopen)</button>`,`<button data-act="lvsend">Monteur sturen (LS-storing)</button>`);
@@ -4437,7 +4471,7 @@ function refreshDevPanel(){if(!SEL)return;const p=$('#devpanel'),d=D[SEL];
 $('#devpanel').addEventListener('click',e=>{const op=e.target.closest('[data-op]');if(op){const [id,v]=op.dataset.op.split(':');operate(id,+v);return;}
   const b=e.target.closest('[data-act]');if(!b||b.disabled)return;const a=b.dataset.act;
   if(a==='1'||a==='0')operate(SEL,+a);else if(a==='x')selectDevice(null);else if(a==='fly')flyToDevice(SEL);else if(a==='inside'){const v=VIEWPOS[SEL==='MS20'?6:5];flyTo(v[0].clone(),v[1].clone(),2);}
-  else if(a.startsWith('ratio'))setRatio(a.slice(5));else if(a==='kin')enterKiosk(SEL);else if(a==='gs')gsSend(D[SEL].st);else if(a==='gsoff')gsOff(D[SEL].st);else if(a==='gsrestart')gsRestart(D[SEL].st);else if(a==='lvsend')dispatchLV(SEL);
+  else if(a.startsWith('ratio'))setRatio(a.slice(5));else if(a==='kin')enterKiosk(SEL);else if(a==='callmp')callMeppel();else if(a==='gs')gsSend(D[SEL].st);else if(a==='gsoff')gsOff(D[SEL].st);else if(a==='gsrestart')gsRestart(D[SEL].st);else if(a==='lvsend')dispatchLV(SEL);
   else if(a==='avr')setAVR(SEL,D[SEL].avr==='auto'?'hand':'auto');else if(a.startsWith('tap'))tapStep(SEL,+a.slice(3));
   else if(a==='reset')resetLockout(SEL);else if(a==='prot')openProt();else if(a==='ar')toggleAR(D[SEL].line);else if(a.startsWith('sel:'))selectDevice(a.slice(4));
   else if(a==='scada'){$('#scada').classList.remove('min');$('#scada').animate([{boxShadow:'0 0 0 3px #f0a43a'},{boxShadow:'0 0 0 0 transparent'}],{duration:900});}});
@@ -4516,13 +4550,14 @@ function buildColliders(){
   addRect(F.x0,F.z1-t,F.gate[0],F.z1+t);addRect(F.gate[1],F.z1-t,F.x1,F.z1+t);addRect(F.gate[1],F.z1+0.2,F.gate[1]+10.2,F.z1+1.1);
   DISTRICT_RECTS.forEach(r=>addRect(...r));
 }
-function blockedAt(x,z){const r=0.3;if(x<-200||x>250||z<-110||z>440)return true;
+function blockedAt(x,z){const r=0.3;if(x<-200||x>250||z<-110||z>565)return true;
+  if(!mpAllowed())for(const q of MEPPEL.lockRects||[])if(x>q[0]-r&&x<q[2]+r&&z>q[1]-r&&z<q[3]+r)return true;
   for(const q of FP.rects)if(x>q[0]-r&&x<q[2]+r&&z>q[1]-r&&z<q[3]+r)return true;return false;}
 function floorAt(x,z){const r=ROOMS.find(r=>x>r.x0-0.05&&x<r.x1+0.05&&z>r.z0-0.05&&z<r.z1+0.05);if(r)return r.y0;
   for(const s of STEPS)if(x>s[0]&&x<s[2]&&z>s[1]&&z<s[3])return s[4];return 0.02;}
 // ---- deuren: gaan open als jij (rondlopen of camera) of een monteur in de buurt is, en vallen daarna weer dicht
 function doorTick(dt){const me=FP.on?FP.pos:camera.position.y<4?camera.position:null,crew=NPCS.filter(n=>n.state!=='out').map(n=>n.P.g.position),dist=(p,D_)=>Math.hypot(p.x-D_.p.x,p.z-D_.p.z);
-  for(const D_ of DOORS){const want=(me&&dist(me,D_)<2.8)||crew.some(p=>dist(p,D_)<D_.R),near=camera.position.distanceTo(D_.p)<30;
+  for(const D_ of DOORS){const want=!D_.locked?.()&&((me&&dist(me,D_)<2.8)||crew.some(p=>dist(p,D_)<D_.R)),near=camera.position.distanceTo(D_.p)<30;
     if(want&&!D_.want&&D_.o<0.05&&near){const v=distGain(D_.p);AudioSys.burst({type:'highpass',f:2400,gain:0.1*v,dur:0.04});AudioSys.tone({f:190,f2:140,type:'triangle',gain:0.02*v,dur:0.5,delay:0.05});}
     D_.want=want;const o0=D_.o;D_.o=approach(D_.o,want?1:0,dt/0.7);if(D_.o===o0)continue;
     if(D_.o===0&&near){const v=distGain(D_.p);AudioSys.burst({type:'lowpass',f:320,gain:0.25*v,dur:0.15});AudioSys.tone({f:72,gain:0.14*v,dur:0.12});}
@@ -4584,6 +4619,7 @@ function updateFP(dt){
   if(id!==FP.look){FP.look=id;const v=id&&VIEWS[id];hovBox.visible=!!v&&id!==SEL;if(v)hovBox.box.copy(v.box).expandByScalar(0.1);}
   const hint=$('#fpHint');
   if(id){const d=D[id],a=actionLabel(d);hint.innerHTML=`<b>${id}</b> · ${d.label}<br>${a?`<kbd>F</kbd> ${a} &nbsp; `:''}<kbd>E</kbd> paneel`;hint.style.display='block';}
+  else if(nearMeppelDoor()&&!mpAllowed()){hint.innerHTML=MP_ACCESS.pending?'<b>OS Meppel</b> · Netbeheer Noord wordt gebeld…':'<b>OS Meppel</b> · deur op slot<br><kbd>F</kbd> bel Netbeheer Noord voor toegang';hint.style.display='block';}
   else hint.style.display='none';
 }
 addEventListener('mousemove',e=>{if(!FP.on||document.pointerLockElement!==canvasEl)return;
@@ -4603,6 +4639,7 @@ addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;
   if(!FP.on)return;FP.keys[e.code]=true;
   if(e.code==='Space'){e.preventDefault();if(!FP.jh&&document.pointerLockElement===canvasEl){FP.vy=4.6;FP.jh=0.001;}return;}
   if(e.code==='KeyZ'){setTorch(!TORCH.on);return;}
+  if(e.code==='KeyF'&&!FP.look&&nearMeppelDoor()&&!mpAllowed()){callMeppel();return;}
   if(e.code==='KeyF'&&FP.look){const d=D[FP.look];if(actionLabel(d))operate(FP.look,d.state?0:1);}
 });
 addEventListener('keyup',e=>{FP.keys[e.code]=false;});
@@ -5446,7 +5483,7 @@ function renderLSTab(){const g=$('#lsG');if(!g||SLD.tab!=='L')return;const o=[],
       o.push(`<text x="${x0+6}" y="${y0+150+i*11}" class="fs" style="font-size:8.5px;fill:${st?(d.load>1?'var(--red)':'#9be15d'):'var(--muted)'}">⇄ ${d.id} → ${other} · ${st?Math.round((d.load||0)*280)+' kW':'open'}</text>`);});
     o.push('</g>');});
   g.innerHTML=o.join('');}
-$('#sld').addEventListener('click',e=>{const c=e.target.closest('[data-ls]');if(c)return openLS(c.dataset.ls);const g=e.target.closest('[data-goto]');if(g)setTab(g.dataset.goto);});
+$('#sld').addEventListener('click',e=>{const c=e.target.closest('[data-ls]');if(c)return openLS(c.dataset.ls);const g=e.target.closest('[data-goto]');if(g)setTab(g.dataset.goto);if(e.target.closest('[data-call="mp"]'))callMeppel();});
 
 // ---- LS-venster
 let lsPrev=false,lsSt='MS1';
@@ -6690,7 +6727,7 @@ function gisDrawExtra(g,cv){const s=TAB.zoom,now=performance.now();
 // ============================================================ updatecontrole in het hoofdmenu: is er op GitHub een nieuwere versie?
 // De build zet een vingerafdruk in BUILD_ID (tests/stamp.mjs) en houdt version.json bij met eerdere versies.
 // Staat onze versie bij de eerdere versies op GitHub, dan is er een update; staat hij er niet in, dan is het eigen (nieuwer) werk.
-const BUILD_ID='aaba6cf0f4c9';
+const BUILD_ID='bda8cb2c9967';
 const UPD_REPO='https://github.com/ProAdmin007/Onderstation-SIM-Pro';
 const UPD_URL='https://raw.githubusercontent.com/ProAdmin007/Onderstation-SIM-Pro/main/version.json';
 // toestand van de controle: idle, bezig, actueel, nieuw, eigen of fout
@@ -6917,7 +6954,9 @@ $('#speed').addEventListener('click',e=>{const b=e.target.closest('button');if(b
 $('#interlock').addEventListener('change',e=>{SIM.interlock=e.target.checked;pushAlarm(SIM.interlock?'Vergrendelingen ingeschakeld':'Let op: vergrendelingen UITGESCHAKELD – verkeerde handelingen worden niet tegengehouden',SIM.interlock?'info':'warn');refreshDevPanel();});
 $('#mute').addEventListener('click',()=>{const m=AudioSys.toggleMute();$('#mute').style.opacity=m?0.45:1;});
 $('#scadaToggle').addEventListener('click',()=>{const s=$('#scada');s.classList.toggle('min');$('#scadaToggle').textContent=s.classList.contains('min')?'+':'–';});
-$('#views').addEventListener('click',e=>{const b=e.target.closest('button');if(b&&b.dataset.v){const v=VIEWPOS[+b.dataset.v];flyTo(v[0].clone(),v[1].clone());}});
+$('#views').addEventListener('click',e=>{const b=e.target.closest('button');if(b&&b.id==='viewBtn'){$('#viewMenu').classList.toggle('hidden');return;}
+  if(b&&b.dataset.v){const v=VIEWPOS[+b.dataset.v];flyTo(v[0].clone(),v[1].clone());$('#viewMenu').classList.add('hidden');}});
+addEventListener('pointerdown',e=>{if(!e.target.closest('.vwrap'))$('#viewMenu')?.classList.add('hidden');});
 addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;
   if(e.key>='1'&&e.key<='9'){const v=VIEWPOS[+e.key-1];flyTo(v[0].clone(),v[1].clone());}
   else if(e.code==='Space'&&!FP.on){e.preventDefault();if($('#intro').classList.contains('hidden'))setSpeed(0);}
@@ -6975,7 +7014,7 @@ else{renderMenu();$('#intro').classList.remove('hidden');controls.autoRotate=tru
 if(params.has('night'))updateSky(22);
 if(params.has('view')){const v=VIEWPOS[+params.get('view')];camera.position.copy(v[0]);controls.target.copy(v[1]);controls.autoRotate=false;controls.update();}
 
-window.OS={FX,fireSmoke,audioPause,MEPPEL,LS_ORDERS,refreshDevPanel,scadaReach,dcBurnt,LAMPS,updateSky,updateNPCs,updateStreetLights,DOORS,STEPS,floorAt,doorTick,pickAt,SVM,serverTick,setAutoMeet,measBlock,measVan,MEAS_VAN,coachRestore,coachReset,installUpdate,COACH,coachCards,setCoach,renderCoach,checkUpdate,UPD,BUILD_ID,GSV,gensetTick,gensetSpot,digStart,klicHit,digTick,digHit,MARKS,setSpeed,klicFocus,klicCard,klicCables,tabletHome,refreshInfo,XLAB,TRACES,cableDist,stationVisuals,cityRoute,CORDONS,inCordon,copperTheft,trafoFire,stationTick,stationBlock,stIsolated,stNeighborSwitches,STV,updateHUD,pushAlarm,FF,ffStart,ffStop,skipRain,openWT,closeWT,setRealWeather,autoWeather,pickWeather,wetNow,ALARM:()=>ALARM_CRIT,VANS,vanTick,crewDispatch,crewSpawn,routeAt,driveVehicle,walkActive:()=>WALK_ACTIVE,BUS,GARB,PARCEL,AMB,TRAIN,XING,HALTES,MARKET,FIG,CY,cityDay,marketOn,schoolBreak,cityTick,measDone,cableCard,isoSwitches,KLIC,klicNew,klicMark,klicHit,gisMeasure,gisMofReplace,faultOf,cableOf,cableRisk,DIGS,CABLES,GIS_NET,gisRoute,cableState,setXray,XRAY,TAB,openTablet,closeTablet,drawTablet,nearestCable,DYN,fpsTick,fireTick,WK,getWalkers:()=>WALKERS,getStrips:()=>WSTRIPS,fireStart,fireDouse,fireStop,GENSET,gsCap,SMALL,lvgLive,updateSmall,setMouseMode,getMouseMode:()=>MOUSE_MODE,cameraKeys,OVK,openPreview,closePreview,viewHour,getPreview:()=>PREVIEW,VIEWPOS,SITE,updateSites,SLD,activeFaults,renderFaults,reportPDF,listSaves,openSlots,closeSlots,SAVE_SLOTS,layoutCheck,LAYOUT,FREC,fltRec,openRec,closeRec,renderRec,selectivity,protSelect,feederT,incT,incOf,shortCircuit,EF,earthFault,efTick,efRails,efU0,railsCoupled,controls,tripBreaker,CONS,LS_LINKS,LS_ORDERS,GENSET,lsTick,lsOrder,lsSwitchOrder,lsExec,gsSend,gsOff,gsRestart,tapOrder,setEta,callPrio,lsAreas,PRIO,openLS,closeLS,renderLS,lvVolt,stationLoads,shedFactor,failP,manualP,phoneTick,refreshDevPanel,updateSLD,openKeys,closeKeys,KEY_HELP,RELAY_BAYS,relayTask,relayDue,relayDefect,initRelays,kitTests,kitMeasure,kitVerdict,kitRun,openKit,closeKit,saveGame,readSave,deleteSave,resumeGame,canSave,specOf,CABLE,soilT,FD,meppelFault,linkTick,tabAlarms,updateTabAlarms,renderTasks,INC,INCIDENTS,startIncident,endIncident,incidentTick,setTab,renderCables,GFX,setGfx,applyGfx,openSettings,closeSettings,WX_TYPES,renderer,scene,FIRE,CARS,updateWindows,updateLife,stationLive,cbMaintTask,worstCb,cond,breakerFails,CB_IDS,FLEX,setFlex,flexTick,congestion,openFlex,closeFlex,checkModel,homeBus,BUSES,SEL_BAYS,TORCH,setTorch,HO_POOL,handoverTick,REC,RP,startReplay,stopReplay,analyse,stationDamage,closeHandover,deviations,PHONE,lvFault,callFrom,phoneAnswer,dispatchLV,LVG,forecast,progAdvice,PROG,startTask:(k,...a)=>{TASK={relayTask,cbMaintTask,railTask,railBTask,stationTask,thermoTask,ringTask,feederTask,lineTask,reserveTask}[k](...a);TASK.i=0;TASK.code='WV-TEST';briefInit(TASK);renderTasks();},SIM,D,LESSONS,lessonGo,selectDevice,abortTask,railTask,stationTask,thermoTask,nearDev,VIEWS,PROT,setProt,openProt,closeProt,busFault,BUSF,RINGS,task:()=>TASK,briefSubmit,briefCheck,briefWatch,actKey,taskActs,crewNear,boxOf:id=>VIEWS[id]&&VIEWS[id].box,AudioSys,updateAudio,WX,setWeather,setSeason,SEASONS,ambient,enterKiosk,ROOMS,blockedAt,RING,NPCS,crewDispatch,ringFault,FP,enterFP,exitFP,pickCenter,camera,camInside,setRatio,setTab,GAME,MODES,applyMode,endGame,EN:()=>EN,FLOW,operate,tapStep,setAVR,resetLockout,toggleAR,regulate,computeFlows,randomEvent,lineFault,feederFault,trafoFault,offerTask,simStep,FEEDERS};
+window.OS={callMeppel,mpAllowed,MP_ACCESS,MEP_IDS,FX,fireSmoke,audioPause,MEPPEL,LS_ORDERS,refreshDevPanel,scadaReach,dcBurnt,LAMPS,updateSky,updateNPCs,updateStreetLights,DOORS,STEPS,floorAt,doorTick,pickAt,SVM,serverTick,setAutoMeet,measBlock,measVan,MEAS_VAN,coachRestore,coachReset,installUpdate,COACH,coachCards,setCoach,renderCoach,checkUpdate,UPD,BUILD_ID,GSV,gensetTick,gensetSpot,digStart,klicHit,digTick,digHit,MARKS,setSpeed,klicFocus,klicCard,klicCables,tabletHome,refreshInfo,XLAB,TRACES,cableDist,stationVisuals,cityRoute,CORDONS,inCordon,copperTheft,trafoFire,stationTick,stationBlock,stIsolated,stNeighborSwitches,STV,updateHUD,pushAlarm,FF,ffStart,ffStop,skipRain,openWT,closeWT,setRealWeather,autoWeather,pickWeather,wetNow,ALARM:()=>ALARM_CRIT,VANS,vanTick,crewDispatch,crewSpawn,routeAt,driveVehicle,walkActive:()=>WALK_ACTIVE,BUS,GARB,PARCEL,AMB,TRAIN,XING,HALTES,MARKET,FIG,CY,cityDay,marketOn,schoolBreak,cityTick,measDone,cableCard,isoSwitches,KLIC,klicNew,klicMark,klicHit,gisMeasure,gisMofReplace,faultOf,cableOf,cableRisk,DIGS,CABLES,GIS_NET,gisRoute,cableState,setXray,XRAY,TAB,openTablet,closeTablet,drawTablet,nearestCable,DYN,fpsTick,fireTick,WK,getWalkers:()=>WALKERS,getStrips:()=>WSTRIPS,fireStart,fireDouse,fireStop,GENSET,gsCap,SMALL,lvgLive,updateSmall,setMouseMode,getMouseMode:()=>MOUSE_MODE,cameraKeys,OVK,openPreview,closePreview,viewHour,getPreview:()=>PREVIEW,VIEWPOS,SITE,updateSites,SLD,activeFaults,renderFaults,reportPDF,listSaves,openSlots,closeSlots,SAVE_SLOTS,layoutCheck,LAYOUT,FREC,fltRec,openRec,closeRec,renderRec,selectivity,protSelect,feederT,incT,incOf,shortCircuit,EF,earthFault,efTick,efRails,efU0,railsCoupled,controls,tripBreaker,CONS,LS_LINKS,LS_ORDERS,GENSET,lsTick,lsOrder,lsSwitchOrder,lsExec,gsSend,gsOff,gsRestart,tapOrder,setEta,callPrio,lsAreas,PRIO,openLS,closeLS,renderLS,lvVolt,stationLoads,shedFactor,failP,manualP,phoneTick,refreshDevPanel,updateSLD,openKeys,closeKeys,KEY_HELP,RELAY_BAYS,relayTask,relayDue,relayDefect,initRelays,kitTests,kitMeasure,kitVerdict,kitRun,openKit,closeKit,saveGame,readSave,deleteSave,resumeGame,canSave,specOf,CABLE,soilT,FD,meppelFault,linkTick,tabAlarms,updateTabAlarms,renderTasks,INC,INCIDENTS,startIncident,endIncident,incidentTick,setTab,renderCables,GFX,setGfx,applyGfx,openSettings,closeSettings,WX_TYPES,renderer,scene,FIRE,CARS,updateWindows,updateLife,stationLive,cbMaintTask,worstCb,cond,breakerFails,CB_IDS,FLEX,setFlex,flexTick,congestion,openFlex,closeFlex,checkModel,homeBus,BUSES,SEL_BAYS,TORCH,setTorch,HO_POOL,handoverTick,REC,RP,startReplay,stopReplay,analyse,stationDamage,closeHandover,deviations,PHONE,lvFault,callFrom,phoneAnswer,dispatchLV,LVG,forecast,progAdvice,PROG,startTask:(k,...a)=>{TASK={relayTask,cbMaintTask,railTask,railBTask,stationTask,thermoTask,ringTask,feederTask,lineTask,reserveTask}[k](...a);TASK.i=0;TASK.code='WV-TEST';briefInit(TASK);renderTasks();},SIM,D,LESSONS,lessonGo,selectDevice,abortTask,railTask,stationTask,thermoTask,nearDev,VIEWS,PROT,setProt,openProt,closeProt,busFault,BUSF,RINGS,task:()=>TASK,briefSubmit,briefCheck,briefWatch,actKey,taskActs,crewNear,boxOf:id=>VIEWS[id]&&VIEWS[id].box,AudioSys,updateAudio,WX,setWeather,setSeason,SEASONS,ambient,enterKiosk,ROOMS,blockedAt,RING,NPCS,crewDispatch,ringFault,FP,enterFP,exitFP,pickCenter,camera,camInside,setRatio,setTab,GAME,MODES,applyMode,endGame,EN:()=>EN,FLOW,operate,tapStep,setAVR,resetLockout,toggleAR,regulate,computeFlows,randomEvent,lineFault,feederFault,trafoFault,offerTask,simStep,FEEDERS};
 const clock=new THREE.Clock();let hudT=0,skyT=0,progT=0;
 let liteAcc=0,shadowT=0,hudStep=4;
 // dieptebuffer: in het overzicht schuift de near-plane mee met de kijkafstand, zodat gevels op afstand niet flikkeren
@@ -7007,7 +7046,7 @@ function frame(){
     else if(k===1){meppelLod();if(!LITE)drawPanelScreens();renderTasks();updateStreetLights();updateWindows();}
     else if(k===2){renderFaults();renderCoach();progTick();if(progT%4===0)renderProg();}
     else if(progT%2===0){renderCables();renderLSTab();if(lsOpen()&&progT%4===0)renderLS();}}
-  if(!LITE){updateHover();updateLabels();}if(GFX.particles)updateRain(dt);else RAIN.ls.visible=SNOW.p.visible=false;updateNPCs(dt);doorTick(dt);updateKioskLight();updateHotspot();phoneTick(dt);replayTick(dt);updateLife(dt);fireTick(dt);gisTick(dt);serverTick(dt);updateSites(dt);updateSmall();
+  if(!LITE){updateHover();updateLabels();}if(GFX.particles)updateRain(dt);else RAIN.ls.visible=SNOW.p.visible=false;updateNPCs(dt);doorTick(dt);meppelAccessTick();updateKioskLight();updateHotspot();phoneTick(dt);replayTick(dt);updateLife(dt);fireTick(dt);gisTick(dt);serverTick(dt);updateSites(dt);updateSmall();
   let off=null;if(shake>0.01){off=V3((Math.random()-0.5)*shake,(Math.random()-0.5)*shake,(Math.random()-0.5)*shake);camera.position.add(off);shake*=Math.pow(0.02,dt);}
   // en het 3D-beeld helemaal niet tekenen: zonder grafische kaart kost één beeld ±2 kernseconden software-grafiek,
   // terwijl de tests alleen de simulatie en de panelen controleren (aanwijzen gaat met raycasting, niet met pixels)

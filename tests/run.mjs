@@ -699,7 +699,7 @@ const TESTS = [
         O.setWeather('mist', true, true); O.updateStreetLights(); const kegel = s.coneMat.opacity > 0.02;
         O.D[s.ovl].state = 0; O.computeFlows(); O.updateStreetLights(); const zonderSpanning = s.lampMat.emissiveIntensity === 0; O.D[s.ovl].state = 1; O.computeFlows();
         O.updateSky(12); O.updateStreetLights(); const dag = s.lampMat.emissiveIntensity === 0;
-        return { lampen: O.LAMPS.n > 30, aan, gedimd, kegel, zonderSpanning, dag, defect: O.LAMPS.defect.length > 0 }; });
+        return { lampen: O.LAMPS.n > 30, aan, gedimd, kegel, zonderSpanning, dag, geenKnipper: O.LAMPS.defect.length === 0 }; });
       for (const [k, v] of Object.entries(r)) assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
   } },
   { name: 'aggregaat vanuit het MS-stationspaneel: sturen als het station spanningsloos is, daarna afkoppelen', query: '?autostart&t=11', async run(p) {
@@ -728,6 +728,30 @@ const TESTS = [
         O.SIM.paused = false; O.audioPause(); await T.sleep(300); const weer = A.ctx.state === 'running';
         return { stil, weer }; });
       if (r.geenAudio) return;
+      for (const [k, v] of Object.entries(r)) assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
+  } },
+  { name: 'OS Meppel: lopen erheen, deur op slot, bellen voor toegang, daarna lokaal schakelen aan onze velden', query: '?autostart&t=11', async run(p) {
+      const r = await p.evaluate(async () => { const O = OS, M = O.MEPPEL, D = O.D; T.quiet();
+        // over de hoofdweg naar het noorden en door de poort kun je lopen
+        let route = true; for (let z = 120; z < M.gate[0]; z += 1) if (O.blockedAt(25, z)) { route = false; break; }
+        const gz = (M.gate[0] + M.gate[1]) / 2; for (let x = 27; x < M.x0 + 4; x += 0.5) if (O.blockedAt(x, gz)) route = false;
+        const d = M.lockRects[0], dx = (d[0] + d[2]) / 2, dz = (d[1] + d[3]) / 2, opSlot = O.blockedAt(dx, dz);
+        const v = O.VIEWS['M-MP1'], veld = !!v && v.inside === M.room.idx && v.center.z > 450 && v.center.z < 465;
+        O.enterFP(); O.FP.pos.set(v.center.x, 0, v.center.z + (v.center.z < 460 ? 1.6 : -1.6)); O.camera.position.set(O.FP.pos.x, 2.1, O.FP.pos.z);
+        O.SIM.localTest = false; const st0 = D['M-MP1'].state; O.operate('M-MP1', 0); const geweigerd = D['M-MP1'].state === st0;
+        O.callMeppel(); T.step(3); const toegang = O.mpAllowed() && !O.blockedAt(dx, dz);
+        D['M-MP1'].springAt = 0; O.operate('M-MP1', 0); T.step(0.2); const geschakeld = D['M-MP1'].state === 0; O.operate('M-MP1', 1); O.exitFP();
+        T.step(95); const verlopen = !O.mpAllowed() && O.blockedAt(dx, dz);
+        return { route, opSlot, veld, geweigerd, toegang, geschakeld, verlopen }; });
+      for (const [k, v] of Object.entries(r)) assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
+  } },
+  { name: 'onderste balk: alle standpunten in één menu, de andere knoppen blijven', query: '?autostart', async run(p) {
+      const r = await p.evaluate(async () => { const bar = document.querySelector('#views'), menu = document.querySelector('#viewMenu');
+        const los = [...bar.children].filter(b => b.matches('button[data-v]')).length === 0, inMenu = menu.querySelectorAll('[data-v]').length === 14, dicht = menu.classList.contains('hidden');
+        document.querySelector('#viewBtn').click(); const open = !menu.classList.contains('hidden');
+        menu.querySelector('[data-v="13"]').click(); const weer = menu.classList.contains('hidden');
+        const rest = ['pvBtn', 'xrayBtn', 'gisBtn', 'coachBtn', 'lsBtn', 'settingsBtn', 'fpBtn'].every(id => bar.contains(document.getElementById(id)));
+        return { los, inMenu, dicht, open, weer, rest }; });
       for (const [k, v] of Object.entries(r)) assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
   } },
   { name: 'sirenes: brandweer, ambulance en politie klinken verschillend', query: '?autostart', async run(p) {

@@ -21,13 +21,14 @@ function buildColliders(){
   addRect(F.x0,F.z1-t,F.gate[0],F.z1+t);addRect(F.gate[1],F.z1-t,F.x1,F.z1+t);addRect(F.gate[1],F.z1+0.2,F.gate[1]+10.2,F.z1+1.1);
   DISTRICT_RECTS.forEach(r=>addRect(...r));
 }
-function blockedAt(x,z){const r=0.3;if(x<-200||x>250||z<-110||z>440)return true;
+function blockedAt(x,z){const r=0.3;if(x<-200||x>250||z<-110||z>565)return true;
+  if(!mpAllowed())for(const q of MEPPEL.lockRects||[])if(x>q[0]-r&&x<q[2]+r&&z>q[1]-r&&z<q[3]+r)return true;
   for(const q of FP.rects)if(x>q[0]-r&&x<q[2]+r&&z>q[1]-r&&z<q[3]+r)return true;return false;}
 function floorAt(x,z){const r=ROOMS.find(r=>x>r.x0-0.05&&x<r.x1+0.05&&z>r.z0-0.05&&z<r.z1+0.05);if(r)return r.y0;
   for(const s of STEPS)if(x>s[0]&&x<s[2]&&z>s[1]&&z<s[3])return s[4];return 0.02;}
 // ---- deuren: gaan open als jij (rondlopen of camera) of een monteur in de buurt is, en vallen daarna weer dicht
 function doorTick(dt){const me=FP.on?FP.pos:camera.position.y<4?camera.position:null,crew=NPCS.filter(n=>n.state!=='out').map(n=>n.P.g.position),dist=(p,D_)=>Math.hypot(p.x-D_.p.x,p.z-D_.p.z);
-  for(const D_ of DOORS){const want=(me&&dist(me,D_)<2.8)||crew.some(p=>dist(p,D_)<D_.R),near=camera.position.distanceTo(D_.p)<30;
+  for(const D_ of DOORS){const want=!D_.locked?.()&&((me&&dist(me,D_)<2.8)||crew.some(p=>dist(p,D_)<D_.R)),near=camera.position.distanceTo(D_.p)<30;
     if(want&&!D_.want&&D_.o<0.05&&near){const v=distGain(D_.p);AudioSys.burst({type:'highpass',f:2400,gain:0.1*v,dur:0.04});AudioSys.tone({f:190,f2:140,type:'triangle',gain:0.02*v,dur:0.5,delay:0.05});}
     D_.want=want;const o0=D_.o;D_.o=approach(D_.o,want?1:0,dt/0.7);if(D_.o===o0)continue;
     if(D_.o===0&&near){const v=distGain(D_.p);AudioSys.burst({type:'lowpass',f:320,gain:0.25*v,dur:0.15});AudioSys.tone({f:72,gain:0.14*v,dur:0.12});}
@@ -89,6 +90,7 @@ function updateFP(dt){
   if(id!==FP.look){FP.look=id;const v=id&&VIEWS[id];hovBox.visible=!!v&&id!==SEL;if(v)hovBox.box.copy(v.box).expandByScalar(0.1);}
   const hint=$('#fpHint');
   if(id){const d=D[id],a=actionLabel(d);hint.innerHTML=`<b>${id}</b> · ${d.label}<br>${a?`<kbd>F</kbd> ${a} &nbsp; `:''}<kbd>E</kbd> paneel`;hint.style.display='block';}
+  else if(nearMeppelDoor()&&!mpAllowed()){hint.innerHTML=MP_ACCESS.pending?'<b>OS Meppel</b> · Netbeheer Noord wordt gebeld…':'<b>OS Meppel</b> · deur op slot<br><kbd>F</kbd> bel Netbeheer Noord voor toegang';hint.style.display='block';}
   else hint.style.display='none';
 }
 addEventListener('mousemove',e=>{if(!FP.on||document.pointerLockElement!==canvasEl)return;
@@ -108,6 +110,7 @@ addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;
   if(!FP.on)return;FP.keys[e.code]=true;
   if(e.code==='Space'){e.preventDefault();if(!FP.jh&&document.pointerLockElement===canvasEl){FP.vy=4.6;FP.jh=0.001;}return;}
   if(e.code==='KeyZ'){setTorch(!TORCH.on);return;}
+  if(e.code==='KeyF'&&!FP.look&&nearMeppelDoor()&&!mpAllowed()){callMeppel();return;}
   if(e.code==='KeyF'&&FP.look){const d=D[FP.look];if(actionLabel(d))operate(FP.look,d.state?0:1);}
 });
 addEventListener('keyup',e=>{FP.keys[e.code]=false;});

@@ -45,7 +45,7 @@ function renderLSTab(){const g=$('#lsG');if(!g||SLD.tab!=='L')return;const o=[],
       o.push(`<text x="${x0+6}" y="${y0+150+i*11}" class="fs" style="font-size:8.5px;fill:${st?(d.load>1?'var(--red)':'#9be15d'):'var(--muted)'}">⇄ ${d.id} → ${other} · ${st?Math.round((d.load||0)*280)+' kW':'open'}</text>`);});
     o.push('</g>');});
   g.innerHTML=o.join('');}
-$('#sld').addEventListener('click',e=>{const c=e.target.closest('[data-ls]');if(c)return openLS(c.dataset.ls);const g=e.target.closest('[data-goto]');if(g)setTab(g.dataset.goto);});
+$('#sld').addEventListener('click',e=>{const c=e.target.closest('[data-ls]');if(c)return openLS(c.dataset.ls);const g=e.target.closest('[data-goto]');if(g)setTab(g.dataset.goto);if(e.target.closest('[data-call="mp"]'))callMeppel();});
 
 // ---- LS-venster
 let lsPrev=false,lsSt='MS1';
