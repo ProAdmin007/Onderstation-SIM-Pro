@@ -61,7 +61,7 @@ Object.assign(MODES,{
       at(4,()=>{GAME.flags.dcAlarm=true;GAME.flags.dcDanger=true;GAME.countdown={label:'Gasblussing datacenter',until:SIM.t+1};
         pushAlarm('BRANDALARM datacenter: blussing start na de vertraging – niemand naar binnen! Brandweer gealarmeerd','crit');});
       at(5,()=>{const r=room(),c=V3((r.x0+r.x1)/2,1.5,(r.z0+r.z1)/2);if(camera.position.distanceTo(c)<60)AudioSys.burst({type:'highpass',f:1600,q:0.6,gain:0.35*distGain(c),dur:7,attack:0.4});
-        fireStart({bld:'SRV',off:0,ladder:false});GAME.countdown=null;
+        fireStart({bld:'SRV',hot:[-34,53.6],inside:true});GAME.countdown=null;
         pushAlarm('INERGEN-blussing geactiveerd, maar slechts 2 van de 6 flessen lossen (pilootventiel defect). De concentratie is te laag – de brand gaat door!','crit');});
       at(7,()=>{GAME.flags.scadaDown=true;$('#scada').classList.add('down');dcBurnt();
         pushAlarm('SCADA-verbinding verbroken: de SCADA-servers en front-ends in het datacenter zijn uitgevallen. Bedienen op afstand kan niet meer.','crit');
@@ -70,14 +70,15 @@ Object.assign(MODES,{
       at(24,()=>{feederFault('F6',10);GAME.flags.f6At=SIM.t;pushAlarm('Telefoon van de tuinders: de kassen zitten zonder stroom – SCADA ziet niets','warn');});
       at(48,()=>{fireStop();GAME.flags.dcAlarm=false;
         readyNotice('Brandweer: brand meester, rook afgezogen. Het datacenter is zwaar beschadigd: SCADA A en B, de front-ends en het netwerk zijn verloren.',null);});
-      at(55,()=>{GAME.flags.dcDanger=false;GAME.countdown={label:'Nood-front-end (MS-stations)',until:SIM.t+40};
+      at(55,()=>{GAME.flags.dcDanger=false;GAME.countdown={label:'Nood-front-end (MS-stations)',until:SIM.t+40};dcRepairCrew(()=>GAME.ended||!SRV.burnt);
+        pushAlarm('Herstelploeg van de leverancier en ICT is er: ze ruimen het datacenter op en plaatsen nieuwe racks en servers (±1,5 uur)','info');
         pushAlarm('Bedrijfsvoering werkt vanuit het uitwijkcentrum. De leverancier richt een nood-front-end in die de RTU’s in de MS-stations via LTE bereikt (±40 min).','info');});
       at(70,()=>{feederFault('F4');pushAlarm('Melding via de telefoon: storing in de woonwijk oost','warn');});
-      at(95,()=>{GAME.flags.scadaDown='os';GAME.countdown={label:'SCADA-container onderstation',until:SIM.t+50};
+      at(95,()=>{GAME.flags.scadaDown='os';GAME.countdown={label:'Nieuwe SCADA-servers in bedrijf',until:SIM.t+50};
         readyNotice('Nood-front-end via LTE in bedrijf: de MS-stations zijn weer op afstand te bedienen. Het onderstation zelf nog niet – daar blijft lokaal schakelen nodig.',null);});
       at(145,()=>{GAME.flags.scadaDown=false;$('#scada').classList.remove('down');GAME.countdown=null;
-        readyNotice('SCADA-container op het terrein in bedrijf: bediening op afstand van het hele onderstation is hersteld. Het nieuwe datacenter laat nog maanden op zich wachten.',null);});},
-    tick(){const r=ROOMS.find(r=>r.id==='SRV');
+        dcRestore();readyNotice('Herstelploeg klaar: nieuwe racks en servers geplaatst en SCADA opnieuw opgestart. Bediening op afstand van het hele onderstation is hersteld.',null);});},
+    tick(){const r=ROOMS.find(r=>r.id==='SRV'),t=SIM.t-GAME.t0;if(t>55&&t<145)dcRepair((t-55)/90);
       if(GAME.flags.dcDanger&&FP.on&&camInside()===r.idx&&!GAME.flags.dcEntered){GAME.flags.dcEntered=true;incident();
         pushAlarm('Je bent het datacenter in gelopen tijdens brand en gasblussing – levensgevaarlijk (rook, te weinig zuurstof)! Direct naar buiten.','crit');}},
     obj:()=>[{t:'Niemand het datacenter in tijdens brand en blussing',check:()=>GAME.flags.dcEntered?'fail':null,final:()=>true},

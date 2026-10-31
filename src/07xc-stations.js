@@ -98,7 +98,7 @@ function foamLayer(s){const b=VIEWS[s.id].box,c=b.getCenter(V3()),g=new THREE.Gr
     o.userData.r=top?rnd(0.7,1.1):rnd(0.6,1.2);o.scale.set(0.01,0.01,0.01);o.castShadow=false;blobs.push(o);}scene.add(g);return {g,blobs};}
 function stationVisuals(dt){const run=!SIM.paused,now=performance.now();POLICE_BLINK.emissiveIntensity=[...STV.values()].some(v=>v.police)&&now%300<150?6:0.2;
   for(const s of RING.stations){const T=s.theft,B=s.burn;let v=STV.get(s);
-    if(!T&&!B){if(v){[v.police?.g,v.tape,v.truck?.g,v.soot,v.foam?.g].forEach(o=>{if(o){scene.remove(o);disposeTree(o,o===v.soot);}});(v.flames||[]).forEach(f=>{scene.remove(f);f.material.dispose();});cordonDown(v.cordon);STV.delete(s);}continue;}
+    if(!T&&!B){if(v){[v.police?.g,v.tape,v.truck?.g,v.soot,v.foam?.g].forEach(o=>{if(o){scene.remove(o);disposeTree(o,o===v.soot);}});flameDispose(v.fe);flameDispose(v.fi);cordonDown(v.cordon);STV.delete(s);}continue;}
     if(!v){v={};STV.set(s,v);}
     // koperdiefstal: politieauto bij het station en lint zolang het onveilig is
     if(T){if(!v.police){const p=stRoadSpot(s),g=policeModel();g.position.set(p.x,0,p.z);g.rotation.y=p.yaw;v.police={g,arrived:true};}
@@ -115,10 +115,11 @@ function stationVisuals(dt){const run=!SIM.paused,now=performance.now();POLICE_B
       // afzetting en lint pas als de politie er is
       if(v.police.arrived&&!v.cordon){v.cordon=cordonUp(s);v.tape=tapeAround(s,5);}
       // vlammen en rook tot het blussen klaar is
-      if(!v.flames){v.flames=[];for(let i=0;i<6;i++){const m=new THREE.SpriteMaterial({map:flameTex,transparent:true,depthWrite:false,blending:i%2?THREE.AdditiveBlending:THREE.NormalBlending,color:i%2?0xffffff:0xffb040});
-        const f=new THREE.Sprite(m);f.userData={ox:rnd(-1.6,1.6),oz:rnd(-1,1),h:rnd(1.8,3.2),ph:Math.random()*9};scene.add(f);v.flames.push(f);}}
-      for(const f of v.flames){const u=f.userData,fl=0.75+0.25*Math.sin(now/70+u.ph),h=u.h*fl*(0.4+0.6*k);f.scale.set(h*0.55,h,1);f.position.set(c.x+u.ox,bx.max.y+h*0.4,c.z+u.oz);f.material.opacity=0.9*k;}
-      v.smoke=(v.smoke||0)+dt;if(v.smoke>0.45){v.smoke=0;smokePuff(c.x+rnd(-1.5,1.5),bx.max.y+1.5,c.z,0.6+0.4*k,B.phase==='blussen'?0xb4b4b0:0x3a3a3a);}
+      if(!v.fe){v.fe=flameEmitter(26);v.fi=flameEmitter(12);}
+      const tc=VIEWS[s.id+'-TR']?.center||c,dc=camera.position.distanceTo(c);flameTick(v.fe,dt,{x:tc.x,y:bx.max.y-0.3,z:tc.z,sx:1.2,sz:0.9,size:1.9,rise:3.2},k);if(dc<50)flameTick(v.fi,dt,{x:tc.x,y:0.3,z:tc.z,sx:0.5,sz:0.4,size:1.1,rise:1.7},k*k);
+      v.smoke=(v.smoke||0)+dt;if(v.smoke>(dc<300?0.14:0.3)){v.smoke=0;const col=B.phase==='blussen'?0xa8a8a4:0x35302c;fireSmoke(tc.x+rnd(-1.2,1.2),bx.max.y+0.6,tc.z+rnd(-1,1),1.2+0.9*k,col,0.85);
+        if(dc<40&&Math.random()<0.4)fireSmoke(tc.x+rnd(-0.6,0.6),0.8,tc.z+rnd(-0.5,0.5),0.8,0x3a3633,0.5,bx.max.y-0.6);}
+      if(!FIRE.on&&dc<200){FIRE_LIGHT.position.set(tc.x,bx.max.y+1.5,tc.z);FIRE_LIGHT.intensity=k*(30+16*Math.sin(now/70)*Math.sin(now/43));}
       // brandweerlieden met de slang op afstand (±7 m) zodra de wagen er staat
       if(v.truck.arrived&&!v.crew){const q=v.truck.g.position;v.crew=crewSpawn({box:bx,n:3,say:'Brandweer',kind:'fire',standOff:7,from:V3(q.x+1.5,0,q.z+1.5),until:()=>!s.burn||s.burn.phase==='vervangen'});}
       // blussen met schuim: vlokken uit de straalpijpen en een groeiende schuimlaag
@@ -128,6 +129,6 @@ function stationVisuals(dt){const run=!SIM.paused,now=performance.now();POLICE_B
           if(n&&NPCS.includes(n)&&n.state==='work'){const a=n.P.g.position.clone().setY(1.3),d=V3(c.x-a.x,0,c.z-a.z).normalize();foamDrop(a.addScaledVector(d,0.6),V3(c.x+rnd(-1.2,1.2),bx.max.y+0.3,c.z+rnd(-0.8,0.8)));}}}}}
     if(!v.soot){v.soot=mesh(new THREE.PlaneGeometry(bx.max.x-bx.min.x+0.2,bx.max.z-bx.min.z+0.2),mat({color:0x151515,roughness:1}),scene,c.x,bx.max.y+0.04,c.z);v.soot.rotation.x=-Math.PI/2;v.soot.castShadow=false;}
     // geblust: vlammen, afzetting en wagens weg; het schuim blijft liggen tot de trafo vervangen is
-    if(!burning){if(v.flames){v.flames.forEach(f=>{scene.remove(f);f.material.dispose();});v.flames=null;}cordonDown(v.cordon);v.cordon=null;if(v.tape){scene.remove(v.tape);disposeTree(v.tape);v.tape=null;}
+    if(!burning){if(v.fe){flameDispose(v.fe);flameDispose(v.fi);v.fe=v.fi=null;if(!FIRE.on)FIRE_LIGHT.intensity=0;}cordonDown(v.cordon);v.cordon=null;if(v.tape){scene.remove(v.tape);disposeTree(v.tape);v.tape=null;}
       if(v.police){scene.remove(v.police.g);disposeTree(v.police.g);v.police=null;}
       if(v.truck&&!(v.crew||[]).some(n=>NPCS.includes(n))){scene.remove(v.truck.g);disposeTree(v.truck.g);v.truck=null;v.crew=null;}}}}

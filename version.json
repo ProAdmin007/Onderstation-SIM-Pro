@@ -1,7 +1,19 @@
 {
-  "build": "4095ed3ccaca",
+  "build": "aaba6cf0f4c9",
   "date": "2026-10-31",
   "previous": [
+    "cc45e675aa27",
+    "fbce7f9ed97c",
+    "037e2088f828",
+    "633b03f24764",
+    "9755af263df6",
+    "cfc325c4d983",
+    "b472d070ec9c",
+    "cebc3c0477b7",
+    "639e5f552740",
+    "c5dd282d8b02",
+    "e6a1e308ac02",
+    "4095ed3ccaca",
     "7d9129c18a0b",
     "6802195abb5b",
     "8df27b14eb05",
@@ -115,6 +127,10 @@
     "4095ed3ccaca": {
       "date": "2026-10-31",
       "text": "OS Meppel ziet er nu uit als OS Zuidwolde, met echte velden, portalen en een bakstenen gebouw; op afstand tekent het alleen de grote delen"
+    },
+    "aaba6cf0f4c9": {
+      "date": "2026-10-31",
+      "text": "Echter vuur met veel rook (ook binnen), brandweer blust en herstelploeg maakt het datacenter weer, geluid pauzeert mee, straatlantaarns geven echt licht, datacenterbrand minder vaak"
     }
   }
 }

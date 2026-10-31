@@ -172,7 +172,8 @@ function aptBlock(x0,z0,x1,z1,floors){const W=x1-x0,Dz=z1-z0,H=floors*3+3.6,cx=(
 const poolTex=(()=>{const c=cnv(128),g=c.getContext('2d'),gr=g.createRadialGradient(64,64,0,64,64,64);gr.addColorStop(0,'rgba(255,238,212,0.95)');gr.addColorStop(0.35,'rgba(255,228,190,0.5)');gr.addColorStop(0.7,'rgba(255,215,170,0.14)');gr.addColorStop(1,'rgba(255,210,160,0)');g.fillStyle=gr;g.fillRect(0,0,128,128);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t;})();
 const haloTex=(()=>{const c=cnv(64),g=c.getContext('2d'),gr=g.createRadialGradient(32,32,0,32,32,32);gr.addColorStop(0,'rgba(255,248,232,1)');gr.addColorStop(0.18,'rgba(255,236,205,0.55)');gr.addColorStop(1,'rgba(255,220,180,0)');g.fillStyle=gr;g.fillRect(0,0,64,64);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t;})();
 const coneMatOf=()=>new THREE.MeshBasicMaterial({color:0xfff0d8,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide});
-const LAMPS={n:0,defect:[]};
+// vijf echte spotlights voor de lantaarns het dichtst bij de camera; al bij het laden in de scène (anders moeten alle shaders tijdens het spel opnieuw)
+const LAMPS={n:0,defect:[],list:[],spots:LITE?null:[0,1,2,3,4].map(()=>{const l=new THREE.SpotLight(0xfff0dc,0,34,1.05,0.75,1.6);scene.add(l,l.target);return l;})};
 // richting van de lantaarn naar de dichtstbijzijnde weg (de uithouder hangt boven de straat)
 function lampDir(x,z){let best=null,bd=1e9;for(const e of LAYOUT)if(e.kind==='road'){const [x0,z0,x1,z1]=e.r,cx=clamp(x,x0,x1),cz=clamp(z,z0,z1),d=Math.hypot(cx-x,cz-z);if(d<bd){bd=d;best=[cx-x,cz-z];}}
   if(!best||bd<0.01||bd>12)return [1,0];return Math.abs(best[0])>Math.abs(best[1])?[Math.sign(best[0]),0]:[0,Math.sign(best[1])];}
@@ -189,7 +190,7 @@ function streetLight(x,z){if(!layFree([x-0.3,z-0.3,x+0.3,z+0.3],['road'],0))retu
   rod(V3(x,H-0.35,z),V3(x+dx*0.55,H+0.1,z+dz*0.55),0.035,MAT.galv,staticRoot,6);rod(V3(x+dx*0.55,H+0.1,z+dz*0.55),V3(x+dx*1.15,H+0.18,z+dz*1.15),0.03,MAT.galv,staticRoot,6);
   box(al?0.62:0.3,0.08,al?0.3:0.62,MAT.galvDark,staticRoot,ax,H+0.16,az);box(al?0.5:0.24,0.03,al?0.24:0.5,MAT.galvDark,staticRoot,ax,H+0.105,az);
   const lens=mesh(new THREE.PlaneGeometry(al?0.46:0.2,al?0.2:0.46),lm,staticRoot,ax,H+0.088,az);lens.rotation.x=Math.PI/2;lens.castShadow=false;
-  hz.push(ax,H+0.05,az);
+  hz.push(ax,H+0.05,az);LAMPS.list.push({x:ax,y:H,z:az,dx,dz,s,d:lm!==s.lampMat?LAMPS.defect[LAMPS.defect.length-1]:null});
   const pool=new THREE.Mesh(new THREE.PlaneGeometry(al?9:15,al?15:9),pm);pool.rotation.x=-Math.PI/2;pool.position.set(ax+dx*0.6,0.07,az+dz*0.6);pool.renderOrder=2;staticRoot.add(pool);
   const cone=new THREE.Mesh(new THREE.ConeGeometry(2.8,H,14,1,true),s.coneMat);cone.position.set(ax,H/2+0.05,az);cone.renderOrder=3;cone.castShadow=false;staticRoot.add(cone);}
 // gloed rond de lampen: één puntenwolk per station (en per defecte lamp)
@@ -198,6 +199,10 @@ function lampHalo(pos){const g=new THREE.BufferGeometry();g.setAttribute('positi
 // aan bij schemer (centraal geschakeld per station, met een klein verschil per circuit), 23–6 uur gedimd, alleen als het LS-veld OVL spanning heeft
 function updateStreetLights(){const h=hourOf(),dim=h>=23||h<6?0.6:1,W=WX.cur,wet=clamp(W.rain*1.6,0,1),haze=clamp(W.fog*1.3+W.rain*0.7+W.snow*0.8,0,1);
   const lvl=s=>NIGHT>0.3+s.lampOff&&EN.has(s.ovl)?dim:0;
+  // echte lampen bij de lantaarns die het dichtst bij de camera branden
+  if(LAMPS.spots){const cp=camera.position;
+    const lit=LAMPS.list.map(l=>({l,v:lvl(l.s),d:Math.hypot(l.x-cp.x,l.z-cp.z)})).filter(o=>o.v>0&&o.d<220).sort((a,b)=>a.d-b.d);
+    LAMPS.spots.forEach((sp,i)=>{const o=lit[i];if(!o){sp.intensity=0;return;}const L=o.l,f=L.d?(L.d.lm.emissiveIntensity/7||0):o.v;sp.position.set(L.x,L.y,L.z);sp.target.position.set(L.x+L.dx*1.2,0,L.z+L.dz*1.2);sp.target.updateMatrixWorld();sp.intensity=260*f*NIGHT;});}
   RING.stations.forEach(s=>{if(!s.lampMat)return;if(!s.haloMat&&s.haloPos.length)s.haloMat=lampHalo(s.haloPos);const on=lvl(s);
     s.lampMat.emissiveIntensity=on*7;s.poolMat.opacity=on*NIGHT*(1+0.35*wet);s.coneMat.opacity=on*NIGHT*0.045*haze;if(s.haloMat)s.haloMat.opacity=on*NIGHT*(0.55+0.4*haze);});
   // defecte lamp: brandt onregelmatig en valt soms even helemaal uit

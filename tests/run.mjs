@@ -174,9 +174,9 @@ const TESTS = [
         const room = O.ROOMS.find(r => r.id === 'SRV'), i0 = O.SIM.incidents; O.enterFP(); O.FP.pos.set((room.x0 + room.x1) / 2, 0, (room.z0 + room.z1) / 2); O.camera.position.set(O.FP.pos.x, 2.1, O.FP.pos.z); T.step(0.5);
         const binnen = O.SIM.incidents === i0 + 1 && G.flags.dcEntered; O.FP.pos.set(25, 0, 62); O.camera.position.set(25, 1.7, 62); O.exitFP();
         T.step(45); const geblust = !O.FIRE.on && G.flags.scadaDown === true;
-        T.step(45); const ms = G.flags.scadaDown === 'os' && O.scadaReach('MS1-L') && !O.scadaReach('V-F6');
-        T.step(52); const terug = G.flags.scadaDown === false && O.scadaReach('V-F6');
-        return { voor, brand, opAfstand, binnen, geblust, ms, terug }; });
+        T.step(45); const ms = G.flags.scadaDown === 'os' && O.scadaReach('MS1-L') && !O.scadaReach('V-F6'); const c = O.SVM.body.color.getHex(), herstel = c !== 0x3c3835 && c !== 0x1a1c1f;
+        T.step(52); const terug = G.flags.scadaDown === false && O.scadaReach('V-F6') && O.SVM.led.opacity === 1 && O.SVM.body.color.getHex() === 0x1a1c1f;
+        return { voor, brand, opAfstand, binnen, geblust, ms, herstel, terug }; });
       for (const [k, v] of Object.entries(r)) assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
   } },
   { name: 'scenario hittegolf start met juist seizoen, weer en storing', query: '?play=hitte', async run(p) {
@@ -722,6 +722,14 @@ const TESTS = [
         return { gebouwd, vrij, binnen, view }; });
       for (const [k, v] of Object.entries(r)) assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
   } },
+  { name: 'pauze zet alle geluiden stil en verder spelen laat ze weer klinken', query: '?autostart', async run(p) {
+      const r = await p.evaluate(async () => { const O = OS, A = O.AudioSys; A.init(); if (!A.ctx) return { geenAudio: true };
+        await A.ctx.resume().catch(() => {}); O.SIM.paused = true; O.audioPause(); await T.sleep(300); const stil = A.ctx.state === 'suspended';
+        O.SIM.paused = false; O.audioPause(); await T.sleep(300); const weer = A.ctx.state === 'running';
+        return { stil, weer }; });
+      if (r.geenAudio) return;
+      for (const [k, v] of Object.entries(r)) assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
+  } },
   { name: 'sirenes: brandweer, ambulance en politie klinken verschillend', query: '?autostart', async run(p) {
       const r = await p.evaluate(() => { const A = OS.AudioSys, orig = A.tone, rec = []; A.tone = function (o) { rec.push(o); };
         const take = k => { rec.length = 0; A.siren(1, k); return rec.map(o => `${o.type || 'sine'}:${Math.round(o.f)}>${o.f2 ? Math.round(o.f2) : ''}@${o.delay || 0}`).join(' '); };
@@ -826,10 +834,10 @@ const TESTS = [
   } },
   { name: 'brand 10 kV: vlammen uit het dak, brandweerwagens en brandweerlieden, blussen na spanningsloos, alles weer weg', query: '?autostart&t=14', async run(p) {
       const r = await p.evaluate(async () => { const O = OS; T.quiet(); O.startIncident('brand', true); const F = O.FIRE;
-        const start = F.on && F.flames.length > 10 && F.trucks.length === 2 && F.trucks.some(t => t.lad) && O.NPCS.filter(n => n.say === 'Brandweer').length === 4 && typeof O.AudioSys.fireBell === 'function' && typeof O.AudioSys.siren === 'function';
+        const start = F.on && F.E.roof.ps.length > 30 && F.E.door.ps.length > 10 && !!F.E.inside && F.trucks.length === 2 && F.trucks.some(t => t.lad) && O.NPCS.filter(n => n.say === 'Brandweer').length === 4 && typeof O.AudioSys.fireBell === 'function' && typeof O.AudioSys.siren === 'function';
         await T.step(6); O.D['V-T1'].state = 0; O.D['V-T3'].state = 0; O.computeFlows(); await T.step(2);
         const blust = F.douseAt != null; await T.step(20); O.fireTick(0.02); const kleiner = F.k < 0.5;
-        await T.step(15); const uit = !F.on && F.flames.length === 0 && !F.scorch && F.trucks.every(t => t.state !== 'come' && t.state !== 'park');
+        await T.step(15); const uit = !F.on && !F.E && !F.scorch && F.trucks.every(t => t.state !== 'come' && t.state !== 'park');
         return { start, blust, kleiner, uit }; });
       for (const [k, v] of Object.entries(r)) assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
   } },

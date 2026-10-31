@@ -339,7 +339,7 @@ Afstands- en differentiaalbeveiliging zijn **niet** als relais gemodelleerd. Ze 
 | Aardfout | `earthFault` | U0 op de rails; zoeken door te schakelen. |
 | LS-storing | `lvFault` (`07g-phone.js`) | Klanten bellen; een monteur gaat erheen. |
 | Koperdiefstal / brandende trafo | `copperTheft`, `trafoFire` (`07xc-stations.js`) | Politie, afzetting, brandweer met schuim; het station is pas veilig als het geïsoleerd is. |
-| Brand in een gebouw | `fireStart` (`04g0-fire.js`) | Vlammen, rook, brandbel en brandweer (zie §7). |
+| Brand in een gebouw | `fireStart` (`04g0-fire.js`) | Vlammen, rook, brandbel en brandweer (zie §7). Gedeeld brandeffect: `flameEmitter`/`flameTick` (vlammen als deeltjes die opstijgen en verkleuren), `fireSmoke` (dichte rook die lineair groeit en binnen onder het plafond blijft) en `FIRE_LIGHT` (één vuurlicht dat al bij het laden bestaat). Ook gebruikt door de brandende distributietrafo. |
 
 `randomEvent()` kiest in de vrije dienst en de diensten een storing (6 % kans op koperdiefstal of trafobrand), met weersinvloed. **Foutplaats en meetwagen** staan in `07z-gisplay.js`: de meetwagen rukt uit zodra `measBlock(c)` niets meer blokkeert, en `measDone` zet de foutplaats en start het graafwerk.
 
@@ -458,6 +458,7 @@ Elke plaatsing in de wereld meldt zich met `lay(kind, x0, z0, x1, z1)`: `road`, 
 - **Straatverlichting:**
   - `streetLight` zoekt de dichtstbijzijnde weg (`lampDir`) en hangt het LED-armatuur aan een uithouder erboven.
   - Per MS-station zijn er gedeelde materialen voor de lens, de lichtvlek, de lichtkegel en de gloed (een `Points`-wolk).
+  - Vijf echte spotlights (`LAMPS.spots`) gaan naar de brandende lantaarns die het dichtst bij de camera staan. Ze worden al bij het laden aangemaakt, zodat er tijdens het spel geen shaders opnieuw hoeven.
   - `updateStreetLights` schakelt op `NIGHT`, de spanning op het OVL-veld, het dimmen tussen 23 en 6 uur en het weer (kegels bij mist, regen of sneeuw; natte straat).
 
 ### Lucht, weer, effecten en geluid
@@ -471,6 +472,7 @@ Elke plaatsing in de wereld meldt zich met `lay(kind, x0, z0, x1, z1)`: `road`, 
   - Loops voor trafobrom, ventilatoren, wind, regen en verkeer.
   - `distGain(p)` regelt het volume op afstand. `updatePlaceAudio` past het geluid aan de plek aan (binnen, kiosk, terrein, wijk).
   - Sirenes: `siren(v, 'brandweer'|'ambulance'|'politie')`.
+  - `audioPause()` zet de AudioContext stil (`suspend`) zolang `SIM.paused` waar is, en laat hem daarna verder gaan.
 
 ---
 

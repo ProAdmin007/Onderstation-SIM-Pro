@@ -87,6 +87,8 @@ const AudioSys={ctx:null,muted:false,vol:0.9,busVol:{},route:null,
 // welke geluiden bij welk kanaal horen
 for(const [bus,names] of [['alarm',['alarm','ready','chime','deny','fireBell','siren']],['omgeving',['chirp','carPass','cricket','thunder']],['telefoon',['ring']]])
   names.forEach(n=>{const f=AudioSys[n];AudioSys[n]=function(...a){const prev=this.route;this.route=this.bus?.[bus]||null;try{return f.apply(this,a);}finally{this.route=prev;}};});
+// pauze: alle geluiden (ook brom, regen en sirenes) stilzetten en daarna verder laten gaan
+function audioPause(){const c=AudioSys.ctx;if(!c)return;if(SIM.paused&&c.state==='running')c.suspend();else if(!SIM.paused&&c.state==='suspended')c.resume();}
 function distGain(p){const d=camera.position.distanceTo(p);return clamp(1.2/(1+(d/35)**2)+0.12,0.12,1);}
 // ---- geluid per plek (elke 0,25 s)
 function updatePlaceAudio(){const A=AudioSys,ins=camInside(),r=ins&&ROOMS[ins-1],kiosk=!!(r&&r.kiosk),p=camera.position,F=FENCE;

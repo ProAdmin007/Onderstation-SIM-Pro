@@ -189,6 +189,10 @@ function buildServerRoom(r){if(!r)return;const Y=r.y0,E=SVM,S=staticRoot,cx=(r.x
 // na de brand: roet op racks en kasten, geen LEDs meer
 const dcMats=()=>[...Object.values(SVM.front),SVM.rear,SVM.body,SVM.fUps,SVM.fBat,SVM.ups,SVM.crac,SVM.fCrac];
 function dcBurnt(){if(SRV.burnt)return;SRV.burnt=true;SRV.orig=dcMats().map(m=>m.color.getHex());dcMats().forEach(m=>m.color.setHex(0x3c3835));SVM.led.opacity=0;}
+const _dcC=new THREE.Color();
+// herstelploeg aan het werk: p van 0 (net na de brand) tot 1 (alles schoon en vervangen); de LEDs gaan pas aan bij het opstarten
+function dcRepair(p){if(!SRV.burnt)return;const k=clamp(p,0,1);dcMats().forEach((m,i)=>m.color.setHex(0x3c3835).lerp(_dcC.setHex(SRV.orig[i]),k));}
+function dcRepairCrew(until){if(VIEWS.SRV)crewDispatch({box:VIEWS.SRV.box,say:'Herstelploeg: datacenter opruimen, nieuwe racks en servers plaatsen',n:3,until});}
 function dcRestore(){if(!SRV.burnt)return;SRV.burnt=false;dcMats().forEach((m,i)=>m.color.setHex(SRV.orig[i]));SVM.led.opacity=1;}
 function serverTick(dt){SVM.flash.emissiveIntensity=GAME.flags.dcAlarm&&performance.now()%700<300?5:0;SRV.t+=dt;if(SRV.t<0.22)return;SRV.t=0;const down=GAME.flags.scadaDown===true;
   SRV.ledTex.offset.y=Math.floor(Math.random()*8)/8;SVM.led.color.setHex(down?0xff3030:0xffffff);

@@ -1314,7 +1314,8 @@ function aptBlock(x0,z0,x1,z1,floors){const W=x1-x0,Dz=z1-z0,H=floors*3+3.6,cx=(
 const poolTex=(()=>{const c=cnv(128),g=c.getContext('2d'),gr=g.createRadialGradient(64,64,0,64,64,64);gr.addColorStop(0,'rgba(255,238,212,0.95)');gr.addColorStop(0.35,'rgba(255,228,190,0.5)');gr.addColorStop(0.7,'rgba(255,215,170,0.14)');gr.addColorStop(1,'rgba(255,210,160,0)');g.fillStyle=gr;g.fillRect(0,0,128,128);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t;})();
 const haloTex=(()=>{const c=cnv(64),g=c.getContext('2d'),gr=g.createRadialGradient(32,32,0,32,32,32);gr.addColorStop(0,'rgba(255,248,232,1)');gr.addColorStop(0.18,'rgba(255,236,205,0.55)');gr.addColorStop(1,'rgba(255,220,180,0)');g.fillStyle=gr;g.fillRect(0,0,64,64);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t;})();
 const coneMatOf=()=>new THREE.MeshBasicMaterial({color:0xfff0d8,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide});
-const LAMPS={n:0,defect:[]};
+// vijf echte spotlights voor de lantaarns het dichtst bij de camera; al bij het laden in de scène (anders moeten alle shaders tijdens het spel opnieuw)
+const LAMPS={n:0,defect:[],list:[],spots:LITE?null:[0,1,2,3,4].map(()=>{const l=new THREE.SpotLight(0xfff0dc,0,34,1.05,0.75,1.6);scene.add(l,l.target);return l;})};
 // richting van de lantaarn naar de dichtstbijzijnde weg (de uithouder hangt boven de straat)
 function lampDir(x,z){let best=null,bd=1e9;for(const e of LAYOUT)if(e.kind==='road'){const [x0,z0,x1,z1]=e.r,cx=clamp(x,x0,x1),cz=clamp(z,z0,z1),d=Math.hypot(cx-x,cz-z);if(d<bd){bd=d;best=[cx-x,cz-z];}}
   if(!best||bd<0.01||bd>12)return [1,0];return Math.abs(best[0])>Math.abs(best[1])?[Math.sign(best[0]),0]:[0,Math.sign(best[1])];}
@@ -1331,7 +1332,7 @@ function streetLight(x,z){if(!layFree([x-0.3,z-0.3,x+0.3,z+0.3],['road'],0))retu
   rod(V3(x,H-0.35,z),V3(x+dx*0.55,H+0.1,z+dz*0.55),0.035,MAT.galv,staticRoot,6);rod(V3(x+dx*0.55,H+0.1,z+dz*0.55),V3(x+dx*1.15,H+0.18,z+dz*1.15),0.03,MAT.galv,staticRoot,6);
   box(al?0.62:0.3,0.08,al?0.3:0.62,MAT.galvDark,staticRoot,ax,H+0.16,az);box(al?0.5:0.24,0.03,al?0.24:0.5,MAT.galvDark,staticRoot,ax,H+0.105,az);
   const lens=mesh(new THREE.PlaneGeometry(al?0.46:0.2,al?0.2:0.46),lm,staticRoot,ax,H+0.088,az);lens.rotation.x=Math.PI/2;lens.castShadow=false;
-  hz.push(ax,H+0.05,az);
+  hz.push(ax,H+0.05,az);LAMPS.list.push({x:ax,y:H,z:az,dx,dz,s,d:lm!==s.lampMat?LAMPS.defect[LAMPS.defect.length-1]:null});
   const pool=new THREE.Mesh(new THREE.PlaneGeometry(al?9:15,al?15:9),pm);pool.rotation.x=-Math.PI/2;pool.position.set(ax+dx*0.6,0.07,az+dz*0.6);pool.renderOrder=2;staticRoot.add(pool);
   const cone=new THREE.Mesh(new THREE.ConeGeometry(2.8,H,14,1,true),s.coneMat);cone.position.set(ax,H/2+0.05,az);cone.renderOrder=3;cone.castShadow=false;staticRoot.add(cone);}
 // gloed rond de lampen: één puntenwolk per station (en per defecte lamp)
@@ -1340,6 +1341,10 @@ function lampHalo(pos){const g=new THREE.BufferGeometry();g.setAttribute('positi
 // aan bij schemer (centraal geschakeld per station, met een klein verschil per circuit), 23–6 uur gedimd, alleen als het LS-veld OVL spanning heeft
 function updateStreetLights(){const h=hourOf(),dim=h>=23||h<6?0.6:1,W=WX.cur,wet=clamp(W.rain*1.6,0,1),haze=clamp(W.fog*1.3+W.rain*0.7+W.snow*0.8,0,1);
   const lvl=s=>NIGHT>0.3+s.lampOff&&EN.has(s.ovl)?dim:0;
+  // echte lampen bij de lantaarns die het dichtst bij de camera branden
+  if(LAMPS.spots){const cp=camera.position;
+    const lit=LAMPS.list.map(l=>({l,v:lvl(l.s),d:Math.hypot(l.x-cp.x,l.z-cp.z)})).filter(o=>o.v>0&&o.d<220).sort((a,b)=>a.d-b.d);
+    LAMPS.spots.forEach((sp,i)=>{const o=lit[i];if(!o){sp.intensity=0;return;}const L=o.l,f=L.d?(L.d.lm.emissiveIntensity/7||0):o.v;sp.position.set(L.x,L.y,L.z);sp.target.position.set(L.x+L.dx*1.2,0,L.z+L.dz*1.2);sp.target.updateMatrixWorld();sp.intensity=260*f*NIGHT;});}
   RING.stations.forEach(s=>{if(!s.lampMat)return;if(!s.haloMat&&s.haloPos.length)s.haloMat=lampHalo(s.haloPos);const on=lvl(s);
     s.lampMat.emissiveIntensity=on*7;s.poolMat.opacity=on*NIGHT*(1+0.35*wet);s.coneMat.opacity=on*NIGHT*0.045*haze;if(s.haloMat)s.haloMat.opacity=on*NIGHT*(0.55+0.4*haze);});
   // defecte lamp: brandt onregelmatig en valt soms even helemaal uit
@@ -3401,7 +3406,7 @@ Object.assign(MODES,{
       at(4,()=>{GAME.flags.dcAlarm=true;GAME.flags.dcDanger=true;GAME.countdown={label:'Gasblussing datacenter',until:SIM.t+1};
         pushAlarm('BRANDALARM datacenter: blussing start na de vertraging – niemand naar binnen! Brandweer gealarmeerd','crit');});
       at(5,()=>{const r=room(),c=V3((r.x0+r.x1)/2,1.5,(r.z0+r.z1)/2);if(camera.position.distanceTo(c)<60)AudioSys.burst({type:'highpass',f:1600,q:0.6,gain:0.35*distGain(c),dur:7,attack:0.4});
-        fireStart({bld:'SRV',off:0,ladder:false});GAME.countdown=null;
+        fireStart({bld:'SRV',hot:[-34,53.6],inside:true});GAME.countdown=null;
         pushAlarm('INERGEN-blussing geactiveerd, maar slechts 2 van de 6 flessen lossen (pilootventiel defect). De concentratie is te laag – de brand gaat door!','crit');});
       at(7,()=>{GAME.flags.scadaDown=true;$('#scada').classList.add('down');dcBurnt();
         pushAlarm('SCADA-verbinding verbroken: de SCADA-servers en front-ends in het datacenter zijn uitgevallen. Bedienen op afstand kan niet meer.','crit');
@@ -3410,14 +3415,15 @@ Object.assign(MODES,{
       at(24,()=>{feederFault('F6',10);GAME.flags.f6At=SIM.t;pushAlarm('Telefoon van de tuinders: de kassen zitten zonder stroom – SCADA ziet niets','warn');});
       at(48,()=>{fireStop();GAME.flags.dcAlarm=false;
         readyNotice('Brandweer: brand meester, rook afgezogen. Het datacenter is zwaar beschadigd: SCADA A en B, de front-ends en het netwerk zijn verloren.',null);});
-      at(55,()=>{GAME.flags.dcDanger=false;GAME.countdown={label:'Nood-front-end (MS-stations)',until:SIM.t+40};
+      at(55,()=>{GAME.flags.dcDanger=false;GAME.countdown={label:'Nood-front-end (MS-stations)',until:SIM.t+40};dcRepairCrew(()=>GAME.ended||!SRV.burnt);
+        pushAlarm('Herstelploeg van de leverancier en ICT is er: ze ruimen het datacenter op en plaatsen nieuwe racks en servers (±1,5 uur)','info');
         pushAlarm('Bedrijfsvoering werkt vanuit het uitwijkcentrum. De leverancier richt een nood-front-end in die de RTU’s in de MS-stations via LTE bereikt (±40 min).','info');});
       at(70,()=>{feederFault('F4');pushAlarm('Melding via de telefoon: storing in de woonwijk oost','warn');});
-      at(95,()=>{GAME.flags.scadaDown='os';GAME.countdown={label:'SCADA-container onderstation',until:SIM.t+50};
+      at(95,()=>{GAME.flags.scadaDown='os';GAME.countdown={label:'Nieuwe SCADA-servers in bedrijf',until:SIM.t+50};
         readyNotice('Nood-front-end via LTE in bedrijf: de MS-stations zijn weer op afstand te bedienen. Het onderstation zelf nog niet – daar blijft lokaal schakelen nodig.',null);});
       at(145,()=>{GAME.flags.scadaDown=false;$('#scada').classList.remove('down');GAME.countdown=null;
-        readyNotice('SCADA-container op het terrein in bedrijf: bediening op afstand van het hele onderstation is hersteld. Het nieuwe datacenter laat nog maanden op zich wachten.',null);});},
-    tick(){const r=ROOMS.find(r=>r.id==='SRV');
+        dcRestore();readyNotice('Herstelploeg klaar: nieuwe racks en servers geplaatst en SCADA opnieuw opgestart. Bediening op afstand van het hele onderstation is hersteld.',null);});},
+    tick(){const r=ROOMS.find(r=>r.id==='SRV'),t=SIM.t-GAME.t0;if(t>55&&t<145)dcRepair((t-55)/90);
       if(GAME.flags.dcDanger&&FP.on&&camInside()===r.idx&&!GAME.flags.dcEntered){GAME.flags.dcEntered=true;incident();
         pushAlarm('Je bent het datacenter in gelopen tijdens brand en gasblussing – levensgevaarlijk (rook, te weinig zuurstof)! Direct naar buiten.','crit');}},
     obj:()=>[{t:'Niemand het datacenter in tijdens brand en blussing',check:()=>GAME.flags.dcEntered?'fail':null,final:()=>true},
@@ -3428,26 +3434,51 @@ Object.assign(MODES,{
 
 // ============================================================ brand in het 10 kV-gebouw: vlammen uit het dak, brandbel, brandweer met wagens, mensen en waterstraal
 // Gedeeld door het scenario 'brand', het grote incident en het scenario 'datacenter'. fireStart → fireDouse (blussen) → fireStop.
-// fireStart({bld,off,ladder}): gebouw (VIEWS-id), verschuiving van de brandhaard langs het gebouw, en of de ladderwagen water spuit.
-const FIRE={bld:'MS',off:-8,ladder:true,on:false,acc:0,glow:null,flames:[],k:1,douseAt:null,bellT:0,sirenT:0,trucks:[],scorch:null,water:0};
+// fireStart({bld,off,hot,ladder,inside}): gebouw (VIEWS-id), verschuiving van de brandhaard langs het gebouw of een vaste brandhaard [x,z],
+// of de ladderwagen water spuit, en of de brandweer naar binnen gaat (binnenaanval met ademlucht).
+// Het vuur zit op het echte dak boven de brandhaard, slaat uit de dichtstbijzijnde deur en brandt binnen; er komt veel rook vrij.
+const FIRE={bld:'MS',off:-8,ladder:true,on:false,acc:0,glow:null,flames:[],k:1,douseAt:null,bellT:0,sirenT:0,trucks:[],scorch:null,water:0,E:null,smolder:0};
 const flameTex=(()=>{const c=cnv(64,128),g=c.getContext('2d'),gr=g.createRadialGradient(32,92,2,32,80,58);
   gr.addColorStop(0,'rgba(255,250,210,1)');gr.addColorStop(0.25,'rgba(255,200,70,0.95)');gr.addColorStop(0.55,'rgba(255,110,20,0.7)');gr.addColorStop(1,'rgba(200,40,0,0)');
   g.fillStyle=gr;g.beginPath();g.moveTo(32,0);g.bezierCurveTo(58,50,64,90,32,128);g.bezierCurveTo(0,90,6,50,32,0);g.fill();const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t;})();
-const fireSpot=()=>{const b=VIEWS[FIRE.bld].box;return {x:(b.min.x+b.max.x)/2+FIRE.off,y:b.max.y,z:(b.min.z+b.max.z)/2,b};};
-function fireStart(o={}){if(FIRE.on)return;Object.assign(FIRE,{bld:o.bld||'MS',off:o.off??-8,ladder:o.ladder!==false});const {x,y,z,b}=fireSpot();Object.assign(FIRE,{on:true,k:1,douseAt:null,bellT:0,acc:0,water:0});
+// brandhaard: boven op het dak (niet op de top van masten of koelers), of de vaste brandhaard
+const fireSpot=()=>{const b=VIEWS[FIRE.bld].box,B=BUILDINGS.find(q=>q.id===FIRE.bld);return {x:FIRE.hot?FIRE.hot[0]:(b.min.x+b.max.x)/2+FIRE.off,y:B?5.45:b.max.y,z:FIRE.hot?FIRE.hot[1]:(b.min.z+b.max.z)/2,b};};
+// ---- gedeeld brandeffect: vlammen als deeltjes die opstijgen, krimpen en van geelwit via oranje naar donkerrood kleuren
+const FLAME_C=[new THREE.Color(0xfff2c4),new THREE.Color(0xffa030),new THREE.Color(0xc8300a)];
+function flameEmitter(n){const ps=[];for(let i=0;i<n;i++){const m=new THREE.SpriteMaterial({map:flameTex,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,opacity:0});const s=new THREE.Sprite(m);s.visible=false;scene.add(s);ps.push({s,m,t:1,life:0});}return {ps};}
+function flameTick(E,dt,src,k){if(!E)return;for(const p of E.ps){p.t+=dt;
+    if(p.t>=p.life){if(k<0.03||Math.random()>0.3+0.7*k){p.s.visible=false;p.t=0;p.life=0.12;continue;}
+      Object.assign(p,{t:0,life:rnd(0.5,1.05),x:src.x+rnd(-src.sx,src.sx),z:src.z+rnd(-src.sz,src.sz),y:src.y,sz:src.size*rnd(0.55,1.1)*(0.45+0.55*k),rise:src.rise*rnd(0.7,1.25),dx:rnd(-0.25,0.25)+0.35});p.s.visible=true;}
+    const q=p.t/p.life,w=p.sz*(1-0.6*q),h=p.sz*(1.4+0.7*q);p.s.position.set(p.x+p.dx*q*p.rise*0.3,p.y+p.rise*q+h*0.35,p.z);p.s.scale.set(w,h,1);
+    if(q<0.4)p.m.color.copy(FLAME_C[0]).lerp(FLAME_C[1],q/0.4);else p.m.color.copy(FLAME_C[1]).lerp(FLAME_C[2],(q-0.4)/0.6);p.m.opacity=(q<0.12?q/0.12:1-(q-0.12)/0.88)*0.92;}}
+function flameDispose(E){if(E)E.ps.forEach(p=>{scene.remove(p.s);p.m.dispose();});}
+// rook bij brand: grote donkere wolken die hoog opstijgen en met de wind meedrijven, en binnen (ceil) onder het plafond blijven hangen
+// dichte rook: veel overlappende wolkjes met een zachte rand (de gewone rooktextuur is voor dunne pluimpjes)
+const fireSmokeTex=(()=>{const c=cnv(128),g=c.getContext('2d');for(let i=0;i<26;i++){const a=rr(0,6.28),d=rr(0,26),x=64+Math.cos(a)*d,y=64+Math.sin(a)*d,r=rr(16,34),gr=g.createRadialGradient(x,y,0,x,y,r);
+  gr.addColorStop(0,'rgba(255,255,255,0.8)');gr.addColorStop(0.55,'rgba(255,255,255,0.42)');gr.addColorStop(1,'rgba(255,255,255,0)');g.fillStyle=gr;g.fillRect(0,0,128,128);}return new THREE.CanvasTexture(c);})();
+function fireSmoke(x,y,z,k=1,col=0x35302c,op=0.85,ceil=null){const m=new THREE.SpriteMaterial({map:fireSmokeTex,color:col,transparent:true,opacity:0,depthWrite:false});const s=new THREE.Sprite(m);
+  s.position.set(x,y,z);s.scale.setScalar(2*k);scene.add(s);const vx=rnd(-0.3,0.3)+(ceil==null?0.9:0),vz=rnd(-0.3,0.3),life=ceil==null?rnd(11,15):rnd(14,20),max=ceil==null?22:3.2;
+  FX.push({t:0,update(dt){this.t+=dt;const q=this.t/life;if(ceil!=null&&s.position.y>=ceil){s.position.x+=vx*dt*1.4;s.position.z+=vz*dt*1.4;}else{s.position.y+=dt*(ceil!=null?1.3:2.8);s.position.x+=vx*dt;s.position.z+=vz*dt;}
+    if(s.scale.x<max)s.scale.addScalar(dt*(ceil!=null?0.25:0.9));m.opacity=op*Math.min(1,this.t/0.8)*(1-q);if(q>=1){scene.remove(s);m.dispose();return false;}return true;}});}
+// vuurlicht: één lamp die bij het opstarten al bestaat (geen nieuwe shaders tijdens het spel); flakkert bij de brand die het dichtst bij is
+const FIRE_LIGHT=new THREE.PointLight(0xff7a2a,0,30,1.6);scene.add(FIRE_LIGHT);
+function fireStart(o={}){if(FIRE.on)return;Object.assign(FIRE,{bld:o.bld||'MS',off:o.off??-8,hot:o.hot||null,ladder:o.ladder!==false});const {x,y,z,b}=fireSpot();Object.assign(FIRE,{on:true,k:1,douseAt:null,bellT:0,acc:0,water:0,smolder:0});
+  // deur het dichtst bij de brandhaard: daar slaan vlammen en rook naar buiten
+  const B=BUILDINGS.find(q=>q.id===FIRE.bld);FIRE.door=B?{x:[...B.doors].sort((a,c)=>Math.abs(a-x)-Math.abs(c-x))[0],z:B.z0}:{x,z:b.min.z};FIRE.room=ROOMS.find(r=>r.id===FIRE.bld)||null;
   FIRE.glow=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,color:0xff7a1a,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending}));
-  FIRE.glow.position.set(x,b.min.y+2.5,b.min.z-0.4);FIRE.glow.scale.set(6,4,1);scene.add(FIRE.glow);
-  // vlammen die uit het dak slaan, met een gloed erboven en een zwartgeblakerde plek op het dak
-  for(let i=0;i<16;i++){const core=i%2===0,m=new THREE.SpriteMaterial({map:flameTex,transparent:true,depthWrite:false,blending:core?THREE.NormalBlending:THREE.AdditiveBlending,color:core?0xffb040:0xffffff});const s=new THREE.Sprite(m);
-    s.userData={ox:rnd(-5.5,5.5),oz:rnd(-3.5,3.5),h:rnd(core?4:3,core?8.5:6),ph:Math.random()*9};s.position.set(x+s.userData.ox,y,z+s.userData.oz);scene.add(s);FIRE.flames.push(s);}
-  const hm=new THREE.SpriteMaterial({map:glowTex,color:0xff6a10,transparent:true,opacity:0.5,depthWrite:false,blending:THREE.AdditiveBlending});const h=new THREE.Sprite(hm);h.position.set(x,y+4,z);h.scale.set(22,14,1);scene.add(h);FIRE.flames.push(h);h.userData={halo:true};
-  FIRE.scorch=mesh(new THREE.CircleGeometry(4.5,20),mat({color:0x101010,roughness:1}),scene,x,y+0.08,z);FIRE.scorch.rotation.x=-Math.PI/2;FIRE.scorch.castShadow=false;
+  FIRE.glow.position.set(FIRE.door.x,2.0,FIRE.door.z-0.5);FIRE.glow.scale.set(5,4,1);scene.add(FIRE.glow);
+  FIRE.E={roof:flameEmitter(44),door:flameEmitter(16),inside:FIRE.room?flameEmitter(36):null};
+  // gloed boven het gat in het dak en een zwartgeblakerde plek eromheen
+  const hm=new THREE.SpriteMaterial({map:glowTex,color:0xff6a10,transparent:true,opacity:0.5,depthWrite:false,blending:THREE.AdditiveBlending});const h=new THREE.Sprite(hm);h.position.set(x,y+3,z);h.scale.set(16,11,1);scene.add(h);FIRE.flames.push(h);h.userData={halo:true};
+  FIRE.scorch=mesh(new THREE.CircleGeometry(3.6,20),mat({color:0x101010,roughness:1}),scene,x,y+0.03,z);FIRE.scorch.rotation.x=-Math.PI/2;FIRE.scorch.castShadow=false;
   // brandweer: twee wagens rijden met sirene over de hoofdweg naar de poort, vier brandweerlieden gaan op verkenning
   FIRE.trucks.forEach(t=>scene.remove(t.g));FIRE.trucks=[[25,79,true],[25,91,false]].map(([tx,tz,ladder],i)=>{const t=fireTruck(ladder);t.g.position.set(tx,0,tz+380+i*24);t.g.rotation.y=Math.PI;scene.add(t.g);
     return Object.assign(t,{x:tx,z:tz,state:'come'});});
-  crewDispatch({box:b,say:'Brandweer',until:()=>!FIRE.on,n:4,kind:'fire'});}
+  // binnenaanval (alleen waar geen hoogspanning is, zoals het datacenter): de ploeg gaat met ademlucht naar de brandhaard in de ruimte
+  const r=o.inside&&ROOMS.find(r=>r.id===FIRE.bld),cb=r?new THREE.Box3(V3(x-1.5,r.y0,z-1.5),V3(x+1.5,r.y0+2.5,z+1.5)):b;
+  crewDispatch({box:cb,say:r?'Brandweer (ademlucht)':'Brandweer',until:()=>!FIRE.on,n:4,kind:'fire'});}
 function fireDouse(){if(FIRE.on&&FIRE.douseAt==null)FIRE.douseAt=SIM.t;}
-function fireStop(){FIRE.on=false;if(FIRE.glow){scene.remove(FIRE.glow);FIRE.glow=null;}FIRE.flames.forEach(s=>{scene.remove(s);s.material.dispose();});FIRE.flames=[];
+function fireStop(){FIRE.on=false;FIRE.smolder=25;FIRE_LIGHT.intensity=0;if(FIRE.E){flameDispose(FIRE.E.roof);flameDispose(FIRE.E.door);flameDispose(FIRE.E.inside);FIRE.E=null;}if(FIRE.glow){scene.remove(FIRE.glow);FIRE.glow=null;}FIRE.flames.forEach(s=>{scene.remove(s);s.material.dispose();});FIRE.flames=[];
   if(FIRE.scorch){scene.remove(FIRE.scorch);FIRE.scorch=null;}FIRE.douseAt=null;FIRE.trucks.forEach(t=>{if(t.state!=='gone')t.state='wait';t.wait=12;});}
 // brandweerwagen: rood met geel-rode blokken, blauwe zwaailichten, (eventueel) ladder
 const FT={red:mat({color:0xc4141f,roughness:0.45,metalness:0.2}),yel:mat({color:0xe6d81a,roughness:0.5}),blk:mat({color:0x15181c,roughness:0.6}),glass:mat({color:0x1e2a34,roughness:0.1,metalness:0.5}),
@@ -3468,18 +3499,33 @@ function fireTick(dt){const now=performance.now(),run=!SIM.paused,sp=clamp(SIM.s
     else if(t.state==='wait'&&run){t.wait-=dt;if(t.wait<=0){t.state='leave';t.g.rotation.y=0;}}
     else if(t.state==='leave'&&run){t.g.position.z+=14*sp*dt;if(t.g.position.z>t.z+420){scene.remove(t.g);t.state='gone';}}}
   if(FIRE.trucks.length&&FIRE.trucks.every(t=>t.state==='gone'))FIRE.trucks=[];
-  if(!FIRE.on)return;const {x,y,z,b}=fireSpot();
+  if(!FIRE.on){// na het blussen nog even nasmeulen: lichtgrijze rook uit het dak
+    if(FIRE.smolder>0&&VIEWS[FIRE.bld]){FIRE.smolder-=dt;FIRE.acc+=dt;if(FIRE.acc>0.4){FIRE.acc=0;const s=fireSpot();fireSmoke(s.x+rnd(-1.5,1.5),s.y+0.5,s.z+rnd(-1,1),1.0,0xa8a8a4,0.5*FIRE.smolder/25);}}return;}
+  const {x,y,z,b}=fireSpot();
   // na het spanningsloos maken blust de brandweer: in ±30 min worden de vlammen klein en de rook wit (stoom)
   FIRE.k=FIRE.douseAt==null?1:clamp(1-(SIM.t-FIRE.douseAt)/28,0.08,1);
-  for(const s of FIRE.flames){const u=s.userData;if(u.halo){s.material.opacity=(0.35+0.15*Math.sin(now/120))*FIRE.k;continue;}
-    const f=0.75+0.25*Math.sin(now/70+u.ph)*Math.sin(now/43+u.ph*2),hh=u.h*f*(0.35+0.65*FIRE.k);s.scale.set(hh*0.55,hh,1);s.position.set(x+u.ox+Math.sin(now/300+u.ph)*0.3,y+hh*0.42,z+u.oz);s.material.opacity=0.9*FIRE.k;}
-  if(FIRE.glow)FIRE.glow.material.opacity=(0.55+0.35*Math.sin(now/90)*Math.sin(now/37))*FIRE.k;
-  FIRE.acc+=dt;if(FIRE.acc>0.3){FIRE.acc=0;smokePuff(x+rnd(-5,5),y+2+3*FIRE.k,z,1+0.5*FIRE.k,FIRE.douseAt==null?0x4a4a4a:0xb4b4b0);}
+  const k=FIRE.k,D_=FIRE.door,R_=FIRE.room,cam=camera.position,near=cam.distanceTo(V3(x,2,z));
+  for(const s of FIRE.flames)if(s.userData.halo)s.material.opacity=(0.3+0.12*Math.sin(now/120))*k;
+  if(FIRE.glow)FIRE.glow.material.opacity=(0.55+0.35*Math.sin(now/90)*Math.sin(now/37))*k;
+  // vlammen: door het dak boven de brandhaard, uit de deur, en binnen bij de brandhaard
+  if(near<900){flameTick(FIRE.E.roof,dt,{x,y,z,sx:2.4,sz:1.6,size:2.8,rise:4.6},k);flameTick(FIRE.E.door,dt,{x:D_.x,y:2.0,z:D_.z-0.25,sx:0.7,sz:0.12,size:1.2,rise:1.8},k*k);}
+  if(R_&&near<80)flameTick(FIRE.E.inside,dt,{x,y:R_.y0,z,sx:1.1,sz:0.6,size:1.15,rise:2.0},k*k);
+  // veel rook: een dikke donkere kolom uit het dak, rook uit de deur en binnen een laag onder het plafond; tijdens het blussen grijswit
+  const col=FIRE.douseAt==null?0x35302c:0xa8a8a4,rate=near<400?0.11:0.25;FIRE.acc+=dt;
+  if(FIRE.acc>rate){FIRE.acc=0;fireSmoke(x+rnd(-2,2),y+1.2,z+rnd(-1.5,1.5),1.7+1.1*k,col,0.88);if(Math.random()<0.5)fireSmoke(D_.x+rnd(-0.6,0.6),2.7,D_.z-0.7,1.0,col,0.6);
+    if(R_&&near<60&&Math.random()<0.45)fireSmoke(x+rnd(-1.5,1.5),R_.y0+1,z+rnd(-1,1),1.1,0x3a3633,0.55,R_.y1-0.7);}
+  // vuurlicht flakkert binnen als je in de ruimte bent, anders boven het dak
+  if(R_&&camInside()===R_.idx)FIRE_LIGHT.position.set(x,R_.y0+1.4,z);else FIRE_LIGHT.position.set(x,y+2.5,z);
+  FIRE_LIGHT.intensity=k*(40+22*Math.sin(now/70)*Math.sin(now/43));
   // brandbel tot de brandweer binnen is
   if(FIRE.douseAt==null&&run){FIRE.bellT-=dt;if(FIRE.bellT<=0){FIRE.bellT=1;AudioSys.fireBell?.(distGain(V3(x,2,z)));}}
   // waterstraal van de brandweer op het dak
   if(FIRE.douseAt!=null&&run&&FIRE.ladder){FIRE.water+=dt;const L=FIRE.trucks.find(t=>t.lad&&t.state==='park');if(L){L.lad.rotation.x=Math.max(-0.62,L.lad.rotation.x-dt*0.4);const tip=L.lad.localToWorld(_tip.set(0,0.2,12.3));
-      if(L.lad.rotation.x<-0.6)while(FIRE.water>0.04){FIRE.water-=0.04;waterDrop(tip,V3(x+rnd(-3,3),y+0.5,z+rnd(-2,2)));}}else FIRE.water=0;}}
+      if(L.lad.rotation.x<-0.6)while(FIRE.water>0.04){FIRE.water-=0.04;waterDrop(tip,V3(x+rnd(-3,3),y+0.5,z+rnd(-2,2)));}}else FIRE.water=0;}
+  // binnenaanval: elke brandweerman die aan het werk is, spuit water op de brandhaard
+  if(FIRE.douseAt!=null&&run&&camera.position.distanceTo(V3(x,2,z))<160){FIRE.hose=(FIRE.hose||0)+dt;if(FIRE.hose>0.09){FIRE.hose=0;
+    for(const n of NPCS)if(n.kind==='fire'&&n.state==='work'){const a=n.P.g.position.clone().setY(n.P.g.position.y+1.2),t=V3(x+rnd(-2.5,2.5),b.min.y+0.8,z+rnd(-2,2)),d=t.clone().sub(a);
+      if(d.length()<25){n.P.g.rotation.y=Math.atan2(d.x,d.z);n.P.armL.rotation.x=n.P.armR.rotation.x=-1.3;waterDrop(a.addScaledVector(d.normalize(),0.6),t);}}}}}
 const _tip=new THREE.Vector3();
 const waterMat=new THREE.SpriteMaterial({map:glowTex,color:0xe4f2ff,transparent:true,opacity:0.9,depthWrite:false});
 function waterDrop(a,tg){const s=new THREE.Sprite(waterMat);s.scale.setScalar(0.9+Math.random()*0.5);s.position.copy(a);scene.add(s);const T=1.3,v=tg.clone().sub(a).divideScalar(T);v.y+=4.9*T;
@@ -3507,21 +3553,21 @@ const INCIDENTS=[
       pushAlarm(`112-melding: vrachtwagen tegen MS-station ${s.id} ${s.name}! Isoleer het station vanaf de buren en voed terug via het normaal-open punt`,'crit');
       addTimer(25,()=>{s.groups.forEach(g=>g.backfed=true);s.genset=true;pushAlarm(`Noodaggregaat bij ${s.id} draait – de klanten hebben weer stroom`,'ok');});},
     end(){const s=this.s;s.damaged=false;s.groups.forEach(g=>g.backfed=false);s.genset=false;readyNotice(`${s.id}: schakelinstallatie vervangen – het station mag weer in bedrijf`,null);}},
-  {id:'datacenter',name:'Brand in het datacenter',desc:'Een UPS-accu vat vlam en de gasblussing faalt: de SCADA-servers branden af. Bedien ter plaatse en blijf uit het datacenter.',w:1.6,dur:115,
+  {id:'datacenter',name:'Brand in het datacenter',desc:'Een UPS-accu vat vlam en de gasblussing faalt: de SCADA-servers branden af. Bedien ter plaatse en blijf uit het datacenter.',w:0.6,dur:115,
     ok:()=>!GAME.flags.scadaDown&&!FIRE.on,
     start(){const live=()=>INC.active?.def.id==='datacenter';pushAlarm('Rookaanzuiging datacenter (VESDA): voor-alarm – rook bij de accukast van UPS B','warn');
       addTimer(2,()=>{if(!live())return;GAME.flags.dcAlarm=true;GAME.flags.dcDanger=true;pushAlarm('BRANDALARM datacenter: blussing start – niemand naar binnen! Brandweer gealarmeerd','crit');});
-      addTimer(3,()=>{if(!live())return;fireStart({bld:'SRV',off:0,ladder:false});pushAlarm('INERGEN-blussing geactiveerd, maar slechts 2 van de 6 flessen lossen (pilootventiel defect) – de brand gaat door!','crit');});
+      addTimer(3,()=>{if(!live())return;fireStart({bld:'SRV',hot:[-34,53.6],inside:true});pushAlarm('INERGEN-blussing geactiveerd, maar slechts 2 van de 6 flessen lossen (pilootventiel defect) – de brand gaat door!','crit');});
       addTimer(5,()=>{if(!live())return;GAME.flags.scadaDown=true;$('#scada').classList.add('down');dcBurnt();pushAlarm('SCADA-verbinding verbroken: de servers in het datacenter zijn uitgevallen. Loop het station in (V) en schakel lokaal (F).','crit');});
       addTimer(16,()=>{if(live()){fireDouse();pushAlarm('Brandweer: we gaan met ademlucht het datacenter in en blussen','ok');}});
       addTimer(rnd(20,30),()=>{if(live())feederFault();});
       addTimer(44,()=>{if(!live())return;fireStop();GAME.flags.dcAlarm=false;readyNotice('Brandweer: brand meester, rook afgezogen. SCADA blijft voorlopig uit – de servers zijn verloren.',null);});
-      addTimer(50,()=>{if(live())GAME.flags.dcDanger=false;});
+      addTimer(50,()=>{if(!live())return;GAME.flags.dcDanger=false;dcRepairCrew(()=>!live());pushAlarm('Herstelploeg is er: ze ruimen het datacenter op en plaatsen nieuwe racks en servers','info');});
       addTimer(75,()=>{if(!live())return;GAME.flags.scadaDown='os';readyNotice('Nood-front-end via LTE in bedrijf: de MS-stations zijn weer op afstand te bedienen. Het onderstation zelf nog niet.',null);});},
-    tick(){const r=ROOMS.find(r=>r.id==='SRV');if(GAME.flags.dcDanger&&FP.on&&camInside()===r.idx&&!this.entered){this.entered=true;incident();
+    tick(){const r=ROOMS.find(r=>r.id==='SRV'),t=SIM.t-INC.active.t0;if(t>50)dcRepair((t-50)/60);if(GAME.flags.dcDanger&&FP.on&&camInside()===r.idx&&!this.entered){this.entered=true;incident();
       pushAlarm('Je bent het datacenter in gelopen tijdens brand en gasblussing – levensgevaarlijk! Direct naar buiten.','crit');}},
     end(){if(FIRE.on&&FIRE.bld==='SRV')fireStop();Object.assign(GAME.flags,{scadaDown:false,dcAlarm:false,dcDanger:false});$('#scada').classList.remove('down');dcRestore();
-      readyNotice('SCADA-container in bedrijf: bediening op afstand van het hele onderstation is hersteld. Het datacenter is opgeruimd en voorzien van nieuwe racks.',null);}},
+      readyNotice('Herstelploeg klaar: nieuwe racks en servers geplaatst en SCADA opnieuw opgestart. Bediening op afstand van het hele onderstation is hersteld.',null);}},
   {id:'cyber',name:'Cyberaanval op SCADA',desc:'De verbinding met het station valt weg: bedienen kan alleen nog lokaal (V).',w:1,dur:30,ok:()=>!GAME.flags.scadaDown,
     start(){GAME.flags.scadaDown=true;$('#scada').classList.add('down');pushAlarm('CERT: cyberaanval – SCADA-verbinding verbroken! Bedien lokaal: loop het station in (V)','crit');addTimer(rnd(8,14),()=>feederFault());},
     end(){GAME.flags.scadaDown=false;$('#scada').classList.remove('down');readyNotice('SCADA-verbinding hersteld',null);}},
@@ -3689,6 +3735,8 @@ const AudioSys={ctx:null,muted:false,vol:0.9,busVol:{},route:null,
 // welke geluiden bij welk kanaal horen
 for(const [bus,names] of [['alarm',['alarm','ready','chime','deny','fireBell','siren']],['omgeving',['chirp','carPass','cricket','thunder']],['telefoon',['ring']]])
   names.forEach(n=>{const f=AudioSys[n];AudioSys[n]=function(...a){const prev=this.route;this.route=this.bus?.[bus]||null;try{return f.apply(this,a);}finally{this.route=prev;}};});
+// pauze: alle geluiden (ook brom, regen en sirenes) stilzetten en daarna verder laten gaan
+function audioPause(){const c=AudioSys.ctx;if(!c)return;if(SIM.paused&&c.state==='running')c.suspend();else if(!SIM.paused&&c.state==='suspended')c.resume();}
 function distGain(p){const d=camera.position.distanceTo(p);return clamp(1.2/(1+(d/35)**2)+0.12,0.12,1);}
 // ---- geluid per plek (elke 0,25 s)
 function updatePlaceAudio(){const A=AudioSys,ins=camInside(),r=ins&&ROOMS[ins-1],kiosk=!!(r&&r.kiosk),p=camera.position,F=FENCE;
@@ -4062,6 +4110,10 @@ function buildServerRoom(r){if(!r)return;const Y=r.y0,E=SVM,S=staticRoot,cx=(r.x
 // na de brand: roet op racks en kasten, geen LEDs meer
 const dcMats=()=>[...Object.values(SVM.front),SVM.rear,SVM.body,SVM.fUps,SVM.fBat,SVM.ups,SVM.crac,SVM.fCrac];
 function dcBurnt(){if(SRV.burnt)return;SRV.burnt=true;SRV.orig=dcMats().map(m=>m.color.getHex());dcMats().forEach(m=>m.color.setHex(0x3c3835));SVM.led.opacity=0;}
+const _dcC=new THREE.Color();
+// herstelploeg aan het werk: p van 0 (net na de brand) tot 1 (alles schoon en vervangen); de LEDs gaan pas aan bij het opstarten
+function dcRepair(p){if(!SRV.burnt)return;const k=clamp(p,0,1);dcMats().forEach((m,i)=>m.color.setHex(0x3c3835).lerp(_dcC.setHex(SRV.orig[i]),k));}
+function dcRepairCrew(until){if(VIEWS.SRV)crewDispatch({box:VIEWS.SRV.box,say:'Herstelploeg: datacenter opruimen, nieuwe racks en servers plaatsen',n:3,until});}
 function dcRestore(){if(!SRV.burnt)return;SRV.burnt=false;dcMats().forEach((m,i)=>m.color.setHex(SRV.orig[i]));SVM.led.opacity=1;}
 function serverTick(dt){SVM.flash.emissiveIntensity=GAME.flags.dcAlarm&&performance.now()%700<300?5:0;SRV.t+=dt;if(SRV.t<0.22)return;SRV.t=0;const down=GAME.flags.scadaDown===true;
   SRV.ledTex.offset.y=Math.floor(Math.random()*8)/8;SVM.led.color.setHex(down?0xff3030:0xffffff);
@@ -4620,7 +4672,7 @@ function crewSpawn({box,say,until,n=2,from=CREW_FROM,rel=[],kind,standOff}){
     const start=from.clone().add(V3(i*0.9,0,i*0.6)),path=findPath(start.x,start.z,sp.x,sp.z);if(!path)return;
     const P=makePerson(NPCS.length+i,kind);P.g.position.copy(path[0]);
     const el=document.createElement('div');el.className='npc';el.textContent=say;$('#labels').appendChild(el);
-    const n_={P,path,i:1,state:'in',look,until,home:start,phase:Math.random()*6,el,say,t:0,talk:i===0,name:CREW_NAMES[(crewSeq++)%CREW_NAMES.length],rel:relSet,bubble:0};NPCS.push(n_);made.push(n_);
+    const n_={P,path,kind,i:1,state:'in',look,until,home:start,phase:Math.random()*6,el,say,t:0,talk:i===0,name:CREW_NAMES[(crewSeq++)%CREW_NAMES.length],rel:relSet,bubble:0};NPCS.push(n_);made.push(n_);
   });return made;}
 function npcWalk(n,dt,spd){const tgt=n.path[n.i];if(!tgt)return true;const p=n.P.g.position,d=V3(tgt.x-p.x,0,tgt.z-p.z),L=d.length();
   if(L<0.15){n.i++;return n.i>=n.path.length;}
@@ -6139,7 +6191,7 @@ function foamLayer(s){const b=VIEWS[s.id].box,c=b.getCenter(V3()),g=new THREE.Gr
     o.userData.r=top?rnd(0.7,1.1):rnd(0.6,1.2);o.scale.set(0.01,0.01,0.01);o.castShadow=false;blobs.push(o);}scene.add(g);return {g,blobs};}
 function stationVisuals(dt){const run=!SIM.paused,now=performance.now();POLICE_BLINK.emissiveIntensity=[...STV.values()].some(v=>v.police)&&now%300<150?6:0.2;
   for(const s of RING.stations){const T=s.theft,B=s.burn;let v=STV.get(s);
-    if(!T&&!B){if(v){[v.police?.g,v.tape,v.truck?.g,v.soot,v.foam?.g].forEach(o=>{if(o){scene.remove(o);disposeTree(o,o===v.soot);}});(v.flames||[]).forEach(f=>{scene.remove(f);f.material.dispose();});cordonDown(v.cordon);STV.delete(s);}continue;}
+    if(!T&&!B){if(v){[v.police?.g,v.tape,v.truck?.g,v.soot,v.foam?.g].forEach(o=>{if(o){scene.remove(o);disposeTree(o,o===v.soot);}});flameDispose(v.fe);flameDispose(v.fi);cordonDown(v.cordon);STV.delete(s);}continue;}
     if(!v){v={};STV.set(s,v);}
     // koperdiefstal: politieauto bij het station en lint zolang het onveilig is
     if(T){if(!v.police){const p=stRoadSpot(s),g=policeModel();g.position.set(p.x,0,p.z);g.rotation.y=p.yaw;v.police={g,arrived:true};}
@@ -6156,10 +6208,11 @@ function stationVisuals(dt){const run=!SIM.paused,now=performance.now();POLICE_B
       // afzetting en lint pas als de politie er is
       if(v.police.arrived&&!v.cordon){v.cordon=cordonUp(s);v.tape=tapeAround(s,5);}
       // vlammen en rook tot het blussen klaar is
-      if(!v.flames){v.flames=[];for(let i=0;i<6;i++){const m=new THREE.SpriteMaterial({map:flameTex,transparent:true,depthWrite:false,blending:i%2?THREE.AdditiveBlending:THREE.NormalBlending,color:i%2?0xffffff:0xffb040});
-        const f=new THREE.Sprite(m);f.userData={ox:rnd(-1.6,1.6),oz:rnd(-1,1),h:rnd(1.8,3.2),ph:Math.random()*9};scene.add(f);v.flames.push(f);}}
-      for(const f of v.flames){const u=f.userData,fl=0.75+0.25*Math.sin(now/70+u.ph),h=u.h*fl*(0.4+0.6*k);f.scale.set(h*0.55,h,1);f.position.set(c.x+u.ox,bx.max.y+h*0.4,c.z+u.oz);f.material.opacity=0.9*k;}
-      v.smoke=(v.smoke||0)+dt;if(v.smoke>0.45){v.smoke=0;smokePuff(c.x+rnd(-1.5,1.5),bx.max.y+1.5,c.z,0.6+0.4*k,B.phase==='blussen'?0xb4b4b0:0x3a3a3a);}
+      if(!v.fe){v.fe=flameEmitter(26);v.fi=flameEmitter(12);}
+      const tc=VIEWS[s.id+'-TR']?.center||c,dc=camera.position.distanceTo(c);flameTick(v.fe,dt,{x:tc.x,y:bx.max.y-0.3,z:tc.z,sx:1.2,sz:0.9,size:1.9,rise:3.2},k);if(dc<50)flameTick(v.fi,dt,{x:tc.x,y:0.3,z:tc.z,sx:0.5,sz:0.4,size:1.1,rise:1.7},k*k);
+      v.smoke=(v.smoke||0)+dt;if(v.smoke>(dc<300?0.14:0.3)){v.smoke=0;const col=B.phase==='blussen'?0xa8a8a4:0x35302c;fireSmoke(tc.x+rnd(-1.2,1.2),bx.max.y+0.6,tc.z+rnd(-1,1),1.2+0.9*k,col,0.85);
+        if(dc<40&&Math.random()<0.4)fireSmoke(tc.x+rnd(-0.6,0.6),0.8,tc.z+rnd(-0.5,0.5),0.8,0x3a3633,0.5,bx.max.y-0.6);}
+      if(!FIRE.on&&dc<200){FIRE_LIGHT.position.set(tc.x,bx.max.y+1.5,tc.z);FIRE_LIGHT.intensity=k*(30+16*Math.sin(now/70)*Math.sin(now/43));}
       // brandweerlieden met de slang op afstand (±7 m) zodra de wagen er staat
       if(v.truck.arrived&&!v.crew){const q=v.truck.g.position;v.crew=crewSpawn({box:bx,n:3,say:'Brandweer',kind:'fire',standOff:7,from:V3(q.x+1.5,0,q.z+1.5),until:()=>!s.burn||s.burn.phase==='vervangen'});}
       // blussen met schuim: vlokken uit de straalpijpen en een groeiende schuimlaag
@@ -6169,7 +6222,7 @@ function stationVisuals(dt){const run=!SIM.paused,now=performance.now();POLICE_B
           if(n&&NPCS.includes(n)&&n.state==='work'){const a=n.P.g.position.clone().setY(1.3),d=V3(c.x-a.x,0,c.z-a.z).normalize();foamDrop(a.addScaledVector(d,0.6),V3(c.x+rnd(-1.2,1.2),bx.max.y+0.3,c.z+rnd(-0.8,0.8)));}}}}}
     if(!v.soot){v.soot=mesh(new THREE.PlaneGeometry(bx.max.x-bx.min.x+0.2,bx.max.z-bx.min.z+0.2),mat({color:0x151515,roughness:1}),scene,c.x,bx.max.y+0.04,c.z);v.soot.rotation.x=-Math.PI/2;v.soot.castShadow=false;}
     // geblust: vlammen, afzetting en wagens weg; het schuim blijft liggen tot de trafo vervangen is
-    if(!burning){if(v.flames){v.flames.forEach(f=>{scene.remove(f);f.material.dispose();});v.flames=null;}cordonDown(v.cordon);v.cordon=null;if(v.tape){scene.remove(v.tape);disposeTree(v.tape);v.tape=null;}
+    if(!burning){if(v.fe){flameDispose(v.fe);flameDispose(v.fi);v.fe=v.fi=null;if(!FIRE.on)FIRE_LIGHT.intensity=0;}cordonDown(v.cordon);v.cordon=null;if(v.tape){scene.remove(v.tape);disposeTree(v.tape);v.tape=null;}
       if(v.police){scene.remove(v.police.g);disposeTree(v.police.g);v.police=null;}
       if(v.truck&&!(v.crew||[]).some(n=>NPCS.includes(n))){scene.remove(v.truck.g);disposeTree(v.truck.g);v.truck=null;v.crew=null;}}}}
 
@@ -6637,7 +6690,7 @@ function gisDrawExtra(g,cv){const s=TAB.zoom,now=performance.now();
 // ============================================================ updatecontrole in het hoofdmenu: is er op GitHub een nieuwere versie?
 // De build zet een vingerafdruk in BUILD_ID (tests/stamp.mjs) en houdt version.json bij met eerdere versies.
 // Staat onze versie bij de eerdere versies op GitHub, dan is er een update; staat hij er niet in, dan is het eigen (nieuwer) werk.
-const BUILD_ID='4095ed3ccaca';
+const BUILD_ID='aaba6cf0f4c9';
 const UPD_REPO='https://github.com/ProAdmin007/Onderstation-SIM-Pro';
 const UPD_URL='https://raw.githubusercontent.com/ProAdmin007/Onderstation-SIM-Pro/main/version.json';
 // toestand van de controle: idle, bezig, actueel, nieuw, eigen of fout
@@ -6922,7 +6975,7 @@ else{renderMenu();$('#intro').classList.remove('hidden');controls.autoRotate=tru
 if(params.has('night'))updateSky(22);
 if(params.has('view')){const v=VIEWPOS[+params.get('view')];camera.position.copy(v[0]);controls.target.copy(v[1]);controls.autoRotate=false;controls.update();}
 
-window.OS={MEPPEL,LS_ORDERS,refreshDevPanel,scadaReach,dcBurnt,LAMPS,updateSky,updateNPCs,updateStreetLights,DOORS,STEPS,floorAt,doorTick,pickAt,SVM,serverTick,setAutoMeet,measBlock,measVan,MEAS_VAN,coachRestore,coachReset,installUpdate,COACH,coachCards,setCoach,renderCoach,checkUpdate,UPD,BUILD_ID,GSV,gensetTick,gensetSpot,digStart,klicHit,digTick,digHit,MARKS,setSpeed,klicFocus,klicCard,klicCables,tabletHome,refreshInfo,XLAB,TRACES,cableDist,stationVisuals,cityRoute,CORDONS,inCordon,copperTheft,trafoFire,stationTick,stationBlock,stIsolated,stNeighborSwitches,STV,updateHUD,pushAlarm,FF,ffStart,ffStop,skipRain,openWT,closeWT,setRealWeather,autoWeather,pickWeather,wetNow,ALARM:()=>ALARM_CRIT,VANS,vanTick,crewDispatch,crewSpawn,routeAt,driveVehicle,walkActive:()=>WALK_ACTIVE,BUS,GARB,PARCEL,AMB,TRAIN,XING,HALTES,MARKET,FIG,CY,cityDay,marketOn,schoolBreak,cityTick,measDone,cableCard,isoSwitches,KLIC,klicNew,klicMark,klicHit,gisMeasure,gisMofReplace,faultOf,cableOf,cableRisk,DIGS,CABLES,GIS_NET,gisRoute,cableState,setXray,XRAY,TAB,openTablet,closeTablet,drawTablet,nearestCable,DYN,fpsTick,fireTick,WK,getWalkers:()=>WALKERS,getStrips:()=>WSTRIPS,fireStart,fireDouse,fireStop,GENSET,gsCap,SMALL,lvgLive,updateSmall,setMouseMode,getMouseMode:()=>MOUSE_MODE,cameraKeys,OVK,openPreview,closePreview,viewHour,getPreview:()=>PREVIEW,VIEWPOS,SITE,updateSites,SLD,activeFaults,renderFaults,reportPDF,listSaves,openSlots,closeSlots,SAVE_SLOTS,layoutCheck,LAYOUT,FREC,fltRec,openRec,closeRec,renderRec,selectivity,protSelect,feederT,incT,incOf,shortCircuit,EF,earthFault,efTick,efRails,efU0,railsCoupled,controls,tripBreaker,CONS,LS_LINKS,LS_ORDERS,GENSET,lsTick,lsOrder,lsSwitchOrder,lsExec,gsSend,gsOff,gsRestart,tapOrder,setEta,callPrio,lsAreas,PRIO,openLS,closeLS,renderLS,lvVolt,stationLoads,shedFactor,failP,manualP,phoneTick,refreshDevPanel,updateSLD,openKeys,closeKeys,KEY_HELP,RELAY_BAYS,relayTask,relayDue,relayDefect,initRelays,kitTests,kitMeasure,kitVerdict,kitRun,openKit,closeKit,saveGame,readSave,deleteSave,resumeGame,canSave,specOf,CABLE,soilT,FD,meppelFault,linkTick,tabAlarms,updateTabAlarms,renderTasks,INC,INCIDENTS,startIncident,endIncident,incidentTick,setTab,renderCables,GFX,setGfx,applyGfx,openSettings,closeSettings,WX_TYPES,renderer,scene,FIRE,CARS,updateWindows,updateLife,stationLive,cbMaintTask,worstCb,cond,breakerFails,CB_IDS,FLEX,setFlex,flexTick,congestion,openFlex,closeFlex,checkModel,homeBus,BUSES,SEL_BAYS,TORCH,setTorch,HO_POOL,handoverTick,REC,RP,startReplay,stopReplay,analyse,stationDamage,closeHandover,deviations,PHONE,lvFault,callFrom,phoneAnswer,dispatchLV,LVG,forecast,progAdvice,PROG,startTask:(k,...a)=>{TASK={relayTask,cbMaintTask,railTask,railBTask,stationTask,thermoTask,ringTask,feederTask,lineTask,reserveTask}[k](...a);TASK.i=0;TASK.code='WV-TEST';briefInit(TASK);renderTasks();},SIM,D,LESSONS,lessonGo,selectDevice,abortTask,railTask,stationTask,thermoTask,nearDev,VIEWS,PROT,setProt,openProt,closeProt,busFault,BUSF,RINGS,task:()=>TASK,briefSubmit,briefCheck,briefWatch,actKey,taskActs,crewNear,boxOf:id=>VIEWS[id]&&VIEWS[id].box,AudioSys,updateAudio,WX,setWeather,setSeason,SEASONS,ambient,enterKiosk,ROOMS,blockedAt,RING,NPCS,crewDispatch,ringFault,FP,enterFP,exitFP,pickCenter,camera,camInside,setRatio,setTab,GAME,MODES,applyMode,endGame,EN:()=>EN,FLOW,operate,tapStep,setAVR,resetLockout,toggleAR,regulate,computeFlows,randomEvent,lineFault,feederFault,trafoFault,offerTask,simStep,FEEDERS};
+window.OS={FX,fireSmoke,audioPause,MEPPEL,LS_ORDERS,refreshDevPanel,scadaReach,dcBurnt,LAMPS,updateSky,updateNPCs,updateStreetLights,DOORS,STEPS,floorAt,doorTick,pickAt,SVM,serverTick,setAutoMeet,measBlock,measVan,MEAS_VAN,coachRestore,coachReset,installUpdate,COACH,coachCards,setCoach,renderCoach,checkUpdate,UPD,BUILD_ID,GSV,gensetTick,gensetSpot,digStart,klicHit,digTick,digHit,MARKS,setSpeed,klicFocus,klicCard,klicCables,tabletHome,refreshInfo,XLAB,TRACES,cableDist,stationVisuals,cityRoute,CORDONS,inCordon,copperTheft,trafoFire,stationTick,stationBlock,stIsolated,stNeighborSwitches,STV,updateHUD,pushAlarm,FF,ffStart,ffStop,skipRain,openWT,closeWT,setRealWeather,autoWeather,pickWeather,wetNow,ALARM:()=>ALARM_CRIT,VANS,vanTick,crewDispatch,crewSpawn,routeAt,driveVehicle,walkActive:()=>WALK_ACTIVE,BUS,GARB,PARCEL,AMB,TRAIN,XING,HALTES,MARKET,FIG,CY,cityDay,marketOn,schoolBreak,cityTick,measDone,cableCard,isoSwitches,KLIC,klicNew,klicMark,klicHit,gisMeasure,gisMofReplace,faultOf,cableOf,cableRisk,DIGS,CABLES,GIS_NET,gisRoute,cableState,setXray,XRAY,TAB,openTablet,closeTablet,drawTablet,nearestCable,DYN,fpsTick,fireTick,WK,getWalkers:()=>WALKERS,getStrips:()=>WSTRIPS,fireStart,fireDouse,fireStop,GENSET,gsCap,SMALL,lvgLive,updateSmall,setMouseMode,getMouseMode:()=>MOUSE_MODE,cameraKeys,OVK,openPreview,closePreview,viewHour,getPreview:()=>PREVIEW,VIEWPOS,SITE,updateSites,SLD,activeFaults,renderFaults,reportPDF,listSaves,openSlots,closeSlots,SAVE_SLOTS,layoutCheck,LAYOUT,FREC,fltRec,openRec,closeRec,renderRec,selectivity,protSelect,feederT,incT,incOf,shortCircuit,EF,earthFault,efTick,efRails,efU0,railsCoupled,controls,tripBreaker,CONS,LS_LINKS,LS_ORDERS,GENSET,lsTick,lsOrder,lsSwitchOrder,lsExec,gsSend,gsOff,gsRestart,tapOrder,setEta,callPrio,lsAreas,PRIO,openLS,closeLS,renderLS,lvVolt,stationLoads,shedFactor,failP,manualP,phoneTick,refreshDevPanel,updateSLD,openKeys,closeKeys,KEY_HELP,RELAY_BAYS,relayTask,relayDue,relayDefect,initRelays,kitTests,kitMeasure,kitVerdict,kitRun,openKit,closeKit,saveGame,readSave,deleteSave,resumeGame,canSave,specOf,CABLE,soilT,FD,meppelFault,linkTick,tabAlarms,updateTabAlarms,renderTasks,INC,INCIDENTS,startIncident,endIncident,incidentTick,setTab,renderCables,GFX,setGfx,applyGfx,openSettings,closeSettings,WX_TYPES,renderer,scene,FIRE,CARS,updateWindows,updateLife,stationLive,cbMaintTask,worstCb,cond,breakerFails,CB_IDS,FLEX,setFlex,flexTick,congestion,openFlex,closeFlex,checkModel,homeBus,BUSES,SEL_BAYS,TORCH,setTorch,HO_POOL,handoverTick,REC,RP,startReplay,stopReplay,analyse,stationDamage,closeHandover,deviations,PHONE,lvFault,callFrom,phoneAnswer,dispatchLV,LVG,forecast,progAdvice,PROG,startTask:(k,...a)=>{TASK={relayTask,cbMaintTask,railTask,railBTask,stationTask,thermoTask,ringTask,feederTask,lineTask,reserveTask}[k](...a);TASK.i=0;TASK.code='WV-TEST';briefInit(TASK);renderTasks();},SIM,D,LESSONS,lessonGo,selectDevice,abortTask,railTask,stationTask,thermoTask,nearDev,VIEWS,PROT,setProt,openProt,closeProt,busFault,BUSF,RINGS,task:()=>TASK,briefSubmit,briefCheck,briefWatch,actKey,taskActs,crewNear,boxOf:id=>VIEWS[id]&&VIEWS[id].box,AudioSys,updateAudio,WX,setWeather,setSeason,SEASONS,ambient,enterKiosk,ROOMS,blockedAt,RING,NPCS,crewDispatch,ringFault,FP,enterFP,exitFP,pickCenter,camera,camInside,setRatio,setTab,GAME,MODES,applyMode,endGame,EN:()=>EN,FLOW,operate,tapStep,setAVR,resetLockout,toggleAR,regulate,computeFlows,randomEvent,lineFault,feederFault,trafoFault,offerTask,simStep,FEEDERS};
 const clock=new THREE.Clock();let hudT=0,skyT=0,progT=0;
 let liteAcc=0,shadowT=0,hudStep=4;
 // dieptebuffer: in het overzicht schuift de near-plane mee met de kijkafstand, zodat gevels op afstand niet flikkeren
@@ -6950,7 +7003,7 @@ function frame(){
   // panelen 4× per seconde bijwerken, verdeeld over vier opeenvolgende beelden (anders één zwaar beeld per kwartseconde: haperen)
   if((hudT+=dt)>0.25){hudT=0;hudStep=0;progT++;}
   if(hudStep<4){const k=hudStep++;
-    if(k===0){if(!RP.on)updateHUD();updateSLD();refreshDevPanel();updateAudio();}
+    if(k===0){if(!RP.on)updateHUD();updateSLD();refreshDevPanel();updateAudio();audioPause();}
     else if(k===1){meppelLod();if(!LITE)drawPanelScreens();renderTasks();updateStreetLights();updateWindows();}
     else if(k===2){renderFaults();renderCoach();progTick();if(progT%4===0)renderProg();}
     else if(progT%2===0){renderCables();renderLSTab();if(lsOpen()&&progT%4===0)renderLS();}}

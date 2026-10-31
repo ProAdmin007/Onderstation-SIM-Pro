@@ -1,26 +1,51 @@
 
 // ============================================================ brand in het 10 kV-gebouw: vlammen uit het dak, brandbel, brandweer met wagens, mensen en waterstraal
 // Gedeeld door het scenario 'brand', het grote incident en het scenario 'datacenter'. fireStart → fireDouse (blussen) → fireStop.
-// fireStart({bld,off,ladder}): gebouw (VIEWS-id), verschuiving van de brandhaard langs het gebouw, en of de ladderwagen water spuit.
-const FIRE={bld:'MS',off:-8,ladder:true,on:false,acc:0,glow:null,flames:[],k:1,douseAt:null,bellT:0,sirenT:0,trucks:[],scorch:null,water:0};
+// fireStart({bld,off,hot,ladder,inside}): gebouw (VIEWS-id), verschuiving van de brandhaard langs het gebouw of een vaste brandhaard [x,z],
+// of de ladderwagen water spuit, en of de brandweer naar binnen gaat (binnenaanval met ademlucht).
+// Het vuur zit op het echte dak boven de brandhaard, slaat uit de dichtstbijzijnde deur en brandt binnen; er komt veel rook vrij.
+const FIRE={bld:'MS',off:-8,ladder:true,on:false,acc:0,glow:null,flames:[],k:1,douseAt:null,bellT:0,sirenT:0,trucks:[],scorch:null,water:0,E:null,smolder:0};
 const flameTex=(()=>{const c=cnv(64,128),g=c.getContext('2d'),gr=g.createRadialGradient(32,92,2,32,80,58);
   gr.addColorStop(0,'rgba(255,250,210,1)');gr.addColorStop(0.25,'rgba(255,200,70,0.95)');gr.addColorStop(0.55,'rgba(255,110,20,0.7)');gr.addColorStop(1,'rgba(200,40,0,0)');
   g.fillStyle=gr;g.beginPath();g.moveTo(32,0);g.bezierCurveTo(58,50,64,90,32,128);g.bezierCurveTo(0,90,6,50,32,0);g.fill();const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t;})();
-const fireSpot=()=>{const b=VIEWS[FIRE.bld].box;return {x:(b.min.x+b.max.x)/2+FIRE.off,y:b.max.y,z:(b.min.z+b.max.z)/2,b};};
-function fireStart(o={}){if(FIRE.on)return;Object.assign(FIRE,{bld:o.bld||'MS',off:o.off??-8,ladder:o.ladder!==false});const {x,y,z,b}=fireSpot();Object.assign(FIRE,{on:true,k:1,douseAt:null,bellT:0,acc:0,water:0});
+// brandhaard: boven op het dak (niet op de top van masten of koelers), of de vaste brandhaard
+const fireSpot=()=>{const b=VIEWS[FIRE.bld].box,B=BUILDINGS.find(q=>q.id===FIRE.bld);return {x:FIRE.hot?FIRE.hot[0]:(b.min.x+b.max.x)/2+FIRE.off,y:B?5.45:b.max.y,z:FIRE.hot?FIRE.hot[1]:(b.min.z+b.max.z)/2,b};};
+// ---- gedeeld brandeffect: vlammen als deeltjes die opstijgen, krimpen en van geelwit via oranje naar donkerrood kleuren
+const FLAME_C=[new THREE.Color(0xfff2c4),new THREE.Color(0xffa030),new THREE.Color(0xc8300a)];
+function flameEmitter(n){const ps=[];for(let i=0;i<n;i++){const m=new THREE.SpriteMaterial({map:flameTex,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,opacity:0});const s=new THREE.Sprite(m);s.visible=false;scene.add(s);ps.push({s,m,t:1,life:0});}return {ps};}
+function flameTick(E,dt,src,k){if(!E)return;for(const p of E.ps){p.t+=dt;
+    if(p.t>=p.life){if(k<0.03||Math.random()>0.3+0.7*k){p.s.visible=false;p.t=0;p.life=0.12;continue;}
+      Object.assign(p,{t:0,life:rnd(0.5,1.05),x:src.x+rnd(-src.sx,src.sx),z:src.z+rnd(-src.sz,src.sz),y:src.y,sz:src.size*rnd(0.55,1.1)*(0.45+0.55*k),rise:src.rise*rnd(0.7,1.25),dx:rnd(-0.25,0.25)+0.35});p.s.visible=true;}
+    const q=p.t/p.life,w=p.sz*(1-0.6*q),h=p.sz*(1.4+0.7*q);p.s.position.set(p.x+p.dx*q*p.rise*0.3,p.y+p.rise*q+h*0.35,p.z);p.s.scale.set(w,h,1);
+    if(q<0.4)p.m.color.copy(FLAME_C[0]).lerp(FLAME_C[1],q/0.4);else p.m.color.copy(FLAME_C[1]).lerp(FLAME_C[2],(q-0.4)/0.6);p.m.opacity=(q<0.12?q/0.12:1-(q-0.12)/0.88)*0.92;}}
+function flameDispose(E){if(E)E.ps.forEach(p=>{scene.remove(p.s);p.m.dispose();});}
+// rook bij brand: grote donkere wolken die hoog opstijgen en met de wind meedrijven, en binnen (ceil) onder het plafond blijven hangen
+// dichte rook: veel overlappende wolkjes met een zachte rand (de gewone rooktextuur is voor dunne pluimpjes)
+const fireSmokeTex=(()=>{const c=cnv(128),g=c.getContext('2d');for(let i=0;i<26;i++){const a=rr(0,6.28),d=rr(0,26),x=64+Math.cos(a)*d,y=64+Math.sin(a)*d,r=rr(16,34),gr=g.createRadialGradient(x,y,0,x,y,r);
+  gr.addColorStop(0,'rgba(255,255,255,0.8)');gr.addColorStop(0.55,'rgba(255,255,255,0.42)');gr.addColorStop(1,'rgba(255,255,255,0)');g.fillStyle=gr;g.fillRect(0,0,128,128);}return new THREE.CanvasTexture(c);})();
+function fireSmoke(x,y,z,k=1,col=0x35302c,op=0.85,ceil=null){const m=new THREE.SpriteMaterial({map:fireSmokeTex,color:col,transparent:true,opacity:0,depthWrite:false});const s=new THREE.Sprite(m);
+  s.position.set(x,y,z);s.scale.setScalar(2*k);scene.add(s);const vx=rnd(-0.3,0.3)+(ceil==null?0.9:0),vz=rnd(-0.3,0.3),life=ceil==null?rnd(11,15):rnd(14,20),max=ceil==null?22:3.2;
+  FX.push({t:0,update(dt){this.t+=dt;const q=this.t/life;if(ceil!=null&&s.position.y>=ceil){s.position.x+=vx*dt*1.4;s.position.z+=vz*dt*1.4;}else{s.position.y+=dt*(ceil!=null?1.3:2.8);s.position.x+=vx*dt;s.position.z+=vz*dt;}
+    if(s.scale.x<max)s.scale.addScalar(dt*(ceil!=null?0.25:0.9));m.opacity=op*Math.min(1,this.t/0.8)*(1-q);if(q>=1){scene.remove(s);m.dispose();return false;}return true;}});}
+// vuurlicht: één lamp die bij het opstarten al bestaat (geen nieuwe shaders tijdens het spel); flakkert bij de brand die het dichtst bij is
+const FIRE_LIGHT=new THREE.PointLight(0xff7a2a,0,30,1.6);scene.add(FIRE_LIGHT);
+function fireStart(o={}){if(FIRE.on)return;Object.assign(FIRE,{bld:o.bld||'MS',off:o.off??-8,hot:o.hot||null,ladder:o.ladder!==false});const {x,y,z,b}=fireSpot();Object.assign(FIRE,{on:true,k:1,douseAt:null,bellT:0,acc:0,water:0,smolder:0});
+  // deur het dichtst bij de brandhaard: daar slaan vlammen en rook naar buiten
+  const B=BUILDINGS.find(q=>q.id===FIRE.bld);FIRE.door=B?{x:[...B.doors].sort((a,c)=>Math.abs(a-x)-Math.abs(c-x))[0],z:B.z0}:{x,z:b.min.z};FIRE.room=ROOMS.find(r=>r.id===FIRE.bld)||null;
   FIRE.glow=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,color:0xff7a1a,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending}));
-  FIRE.glow.position.set(x,b.min.y+2.5,b.min.z-0.4);FIRE.glow.scale.set(6,4,1);scene.add(FIRE.glow);
-  // vlammen die uit het dak slaan, met een gloed erboven en een zwartgeblakerde plek op het dak
-  for(let i=0;i<16;i++){const core=i%2===0,m=new THREE.SpriteMaterial({map:flameTex,transparent:true,depthWrite:false,blending:core?THREE.NormalBlending:THREE.AdditiveBlending,color:core?0xffb040:0xffffff});const s=new THREE.Sprite(m);
-    s.userData={ox:rnd(-5.5,5.5),oz:rnd(-3.5,3.5),h:rnd(core?4:3,core?8.5:6),ph:Math.random()*9};s.position.set(x+s.userData.ox,y,z+s.userData.oz);scene.add(s);FIRE.flames.push(s);}
-  const hm=new THREE.SpriteMaterial({map:glowTex,color:0xff6a10,transparent:true,opacity:0.5,depthWrite:false,blending:THREE.AdditiveBlending});const h=new THREE.Sprite(hm);h.position.set(x,y+4,z);h.scale.set(22,14,1);scene.add(h);FIRE.flames.push(h);h.userData={halo:true};
-  FIRE.scorch=mesh(new THREE.CircleGeometry(4.5,20),mat({color:0x101010,roughness:1}),scene,x,y+0.08,z);FIRE.scorch.rotation.x=-Math.PI/2;FIRE.scorch.castShadow=false;
+  FIRE.glow.position.set(FIRE.door.x,2.0,FIRE.door.z-0.5);FIRE.glow.scale.set(5,4,1);scene.add(FIRE.glow);
+  FIRE.E={roof:flameEmitter(44),door:flameEmitter(16),inside:FIRE.room?flameEmitter(36):null};
+  // gloed boven het gat in het dak en een zwartgeblakerde plek eromheen
+  const hm=new THREE.SpriteMaterial({map:glowTex,color:0xff6a10,transparent:true,opacity:0.5,depthWrite:false,blending:THREE.AdditiveBlending});const h=new THREE.Sprite(hm);h.position.set(x,y+3,z);h.scale.set(16,11,1);scene.add(h);FIRE.flames.push(h);h.userData={halo:true};
+  FIRE.scorch=mesh(new THREE.CircleGeometry(3.6,20),mat({color:0x101010,roughness:1}),scene,x,y+0.03,z);FIRE.scorch.rotation.x=-Math.PI/2;FIRE.scorch.castShadow=false;
   // brandweer: twee wagens rijden met sirene over de hoofdweg naar de poort, vier brandweerlieden gaan op verkenning
   FIRE.trucks.forEach(t=>scene.remove(t.g));FIRE.trucks=[[25,79,true],[25,91,false]].map(([tx,tz,ladder],i)=>{const t=fireTruck(ladder);t.g.position.set(tx,0,tz+380+i*24);t.g.rotation.y=Math.PI;scene.add(t.g);
     return Object.assign(t,{x:tx,z:tz,state:'come'});});
-  crewDispatch({box:b,say:'Brandweer',until:()=>!FIRE.on,n:4,kind:'fire'});}
+  // binnenaanval (alleen waar geen hoogspanning is, zoals het datacenter): de ploeg gaat met ademlucht naar de brandhaard in de ruimte
+  const r=o.inside&&ROOMS.find(r=>r.id===FIRE.bld),cb=r?new THREE.Box3(V3(x-1.5,r.y0,z-1.5),V3(x+1.5,r.y0+2.5,z+1.5)):b;
+  crewDispatch({box:cb,say:r?'Brandweer (ademlucht)':'Brandweer',until:()=>!FIRE.on,n:4,kind:'fire'});}
 function fireDouse(){if(FIRE.on&&FIRE.douseAt==null)FIRE.douseAt=SIM.t;}
-function fireStop(){FIRE.on=false;if(FIRE.glow){scene.remove(FIRE.glow);FIRE.glow=null;}FIRE.flames.forEach(s=>{scene.remove(s);s.material.dispose();});FIRE.flames=[];
+function fireStop(){FIRE.on=false;FIRE.smolder=25;FIRE_LIGHT.intensity=0;if(FIRE.E){flameDispose(FIRE.E.roof);flameDispose(FIRE.E.door);flameDispose(FIRE.E.inside);FIRE.E=null;}if(FIRE.glow){scene.remove(FIRE.glow);FIRE.glow=null;}FIRE.flames.forEach(s=>{scene.remove(s);s.material.dispose();});FIRE.flames=[];
   if(FIRE.scorch){scene.remove(FIRE.scorch);FIRE.scorch=null;}FIRE.douseAt=null;FIRE.trucks.forEach(t=>{if(t.state!=='gone')t.state='wait';t.wait=12;});}
 // brandweerwagen: rood met geel-rode blokken, blauwe zwaailichten, (eventueel) ladder
 const FT={red:mat({color:0xc4141f,roughness:0.45,metalness:0.2}),yel:mat({color:0xe6d81a,roughness:0.5}),blk:mat({color:0x15181c,roughness:0.6}),glass:mat({color:0x1e2a34,roughness:0.1,metalness:0.5}),
@@ -41,18 +66,33 @@ function fireTick(dt){const now=performance.now(),run=!SIM.paused,sp=clamp(SIM.s
     else if(t.state==='wait'&&run){t.wait-=dt;if(t.wait<=0){t.state='leave';t.g.rotation.y=0;}}
     else if(t.state==='leave'&&run){t.g.position.z+=14*sp*dt;if(t.g.position.z>t.z+420){scene.remove(t.g);t.state='gone';}}}
   if(FIRE.trucks.length&&FIRE.trucks.every(t=>t.state==='gone'))FIRE.trucks=[];
-  if(!FIRE.on)return;const {x,y,z,b}=fireSpot();
+  if(!FIRE.on){// na het blussen nog even nasmeulen: lichtgrijze rook uit het dak
+    if(FIRE.smolder>0&&VIEWS[FIRE.bld]){FIRE.smolder-=dt;FIRE.acc+=dt;if(FIRE.acc>0.4){FIRE.acc=0;const s=fireSpot();fireSmoke(s.x+rnd(-1.5,1.5),s.y+0.5,s.z+rnd(-1,1),1.0,0xa8a8a4,0.5*FIRE.smolder/25);}}return;}
+  const {x,y,z,b}=fireSpot();
   // na het spanningsloos maken blust de brandweer: in ±30 min worden de vlammen klein en de rook wit (stoom)
   FIRE.k=FIRE.douseAt==null?1:clamp(1-(SIM.t-FIRE.douseAt)/28,0.08,1);
-  for(const s of FIRE.flames){const u=s.userData;if(u.halo){s.material.opacity=(0.35+0.15*Math.sin(now/120))*FIRE.k;continue;}
-    const f=0.75+0.25*Math.sin(now/70+u.ph)*Math.sin(now/43+u.ph*2),hh=u.h*f*(0.35+0.65*FIRE.k);s.scale.set(hh*0.55,hh,1);s.position.set(x+u.ox+Math.sin(now/300+u.ph)*0.3,y+hh*0.42,z+u.oz);s.material.opacity=0.9*FIRE.k;}
-  if(FIRE.glow)FIRE.glow.material.opacity=(0.55+0.35*Math.sin(now/90)*Math.sin(now/37))*FIRE.k;
-  FIRE.acc+=dt;if(FIRE.acc>0.3){FIRE.acc=0;smokePuff(x+rnd(-5,5),y+2+3*FIRE.k,z,1+0.5*FIRE.k,FIRE.douseAt==null?0x4a4a4a:0xb4b4b0);}
+  const k=FIRE.k,D_=FIRE.door,R_=FIRE.room,cam=camera.position,near=cam.distanceTo(V3(x,2,z));
+  for(const s of FIRE.flames)if(s.userData.halo)s.material.opacity=(0.3+0.12*Math.sin(now/120))*k;
+  if(FIRE.glow)FIRE.glow.material.opacity=(0.55+0.35*Math.sin(now/90)*Math.sin(now/37))*k;
+  // vlammen: door het dak boven de brandhaard, uit de deur, en binnen bij de brandhaard
+  if(near<900){flameTick(FIRE.E.roof,dt,{x,y,z,sx:2.4,sz:1.6,size:2.8,rise:4.6},k);flameTick(FIRE.E.door,dt,{x:D_.x,y:2.0,z:D_.z-0.25,sx:0.7,sz:0.12,size:1.2,rise:1.8},k*k);}
+  if(R_&&near<80)flameTick(FIRE.E.inside,dt,{x,y:R_.y0,z,sx:1.1,sz:0.6,size:1.15,rise:2.0},k*k);
+  // veel rook: een dikke donkere kolom uit het dak, rook uit de deur en binnen een laag onder het plafond; tijdens het blussen grijswit
+  const col=FIRE.douseAt==null?0x35302c:0xa8a8a4,rate=near<400?0.11:0.25;FIRE.acc+=dt;
+  if(FIRE.acc>rate){FIRE.acc=0;fireSmoke(x+rnd(-2,2),y+1.2,z+rnd(-1.5,1.5),1.7+1.1*k,col,0.88);if(Math.random()<0.5)fireSmoke(D_.x+rnd(-0.6,0.6),2.7,D_.z-0.7,1.0,col,0.6);
+    if(R_&&near<60&&Math.random()<0.45)fireSmoke(x+rnd(-1.5,1.5),R_.y0+1,z+rnd(-1,1),1.1,0x3a3633,0.55,R_.y1-0.7);}
+  // vuurlicht flakkert binnen als je in de ruimte bent, anders boven het dak
+  if(R_&&camInside()===R_.idx)FIRE_LIGHT.position.set(x,R_.y0+1.4,z);else FIRE_LIGHT.position.set(x,y+2.5,z);
+  FIRE_LIGHT.intensity=k*(40+22*Math.sin(now/70)*Math.sin(now/43));
   // brandbel tot de brandweer binnen is
   if(FIRE.douseAt==null&&run){FIRE.bellT-=dt;if(FIRE.bellT<=0){FIRE.bellT=1;AudioSys.fireBell?.(distGain(V3(x,2,z)));}}
   // waterstraal van de brandweer op het dak
   if(FIRE.douseAt!=null&&run&&FIRE.ladder){FIRE.water+=dt;const L=FIRE.trucks.find(t=>t.lad&&t.state==='park');if(L){L.lad.rotation.x=Math.max(-0.62,L.lad.rotation.x-dt*0.4);const tip=L.lad.localToWorld(_tip.set(0,0.2,12.3));
-      if(L.lad.rotation.x<-0.6)while(FIRE.water>0.04){FIRE.water-=0.04;waterDrop(tip,V3(x+rnd(-3,3),y+0.5,z+rnd(-2,2)));}}else FIRE.water=0;}}
+      if(L.lad.rotation.x<-0.6)while(FIRE.water>0.04){FIRE.water-=0.04;waterDrop(tip,V3(x+rnd(-3,3),y+0.5,z+rnd(-2,2)));}}else FIRE.water=0;}
+  // binnenaanval: elke brandweerman die aan het werk is, spuit water op de brandhaard
+  if(FIRE.douseAt!=null&&run&&camera.position.distanceTo(V3(x,2,z))<160){FIRE.hose=(FIRE.hose||0)+dt;if(FIRE.hose>0.09){FIRE.hose=0;
+    for(const n of NPCS)if(n.kind==='fire'&&n.state==='work'){const a=n.P.g.position.clone().setY(n.P.g.position.y+1.2),t=V3(x+rnd(-2.5,2.5),b.min.y+0.8,z+rnd(-2,2)),d=t.clone().sub(a);
+      if(d.length()<25){n.P.g.rotation.y=Math.atan2(d.x,d.z);n.P.armL.rotation.x=n.P.armR.rotation.x=-1.3;waterDrop(a.addScaledVector(d.normalize(),0.6),t);}}}}}
 const _tip=new THREE.Vector3();
 const waterMat=new THREE.SpriteMaterial({map:glowTex,color:0xe4f2ff,transparent:true,opacity:0.9,depthWrite:false});
 function waterDrop(a,tg){const s=new THREE.Sprite(waterMat);s.scale.setScalar(0.9+Math.random()*0.5);s.position.copy(a);scene.add(s);const T=1.3,v=tg.clone().sub(a).divideScalar(T);v.y+=4.9*T;
