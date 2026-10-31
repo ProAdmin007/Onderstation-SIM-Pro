@@ -592,7 +592,11 @@ function hazardCanvas(){const c=cnv(256,320),g=c.getContext('2d');g.fillStyle='#
   g.font='bold 30px Arial';g.textAlign='center';g.fillText('LEVENSGEVAAR',128,250);g.font='bold 24px Arial';g.fillText('HOOGSPANNING',128,288);return c;}
 function textCanvas(lines,{w=256,h=128,bg='#f3f3ee',fg='#111',border=true,font='bold 64px Arial'}={}){const c=cnv(w,h),g=c.getContext('2d');g.fillStyle=bg;g.fillRect(0,0,w,h);
   if(border){g.strokeStyle=fg;g.lineWidth=Math.max(4,h*0.045);g.strokeRect(h*0.04,h*0.04,w-h*0.08,h-h*0.08);}
-  g.fillStyle=fg;g.font=font;g.textAlign='center';g.textBaseline='middle';const L=[].concat(lines);
+  g.fillStyle=fg;g.textAlign='center';g.textBaseline='middle';let L=[].concat(lines);
+  // tekst altijd binnen het bordje: kleiner lettertype, en een lange naam met een spatie over twee regels als hij anders te klein wordt
+  const sz0=+(font.match(/(\d+)px/)||[0,64])[1],avail=w-(border?h*0.24:w*0.05),widest=s=>{g.font=font.replace(/\d+px/,s+'px');return Math.max(...L.map(t=>g.measureText(t).width));};
+  if(L.length===1&&L[0].includes(' ')&&sz0*avail/widest(sz0)<sz0*0.62){const t=L[0],m=t.length/2;let k=-1;for(let i=0;i<t.length;i++)if(t[i]===' '&&(k<0||Math.abs(i-m)<Math.abs(k-m)))k=i;L=[t.slice(0,k),t.slice(k+1)].map(s=>s.replace(/^· | ·$/g,'').trim());}
+  let sz=L.length>1?Math.min(sz0,h*0.92/(L.length+1)):sz0;sz=Math.floor(Math.min(sz,sz*avail/widest(sz)));g.font=font.replace(/\d+px/,sz+'px');
   L.forEach((t,i)=>g.fillText(t,w/2,h*(i+1)/(L.length+1)+h*0.02));return c;}
 
 const C = {gravel:gravelCanvas(),grass:grassCanvas(),soil:soilCanvas(),conc:concreteCanvas(),asph:asphaltCanvas(),brick:brickCanvas(),chain:chainCanvas(),louvre:louvreCanvas(),hazard:hazardCanvas()};
@@ -6270,7 +6274,7 @@ function gisDrawExtra(g,cv){const s=TAB.zoom,now=performance.now();
 // ============================================================ updatecontrole in het hoofdmenu: is er op GitHub een nieuwere versie?
 // De build zet een vingerafdruk in BUILD_ID (tests/stamp.mjs) en houdt version.json bij met eerdere versies.
 // Staat onze versie bij de eerdere versies op GitHub, dan is er een update; staat hij er niet in, dan is het eigen (nieuwer) werk.
-const BUILD_ID='743b90587dc9';
+const BUILD_ID='cab0d8f4771f';
 const UPD_REPO='https://github.com/ProAdmin007/Onderstation-SIM-Pro';
 const UPD_URL='https://raw.githubusercontent.com/ProAdmin007/Onderstation-SIM-Pro/main/version.json';
 // toestand van de controle: idle, bezig, actueel, nieuw, eigen of fout
@@ -6588,7 +6592,7 @@ function frame(){
 }
 // een fout in één beeld mag het spel niet stilzetten: three.js vraagt het volgende beeld pas na dit beeld aan
 const LOOP_ERR=new Map();window.LOOP_ERR=LOOP_ERR;
-function loopError(e){const msg=String(e&&e.message||e),where=(String(e&&e.stack||'').split('\n').find(l=>/index\.html|\.js/.test(l))||'').trim().replace(/^at /,'');
+function loopError(e){const msg=String(e&&e.message||e),st=String(e&&e.stack||'').split('\n'),where=(st.find(l=>/\.html/.test(l))||st.find(l=>/\.js/.test(l))||'').trim().replace(/^at /,'');
   const n=(LOOP_ERR.get(msg)||0)+1;LOOP_ERR.set(msg,n);console.error('Fout in de hoofdlus:',e);
   if(n===1)pushAlarm(`⚠ Interne fout (het spel loopt door): ${msg}${where?` – ${where.slice(-80)}`:''}. Meld dit graag, met wat je net deed.`,'crit');}
 renderer.setAnimationLoop(()=>{try{frame();}catch(e){loopError(e);}});

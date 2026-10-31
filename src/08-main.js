@@ -114,7 +114,7 @@ function frame(){
 }
 // een fout in één beeld mag het spel niet stilzetten: three.js vraagt het volgende beeld pas na dit beeld aan
 const LOOP_ERR=new Map();window.LOOP_ERR=LOOP_ERR;
-function loopError(e){const msg=String(e&&e.message||e),where=(String(e&&e.stack||'').split('\n').find(l=>/index\.html|\.js/.test(l))||'').trim().replace(/^at /,'');
+function loopError(e){const msg=String(e&&e.message||e),st=String(e&&e.stack||'').split('\n'),where=(st.find(l=>/\.html/.test(l))||st.find(l=>/\.js/.test(l))||'').trim().replace(/^at /,'');
   const n=(LOOP_ERR.get(msg)||0)+1;LOOP_ERR.set(msg,n);console.error('Fout in de hoofdlus:',e);
   if(n===1)pushAlarm(`⚠ Interne fout (het spel loopt door): ${msg}${where?` – ${where.slice(-80)}`:''}. Meld dit graag, met wat je net deed.`,'crit');}
 renderer.setAnimationLoop(()=>{try{frame();}catch(e){loopError(e);}});
