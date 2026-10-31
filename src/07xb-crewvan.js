@@ -49,9 +49,11 @@ function vanBack(V){V.o.onLeave?.(V);const back=V.pts.slice().reverse(),r=vanRou
 const VAN_CURB=2.5;
 // vrije plek op de stoep: vanaf het stoppunt terug langs de route (dan vooruit), niet tegen een station, lantaarn, kast, boom of halte
 const VAN_AVOID=['kiosk','lamp','kast','kk','tree','halte','house','apt','hall','small','shed','hedge','aggregaat','car'];
-function vanParkSpot(V){const r=V.r,free=(d,curb)=>{const [x,z,yaw]=routeAt(r,d),nx=-Math.cos(yaw),nz=Math.sin(yaw),px=x+nx*curb,pz=z+nz*curb,al=Math.abs(Math.sin(yaw))>0.5;
+function vanParkSpot(V){const r=V.r,tgc=V.o.box.getCenter(V3()),free=(d,curb)=>{const [x,z,yaw]=routeAt(r,d),nx=-Math.cos(yaw),nz=Math.sin(yaw),px=x+nx*curb,pz=z+nz*curb,al=Math.abs(Math.sin(yaw))>0.5;
     const rc=al?[px-2.9,pz-1.05,px+2.9,pz+1.05]:[px-1.05,pz-2.9,px+1.05,pz+2.9],onStoep=curb!==0&&LAYOUT.some(e=>e.kind==='stoep'&&(al?px-2.8>=e.r[0]&&px+2.8<=e.r[2]&&pz>=e.r[1]&&pz<=e.r[3]:pz-2.8>=e.r[1]&&pz+2.8<=e.r[3]&&px>=e.r[0]&&px<=e.r[2]));
-    return onStoep&&layFree(rc,VAN_AVOID,0.1);};
+    // niet pal voor het werk (station, gebouw): langs de straat minstens een busjeslengte opzij
+    const bx=V.o.box,half=al?(bx.max.x-bx.min.x)/2:(bx.max.z-bx.min.z)/2,along=al?Math.abs(px-tgc.x):Math.abs(pz-tgc.z),naast=along>=half+3.4||Math.hypot(px-tgc.x,pz-tgc.z)>18;
+    return onStoep&&naast&&layFree(rc,VAN_AVOID,0.1);};
   const tg=V.o.box.getCenter(V3()),[sx,sz,sy]=routeAt(r,V.stopAt),left=(-Math.cos(sy))*(tg.x-sx)+Math.sin(sy)*(tg.z-sz)<0,
     curbs=left?[-VAN_CURB-3.4,-VAN_CURB-2.8,VAN_CURB,1.9]:[VAN_CURB,1.9,-VAN_CURB-3.4,-VAN_CURB-2.8];
   for(const curb of curbs)for(let k=0;k<=30;k++)for(const sg of[-1,1]){const d=V.stopAt+sg*k*1.5;if(d<6||d>V.r.total)continue;if(free(d,curb))return {d,curb};}
