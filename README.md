@@ -31,7 +31,7 @@ Bedoeld voor **bedrijfsvoerders en monteurs in opleiding**, studenten **elektrot
 2. Dubbelklik op **`index.html`**. Klaar: geen installatie, geen server.
 3. Kies in het menu een **les**, een **scenario**, een **dienst** of **vrij spelen**. Druk op **`H`** voor alle toetsen.
 
-> **Updates:** bovenaan het hoofdmenu staat een updateknop. Het spel controleert bij het openen (en als je op de knop klikt) of er op GitHub een nieuwere versie staat. Zo ja, dan knippert de knop oranje. Klik erop en kies *Nieuwe versie installeren*: het spel haalt de nieuwe `index.html` van GitHub. In Chrome en Edge schrijft het spel de nieuwe versie direct over je `index.html` heen en herstart meteen. De eerste keer wijs je één keer de `index.html` van het spel aan; het spel onthoudt dat bestand (en controleert dat het echt de simulator is). Daarna gaat een update met één klik; de browser vraagt hooguit om toestemming om het bestand te wijzigen (kies *Altijd toestaan*, dan hoeft ook dat niet meer). In andere browsers wordt `index.html` gedownload; zet die over de oude heen en open hem. Je opgeslagen spellen blijven bewaard.
+> **Updates:** bovenaan het hoofdmenu staat een updateknop. Het spel controleert bij het openen (en als je op de knop klikt) of er op GitHub een nieuwere versie staat. Zo ja, dan knippert de knop oranje. Klik erop: onder **Wat is er nieuw?** staat een korte samenvatting van alles wat er sinds jouw versie is veranderd (nieuwste eerst). Kies *Nieuwe versie installeren*: het spel haalt de nieuwe `index.html` van GitHub. In Chrome en Edge schrijft het spel de nieuwe versie direct over je `index.html` heen en herstart meteen. De eerste keer wijs je één keer de `index.html` van het spel aan; het spel onthoudt dat bestand (en controleert dat het echt de simulator is). Daarna gaat een update met één klik; de browser vraagt hooguit om toestemming om het bestand te wijzigen (kies *Altijd toestaan*, dan hoeft ook dat niet meer). In andere browsers wordt `index.html` gedownload; zet die over de oude heen en open hem. Na de herstart zie je in het menu wat er nieuw is in deze versie. Je opgeslagen spellen blijven bewaard.
 
 > Internet is nodig voor Three.js en de lettertypen (via CDN). Werkt in Chrome, Edge en Firefox. Op een trage laptop: **Instellingen (`I`) → Prestaties → Laag**.
 
@@ -581,7 +581,9 @@ De lint draait ook op GitHub vóór de tests.
 
 Na het samenvoegen zet `tests/stamp.mjs` een **versie-ID** in `index.html`: een vingerafdruk van de broncode (dezelfde op elke computer). Ook werkt het `version.json` bij met de huidige versie, de datum en de eerdere versies. Het hoofdmenu vergelijkt zijn eigen versie met `version.json` op GitHub: staat de eigen versie bij de eerdere versies, dan is er een update; staat hij er niet in, dan is het eigen werk dat nog niet gepusht is. Commit `version.json` dus altijd mee met `index.html`.
 
-URL-parameters om te testen: `?autostart`, `?t=18.5` (starttijd), `?view=0..11`, `?night`, `?play=zkh|storm|piek|blackout|hitte|winter|dubbel|aanrijding|cyber|overstroming|zonnepiek|pinksteren|aardonweer|kraan|brand|evenement|laadpiek|les1…les11|day|eve|free&diff=rustig|normaal|zwaar`.
+Zet na het bouwen en vóór de commit een **korte samenvatting** bij de versie: `node tests/note.mjs "Datacenter realistischer met koude gang"`. Die komt in `version.json` (`notes`) en verschijnt bij de updateknop onder *Wat is er nieuw?*. Bouw je daarna opnieuw, zet de samenvatting dan opnieuw (hij hoort bij de versie-ID).
+
+URL-parameters om te testen: `?autostart`, `?t=18.5` (starttijd), `?view=0..12`, `?night`, `?play=zkh|storm|piek|blackout|hitte|winter|dubbel|aanrijding|cyber|overstroming|zonnepiek|pinksteren|aardonweer|kraan|brand|evenement|laadpiek|les1…les11|day|eve|free&diff=rustig|normaal|zwaar`.
 
 ## 🧪 Tests
 

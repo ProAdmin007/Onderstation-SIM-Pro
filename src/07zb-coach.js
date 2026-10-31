@@ -5,7 +5,7 @@
 const COACH={on:false,shown:new Set()};
 // eerste keer opgestart (nog geen keuze bewaard): begeleiding aan; daarna geldt wat de speler kiest. Niet in de testmodus.
 try{const v=localStorage.getItem('osz-coach');if(v===null&&!LITE){COACH.on=true;localStorage.setItem('osz-coach','1');}else COACH.on=v==='1';}catch(e){}
-const coachOk=()=>!MODES[GAME.mode]?.les;   // lessen hebben hun eigen uitleg
+const coachOk=()=>!MODES[GAME.mode]?.les&&$('#intro')?.classList.contains('hidden')!==false;   // lessen hebben hun eigen uitleg, en in het hoofdmenu ligt hij niet over de keuzes
 const railNm=b=>BUSES[b]?.nm||b;
 const dsOn=id=>D[id]?.state===1;
 // alle situaties die nu spelen, belangrijkste eerst

@@ -1,7 +1,9 @@
 {
-  "build": "a72d39d4e604",
+  "build": "0b36241f5137",
   "date": "2026-10-31",
   "previous": [
+    "77b1e56bb34c",
+    "a72d39d4e604",
     "eecf133ff1b7",
     "9d8d9653c01f",
     "795cef761651",
@@ -27,5 +29,51 @@
     "a7767df078c0",
     "f8f817b70ad7",
     "15848287b284"
-  ]
+  ],
+  "notes": {
+    "a72d39d4e604": {
+      "date": "2026-10-31",
+      "text": "Datacenter (was serverruimte) en RTU-kast in de MS-stations veel realistischer"
+    },
+    "9d8d9653c01f": {
+      "date": "2026-10-31",
+      "text": "Fout opgelost bij het aanwijzen van het datacentergebouw"
+    },
+    "cab0d8f4771f": {
+      "date": "2026-10-31",
+      "text": "Tekst op alle bordjes past nu binnen de rand"
+    },
+    "743b90587dc9": {
+      "date": "2026-10-31",
+      "text": "Storingsbusje en meetwagen parkeren naast het station in plaats van ervoor"
+    },
+    "6c76df340357": {
+      "date": "2026-10-31",
+      "text": "RTU-kast met LTE en glasvezel in elk MS-station en SCADA-servers op het onderstation"
+    },
+    "a2cf34993d9e": {
+      "date": "2026-10-27",
+      "text": "Meetwagen rukt automatisch uit bij een gevonden kabelfout (instelbaar)"
+    },
+    "0a39ad2d1bf2": {
+      "date": "2026-10-27",
+      "text": "Kabelmeetwagen bij foutplaatsbepaling, met technici en reflectiemeter"
+    },
+    "3b57a67d0405": {
+      "date": "2026-10-27",
+      "text": "Bedrijventerreinen realistischer: laadperrons, opleggers, containers en daken"
+    },
+    "cfc7ed184da0": {
+      "date": "2026-10-27",
+      "text": "Updatemelding verdwijnt vanzelf; uitleg bij het versielabel"
+    },
+    "cb67325a5511": {
+      "date": "2026-10-27",
+      "text": "Update schrijft direct over het spelbestand en herstart het spel"
+    },
+    "0b36241f5137": {
+      "date": "2026-10-31",
+      "text": "Updateknop toont een korte samenvatting van wat er nieuw is; begeleiding ligt niet meer over het hoofdmenu"
+    }
+  }
 }

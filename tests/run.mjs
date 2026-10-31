@@ -618,12 +618,16 @@ const TESTS = [
   { name: 'updateknop in het hoofdmenu: nieuwe versie op GitHub laat de knop knipperen, eigen of actuele versie niet', query: '?menu', async run(p) {
       const r = await p.evaluate(async () => { const O = OS, url = v => URL.createObjectURL(new Blob([JSON.stringify(v)], { type: 'application/json' })), btn = () => document.querySelector('#updBtn');
         const knop = !!btn() && /versie [0-9a-f]{12}/.test(document.querySelector('#updWrap').textContent);
-        await O.checkUpdate(url({ build: 'aaaaaaaaaaaa', date: '2026-11-01', previous: [O.BUILD_ID] })); const nieuw = O.UPD.state === 'nieuw' && btn().classList.contains('upd-new');
+        await O.checkUpdate(url({ build: 'aaaaaaaaaaaa', date: '2026-11-01', previous: ['dddddddddddd', O.BUILD_ID, 'eeeeeeeeeeee'],
+          notes: { aaaaaaaaaaaa: { date: '2026-11-01', text: 'Datacenter <b>realistischer</b>' }, dddddddddddd: { date: '2026-10-31', text: 'Bordjes passen' }, [O.BUILD_ID]: { text: 'al geïnstalleerd' }, eeeeeeeeeeee: { text: 'oud' } } }));
+        const nieuw = O.UPD.state === 'nieuw' && btn().classList.contains('upd-new');
         btn().click(); const box = !!document.querySelector('.upd-box [data-upd="install"]');
+        const li = [...document.querySelectorAll('.upd-notes li')].map(e => e.textContent), notities = li.length === 2 && /^Datacenter <b>realistischer<\/b>/.test(li[0]) && /^Bordjes passen/.test(li[1]);
+        document.querySelector('[data-upd="close"]').click(); const dicht = !document.querySelector('.upd-box');
         await O.checkUpdate(url({ build: O.BUILD_ID, date: '2026-10-26', previous: [] })); const actueel = O.UPD.state === 'actueel' && !btn().classList.contains('upd-new');
         await O.checkUpdate(url({ build: 'bbbbbbbbbbbb', date: '2026-10-20', previous: ['cccccccccccc'] })); const eigen = O.UPD.state === 'eigen' && !btn().classList.contains('upd-new');
         await O.checkUpdate('data:application/json,geen-json'); const fout = O.UPD.state === 'fout';
-        return { knop, nieuw, box, actueel, eigen, fout }; });
+        return { knop, nieuw, box, notities, dicht, actueel, eigen, fout }; });
       for (const [k, v] of Object.entries(r)) assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
   } },
   { name: 'begeleiding: railfout uitgelegd met stappen die zichzelf afvinken, railfout zichtbaar in SCADA', query: '?autostart&t=13', async run(p) {
@@ -648,7 +652,7 @@ const TESTS = [
           createWritable: async () => ({ write: async b => { inhoud = await b.text(); }, close: async () => {} }) };
         window.showOpenFilePicker = async () => { kiezen++; return [handle]; }; O.UPD.reload = () => { herstart++; };
         await O.installUpdate(url); await new Promise(r => setTimeout(r, 900));
-        const eerste = kiezen === 1 && inhoud === html && herstart === 1 && mem.has('gameFile') && localStorage.getItem('osz-upd-expect') === 'abcdefabcdef';
+        const eerste = kiezen === 1 && inhoud === html && herstart === 1 && mem.has('gameFile') && localStorage.getItem('osz-upd-expect') === 'abcdefabcdef' && localStorage.getItem('osz-upd-from') === O.BUILD_ID;
         await O.installUpdate(url); await new Promise(r => setTimeout(r, 900)); const tweede = kiezen === 1 && herstart === 2;   // geen venster meer
         // verkeerd bestand: geweigerd
         mem.clear(); inhoud = '<html>mijn vakantiefoto\'s</html>'; await O.installUpdate(url); const geweigerd = /niet de simulator/.test(O.UPD.msg) && inhoud.includes('vakantie');
@@ -657,7 +661,7 @@ const TESTS = [
         // andere browsers: download
         delete window.showOpenFilePicker; let dl = null; const orig = HTMLAnchorElement.prototype.click; HTMLAnchorElement.prototype.click = function () { dl = this.download; };
         await O.installUpdate(url); HTMLAnchorElement.prototype.click = orig; const download = dl === 'index.html' && /gedownload/.test(O.UPD.msg);
-        await O.installUpdate(URL.createObjectURL(new Blob(['<html>iets anders</html>']))); const ongeldig = /geen geldige versie/.test(O.UPD.msg); localStorage.removeItem('osz-upd-expect');
+        await O.installUpdate(URL.createObjectURL(new Blob(['<html>iets anders</html>']))); const ongeldig = /geen geldige versie/.test(O.UPD.msg); localStorage.removeItem('osz-upd-expect'); localStorage.removeItem('osz-upd-from');
         return { eerste, tweede, geweigerd, geannuleerd, download, ongeldig }; });
       for (const [k, v] of Object.entries(r)) assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
   } },
