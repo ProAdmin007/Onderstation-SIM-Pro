@@ -1,7 +1,8 @@
 {
-  "build": "3392c8085a95",
+  "build": "b2834237b22b",
   "date": "2026-10-31",
   "previous": [
+    "3392c8085a95",
     "af516478fcc4",
     "aee4710321bf",
     "9666f9809047",
@@ -100,6 +101,10 @@
     "3392c8085a95": {
       "date": "2026-10-31",
       "text": "OS Meppel aan de noordkant van de stad; aggregaat vanuit het MS-stationspaneel; realistischer graafwerk en kabeltreffer; lichtere, realistischere nachten; rustigere ambulance; BEI BHS"
+    },
+    "b2834237b22b": {
+      "date": "2026-10-31",
+      "text": "Brand in het datacenter staat nu in het hoofdmenu en komt in de vrije dienst voor als groot incident"
     }
   }
 }

@@ -640,7 +640,7 @@ const TESTS = [
         await O.checkUpdate(url({ build: O.BUILD_ID, date: '2026-10-26', previous: [] })); const actueel = O.UPD.state === 'actueel' && !btn().classList.contains('upd-new');
         await O.checkUpdate(url({ build: 'bbbbbbbbbbbb', date: '2026-10-20', previous: ['cccccccccccc'] })); const eigen = O.UPD.state === 'eigen' && !btn().classList.contains('upd-new');
         await O.checkUpdate('data:application/json,geen-json'); const fout = O.UPD.state === 'fout';
-        return { knop, nieuw, box, notities, dicht, actueel, eigen, fout }; });
+        return { knop, nieuw, box, notities, dicht, actueel, eigen, fout, datacenterInMenu: !!document.querySelector('#menu [data-mode="datacenter"]') }; });
       for (const [k, v] of Object.entries(r)) assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
   } },
   { name: 'begeleiding: railfout uitgelegd met stappen die zichzelf afvinken, railfout zichtbaar in SCADA', query: '?autostart&t=13', async run(p) {
@@ -949,12 +949,12 @@ const TESTS = [
         T.step(0.5); return { actief: O.INC.active?.def.id || null, kop: !!document.querySelector('#taskBody .gh.inc') || (O.renderTasks?.(), !!document.querySelector('#taskBody .gh.inc')) }; });
       assert(r.actief, 'er startte geen incident');
   } },
-  ...['zkh', 'storm', 'dubbel', 'hitte', 'aanrijding', 'cyber', 'water', 'zon', 'kraan', 'brand', 'concert', 'laden', 'blackout'].map(id => ({ name: `incident ${id}: start en ruimt zichzelf op`, query: '?autostart&t=17.5', async run(p) {
+  ...['zkh', 'storm', 'dubbel', 'hitte', 'aanrijding', 'cyber', 'water', 'zon', 'kraan', 'brand', 'datacenter', 'concert', 'laden', 'blackout'].map(id => ({ name: `incident ${id}: start en ruimt zichzelf op`, query: '?autostart&t=17.5', async run(p) {
     const r = await p.evaluate(id => { const O = OS, D = O.D; O.SIM.nextEvent = 1e9; O.SIM.nextTaskAt = 1e9; O.SIM.paused = false; T.step(0.3);
       const base = O.LVG.map(g => g.base).join(), g1 = O.FEEDERS.find(f => f.id === 'G1').base;
       const ok = O.startIncident(id, true); const actief = !!O.INC.active; T.step(0.5);
       for (let k = 0; k < 60 && O.INC.active; k++) T.step(5);
-      return { ok, actief, klaar: !O.INC.active, scada: !O.GAME.flags.scadaDown, brand: !O.FIRE.on, grens: !O.GAME.flags.lineLimit, dicht: !(O.GAME.flags.mustOpen || []).length,
+      return { ok, actief, klaar: !O.INC.active, scada: !O.GAME.flags.scadaDown, brand: !O.FIRE.on, leds: O.SVM.led.opacity === 1, grens: !O.GAME.flags.lineLimit, dicht: !(O.GAME.flags.mustOpen || []).length,
         belast: O.LVG.map(g => g.base).join() === base && O.FEEDERS.find(f => f.id === 'G1').base === g1, stations: O.RING.stations.every(s => !s.damaged && !s.evac),
         lijnen: O.SIM.lines.L1.avail && O.SIM.lines.L2.avail, koeling: !D.T1.fanFail, flex: !O.FLEX.some(f => f.id === 'MS6-G2') }; }, id);
     for (const [k, v] of Object.entries(r)) assert(v, `${k} klopt niet: ${JSON.stringify(r)}`);

@@ -89,7 +89,7 @@ function resumeGame(d){$('#intro').classList.add('hidden');SAVE_SLOT=d.slot||'au
   const v=VIEWPOS[0];flyTo(v[0].clone(),v[1].clone(),2);
   pushAlarm(`💾 Spel hervat: ${MODES[d.mode].name} (${DIFFS[d.diff].label}), opgeslagen ${new Date(d.at).toLocaleString('nl-NL',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}`,'ok');}
 // een incident dat liep tijdens het opslaan: netjes afronden
-function clearIncident(id){GAME.flags.scadaDown=false;$('#scada').classList.remove('down');GAME.flags.mustOpen=null;GAME.flags.lineLimit=null;FIRE.on=false;if(INC_WATER)INC_WATER.visible=false;
+function clearIncident(id){GAME.flags.scadaDown=false;GAME.flags.dcAlarm=false;GAME.flags.dcDanger=false;dcRestore();$('#scada').classList.remove('down');GAME.flags.mustOpen=null;GAME.flags.lineLimit=null;FIRE.on=false;if(INC_WATER)INC_WATER.visible=false;
   RING.stations.forEach(s=>{if(s.damaged||s.evac){s.damaged=false;s.evac=false;}if(s.genset&&TASK?.station!==s.id){s.genset=false;s.groups.forEach(g=>g.backfed=false);}});
   CONS.forEach(c=>{if(BASE0.has(c.id))c.base=BASE0.get(c.id);});D.T1.fanFail=false;
   const def=INCIDENTS.find(x=>x.id===id);pushAlarm(`Het incident “${def?def.name:id}” is tijdens het opslaan afgerond`,'info');}

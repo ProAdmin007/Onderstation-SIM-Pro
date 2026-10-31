@@ -3020,7 +3020,7 @@ function renderMenu(){
   const svs=listSaves(),svHtml=svs.length?`<div class="mh">Verder spelen</div><div class="mgrid">${svs.map(({k,d})=>`<div class="savecard"><button class="mode resume" data-resume="${k}"><span class="mt">💾 ${slotName(k)}</span><b>${MODES[d.mode].name} · ${fmtClock(d.SIM.t)}</b><span class="md">${DIFFS[d.diff].label} · ${SEASONS[d.season].name} · score ${Math.round(d.GAME.score).toLocaleString('nl-NL')}<br>opgeslagen ${new Date(d.at).toLocaleString('nl-NL',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</span></button><button class="mini delsave" data-delsave="${k}" title="Dit opgeslagen spel verwijderen">✕ verwijderen</button></div>`).join('')}</div>`:'';
   $('#menu').innerHTML=svHtml+`<div class="mh">Dienst draaien</div><div class="mgrid">${['free','day','eve'].map(card).join('')}</div>
     <div class="mh">Leren · begeleide lessen</div><div class="mgrid">${Object.keys(LESSONS).map(card).join('')}</div>
-    <div class="mh">Scenario's</div><div class="mgrid">${['zkh','storm','piek','hitte','winter','blackout','dubbel','aanrijding','cyber','overstroming','zonnepiek','pinksteren','aardonweer','kraan','brand','evenement','laadpiek'].map(card).join('')}</div>`;
+    <div class="mh">Scenario's</div><div class="mgrid">${['zkh','storm','piek','hitte','winter','blackout','dubbel','aanrijding','cyber','overstroming','zonnepiek','pinksteren','aardonweer','kraan','brand','datacenter','evenement','laadpiek'].map(card).join('')}</div>`;
   menuUpdate();   // updateknop bovenaan het menu
   document.querySelectorAll('#diff button').forEach(b=>b.classList.toggle('on',b.dataset.d===GAME.diff));
   document.querySelectorAll('#season button').forEach(b=>b.classList.toggle('on',b.dataset.s===GAME.season));
@@ -3502,6 +3502,21 @@ const INCIDENTS=[
       pushAlarm(`112-melding: vrachtwagen tegen MS-station ${s.id} ${s.name}! Isoleer het station vanaf de buren en voed terug via het normaal-open punt`,'crit');
       addTimer(25,()=>{s.groups.forEach(g=>g.backfed=true);s.genset=true;pushAlarm(`Noodaggregaat bij ${s.id} draait – de klanten hebben weer stroom`,'ok');});},
     end(){const s=this.s;s.damaged=false;s.groups.forEach(g=>g.backfed=false);s.genset=false;readyNotice(`${s.id}: schakelinstallatie vervangen – het station mag weer in bedrijf`,null);}},
+  {id:'datacenter',name:'Brand in het datacenter',desc:'Een UPS-accu vat vlam en de gasblussing faalt: de SCADA-servers branden af. Bedien ter plaatse en blijf uit het datacenter.',w:1.6,dur:115,
+    ok:()=>!GAME.flags.scadaDown&&!FIRE.on,
+    start(){const live=()=>INC.active?.def.id==='datacenter';pushAlarm('Rookaanzuiging datacenter (VESDA): voor-alarm – rook bij de accukast van UPS B','warn');
+      addTimer(2,()=>{if(!live())return;GAME.flags.dcAlarm=true;GAME.flags.dcDanger=true;pushAlarm('BRANDALARM datacenter: blussing start – niemand naar binnen! Brandweer gealarmeerd','crit');});
+      addTimer(3,()=>{if(!live())return;fireStart({bld:'SRV',off:0,ladder:false});pushAlarm('INERGEN-blussing geactiveerd, maar slechts 2 van de 6 flessen lossen (pilootventiel defect) – de brand gaat door!','crit');});
+      addTimer(5,()=>{if(!live())return;GAME.flags.scadaDown=true;$('#scada').classList.add('down');dcBurnt();pushAlarm('SCADA-verbinding verbroken: de servers in het datacenter zijn uitgevallen. Loop het station in (V) en schakel lokaal (F).','crit');});
+      addTimer(16,()=>{if(live()){fireDouse();pushAlarm('Brandweer: we gaan met ademlucht het datacenter in en blussen','ok');}});
+      addTimer(rnd(20,30),()=>{if(live())feederFault();});
+      addTimer(44,()=>{if(!live())return;fireStop();GAME.flags.dcAlarm=false;readyNotice('Brandweer: brand meester, rook afgezogen. SCADA blijft voorlopig uit – de servers zijn verloren.',null);});
+      addTimer(50,()=>{if(live())GAME.flags.dcDanger=false;});
+      addTimer(75,()=>{if(!live())return;GAME.flags.scadaDown='os';readyNotice('Nood-front-end via LTE in bedrijf: de MS-stations zijn weer op afstand te bedienen. Het onderstation zelf nog niet.',null);});},
+    tick(){const r=ROOMS.find(r=>r.id==='SRV');if(GAME.flags.dcDanger&&FP.on&&camInside()===r.idx&&!this.entered){this.entered=true;incident();
+      pushAlarm('Je bent het datacenter in gelopen tijdens brand en gasblussing – levensgevaarlijk! Direct naar buiten.','crit');}},
+    end(){if(FIRE.on&&FIRE.bld==='SRV')fireStop();Object.assign(GAME.flags,{scadaDown:false,dcAlarm:false,dcDanger:false});$('#scada').classList.remove('down');dcRestore();
+      readyNotice('SCADA-container in bedrijf: bediening op afstand van het hele onderstation is hersteld. Het datacenter is opgeruimd en voorzien van nieuwe racks.',null);}},
   {id:'cyber',name:'Cyberaanval op SCADA',desc:'De verbinding met het station valt weg: bedienen kan alleen nog lokaal (V).',w:1,dur:30,ok:()=>!GAME.flags.scadaDown,
     start(){GAME.flags.scadaDown=true;$('#scada').classList.add('down');pushAlarm('CERT: cyberaanval – SCADA-verbinding verbroken! Bedien lokaal: loop het station in (V)','crit');addTimer(rnd(8,14),()=>feederFault());},
     end(){GAME.flags.scadaDown=false;$('#scada').classList.remove('down');readyNotice('SCADA-verbinding hersteld',null);}},
@@ -4040,7 +4055,9 @@ function buildServerRoom(r){if(!r)return;const Y=r.y0,E=SVM,S=staticRoot,cx=(r.x
   wsign('SCADA · DATACENTER',S,cx,Y+3.4,r.z1-0.02,P,3.2);}
 // ---- elke frame: LEDs knipperen (patroon verschuift); rood als de SCADA-verbinding is weggevallen (cyberaanval)
 // na de brand: roet op racks en kasten, geen LEDs meer
-function dcBurnt(){if(SRV.burnt)return;SRV.burnt=true;for(const m of[...Object.values(SVM.front),SVM.rear,SVM.body,SVM.fUps,SVM.fBat,SVM.ups,SVM.crac,SVM.fCrac])m.color.setHex(0x3c3835);SVM.led.opacity=0;}
+const dcMats=()=>[...Object.values(SVM.front),SVM.rear,SVM.body,SVM.fUps,SVM.fBat,SVM.ups,SVM.crac,SVM.fCrac];
+function dcBurnt(){if(SRV.burnt)return;SRV.burnt=true;SRV.orig=dcMats().map(m=>m.color.getHex());dcMats().forEach(m=>m.color.setHex(0x3c3835));SVM.led.opacity=0;}
+function dcRestore(){if(!SRV.burnt)return;SRV.burnt=false;dcMats().forEach((m,i)=>m.color.setHex(SRV.orig[i]));SVM.led.opacity=1;}
 function serverTick(dt){SVM.flash.emissiveIntensity=GAME.flags.dcAlarm&&performance.now()%700<300?5:0;SRV.t+=dt;if(SRV.t<0.22)return;SRV.t=0;const down=GAME.flags.scadaDown===true;
   SRV.ledTex.offset.y=Math.floor(Math.random()*8)/8;SVM.led.color.setHex(down?0xff3030:0xffffff);
   const b=performance.now()%1000<500;SVM.rtuOk.emissive.setHex(down?0xff2020:0x2cff6a);SVM.rtuOk.emissiveIntensity=b?2.5:0.6;SVM.rtuLte.emissiveIntensity=down?0:(Math.random()<0.5?2.5:0.5);SVM.rtuFo.emissiveIntensity=down?0:Math.random()<0.6?2.5:0.6;}
@@ -5244,7 +5261,7 @@ function resumeGame(d){$('#intro').classList.add('hidden');SAVE_SLOT=d.slot||'au
   const v=VIEWPOS[0];flyTo(v[0].clone(),v[1].clone(),2);
   pushAlarm(`💾 Spel hervat: ${MODES[d.mode].name} (${DIFFS[d.diff].label}), opgeslagen ${new Date(d.at).toLocaleString('nl-NL',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}`,'ok');}
 // een incident dat liep tijdens het opslaan: netjes afronden
-function clearIncident(id){GAME.flags.scadaDown=false;$('#scada').classList.remove('down');GAME.flags.mustOpen=null;GAME.flags.lineLimit=null;FIRE.on=false;if(INC_WATER)INC_WATER.visible=false;
+function clearIncident(id){GAME.flags.scadaDown=false;GAME.flags.dcAlarm=false;GAME.flags.dcDanger=false;dcRestore();$('#scada').classList.remove('down');GAME.flags.mustOpen=null;GAME.flags.lineLimit=null;FIRE.on=false;if(INC_WATER)INC_WATER.visible=false;
   RING.stations.forEach(s=>{if(s.damaged||s.evac){s.damaged=false;s.evac=false;}if(s.genset&&TASK?.station!==s.id){s.genset=false;s.groups.forEach(g=>g.backfed=false);}});
   CONS.forEach(c=>{if(BASE0.has(c.id))c.base=BASE0.get(c.id);});D.T1.fanFail=false;
   const def=INCIDENTS.find(x=>x.id===id);pushAlarm(`Het incident “${def?def.name:id}” is tijdens het opslaan afgerond`,'info');}
@@ -6615,7 +6632,7 @@ function gisDrawExtra(g,cv){const s=TAB.zoom,now=performance.now();
 // ============================================================ updatecontrole in het hoofdmenu: is er op GitHub een nieuwere versie?
 // De build zet een vingerafdruk in BUILD_ID (tests/stamp.mjs) en houdt version.json bij met eerdere versies.
 // Staat onze versie bij de eerdere versies op GitHub, dan is er een update; staat hij er niet in, dan is het eigen (nieuwer) werk.
-const BUILD_ID='3392c8085a95';
+const BUILD_ID='b2834237b22b';
 const UPD_REPO='https://github.com/ProAdmin007/Onderstation-SIM-Pro';
 const UPD_URL='https://raw.githubusercontent.com/ProAdmin007/Onderstation-SIM-Pro/main/version.json';
 // toestand van de controle: idle, bezig, actueel, nieuw, eigen of fout

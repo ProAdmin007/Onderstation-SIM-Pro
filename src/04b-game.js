@@ -166,7 +166,7 @@ function renderMenu(){
   const svs=listSaves(),svHtml=svs.length?`<div class="mh">Verder spelen</div><div class="mgrid">${svs.map(({k,d})=>`<div class="savecard"><button class="mode resume" data-resume="${k}"><span class="mt">💾 ${slotName(k)}</span><b>${MODES[d.mode].name} · ${fmtClock(d.SIM.t)}</b><span class="md">${DIFFS[d.diff].label} · ${SEASONS[d.season].name} · score ${Math.round(d.GAME.score).toLocaleString('nl-NL')}<br>opgeslagen ${new Date(d.at).toLocaleString('nl-NL',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</span></button><button class="mini delsave" data-delsave="${k}" title="Dit opgeslagen spel verwijderen">✕ verwijderen</button></div>`).join('')}</div>`:'';
   $('#menu').innerHTML=svHtml+`<div class="mh">Dienst draaien</div><div class="mgrid">${['free','day','eve'].map(card).join('')}</div>
     <div class="mh">Leren · begeleide lessen</div><div class="mgrid">${Object.keys(LESSONS).map(card).join('')}</div>
-    <div class="mh">Scenario's</div><div class="mgrid">${['zkh','storm','piek','hitte','winter','blackout','dubbel','aanrijding','cyber','overstroming','zonnepiek','pinksteren','aardonweer','kraan','brand','evenement','laadpiek'].map(card).join('')}</div>`;
+    <div class="mh">Scenario's</div><div class="mgrid">${['zkh','storm','piek','hitte','winter','blackout','dubbel','aanrijding','cyber','overstroming','zonnepiek','pinksteren','aardonweer','kraan','brand','datacenter','evenement','laadpiek'].map(card).join('')}</div>`;
   menuUpdate();   // updateknop bovenaan het menu
   document.querySelectorAll('#diff button').forEach(b=>b.classList.toggle('on',b.dataset.d===GAME.diff));
   document.querySelectorAll('#season button').forEach(b=>b.classList.toggle('on',b.dataset.s===GAME.season));

@@ -187,7 +187,9 @@ function buildServerRoom(r){if(!r)return;const Y=r.y0,E=SVM,S=staticRoot,cx=(r.x
   wsign('SCADA · DATACENTER',S,cx,Y+3.4,r.z1-0.02,P,3.2);}
 // ---- elke frame: LEDs knipperen (patroon verschuift); rood als de SCADA-verbinding is weggevallen (cyberaanval)
 // na de brand: roet op racks en kasten, geen LEDs meer
-function dcBurnt(){if(SRV.burnt)return;SRV.burnt=true;for(const m of[...Object.values(SVM.front),SVM.rear,SVM.body,SVM.fUps,SVM.fBat,SVM.ups,SVM.crac,SVM.fCrac])m.color.setHex(0x3c3835);SVM.led.opacity=0;}
+const dcMats=()=>[...Object.values(SVM.front),SVM.rear,SVM.body,SVM.fUps,SVM.fBat,SVM.ups,SVM.crac,SVM.fCrac];
+function dcBurnt(){if(SRV.burnt)return;SRV.burnt=true;SRV.orig=dcMats().map(m=>m.color.getHex());dcMats().forEach(m=>m.color.setHex(0x3c3835));SVM.led.opacity=0;}
+function dcRestore(){if(!SRV.burnt)return;SRV.burnt=false;dcMats().forEach((m,i)=>m.color.setHex(SRV.orig[i]));SVM.led.opacity=1;}
 function serverTick(dt){SVM.flash.emissiveIntensity=GAME.flags.dcAlarm&&performance.now()%700<300?5:0;SRV.t+=dt;if(SRV.t<0.22)return;SRV.t=0;const down=GAME.flags.scadaDown===true;
   SRV.ledTex.offset.y=Math.floor(Math.random()*8)/8;SVM.led.color.setHex(down?0xff3030:0xffffff);
   const b=performance.now()%1000<500;SVM.rtuOk.emissive.setHex(down?0xff2020:0x2cff6a);SVM.rtuOk.emissiveIntensity=b?2.5:0.6;SVM.rtuLte.emissiveIntensity=down?0:(Math.random()<0.5?2.5:0.5);SVM.rtuFo.emissiveIntensity=down?0:Math.random()<0.6?2.5:0.6;}

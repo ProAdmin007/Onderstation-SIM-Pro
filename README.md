@@ -67,7 +67,7 @@ Bedoeld voor **bedrijfsvoerders en monteurs in opleiding**, studenten **elektrot
 <a id="spelmodi"></a>
 ## 🎮 Spelmodi en score
 
-- **Vrije dienst:** eindeloos spelen. Storingen komen hier vaker dan in een dienst, en af en toe slaat er een **groot incident** uit de scenario's toe.
+- **Vrije dienst:** eindeloos spelen. Storingen komen hier vaker dan in een dienst, en af en toe slaat er een **groot incident** uit de scenario's toe, zoals een **brand in het datacenter** waardoor SCADA ruim een uur wegvalt.
   - De eerste komt na 1–2 uur, daarna één per paar uur. Welke het wordt is willekeurig, maar het moet passen bij het moment:
     - kabelstoring ziekenhuis met trip T1;
     - onweersbuien (zeldzaam);

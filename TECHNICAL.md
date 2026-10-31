@@ -393,7 +393,7 @@ Dit scenario laat zien hoe de lagen samenwerken.
 
 Een incident heeft `{id, name, desc, w (gewicht), dur, ok() (voorwaarde), start(), tick(dm)?, end()?}`. `incidentTick` start het eerste incident na 60–120 min en daarna elke 90–200 min een gewogen keuze. `startIncident(id)` maakt een instantie met `Object.create(def)`. `endIncident()` geeft +100 als iedereen weer stroom heeft.
 
-Ids: `zkh`, `storm`, `dubbel`, `hitte`, `aanrijding`, `cyber`, `water`, `zon`, `kraan`, `brand`, `concert`, `laden`, `blackout`. `clearIncident` (`07o-save.js`) ruimt vlaggen op bij hervatten.
+Ids: `zkh`, `storm`, `dubbel`, `hitte`, `aanrijding`, `datacenter` (gewicht 1,6; na afloop ruimt `dcRestore()` het roet op), `cyber`, `water`, `zon`, `kraan`, `brand`, `concert`, `laden`, `blackout`. `clearIncident` (`07o-save.js`) ruimt vlaggen op bij hervatten.
 
 ### Werkopdrachten, overdracht en tijdlijn
 
