@@ -2,7 +2,7 @@
 
 De simulator richt zich nu vooral op **Onderhoud en Storingen Elektra (OSE)**: schakelen, storingen oplossen, monteurs aansturen en het onderhoud aan de installatie. Een netbeheerder (DSO) doet meer dan dat. **Asset Management (AM)** beslist over aansluitingen, uitbreiding van het net, vervangingen en het budget, en legt verantwoording af over de kwaliteit van het net.
 
-Deze roadmap heeft vijf sporen:
+Deze roadmap heeft zes sporen:
 
 | Spoor | Waar het over gaat | Tijdschaal |
 |---|---|---|
@@ -11,8 +11,9 @@ Deze roadmap heeft vijf sporen:
 | **C. Carrièremodus** | groeien van monteur via bedrijfsvoerder naar asset manager | meerdere jaren spelen |
 | **D. Techniek** | de code makkelijk uitbreidbaar houden | doorlopend |
 | **E. Opleiding en bereik** | trainen in groepen, eigen scenario's, meer spelers bereiken | per onderdeel |
+| **F. Realisme voor monteurs en operators** | veilig werken in het veld en een meldkamer zoals in het echt | per onderdeel |
 
-Spoor C bouwt op A en B; spoor D maakt A, B, C en E eenvoudiger. Binnen elk spoor staan de onderdelen op volgorde van nut.
+Spoor C bouwt op A en B; spoor F verdiept A; spoor D maakt A, B, C, E en F eenvoudiger. Binnen elk spoor staan de onderdelen op volgorde van nut.
 
 ## Overzicht
 
@@ -39,6 +40,18 @@ Spoor C bouwt op A en B; spoor D maakt A, B, C en E eenvoudiger. Binnen elk spoo
 | E4 | Beoordeling met de begeleiding | opleiding | klein | ⏳ gepland |
 | E5 | Tablet en telefoon | bereik | middel | ⏳ gepland |
 | E6 | Engelse taal | bereik | middel | ⏳ gepland |
+| F1 | De vijf veiligheidsregels zelf uitvoeren (spanningzoeker, draagbare aarde, LOTO) | monteur | middel | ⏳ gepland |
+| F2 | Persoonlijke beschermingsmiddelen | monteur | klein | ⏳ gepland |
+| F3 | Ter plaatse kijken en meten | monteur | middel | ⏳ gepland |
+| F4 | Zekeringen vervangen met het juiste gereedschap | monteur | klein | ⏳ gepland |
+| F5 | Sleutelvergrendelingen in MS-stations | monteur | klein | ⏳ gepland |
+| F6 | Read-back in de communicatie | operator | klein | ⏳ gepland |
+| F7 | Vier-ogenprincipe en bedrijfsvoeringslogboek | operator | middel | ⏳ gepland |
+| F8 | Alarmbeheer: kwitteren, prioriteiten, alarmlawine | operator | middel | ⏳ gepland |
+| F9 | Markeringen in SCADA en onbetrouwbare standen | operator | klein | ⏳ gepland |
+| F10 | Wat-als-berekening en N-1-controle | operator | middel | ⏳ gepland |
+| F11 | Beperkte ploegen en piketdienst | beide | middel | ⏳ gepland |
+| F12 | Externe communicatie volgens protocol | operator | middel | ⏳ gepland |
 
 ---
 
@@ -237,6 +250,79 @@ Aanraakbediening (slepen, knijpen om te zoomen, tikken om te schakelen) en een i
 ### E6. Engelse taal
 
 De interface, meldingen, lessen en begeleiding vertalen, met een taalkeuze in de instellingen. Vraagt eerst dat alle teksten op één plek komen te staan.
+
+---
+
+## F. Realisme voor monteurs en operators
+
+Nu schakel je met één klik en gaan veiligheid en communicatie grotendeels vanzelf. In het echt zitten daar juist de leermomenten. Dit spoor maakt het werk van de monteur (in het veld, met rondlopen) en de operator (in de meldkamer, met SCADA) realistischer. Het sluit aan op de werkvergunningen en rollen (A4).
+
+**Aanraders om mee te beginnen:** F1 en F6 (de kern van veilig werken volgens NEN 3140 en de VIAG), F8 (herkenbaar voor bedrijfsvoerders) en F11 (prioriteren bij drukte).
+
+### Monteurs
+
+#### F1. De vijf veiligheidsregels zelf uitvoeren
+
+Nu sluit je alleen een aardschakelaar. Bij het vrijschakelen voert de monteur de regels echt uit, in het station (rondlopen) of via de portofoon:
+
+1. **vrijschakelen**;
+2. **beveiligen tegen herinschakelen**: eigen hangslot op de bediening en een bord *Niet schakelen – er wordt gewerkt* (LOTO);
+3. **spanningsloosheid vaststellen** met een spanningzoeker, eerst testen op een bekend spanningvoerend deel;
+4. **aarden en kortsluiten**: aardschakelaar of draagbare aarde (aardgarnituur);
+5. **afschermen** van naastgelegen delen die onder spanning blijven.
+
+Een overgeslagen of verkeerd uitgevoerde stap is een veiligheidsincident. Ook het opheffen gaat in omgekeerde volgorde: slot eraf mag pas als iedereen zich heeft afgemeld.
+
+#### F2. Persoonlijke beschermingsmiddelen
+
+Voor het schakelen in een MS-ruimte: boogvlambestendige kleding, gelaatsscherm en handschoenen. In het eerste-persoonsbeeld zie je het vizier. Zonder PBM schakelen bij een vlamboog is een ernstig incident.
+
+#### F3. Ter plaatse kijken en meten
+
+- kortsluitverklikkers zelf aflezen en terugzetten in het MS-station;
+- in een kabelkast of aansluitkast met een meetinstrument zoeken naar een doorgebrande LS-zekering;
+- de fasevolgorde (draaiveld) controleren voordat je een kabelkast sluit tussen twee stations.
+
+#### F4. Zekeringen vervangen met het juiste gereedschap
+
+MS-zekeringen in de RMU wisselen met een isolerende zekeringtang (alleen spanningsloos); NH-zekeringen in het LS-rek met een NH-greep met manchet. Verkeerde waarde (te groot) kiezen geeft later een probleem.
+
+#### F5. Sleutelvergrendelingen in MS-stations
+
+Zoals in het echt: de sleutel van de aardschakelaar komt pas vrij als de lastscheider open staat, en de deur van het trafovak pas als de trafo geaard is. De monteur moet de volgorde volgen.
+
+### Operators (bedrijfsvoerders)
+
+#### F6. Read-back in de communicatie
+
+Elke schakelopdracht via de portofoon of telefoon wordt door de monteur herhaald ("Ik herhaal: MS3-R open") en door de operator bevestigd. Af en toe herhaalt de monteur iets verkeerd (ander station, open in plaats van dicht): dat moet je opmerken en corrigeren, anders gebeurt de verkeerde handeling.
+
+#### F7. Vier-ogenprincipe en bedrijfsvoeringslogboek
+
+Een schakelprogramma wordt door een tweede bedrijfsvoerder gecontroleerd voordat het wordt uitgevoerd. Elke uitgevoerde stap krijgt een tijdstempel en de naam van wie hem deed in een **bedrijfsvoeringslogboek**, dat ook bij de dienstoverdracht hoort.
+
+#### F8. Alarmbeheer: kwitteren, prioriteiten, alarmlawine
+
+- meldingen met **prioriteit 1–3** en **kwitteren** (bevestigen dat je ze gezien hebt);
+- bij een grote storing een **alarmlawine** van tientallen gevolgmeldingen, waartussen je de oorzaak moet vinden;
+- **klapperende meldingen** (die steeds aan en uit gaan) tijdelijk onderdrukken;
+- een overzicht van niet-gekwitteerde meldingen bij de overdracht.
+
+#### F9. Markeringen in SCADA en onbetrouwbare standen
+
+Velden markeren als *in werkzaamheden*, *geaard* of *niet schakelen*, met een vergrendeling in SCADA zelf. Valt de communicatie met een station weg, dan toont SCADA een vraagteken in plaats van een stand en mag je niet op die waarde vertrouwen.
+
+#### F10. Wat-als-berekening en N-1-controle
+
+Voordat je schakelt, rekent SCADA de nieuwe belasting voor ("als je MS7-R sluit, wordt K67 110% belast"). Daarnaast een continue **N-1-controle**: wat gebeurt er als nu het zwakste onderdeel uitvalt?
+
+#### F11. Beperkte ploegen en piketdienst
+
+Er zijn maar 2–3 storingsploegen. Overdag zijn ze snel ter plaatse; 's nachts moet de piketdienst eerst van huis komen. Bij meerdere storingen tegelijk moet je kiezen wie waarheen gaat, en sommige klanten wachten langer.
+
+#### F12. Externe communicatie volgens protocol
+
+Gesprekken met **TenneT** (110 kV), **Netbeheer Noord** (OS Meppel), de **gemeente** en de **brandweer** volgens vaste afspraken: wie belt wie, wat moet je melden, welke toestemming heb je nodig. Afspraken niet nakomen heeft gevolgen.
 
 ---
 
