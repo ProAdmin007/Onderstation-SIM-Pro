@@ -77,12 +77,12 @@ function buildPanel(i,p,row){
 function buildRoomShell(r){
   const Y=r.y0,W=r.x1-r.x0,H=r.y1-Y,cx=(r.x0+r.x1)/2,cy=(Y+r.y1)/2,cz=(r.z0+r.z1)/2,D2=r.z1-r.z0;
   groundQuad(r.x0,r.z0,r.x1,r.z1,Y+0.004,IM.floor,4);
-  iplane(W,H,IM.plaster,cx,cy,r.z0+0.01,0);iplane(W,H,IM.plaster,cx,cy,r.z1-0.01,Math.PI);
+  const holes=[...r.doors].sort((a,c)=>a-c);{let xc=r.x0;holes.forEach(d=>{const a=d-1.1;if(a>xc){iplane(a-xc,H,IM.plaster,(xc+a)/2,cy,r.z0+0.01,0);box(a-xc,0.04,0.012,MAT.copper,staticRoot,(xc+a)/2,Y+0.4,r.z0+0.02);}
+    iplane(2.2,r.y1-3.0,IM.plaster,d,(3.0+r.y1)/2,r.z0+0.01,0);xc=d+1.1;});iplane(r.x1-xc,H,IM.plaster,(xc+r.x1)/2,cy,r.z0+0.01,0);box(r.x1-xc,0.04,0.012,MAT.copper,staticRoot,(xc+r.x1)/2,Y+0.4,r.z0+0.02);}
+  iplane(W,H,IM.plaster,cx,cy,r.z1-0.01,Math.PI);
   iplane(D2,H,IM.plaster,r.x0+0.01,cy,cz,Math.PI/2);iplane(D2,H,IM.plaster,r.x1-0.01,cy,cz,-Math.PI/2);
   iplane(W,D2,IM.ceiling,cx,r.y1-0.01,cz,0,Math.PI/2);
-  r.doors.forEach(x=>{box(2.1,2.65,0.05,MAT.door,staticRoot,x,Y+1.32,r.z0+0.03);box(0.04,0.04,0.12,MAT.trim,staticRoot,x+0.15,Y+1.2,r.z0+0.1);});
-  box(W-0.6,0.04,0.012,MAT.copper,staticRoot,cx,Y+0.4,r.z0+0.02);
-  for(let x=r.x0+4;x<r.x1-2;x+=6)for(const z of[49,53]){box(1.4,0.06,0.22,IM.led,staticRoot,x,r.y1-0.35,z);for(const s of[-0.6,0.6])rod(V3(x+s,r.y1-0.32,z),V3(x+s,r.y1,z),0.006,MAT.galv,staticRoot,4);}
+    for(let x=r.x0+4;x<r.x1-2;x+=6)for(const z of[49,53]){box(1.4,0.06,0.22,IM.led,staticRoot,x,r.y1-0.35,z);for(const s of[-0.6,0.6])rod(V3(x+s,r.y1-0.32,z),V3(x+s,r.y1,z),0.006,MAT.galv,staticRoot,4);}
   if(r.id!=='SRV')for(let x=r.x0+W/6;x<r.x1;x+=W/3){const l=new THREE.PointLight(0xf4f2ea,70,9,2);l.position.set(x,r.y1-0.5,51);scene.add(l);}   // datacenter: verplaatsbare lamp (zie updateKioskLight)
   r.doors.forEach(x=>{cyl(0.08,0.08,0.55,IM.redPaint,staticRoot,x+1.6,Y+0.3,r.z0+0.15,14);cyl(0.03,0.03,0.08,MAT.black,staticRoot,x+1.6,Y+0.61,r.z0+0.15,8);});
 }
@@ -108,14 +108,14 @@ function buildInterior(){
   iplane(1.3,1.78,mat({map:posterTex(),roughness:0.7}),-11.2,Y+1.7,IN.z1-0.02,Math.PI);
   iplane(1.3,1.78,mat({map:posterTex(),roughness:0.7}),70.5,Y+1.7,ROOMS[1].z1-0.02,Math.PI);
   // bedieningsbureau met SCADA-schermen
-  box(3.0,0.05,0.9,IM.wood,staticRoot,-15.5,Y+0.75,47.2);
-  for(const sx of[-1.4,1.4])box(0.05,0.73,0.8,MAT.galvDark,staticRoot,-15.5+sx,Y+0.37,47.2);
+  box(3.0,0.05,0.9,IM.wood,staticRoot,-17.4,Y+0.75,47.2);
+  for(const sx of[-1.4,1.4])box(0.05,0.73,0.8,MAT.galvDark,staticRoot,-17.4+sx,Y+0.37,47.2);
   const s1=liveTex(512,320),s2=liveTex(512,320);deskScreens=[s1,s2];
-  [[-16.25,s1],[-14.75,s2]].forEach(([x,s])=>{box(0.7,0.43,0.04,MAT.black,staticRoot,x,Y+1.18,46.95);rod(V3(x,Y+0.78,46.98),V3(x,Y+0.98,46.98),0.03,MAT.black,staticRoot,8);
+  [[-18.15,s1],[-16.65,s2]].forEach(([x,s])=>{box(0.7,0.43,0.04,MAT.black,staticRoot,x,Y+1.18,46.95);rod(V3(x,Y+0.78,46.98),V3(x,Y+0.98,46.98),0.03,MAT.black,staticRoot,8);
     iplane(0.64,0.4,new THREE.MeshBasicMaterial({map:s.t}),x,Y+1.18,46.972,0);});
-  box(0.45,0.02,0.15,MAT.black,staticRoot,-15.5,Y+0.785,47.45);
-  box(0.5,0.08,0.5,MAT.black,staticRoot,-15.5,Y+0.48,48.2);box(0.5,0.6,0.07,MAT.black,staticRoot,-15.5,Y+0.85,48.47);rod(V3(-15.5,Y+0.08,48.2),V3(-15.5,Y+0.45,48.2),0.03,MAT.galv,staticRoot,6);
-  for(let k=0;k<5;k++){const a=k*Math.PI*2/5;rod(V3(-15.5,Y+0.07,48.2),V3(-15.5+Math.cos(a)*0.3,Y+0.04,48.2+Math.sin(a)*0.3),0.015,MAT.black,staticRoot,4);}
+  box(0.45,0.02,0.15,MAT.black,staticRoot,-17.4,Y+0.785,47.45);
+  box(0.5,0.08,0.5,MAT.black,staticRoot,-17.4,Y+0.48,48.2);box(0.5,0.6,0.07,MAT.black,staticRoot,-17.4,Y+0.85,48.47);rod(V3(-17.4,Y+0.08,48.2),V3(-17.4,Y+0.45,48.2),0.03,MAT.galv,staticRoot,6);
+  for(let k=0;k<5;k++){const a=k*Math.PI*2/5;rod(V3(-17.4,Y+0.07,48.2),V3(-17.4+Math.cos(a)*0.3,Y+0.04,48.2+Math.sin(a)*0.3),0.015,MAT.black,staticRoot,4);}
   // accubatterij 110 V DC
   for(const tier of[0.35,1.05]){box(4.4,0.04,0.55,MAT.galvDark,staticRoot,15.6,Y+tier,55.2);
     for(let k=0;k<18;k++){const x=13.6+k*0.235;box(0.2,0.26,0.17,IM.battery,staticRoot,x,Y+tier+0.15,55.2);
@@ -127,7 +127,7 @@ function buildInterior(){
   box(1.3,1.7,1.0,MAT.trafo,staticRoot,17.6,Y+0.85,47.6);iplane(0.9,0.7,MAT.louvre,17.6,Y+1.0,48.11,0);plate('EB 10/0,4 kV',staticRoot,17.6,Y+1.55,48.11,0,0.5);
 }
 // alleen schermen in de buurt van de camera, en alleen als er iets veranderd is (elke upload naar de GPU kost tijd)
-const DESK_POS=V3(-15.5,1.5,47);
+const DESK_POS=V3(-17.4,1.5,47);
 function drawPanelScreens(){const cp=camera.position;
   SCREENS.forEach(s=>{const d=D[s.id],g=s.g,c=VIEWS[s.id]?.center;if(c&&cp.distanceTo(c)>30)return;
     const key=[d.state,d.I|0,EN.has(s.node)?nodeU(s.node).toFixed(2):0,!!(d.feeder&&d.feeder.fault),springOk(d),s.es&&D[s.es].state].join();if(key===s.key)return;s.key=key;

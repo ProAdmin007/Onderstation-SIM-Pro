@@ -67,7 +67,8 @@ function kiosk(s){
   box(KW+0.3,0.18,KD+0.3,MAT.concreteDark,root,0,Y+KH+0.09,0);
   const fl=mesh(new THREE.PlaneGeometry(KW-0.3,KD-0.3),IM.floor,root,0,Y+0.01,0);fl.rotation.x=-Math.PI/2;fl.castShadow=false;
   // openstaande deur en dichte trafodeur
-  const dg=new THREE.Group();dg.position.set(-2.05,Y,fz+0.08);dg.rotation.y=-1.75;root.add(dg);box(1.3,2.15,0.05,MAT.door,dg,0.65,1.08,0);
+  const dg=new THREE.Group();dg.position.set(-2.05,Y,fz+0.08);dg.userData.dyn=true;root.add(dg);box(1.3,2.15,0.05,MAT.door,dg,0.65,1.08,0);box(0.03,0.2,0.05,MAT.trim,dg,1.18,1.0,0.05);
+  {const c=L2W(-1.4,fz+0.4);DOORS.push({leaves:[{g:dg,ang:-1.75}],p:V3(c[0],1,c[1]),R:4.2,o:0,want:false});}
   box(1.3,2.15,0.05,MAT.door,root,1.65,Y+1.08,fz+0.1);
   const hz=mesh(new THREE.PlaneGeometry(0.32,0.4),MAT.hazard,root,1.65,Y+1.6,fz+0.135);hz.castShadow=false;
   plate(s.id,root,0.4,Y+1.9,fz+0.08,0,0.42);
@@ -166,13 +167,42 @@ function aptBlock(x0,z0,x1,z1,floors){const W=x1-x0,Dz=z1-z0,H=floors*3+3.6,cx=(
   aptExtras(x0,z0,x1,z1,floors);
   DISTRICT_RECTS.push([x0,z0-1.7,x1,z1+1.7]);}
 // straatlantaarn, gevoed uit het LS-veld openbare verlichting van het dichtstbijzijnde MS-station
-const poolTex=(()=>{const c=cnv(128),g=c.getContext('2d'),gr=g.createRadialGradient(64,64,0,64,64,64);gr.addColorStop(0,'rgba(255,214,150,0.9)');gr.addColorStop(0.45,'rgba(255,190,110,0.35)');gr.addColorStop(1,'rgba(255,170,90,0)');g.fillStyle=gr;g.fillRect(0,0,128,128);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t;})();
+// LED-armatuur (warm wit, 3000 K) aan een gebogen uithouder boven de straat; lichtvlak langgerekt langs de weg, gloed rond de lamp,
+// lichtkegel bij mist, regen of sneeuw; 's nachts gedimd. Per station één set materialen, dus alle lantaarns samen kosten weinig.
+const poolTex=(()=>{const c=cnv(128),g=c.getContext('2d'),gr=g.createRadialGradient(64,64,0,64,64,64);gr.addColorStop(0,'rgba(255,238,212,0.95)');gr.addColorStop(0.35,'rgba(255,228,190,0.5)');gr.addColorStop(0.7,'rgba(255,215,170,0.14)');gr.addColorStop(1,'rgba(255,210,160,0)');g.fillStyle=gr;g.fillRect(0,0,128,128);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t;})();
+const haloTex=(()=>{const c=cnv(64),g=c.getContext('2d'),gr=g.createRadialGradient(32,32,0,32,32,32);gr.addColorStop(0,'rgba(255,248,232,1)');gr.addColorStop(0.18,'rgba(255,236,205,0.55)');gr.addColorStop(1,'rgba(255,220,180,0)');g.fillStyle=gr;g.fillRect(0,0,64,64);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t;})();
+const coneMatOf=()=>new THREE.MeshBasicMaterial({color:0xfff0d8,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide});
+const LAMPS={n:0,defect:[]};
+// richting van de lantaarn naar de dichtstbijzijnde weg (de uithouder hangt boven de straat)
+function lampDir(x,z){let best=null,bd=1e9;for(const e of LAYOUT)if(e.kind==='road'){const [x0,z0,x1,z1]=e.r,cx=clamp(x,x0,x1),cz=clamp(z,z0,z1),d=Math.hypot(cx-x,cz-z);if(d<bd){bd=d;best=[cx-x,cz-z];}}
+  if(!best||bd<0.01||bd>12)return [1,0];return Math.abs(best[0])>Math.abs(best[1])?[Math.sign(best[0]),0]:[0,Math.sign(best[1])];}
 function streetLight(x,z){if(!layFree([x-0.3,z-0.3,x+0.3,z+0.3],['road'],0))return;lay('lamp',x-0.15,z-0.15,x+0.15,z+0.15);
   const s=RING.stations.reduce((a,b)=>Math.hypot(b.pos[0]-x,b.pos[1]-z)<Math.hypot(a.pos[0]-x,a.pos[1]-z)?b:a);
-  if(!s.lampMat){s.lampMat=mat({color:0x2a2c2e,emissive:0xffd9a0,emissiveIntensity:0});s.poolMat=new THREE.MeshBasicMaterial({map:poolTex,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false,fog:false});s.lamps=0;}
-  s.lamps++;cyl(0.06,0.09,7,MAT.galv,staticRoot,x,3.5,z,8);box(0.7,0.12,0.25,s.lampMat,staticRoot,x+0.3,7,z);
-  const pool=new THREE.Mesh(new THREE.PlaneGeometry(11,11),s.poolMat);pool.rotation.x=-Math.PI/2;pool.position.set(x+0.3,0.07,z);pool.renderOrder=2;staticRoot.add(pool);}
-function updateStreetLights(){RING.stations.forEach(s=>{if(!s.lampMat)return;const on=NIGHT>0.3&&EN.has(s.ovl);s.lampMat.emissiveIntensity=on?5:0;s.poolMat.opacity=on?0.55*NIGHT:0;});}
+  if(!s.lampMat){s.lampMat=mat({color:0x3a3c3e,emissive:0xfff1dc,emissiveIntensity:0});s.poolMat=new THREE.MeshBasicMaterial({map:poolTex,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false,fog:false});
+    s.coneMat=coneMatOf();s.haloPos=[];s.lamps=0;s.lampOff=(s.pos[0]*7.3+s.pos[1]*3.1)%1*0.06;}
+  s.lamps++;LAMPS.n++;const [dx,dz]=lampDir(x,z),H=6.2,ax=x+dx*1.45,az=z+dz*1.45,al=dx!==0;
+  // defecte lamp: eigen materialen zodat hij los van de rest kan flikkeren
+  let lm=s.lampMat,pm=s.poolMat,hz=s.haloPos;if(LAMPS.n%23===7){lm=s.lampMat.clone();pm=s.poolMat.clone();const d={s,lm,pm,halo:[]};LAMPS.defect.push(d);hz=d.halo;}
+  // voet met mastluik, getrapte mast, gebogen uithouder en een plat LED-armatuur met lichtgevende onderkant
+  cyl(0.11,0.13,0.55,MAT.galvDark,staticRoot,x,0.28,z,10);box(0.07,0.24,0.02,MAT.galv,staticRoot,x-dx*0.1,0.32,z-dz*0.1);
+  cyl(0.055,0.085,H-0.3,MAT.galv,staticRoot,x,0.55+(H-0.85)/2,z,8);
+  rod(V3(x,H-0.35,z),V3(x+dx*0.55,H+0.1,z+dz*0.55),0.035,MAT.galv,staticRoot,6);rod(V3(x+dx*0.55,H+0.1,z+dz*0.55),V3(x+dx*1.15,H+0.18,z+dz*1.15),0.03,MAT.galv,staticRoot,6);
+  box(al?0.62:0.3,0.08,al?0.3:0.62,MAT.galvDark,staticRoot,ax,H+0.16,az);box(al?0.5:0.24,0.03,al?0.24:0.5,MAT.galvDark,staticRoot,ax,H+0.105,az);
+  const lens=mesh(new THREE.PlaneGeometry(al?0.46:0.2,al?0.2:0.46),lm,staticRoot,ax,H+0.088,az);lens.rotation.x=Math.PI/2;lens.castShadow=false;
+  hz.push(ax,H+0.05,az);
+  const pool=new THREE.Mesh(new THREE.PlaneGeometry(al?9:15,al?15:9),pm);pool.rotation.x=-Math.PI/2;pool.position.set(ax+dx*0.6,0.07,az+dz*0.6);pool.renderOrder=2;staticRoot.add(pool);
+  const cone=new THREE.Mesh(new THREE.ConeGeometry(2.8,H,14,1,true),s.coneMat);cone.position.set(ax,H/2+0.05,az);cone.renderOrder=3;cone.castShadow=false;staticRoot.add(cone);}
+// gloed rond de lampen: één puntenwolk per station (en per defecte lamp)
+function lampHalo(pos){const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+  const m=new THREE.PointsMaterial({map:haloTex,size:2.4,sizeAttenuation:true,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false,color:0xffe9cc});const p=new THREE.Points(g,m);p.frustumCulled=false;scene.add(p);return m;}
+// aan bij schemer (centraal geschakeld per station, met een klein verschil per circuit), 23–6 uur gedimd, alleen als het LS-veld OVL spanning heeft
+function updateStreetLights(){const h=hourOf(),dim=h>=23||h<6?0.6:1,W=WX.cur,wet=clamp(W.rain*1.6,0,1),haze=clamp(W.fog*1.3+W.rain*0.7+W.snow*0.8,0,1);
+  const lvl=s=>NIGHT>0.3+s.lampOff&&EN.has(s.ovl)?dim:0;
+  RING.stations.forEach(s=>{if(!s.lampMat)return;if(!s.haloMat&&s.haloPos.length)s.haloMat=lampHalo(s.haloPos);const on=lvl(s);
+    s.lampMat.emissiveIntensity=on*5;s.poolMat.opacity=on*0.68*NIGHT*(1+0.5*wet);s.coneMat.opacity=on*NIGHT*0.045*haze;if(s.haloMat)s.haloMat.opacity=on*NIGHT*(0.55+0.4*haze);});
+  // defecte lamp: brandt onregelmatig en valt soms even helemaal uit
+  LAMPS.defect.forEach(d=>{if(!d.hm&&d.halo.length)d.hm=lampHalo(d.halo);const on=lvl(d.s),f=on?(Math.random()<0.75?1:Math.random()*0.2):0;
+    d.lm.emissiveIntensity=on*5*f;d.pm.opacity=on*0.68*NIGHT*f*(1+0.5*wet);if(d.hm)d.hm.opacity=on*NIGHT*0.6*f;});}
 function buildDistrict(){
   // straten
   groundQuad(-150,98,165,104,0.04,MAT.asphalt,6);groundQuad(-150,236,165,242,0.04,MAT.asphalt,6);

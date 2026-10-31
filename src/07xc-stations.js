@@ -85,7 +85,7 @@ function respond(model,s,park,vmax){const c=VIEWS[s.id].center,sn=gisSnap(c.x,c.
   const stopAt=routeStopAt(r,c,park),V={g:model,r,d:0,v:0,vmax,wait:0,stops:[{d:stopAt,dur:1e9}],len:8,emergency:true,stopAt,arrived:false,sir:0};
   const [x,z,yaw]=routeAt(r,0);model.position.set(x,0,z);model.rotation.y=yaw;return V;}
 function respondTick(V,dt,run,siren){if(!V||V.arrived)return;driveVehicle(V,run?dt:0);if(V.d>=V.stopAt-0.3)V.arrived=true;
-  if(siren&&run){V.sir-=dt;if(V.sir<=0){V.sir=1.2;if(camera.position.distanceTo(V.g.position)<400)AudioSys.siren?.(distGain(V.g.position)*0.8);}}}
+  if(siren&&run){V.sir-=dt;if(V.sir<=0){V.sir=1.2;if(camera.position.distanceTo(V.g.position)<400)AudioSys.siren?.(distGain(V.g.position)*0.8,siren);}}}
 // zet een hulpdienst direct op zijn plek (na hervatten, of als het spel verder is dan het beeld)
 function respondPark(V){if(!V||V.arrived||!V.r)return;V.d=V.stopAt;V.v=0;driveVehicle(V,0);V.arrived=true;}
 // schuim: vlokken uit de straalpijp en een groeiende schuimlaag op en rond het station
@@ -110,7 +110,7 @@ function stationVisuals(dt){const run=!SIM.paused,now=performance.now();POLICE_B
       if(!v.truck){const t=fireTruck(true);scene.add(t.g);v.truck=respond(t.g,s,PARK.brandweer,13);v.truck.bm=t.bm;}
       if(!v.ploeg){v.ploeg=true;crewDispatch({box:bx,n:2,say:`Storingsdienst ${s.id}: toezicht`,park:PARK.ploeg,standOff:16,until:()=>!s.burn||s.burn.phase==='vervangen'});}
       if(B.phase!=='brand'){respondPark(v.police);respondPark(v.truck);}
-      respondTick(v.police,dt,run,true);respondTick(v.truck,dt,run,true);
+      respondTick(v.police,dt,run,'politie');respondTick(v.truck,dt,run,'brandweer');
       if(v.truck.bm)v.truck.bm.emissiveIntensity=now%400<200?6:0.3;
       // afzetting en lint pas als de politie er is
       if(v.police.arrived&&!v.cordon){v.cordon=cordonUp(s);v.tape=tapeAround(s,5);}

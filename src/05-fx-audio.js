@@ -69,9 +69,13 @@ const AudioSys={ctx:null,muted:false,vol:0.9,busVol:{},route:null,
   chirp(v=1){const b=2600+Math.random()*2400,n=2+Math.floor(Math.random()*4);for(let i=0;i<n;i++)this.tone({f:b*(0.9+Math.random()*0.25),f2:b*(1.15+Math.random()*0.3),gain:0.018*v,dur:0.07+Math.random()*0.05,delay:i*(0.1+Math.random()*0.06)});},
   carPass(v=1){this.burst({type:'lowpass',f:420,q:0.6,gain:0.07*v,dur:3.6,attack:1.6});this.tone({f:95,f2:72,type:'sawtooth',gain:0.012*v,dur:3.2,delay:0.4});},
   cricket(v=1){for(let i=0;i<4;i++)this.tone({f:4300+Math.random()*200,gain:0.007*v,dur:0.035,delay:i*0.065});},
-  // brandbel: snelle slagen op een metalen bel; sirene van de brandweer: twee tonen (hoog-laag)
+  // brandbel: snelle slagen op een metalen bel.
+  // Sirenes (elke 1,2 s een cyclus): brandweer lage twee-toon als een hoorn, ambulance een elektronische wail (op en neer glijdend), politie een snelle hoge twee-toon
   fireBell(v=1){for(let i=0;i<12;i++){this.tone({f:1850,type:'triangle',gain:0.06*v,dur:0.07,delay:i*0.083});this.tone({f:2950,gain:0.02*v,dur:0.05,delay:i*0.083});}},
-  siren(v=1){[[435,0],[580,0.6]].forEach(([f,d])=>{this.tone({f,type:'sawtooth',gain:0.025*v,dur:0.58,delay:d});this.tone({f:f*2,gain:0.012*v,dur:0.58,delay:d});});},
+  siren(v=1,kind='brandweer'){
+    if(kind==='ambulance'){for(const [f,f2,d] of[[620,1350,0],[1350,620,0.6]]){this.tone({f,f2,type:'sawtooth',gain:0.016*v,dur:0.6,delay:d});this.tone({f:f/2,f2:f2/2,type:'triangle',gain:0.02*v,dur:0.6,delay:d});}return;}
+    if(kind==='politie'){[[700,0],[930,0.3],[700,0.6],[930,0.9]].forEach(([f,d])=>{this.tone({f,type:'square',gain:0.012*v,dur:0.28,delay:d});this.tone({f:f*2,gain:0.008*v,dur:0.28,delay:d});});return;}
+    [[392,0],[523,0.6]].forEach(([f,d])=>{this.tone({f,type:'sawtooth',gain:0.025*v,dur:0.58,delay:d});this.tone({f:f*1.5,type:'square',gain:0.007*v,dur:0.58,delay:d});this.tone({f:f*2,gain:0.012*v,dur:0.58,delay:d});});},
   chime(){this.tone({f:660,gain:0.08,dur:0.3});this.tone({f:990,gain:0.07,dur:0.4,delay:0.12});},
   deny(){this.tone({f:200,type:'square',gain:0.045,dur:0.2});},
   ring(){this.tone({f:440,gain:0.045,dur:0.35});this.tone({f:480,gain:0.045,dur:0.35,delay:0.42});},

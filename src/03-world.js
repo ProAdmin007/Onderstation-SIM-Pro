@@ -64,6 +64,8 @@ function buildFence(){
   for(const x of[16,18])cyl(0.04,0.04,2.5,MAT.galv,staticRoot,x,1.25,z1+1.45,8);
 }
 
+// deuren die opengaan als er iemand aankomt (doorTick in 07b-fp.js) en verhoogde vloerdelen buiten de gebouwen (bordes, trede)
+const DOORS=[],STEPS=[];
 const BUILDINGS=[{id:'MS',x0:-20,x1:20,z0:46,z1:56,doors:[-14,-6,6],label:'OS ZUIDWOLDE  ·  10 kV'},
   {id:'MS20',x0:46,x1:76,z0:46,z1:56,doors:[51,59,69],label:'OS ZUIDWOLDE  ·  20 kV'},
   {id:'SRV',x0:-42,x1:-26,z0:46,z1:55.5,doors:[-36],label:'SCADA · DATACENTER'}];
@@ -71,15 +73,28 @@ function buildBuilding({id,x0,x1,z0,z1,doors,label}){
   const H=5.2,root=grp(),bt=C.brick,W=x1-x0,Dz=z1-z0,cx=(x0+x1)/2,cz=(z0+z1)/2;
   const brick=(len)=>{const t=toTex(bt,len/1.76,H/1.5);return mat({map:t,bumpMap:toTex(bt,len/1.76,H/1.5,false),bumpScale:0.8,roughness:0.88});};
   const bl=brick(W),bs=brick(Dz);
-  box(W,H,0.3,bl,root,cx,H/2,z0+0.15);box(W,H,0.3,bl,root,cx,H/2,z1-0.15);
+  // voorgevel in delen met deuropeningen (0,45–3,0 m); de baksteentextuur loopt door over de delen
+  const DH=3.0,brickPart=(xa,xb,ya,yb)=>{const w=xb-xa,h=yb-ya,g=new THREE.BoxGeometry(w,h,0.3),uv=g.attributes.uv;
+    for(let i=0;i<uv.count;i++){const u=uv.getX(i),v=uv.getY(i);uv.setXY(i,i>=20?(x1-xb+u*w)/W:(xa-x0+u*w)/W,(ya+v*h)/H);}mesh(g,bl,root,(xa+xb)/2,(ya+yb)/2,z0+0.15);};
+  {let xc=x0;[...doors].sort((a,c)=>a-c).forEach(d=>{brickPart(xc,d-1.1,0,H);brickPart(d-1.1,d+1.1,DH,H);xc=d+1.1;});brickPart(xc,x1,0,H);}
+  box(W,H,0.3,bl,root,cx,H/2,z1-0.15);
   box(0.3,H,Dz,bs,root,x0+0.15,H/2,cz);box(0.3,H,Dz,bs,root,x1-0.15,H/2,cz);
   box(W+0.1,0.45,Dz+0.1,MAT.concreteDark,root,cx,0.22,cz);
   box(W+0.3,0.25,Dz+0.3,MAT.roof,root,cx,H+0.12,cz);
   for(const z of[z0-0.03,z1+0.03])box(W+0.5,0.3,0.12,MAT.trim,root,cx,H+0.22,z);
   for(const x of[x0-0.03,x1+0.03])box(0.12,0.3,Dz+0.5,MAT.trim,root,x,H+0.22,cz);
   box(2.2,1.2,1.4,MAT.cabinet,root,cx+W*0.2,H+0.85,cz);box(1.2,0.6,1.2,MAT.cabinet,root,cx-W*0.25,H+0.55,cz-1);
-  doors.forEach(x=>{box(2.3,2.75,0.12,MAT.trim,root,x,1.4+0.03,z0-0.03);box(1.0,2.6,0.08,MAT.door,root,x-0.52,1.35,z0-0.08);box(1.0,2.6,0.08,MAT.door,root,x+0.52,1.35,z0-0.08);
-    box(0.04,0.3,0.05,MAT.trim,root,x-0.12,1.3,z0-0.14);
+  doors.forEach(x=>{
+    // kozijn en drempel; stalen dubbele deur die naar buiten opendraait (vluchtrichting), met paniekstang aan de binnenkant
+    for(const s of[-1,1])box(0.08,DH-0.45,0.34,MAT.trim,root,x+s*1.06,(0.45+DH)/2,z0+0.15);box(2.2,0.1,0.34,MAT.trim,root,x,DH-0.05,z0+0.15);box(2.04,0.015,0.34,MAT.galvDark,root,x,0.455,z0+0.15);
+    const leaves=[-1,1].map(s=>{const g=new THREE.Group();g.position.set(x+s*1.02,0.47,z0+0.04);g.userData.dyn=true;root.add(g);const lx=-s*0.51,LH=DH-0.1-0.47;
+      box(1.01,LH,0.05,MAT.door,g,lx,LH/2,-0.025);box(0.03,0.26,0.05,MAT.trim,g,-s*0.9,1.05,-0.07);box(0.8,0.05,0.06,MAT.galv,g,lx,1.0,0.03);
+      if(s<0){const hz=mesh(new THREE.PlaneGeometry(0.3,0.38),MAT.hazard,g,lx,1.55,-0.052);hz.rotation.y=Math.PI;hz.castShadow=false;}
+      return {g,ang:-s*1.65};});
+    DOORS.push({leaves,p:V3(x,1,z0),R:2.6,o:0,want:false});
+    // betonnen bordes op vloerhoogte met een trede ervoor
+    box(3.0,0.45,1.3,MAT.concreteDark,root,x,0.225,z0-0.65);box(3.0,0.22,0.4,MAT.concreteDark,root,x,0.11,z0-1.5);
+    STEPS.push([x-1.5,z0-1.3,x+1.5,z0+0.35,0.45],[x-1.5,z0-1.7,x+1.5,z0-1.3,0.22]);
     const hz=mesh(new THREE.PlaneGeometry(0.4,0.5),MAT.hazard,root,x,3.15,z0-0.1);hz.rotation.y=Math.PI;hz.castShadow=false;
     box(0.4,0.12,0.25,MAT.lamp,root,x,3.65,z0-0.15);});
   for(let x=x0+3;x<x1-2;x+=W/6){const lv=mesh(new THREE.PlaneGeometry(1.2,0.8),MAT.louvre,root,x,3.6,z1+0.01);lv.castShadow=false;}

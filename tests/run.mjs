@@ -665,6 +665,37 @@ const TESTS = [
         return { eerste, tweede, geweigerd, geannuleerd, download, ongeldig }; });
       for (const [k, v] of Object.entries(r)) assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
   } },
+  { name: 'gebouwen in- en uitlopen: open deuropening, bordes op vloerhoogte, deur gaat open bij nadering en weer dicht; monteurs lopen op de vloer', query: '?autostart&t=11', async run(p) {
+      const r = await p.evaluate(async () => { const O = OS, bld = O.DOORS.filter(d => d.leaves.length === 2);
+        // door elke deur van de stationsgebouwen kun je recht naar binnen lopen
+        const vrij = bld.length >= 7 && bld.every(d => { for (let z = d.p.z - 2.2; z < d.p.z + 1.5; z += 0.1) if (O.blockedAt(d.p.x, z)) return false; return true; });
+        const d = bld[0], bordes = Math.abs(O.floorAt(d.p.x, d.p.z - 0.6) - 0.45) < 0.01 && Math.abs(O.floorAt(d.p.x, d.p.z - 1.5) - 0.22) < 0.01 && Math.abs(O.floorAt(d.p.x, d.p.z + 1) - 0.45) < 0.01;
+        O.enterFP(); O.FP.pos.set(d.p.x, 0, d.p.z - 6); for (let i = 0; i < 10; i++) O.doorTick(0.1); const dichtVer = d.o === 0;
+        O.FP.pos.set(d.p.x, 0, d.p.z - 1.8); for (let i = 0; i < 10; i++) O.doorTick(0.1); const open = d.o === 1 && Math.abs(d.leaves[0].g.rotation.y) > 1.5;
+        O.FP.pos.set(d.p.x, 0, d.p.z - 8); for (let i = 0; i < 10; i++) O.doorTick(0.1); const weerDicht = d.o === 0 && d.leaves[0].g.rotation.y === 0; O.exitFP();
+        // een monteur die naar binnen loopt, staat binnen op de vloer
+        O.crewSpawn({ box: O.VIEWS['V-F6'].box, say: '', until: () => false, n: 1 }); const n = O.NPCS[O.NPCS.length - 1]; let y = 0;
+        for (let i = 0; i < 2000 && n.state !== 'work'; i++) O.updateNPCs(0.05); y = n.P.g.position.y;
+        const opVloer = n.state === 'work' && Math.abs(y - 0.45) < 0.05;
+        return { vrij, bordes, dichtVer, open, weerDicht, opVloer, y }; });
+      for (const [k, v] of Object.entries(r)) if (typeof v === 'boolean') assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
+  } },
+  { name: 'straatverlichting: brandt alleen in het donker en met spanning op het OVL-veld, gedimd na 23 uur, lichtkegel bij mist', query: '?autostart&t=21.5', async run(p) {
+      const r = await p.evaluate(async () => { const O = OS, s = O.RING.stations.find(x => x.lampMat && x.lamps > 2), t0 = O.SIM.t; O.updateSky(0.5); O.setWeather('helder', true, true); O.updateStreetLights();
+        const aan = s.lampMat.emissiveIntensity > 4 && s.poolMat.opacity > 0.2 && s.coneMat.opacity < 0.01; O.SIM.t = t0 + 2 * 60; O.updateStreetLights(); const gedimd = Math.abs(s.lampMat.emissiveIntensity - 3) < 0.01; O.SIM.t = t0;
+        O.setWeather('mist', true, true); O.updateStreetLights(); const kegel = s.coneMat.opacity > 0.02;
+        O.D[s.ovl].state = 0; O.computeFlows(); O.updateStreetLights(); const zonderSpanning = s.lampMat.emissiveIntensity === 0; O.D[s.ovl].state = 1; O.computeFlows();
+        O.updateSky(12); O.updateStreetLights(); const dag = s.lampMat.emissiveIntensity === 0;
+        return { lampen: O.LAMPS.n > 30, aan, gedimd, kegel, zonderSpanning, dag, defect: O.LAMPS.defect.length > 0 }; });
+      for (const [k, v] of Object.entries(r)) assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
+  } },
+  { name: 'sirenes: brandweer, ambulance en politie klinken verschillend', query: '?autostart', async run(p) {
+      const r = await p.evaluate(() => { const A = OS.AudioSys, orig = A.tone, rec = []; A.tone = function (o) { rec.push(o); };
+        const take = k => { rec.length = 0; A.siren(1, k); return rec.map(o => `${o.type || 'sine'}:${Math.round(o.f)}>${o.f2 ? Math.round(o.f2) : ''}@${o.delay || 0}`).join(' '); };
+        const b = take('brandweer'), a = take('ambulance'), po = take('politie'); A.tone = orig;
+        return { verschillend: new Set([b, a, po]).size === 3 && b.length > 0, wail: /620>1350/.test(a) && /1350>620/.test(a), b, a, po }; });
+      assert(r.verschillend && r.wail, `sirenes: ${JSON.stringify(r)}`);
+  } },
   { name: 'aanwijzen: gebouwen zonder apparaat (datacenter) geven geen fout bij hover en rondlopen', query: '?autostart&t=11', async run(p) {
       const r = await p.evaluate(() => { const O = OS, c = O.VIEWS.SRV.center; O.camera.position.set(c.x, c.y + 40, c.z + 25); O.camera.lookAt(c); O.camera.updateMatrixWorld();
         const v = c.clone().project(O.camera), x = (v.x + 1) / 2 * innerWidth, y = (1 - v.y) / 2 * innerHeight; let fout = null, id;

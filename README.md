@@ -168,7 +168,8 @@ Bedoeld voor **bedrijfsvoerders en monteurs in opleiding**, studenten **elektrot
 - **Rondlopen (first person):** druk op `V` of op de knop *Rondlopen*.
   - Je loopt met `WASD`, rent met `Shift` en kijkt rond met de muis.
   - Richt het kruis op een schakelaar: `F` schakelt direct. `E` maakt de cursor vrij (en opent het paneel als je naar een schakelaar kijkt), zodat je ook in het SCADA-schema kunt schakelen. Met nog een keer `E` loop je verder.
-  - Je loopt niet door apparatuur, muren, huizen of het hek. De gebouwen kun je via de deuren in, en via de open poort loop je de wijk in naar de MS-stations.
+  - Je loopt niet door apparatuur, muren, huizen of het hek. Via de open poort loop je de wijk in naar de MS-stations.
+  - **Gebouwen in en uit:** voor elke deur van de stationsgebouwen ligt een betonnen bordes met een trede, zodat je soepel naar de vloerhoogte binnen (0,45 m) opstapt. De stalen dubbele deuren draaien naar buiten open als je eraan komt en vallen achter je weer dicht, met geluid. Binnen zitten paniekstangen. Ook monteurs openen de deuren en lopen binnen op de vloer.
   - Met `V` stop je met rondlopen; met nog een keer `V` ga je verder waar je was.
   - Lopen gaat met 2,2 m/s, rennen met `Shift` met 8 m/s en sprinten met `Q` met 16 m/s. Met `spatie` spring je; pauzeren gaat tijdens het rondlopen met `P`.
   - Met `Z` zet je je **zaklamp** aan of uit. Handig 's nachts op het terrein, in een donker MS-station of bij een storing in het gebouw.
@@ -239,8 +240,11 @@ Bedoeld voor **bedrijfsvoerders en monteurs in opleiding**, studenten **elektrot
     - boven 90 °C (het maximum voor XLPE) kost het punten;
     - vanaf 105 °C brandt de kabel door.
     Bij 130% duurt dat ongeveer een uur, bij 150% zo'n 40 minuten. De temperatuur staat in het tabblad *Kabels*, in het stationspaneel en in het veldpaneel.
-- **Straatverlichting:** elk MS-station heeft een LS-veld *Openbare verlichting* met een schemerschakeling. Alle lantaarns hangen aan het dichtstbijzijnde station en gaan uit als dat station of het OVL-veld spanningsloos is, met een lichtvlek op straat als ze branden.
-- **Inloop-MS-stations:** elk ringstation kun je in, via de open deur of met de knop *Naar binnen* in het stationspaneel. Binnen staan:
+- **Straatverlichting:** elk MS-station heeft een LS-veld *Openbare verlichting* met een schemerschakeling. Alle lantaarns hangen aan het dichtstbijzijnde station en gaan uit als dat station of het OVL-veld spanningsloos is.
+  - **Lantaarn:** een getrapte mast met voet en mastluik, en een gebogen uithouder met een plat LED-armatuur (warm wit, 3000 K) boven de straat.
+  - **Licht:** een langgerekte lichtvlek langs de weg en een gloed rond de lamp. Bij mist, regen of sneeuw zie je een lichtkegel, en in de regen glimt de natte straat sterker.
+  - **Schakelen:** elk station schakelt centraal, met een klein verschil per circuit. Tussen 23:00 en 06:00 wordt de verlichting gedimd. Hier en daar flikkert een defecte lamp.
+- **Inloop-MS-stations:** elk ringstation kun je in, via de deur (die gaat open als je eraan komt, of als er een monteur binnen werkt) of met de knop *Naar binnen* in het stationspaneel. Binnen staan:
   - een compacte RMU met de velden L, T en R, met standmelders, spanningslampjes en een kortsluitverklikker (KSV);
   - een laagspanningsrek met een hoofdschakelaar en NH-lastscheiders per LS-veld (de klep gaat echt open of dicht);
   - de distributietransformator achter een gaashek;
@@ -534,7 +538,7 @@ Alle geluid wordt in de browser gemaakt (Web Audio) en hangt af van waar je bent
 - **Op het 110 kV-terrein:** transformatorbrom en corona-geknetter (sterker bij regen en mist).
 - **In de wijk:** verkeersgeruis, passerende auto's, vogels overdag en krekels op zomer- en lenteavonden.
 - **Overal:** wind, regen en onweer.
-- **Gebeurtenissen:** de brandbel en de sirenes van brandweer en ambulance, de bel van de spoorwegovergang en het gedreun van een passerende trein.
+- **Gebeurtenissen:** de brandbel; sirenes die je uit elkaar houdt: de brandweer met een lage twee-toon, de ambulance met een aanzwellende en wegzakkende toon (wail) en de politie met een snelle hoge twee-toon; de bel van de spoorwegovergang en het gedreun van een passerende trein.
 </details>
 
 <a id="ontwikkelen"></a>

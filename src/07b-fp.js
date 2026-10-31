@@ -14,7 +14,7 @@ function buildColliders(){
   BUILDINGS.forEach(b=>{const t=0.3;addRect(b.x0,b.z1-t,b.x1,b.z1);addRect(b.x0,b.z0,b.x0+t,b.z1);addRect(b.x1-t,b.z0,b.x1,b.z1);
     let x=b.x0;[...b.doors].sort((a,c)=>a-c).forEach(dx=>{addRect(x,b.z0,dx-1.05,b.z0+t);x=dx+1.05;});addRect(x,b.z0,b.x1,b.z0+t);});
   // inrichting binnen
-  addRect(-19.4,54.8,-14.0,55.7);addRect(-17.1,46.7,-13.9,47.7);addRect(13.3,54.9,17.9,55.5);addRect(16.9,47.0,18.3,48.2);addRect(47.9,54.8,51.2,55.7);
+  addRect(-19.4,54.8,-14.0,55.7);addRect(-19.0,46.7,-15.8,47.7);addRect(13.3,54.9,17.9,55.5);addRect(16.9,47.0,18.3,48.2);addRect(47.9,54.8,51.2,55.7);
   addRect(37.4,33.4,42.6,35.8);   // busje (naast de stationsweg)
   // hek met open poort, poortvleugels opzij
   const F=FENCE,t=0.25;addRect(F.x0,F.z0-t,F.x1,F.z0+t);addRect(F.x0-t,F.z0,F.x0+t,F.gateW[0]);addRect(F.x0-t,F.gateW[1],F.x0+t,F.z1);addRect(F.x1-t,F.z0,F.x1+t,F.z1);
@@ -23,7 +23,15 @@ function buildColliders(){
 }
 function blockedAt(x,z){const r=0.3;if(x<-200||x>250||z<-110||z>440)return true;
   for(const q of FP.rects)if(x>q[0]-r&&x<q[2]+r&&z>q[1]-r&&z<q[3]+r)return true;return false;}
-function floorAt(x,z){const r=ROOMS.find(r=>x>r.x0-0.05&&x<r.x1+0.05&&z>r.z0-0.05&&z<r.z1+0.05);return r?r.y0:0.02;}
+function floorAt(x,z){const r=ROOMS.find(r=>x>r.x0-0.05&&x<r.x1+0.05&&z>r.z0-0.05&&z<r.z1+0.05);if(r)return r.y0;
+  for(const s of STEPS)if(x>s[0]&&x<s[2]&&z>s[1]&&z<s[3])return s[4];return 0.02;}
+// ---- deuren: gaan open als jij (rondlopen of camera) of een monteur in de buurt is, en vallen daarna weer dicht
+function doorTick(dt){const me=FP.on?FP.pos:camera.position.y<4?camera.position:null,crew=NPCS.filter(n=>n.state!=='out').map(n=>n.P.g.position),dist=(p,D_)=>Math.hypot(p.x-D_.p.x,p.z-D_.p.z);
+  for(const D_ of DOORS){const want=(me&&dist(me,D_)<2.8)||crew.some(p=>dist(p,D_)<D_.R),near=camera.position.distanceTo(D_.p)<30;
+    if(want&&!D_.want&&D_.o<0.05&&near){const v=distGain(D_.p);AudioSys.burst({type:'highpass',f:2400,gain:0.1*v,dur:0.04});AudioSys.tone({f:190,f2:140,type:'triangle',gain:0.02*v,dur:0.5,delay:0.05});}
+    D_.want=want;const o0=D_.o;D_.o=approach(D_.o,want?1:0,dt/0.7);if(D_.o===o0)continue;
+    if(D_.o===0&&near){const v=distGain(D_.p);AudioSys.burst({type:'lowpass',f:320,gain:0.25*v,dur:0.15});AudioSys.tone({f:72,gain:0.14*v,dur:0.12});}
+    const k=easeIO(D_.o);D_.leaves.forEach(l=>l.g.rotation.y=l.ang*k);}}
 const canvasEl=renderer.domElement;
 // ---- zaklamp (Z): spotlicht dat met je blik meebeweegt; staat altijd in de scène (intensiteit 0 = uit) zodat er geen shaderhercompilatie is
 const TORCH={on:false,light:new THREE.SpotLight(0xfff0d8,0,38,0.36,0.5,1.4)};

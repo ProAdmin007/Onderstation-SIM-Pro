@@ -49,7 +49,9 @@ const CREW_FROM=V3(25,0,74);   // bij de poort
 function standPoints(box,n,from,dist=1.2){const c=box.getCenter(V3()),pts=[];
   const cand=[];for(let a=0;a<16;a++){const ang=a/16*Math.PI*2;const r=Math.max(box.max.x-box.min.x,box.max.z-box.min.z)/2+dist;cand.push(V3(c.x+Math.cos(ang)*r,0,c.z+Math.sin(ang)*r));}
   cand.sort((p,q)=>p.distanceTo(from)-q.distanceTo(from));
-  for(const p of cand){const f=nearestFree(p.x,p.z);if(!f)continue;const q=V3(GRID.x0+f[0]+0.5,0,GRID.z0+f[1]+0.5);if(pts.every(o=>o.distanceTo(q)>1.4))pts.push(q);if(pts.length>=n)break;}
+  const roomAt=(x,z)=>ROOMS.find(r=>x>r.x0&&x<r.x1&&z>r.z0&&z<r.z1)||null,room=roomAt(c.x,c.z);
+  for(const same of room?[true,false]:[false])for(const p of cand){if(pts.length>=n)break;const f=nearestFree(p.x,p.z);if(!f)continue;const q=V3(GRID.x0+f[0]+0.5,0,GRID.z0+f[1]+0.5);
+    if(same&&roomAt(q.x,q.z)!==room)continue;if(pts.every(o=>o.distanceTo(q)>1.4))pts.push(q);}
   return pts;}
 const CREW_NAMES=['Henk','Sandra','Kees','Mo','Fatima','Joris','Ilse','Daan','Ruud','Esra','Bram','Lotte'];let crewSeq=0;
 // monteurs laten verschijnen en naar het werk lopen (crewDispatch in 07xb-crewvan.js kiest: lopend of met het storingsbusje)
@@ -66,7 +68,7 @@ function npcWalk(n,dt,spd){const tgt=n.path[n.i];if(!tgt)return true;const p=n.P
   const step=Math.min(L,spd*dt);p.addScaledVector(d,step/L);
   const yaw=Math.atan2(d.x,d.z);n.P.g.rotation.y+=Math.atan2(Math.sin(yaw-n.P.g.rotation.y),Math.cos(yaw-n.P.g.rotation.y))*Math.min(1,dt*8);
   n.phase+=dt*spd*3.4;const s=Math.sin(n.phase)*0.55;n.P.legL.rotation.x=s;n.P.legR.rotation.x=-s;n.P.armL.rotation.x=-s*0.8;n.P.armR.rotation.x=s*0.8;
-  p.y=Math.abs(Math.cos(n.phase))*0.04;return false;}
+  p.y=floorAt(p.x,p.z)-0.02+Math.abs(Math.cos(n.phase))*0.04;return false;}
 const _np=new THREE.Vector3();
 function updateNPCs(dt){
   const spd=SIM.paused?0:1.5*clamp(SIM.speed/30,1,3.5),w=innerWidth,h=innerHeight,ins=camInside();
@@ -79,7 +81,7 @@ function updateNPCs(dt){
     if(n.bubble>0){n.bubble-=dt;if(n.bubble<=0)n.el.textContent=n.state==='out'?'Klaar, op weg terug':n.say;}
     else if(n.state==='out'){if(spd&&npcWalk(n,dt,spd)){scene.remove(n.P.g);disposeTree(n.P.g);n.el.remove();NPCS.splice(k,1);continue;}}
     // tekstwolkje boven het hoofd
-    _np.copy(n.P.g.position).setY(2.25).project(camera);const dist=camera.position.distanceTo(n.P.g.position);
+    _np.copy(n.P.g.position).setY(n.P.g.position.y+2.25).project(camera);const dist=camera.position.distanceTo(n.P.g.position);
     const vis=!ins&&dist<60&&(n.talk||n.state!=='work'||n.bubble>0);
     if(vis&&_np.z<1&&Math.abs(_np.x)<1.1&&Math.abs(_np.y)<1.1){n.el.style.display='';n.el.style.transform=`translate(${((_np.x+1)/2*w).toFixed(1)}px,${((1-_np.y)/2*h).toFixed(1)}px) translate(-50%,-100%)`;}
     else n.el.style.display='none';}}

@@ -36,7 +36,7 @@ function fireTruck(ladder){const g=new THREE.Group(),bm=mat({color:0x0a1430,emis
 function fireTick(dt){const now=performance.now(),run=!SIM.paused,sp=clamp(SIM.speed/30,1,4);
   for(const t of FIRE.trucks){if(t.state==='gone')continue;if(t.lad&&FIRE.douseAt==null&&t.lad.rotation.x<0)t.lad.rotation.x=Math.min(0,t.lad.rotation.x+dt*0.4);const flash=(now%500<250)!==(t.ladder?true:false);t.bm.emissiveIntensity=t.state==='leave'?0:(now%400<200?6:0.3)*(flash?1:0.5);
     if(t.state==='come'&&run){t.g.position.z-=Math.min(t.g.position.z-t.z,20*sp*dt);if(t.g.position.z-t.z<0.05)t.state='park';
-      FIRE.sirenT-=dt;if(FIRE.sirenT<=0){FIRE.sirenT=1.2;const v=distGain(t.g.position);AudioSys.siren?.(v);}}
+      FIRE.sirenT-=dt;if(FIRE.sirenT<=0){FIRE.sirenT=1.2;const v=distGain(t.g.position);AudioSys.siren?.(v,'brandweer');}}
     else if(t.state==='wait'&&run){t.wait-=dt;if(t.wait<=0){t.state='leave';t.g.rotation.y=0;}}
     else if(t.state==='leave'&&run){t.g.position.z+=14*sp*dt;if(t.g.position.z>t.z+420){scene.remove(t.g);t.state='gone';}}}
   if(FIRE.trucks.length&&FIRE.trucks.every(t=>t.state==='gone'))FIRE.trucks=[];
