@@ -166,6 +166,19 @@ const TESTS = [
       assert(r.aan.join() === 'MS1,MS5', `verwacht MS1 en MS5 aan, kreeg ${r.aan}`);
       assert(r.obj[0] === 'done', `doel MS1/MS5 niet gehaald: ${r.obj}`);
   } },
+  { name: 'scenario brand in het datacenter: blussing faalt, SCADA lang weg, eerst MS-stations terug, binnenlopen is een incident', query: '?play=datacenter', async run(p) {
+      const r = await p.evaluate(() => { const O = OS, G = O.GAME; T.quiet(); T.step(3); const voor = !G.flags.scadaDown && !O.FIRE.on;
+        T.step(5); const brand = O.FIRE.on && O.FIRE.bld === 'SRV' && G.flags.scadaDown === true && G.flags.dcAlarm && O.SVM.led.opacity === 0;
+        const opAfstand = !O.scadaReach('V-F6') && !O.scadaReach('MS1-L');
+        // de speler loopt het brandende datacenter in
+        const room = O.ROOMS.find(r => r.id === 'SRV'), i0 = O.SIM.incidents; O.enterFP(); O.FP.pos.set((room.x0 + room.x1) / 2, 0, (room.z0 + room.z1) / 2); O.camera.position.set(O.FP.pos.x, 2.1, O.FP.pos.z); T.step(0.5);
+        const binnen = O.SIM.incidents === i0 + 1 && G.flags.dcEntered; O.FP.pos.set(25, 0, 62); O.camera.position.set(25, 1.7, 62); O.exitFP();
+        T.step(45); const geblust = !O.FIRE.on && G.flags.scadaDown === true;
+        T.step(45); const ms = G.flags.scadaDown === 'os' && O.scadaReach('MS1-L') && !O.scadaReach('V-F6');
+        T.step(52); const terug = G.flags.scadaDown === false && O.scadaReach('V-F6');
+        return { voor, brand, opAfstand, binnen, geblust, ms, terug }; });
+      for (const [k, v] of Object.entries(r)) assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
+  } },
   { name: 'scenario hittegolf start met juist seizoen, weer en storing', query: '?play=hitte', async run(p) {
       const r = await p.evaluate(() => { T.step(25); return { wx: OS.WX.type, amb: OS.ambient(), fan: OS.D.T1.fanFail }; });
       assert(r.wx === 'hitte' && r.amb > 30, `geen hittegolf: ${r.wx} ${r.amb}`);

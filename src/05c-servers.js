@@ -74,6 +74,7 @@ const SVM={body:mat({color:0x1a1c1f,roughness:0.6,metalness:0.4}),
   mod:mat({color:0x9aa0a5,roughness:0.5}),modB:mat({color:0x24364d,roughness:0.5}),router:mat({color:0xf2f2ee,roughness:0.5}),dark:mat({color:0x22252a,roughness:0.5}),odf:mat({color:0xc8ccce,roughness:0.5}),
   mcb:mat({color:0xf4f4f0,roughness:0.5}),term:mat({color:0x9aa1a6,roughness:0.6}),termB:mat({color:0x2f6fd6,roughness:0.6}),fduct:mat({color:0xff7a1a,roughness:0.6}),sig:mat({color:0x6b7177,roughness:0.7}),
   fPsu:mat({map:RTUF.psu,roughness:0.5}),fCpu:mat({map:RTUF.cpu,roughness:0.5}),fIo:mat({map:RTUF.io,roughness:0.5}),fLte:mat({map:RTUF.lte,roughness:0.5}),fSw:mat({map:RTUF.sw,roughness:0.5}),fOdf:mat({map:RTUF.odf,roughness:0.5}),doc:mat({map:RTUF.doc,roughness:0.8}),
+  flash:mat({color:0x8a5a10,emissive:0xff3a10,emissiveIntensity:0,roughness:0.3}),
   rtuOk:mat({color:0x0a2a14,emissive:0x2cff6a,emissiveIntensity:2}),rtuLte:mat({color:0x0a1430,emissive:0x2a8bff,emissiveIntensity:2}),rtuFo:mat({color:0x2a1a00,emissive:0xffa21a,emissiveIntensity:2})};
 // breed bordje voor lange opschriften (het standaardplaatje is voor korte codes)
 const WSIGN=new Map();
@@ -173,7 +174,7 @@ function buildServerRoom(r){if(!r)return;const Y=r.y0,E=SVM,S=staticRoot,cx=(r.x
   plate('VESDA',S,vx,Y+1.8,r.z0+0.02,0,0.24);
   for(const x of[-39,-35,-31,-28])for(const z of[48,51.2,54.2])cyl(0.06,0.06,0.04,MAT.white,S,x,r.y1-0.02,z,12);
   // bij de deur: waarschuwing gasblussing met flitslicht, blusknop, nood-uit en pasjeslezer
-  wsign('GASBLUSSING · BIJ ALARM DIRECT VERLATEN',S,-36,Y+2.8,r.z0+0.02,0,2.2);box(0.2,0.14,0.08,E.gas,S,-36,Y+3.05,r.z0+0.04);box(0.12,0.06,0.02,mat({color:0x8a5a10,roughness:0.3}),S,-36,Y+3.05,r.z0+0.085);
+  wsign('GASBLUSSING · BIJ ALARM DIRECT VERLATEN',S,-36,Y+2.8,r.z0+0.02,0,2.2);box(0.2,0.14,0.08,E.gas,S,-36,Y+3.05,r.z0+0.04);box(0.12,0.06,0.02,E.flash,S,-36,Y+3.05,r.z0+0.085);
   box(0.14,0.18,0.06,E.yellow,S,-33.9,Y+1.4,r.z0+0.03);plate('BLUSSEN',S,-33.9,Y+1.58,r.z0+0.02,0,0.2);
   box(0.14,0.14,0.06,IM.redBtn,S,-33.6,Y+1.4,r.z0+0.03);plate('NOOD-UIT',S,-33.6,Y+1.58,r.z0+0.02,0,0.2);
   box(0.08,0.12,0.03,MAT.black,S,-37.35,Y+1.25,r.z0+0.02);
@@ -185,6 +186,8 @@ function buildServerRoom(r){if(!r)return;const Y=r.y0,E=SVM,S=staticRoot,cx=(r.x
   box(0.5,0.08,0.5,E.dark,S,dx,Y+0.48,dz+0.75);box(0.5,0.55,0.06,E.dark,S,dx,Y+0.8,dz+1.0);cyl(0.03,0.03,0.4,MAT.galvDark,S,dx,Y+0.25,dz+0.75,8);
   wsign('SCADA · DATACENTER',S,cx,Y+3.4,r.z1-0.02,P,3.2);}
 // ---- elke frame: LEDs knipperen (patroon verschuift); rood als de SCADA-verbinding is weggevallen (cyberaanval)
-function serverTick(dt){SRV.t+=dt;if(SRV.t<0.22)return;SRV.t=0;const down=SCADA_DOWN();
+// na de brand: roet op racks en kasten, geen LEDs meer
+function dcBurnt(){if(SRV.burnt)return;SRV.burnt=true;for(const m of[...Object.values(SVM.front),SVM.rear,SVM.body,SVM.fUps,SVM.fBat,SVM.ups,SVM.crac,SVM.fCrac])m.color.setHex(0x3c3835);SVM.led.opacity=0;}
+function serverTick(dt){SVM.flash.emissiveIntensity=GAME.flags.dcAlarm&&performance.now()%700<300?5:0;SRV.t+=dt;if(SRV.t<0.22)return;SRV.t=0;const down=GAME.flags.scadaDown===true;
   SRV.ledTex.offset.y=Math.floor(Math.random()*8)/8;SVM.led.color.setHex(down?0xff3030:0xffffff);
   const b=performance.now()%1000<500;SVM.rtuOk.emissive.setHex(down?0xff2020:0x2cff6a);SVM.rtuOk.emissiveIntensity=b?2.5:0.6;SVM.rtuLte.emissiveIntensity=down?0:(Math.random()<0.5?2.5:0.5);SVM.rtuFo.emissiveIntensity=down?0:Math.random()<0.6?2.5:0.6;}

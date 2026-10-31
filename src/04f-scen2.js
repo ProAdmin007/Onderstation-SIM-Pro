@@ -6,6 +6,8 @@ function stationDamage(s,why){s.damaged=why;const v=VIEWS[s.id];if(v)spawnArc(v.
 function stationProtection(){RING.stations.forEach(s=>{if(s.damaged&&EN.has(s.node)){tripFrom(s.node);GAME.stats.recloseFault++;award(-40,'Ingeschakeld op beschadigd station');
   pushAlarm(`${s.id} ${s.name} (${s.damaged}) onder spanning gebracht – beveiliging schakelt direct af`,'warn');}});}
 const SCADA_DOWN=()=>!!GAME.flags.scadaDown;
+// is dit apparaat op afstand te bedienen? (bij scadaDown==='os' wel de schakelaars in de MS-stations)
+const scadaReach=id=>!GAME.flags.scadaDown||(GAME.flags.scadaDown==='os'&&RING.stations.some(s=>s.id===D[id]?.bay));
 // lokaal bedienen: in first person dichtbij het veld staan
 const localOk=id=>SIM.localTest||(FP.on&&!!VIEWS[id]&&camera.position.distanceTo(VIEWS[id].center)<7);
 let WATER=null;

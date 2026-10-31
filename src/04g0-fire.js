@@ -1,12 +1,13 @@
 
 // ============================================================ brand in het 10 kV-gebouw: vlammen uit het dak, brandbel, brandweer met wagens, mensen en waterstraal
-// Gedeeld door het scenario 'brand' en het grote incident. fireStart → (spanningsloos) fireDouse → fireStop.
-const FIRE={on:false,acc:0,glow:null,flames:[],k:1,douseAt:null,bellT:0,sirenT:0,trucks:[],scorch:null,water:0};
+// Gedeeld door het scenario 'brand', het grote incident en het scenario 'datacenter'. fireStart → fireDouse (blussen) → fireStop.
+// fireStart({bld,off,ladder}): gebouw (VIEWS-id), verschuiving van de brandhaard langs het gebouw, en of de ladderwagen water spuit.
+const FIRE={bld:'MS',off:-8,ladder:true,on:false,acc:0,glow:null,flames:[],k:1,douseAt:null,bellT:0,sirenT:0,trucks:[],scorch:null,water:0};
 const flameTex=(()=>{const c=cnv(64,128),g=c.getContext('2d'),gr=g.createRadialGradient(32,92,2,32,80,58);
   gr.addColorStop(0,'rgba(255,250,210,1)');gr.addColorStop(0.25,'rgba(255,200,70,0.95)');gr.addColorStop(0.55,'rgba(255,110,20,0.7)');gr.addColorStop(1,'rgba(200,40,0,0)');
   g.fillStyle=gr;g.beginPath();g.moveTo(32,0);g.bezierCurveTo(58,50,64,90,32,128);g.bezierCurveTo(0,90,6,50,32,0);g.fill();const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t;})();
-const fireSpot=()=>{const b=VIEWS.MS.box;return {x:(b.min.x+b.max.x)/2-8,y:b.max.y,z:(b.min.z+b.max.z)/2,b};};
-function fireStart(){if(FIRE.on)return;const {x,y,z,b}=fireSpot();Object.assign(FIRE,{on:true,k:1,douseAt:null,bellT:0,acc:0,water:0});
+const fireSpot=()=>{const b=VIEWS[FIRE.bld].box;return {x:(b.min.x+b.max.x)/2+FIRE.off,y:b.max.y,z:(b.min.z+b.max.z)/2,b};};
+function fireStart(o={}){if(FIRE.on)return;Object.assign(FIRE,{bld:o.bld||'MS',off:o.off??-8,ladder:o.ladder!==false});const {x,y,z,b}=fireSpot();Object.assign(FIRE,{on:true,k:1,douseAt:null,bellT:0,acc:0,water:0});
   FIRE.glow=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,color:0xff7a1a,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending}));
   FIRE.glow.position.set(x,b.min.y+2.5,b.min.z-0.4);FIRE.glow.scale.set(6,4,1);scene.add(FIRE.glow);
   // vlammen die uit het dak slaan, met een gloed erboven en een zwartgeblakerde plek op het dak
@@ -50,7 +51,7 @@ function fireTick(dt){const now=performance.now(),run=!SIM.paused,sp=clamp(SIM.s
   // brandbel tot de brandweer binnen is
   if(FIRE.douseAt==null&&run){FIRE.bellT-=dt;if(FIRE.bellT<=0){FIRE.bellT=1;AudioSys.fireBell?.(distGain(V3(x,2,z)));}}
   // waterstraal van de brandweer op het dak
-  if(FIRE.douseAt!=null&&run){FIRE.water+=dt;const L=FIRE.trucks.find(t=>t.lad&&t.state==='park');if(L){L.lad.rotation.x=Math.max(-0.62,L.lad.rotation.x-dt*0.4);const tip=L.lad.localToWorld(_tip.set(0,0.2,12.3));
+  if(FIRE.douseAt!=null&&run&&FIRE.ladder){FIRE.water+=dt;const L=FIRE.trucks.find(t=>t.lad&&t.state==='park');if(L){L.lad.rotation.x=Math.max(-0.62,L.lad.rotation.x-dt*0.4);const tip=L.lad.localToWorld(_tip.set(0,0.2,12.3));
       if(L.lad.rotation.x<-0.6)while(FIRE.water>0.04){FIRE.water-=0.04;waterDrop(tip,V3(x+rnd(-3,3),y+0.5,z+rnd(-2,2)));}}else FIRE.water=0;}}
 const _tip=new THREE.Vector3();
 const waterMat=new THREE.SpriteMaterial({map:glowTex,color:0xe4f2ff,transparent:true,opacity:0.9,depthWrite:false});

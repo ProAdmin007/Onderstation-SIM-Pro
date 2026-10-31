@@ -145,7 +145,7 @@ const RUNS = [
   { name: 'zkh', query: '?play=zkh' }, { name: 'storm', query: '?play=storm' }, { name: 'piek', query: '?play=piek' },
   { name: 'blackout', query: '?play=blackout' }, { name: 'hitte', query: '?play=hitte' }, { name: 'winter', query: '?play=winter' },
   { name: 'dubbel', query: '?play=dubbel' }, { name: 'aanrijding', query: '?play=aanrijding' }, { name: 'cyber', query: '?play=cyber' },
-  { name: 'overstroming', query: '?play=overstroming' }, { name: 'zonnepiek', query: '?play=zonnepiek' }, { name: 'kraan', query: '?play=kraan' }, { name: 'brand', query: '?play=brand' },
+  { name: 'overstroming', query: '?play=overstroming' }, { name: 'zonnepiek', query: '?play=zonnepiek' }, { name: 'kraan', query: '?play=kraan' }, { name: 'brand', query: '?play=brand' }, { name: 'datacenter', query: '?play=datacenter' },
   { name: 'evenement', query: '?play=evenement' }, { name: 'laadpiek', query: '?play=laadpiek' }, { name: 'pinksteren', query: '?play=pinksteren' }, { name: 'aardonweer', query: '?play=aardonweer' }, { name: 'dagdienst', query: '?play=day' }, { name: 'avonddienst', query: '?play=eve&diff=zwaar' },
 ];
 // parallel: elke werker een eigen browser; de lange diensten eerst, zodat ze niet als laatste overblijven

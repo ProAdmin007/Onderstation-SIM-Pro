@@ -48,7 +48,7 @@ Bedoeld voor **bedrijfsvoerders en monteurs in opleiding**, studenten **elektrot
 | 📞 **Klanten** | Telefoon met klantmeldingen, storingsbandje, **verwachte hersteltijd** doorgeven en prioriteitsklanten bellen. |
 | 📈 **Netbeheer** | **Netcongestie** en flexibel vermogen, belastingprognose, veroudering en preventief onderhoud, beveiligingsinstellingen. |
 | 🗺️ **Kabels en GIS** | Alle kabels fysiek langs de straten met moffen en aanlegjaar: **röntgenblik** in 3D, een **kabeltablet** met kaart of luchtfoto, foutplaats bepalen met de meetwagen en **graafwerk (KLIC)**. |
-| 🎓 **Leren en spelen** | 11 lessen, 17 scenario's, dag- en avonddiensten, vrij spelen met incidenten, score met cijfer, **tijdlijn en herhaling**, opslaan en verder spelen. |
+| 🎓 **Leren en spelen** | 11 lessen, 18 scenario's, dag- en avonddiensten, vrij spelen met incidenten, score met cijfer, **tijdlijn en herhaling**, opslaan en verder spelen. |
 | 🌦️ **Sfeer** | Dag en nacht, vier seizoenen, weer (onweer, sneeuw, mist, hittegolf), ziekenhuis, kassen en kleine afnemers die zichtbaar zonder stroom zitten, **stadsleven** (trein, bus, weekmarkt, voetgangers), buren op straat bij uitval. |
 
 <a id="screenshots"></a>
@@ -110,6 +110,7 @@ Bedoeld voor **bedrijfsvoerders en monteurs in opleiding**, studenten **elektrot
   - *Overstroming De Vaart*: het water stijgt bij MS9. Sluit het normaal-open punt, haal MS9 uit de ring (MS8-R open, V-F2 uit) vóór het water er is, en neem MS9 na het droogvallen weer in bedrijf.
   - *Kraan raakt de 110 kV-lijn*: L1 is urenlang weg en TenneT laat via L2 maar 33 MW toe tijdens de avondpiek; blijf eronder met flexibel vermogen.
   - *Brand in het 10 kV-gebouw*: de brandbel gaat, er slaan vlammen uit het dak en er komt rook. Twee brandweerwagens rijden met sirene en zwaailichten naar de poort en vier brandweerlieden gaan op verkenning. De brandweer wil de hele 10 kV spanningsloos voordat ze naar binnen gaat; het ziekenhuis draait op noodstroom. Is de 10 kV spanningsloos, dan steekt de ladderwagen de ladder op en blust met een waterstraal; de vlammen worden kleiner en de rook wordt stoom. Daarna stap voor stap herstellen (V-F6 heeft rookschade).
+  - *Brand in het datacenter* (zwaar): een accu van UPS B vat vlam. De gasblussing gaat niet goed (een defect pilootventiel, maar 2 van de 6 flessen lossen), de SCADA-servers branden af en bedienen kan alleen nog ter plaatse. Loop je zelf het datacenter in tijdens brand en blussing, dan is dat een veiligheidsincident. Het herstel duurt uren: na ruim anderhalf uur bereikt een nood-front-end de MS-stations via LTE, en pas na ruim twee uur draait SCADA voor het hele onderstation vanuit een container. Tussendoor vallen de kassen en ring oost uit.
   - *Concert op het Marktplein*: podium, lichtshow en foodtrucks overbelasten MS6; het podium heeft een flexcontract.
   - *Laadpiek op een winteravond*: een uitgebreid laadplein en thuisladers in de hele woonwijk; congestie in trafo's en kabels.
   - *Zonnige pinksterzondag*: weinig afname en ±50% meer zonnepanelen: overspanning in de lange straten. Verlaag de vaste trappen. Dat kan alleen spanningsloos, dus open de trafo pas als de monteur er bijna is, of voed de straat via een kabelkast. Doelen: om 14:00 alle straten binnen 207–253 V, hooguit 30 keer omvormers uit, minder dan 10.000 klantminuten.
@@ -544,7 +545,7 @@ Alle geluid wordt in de browser gemaakt (Web Audio) en hangt af van waar je bent
 <a id="ontwikkelen"></a>
 ## 🧑‍💻 Ontwikkelen
 
-De broncode staat in `src/`. Plannen voor nieuwe functies (OSE, Asset Management, carrièremodus) en de architectuur staan in de [roadmap](ROADMAP.md). `build.ps1` plakt de bestanden in strikte naamvolgorde aan elkaar tot één `index.html`.
+De broncode staat in `src/`. **Hoe het technisch werkt** (opbouw, simulatie, rendering, tests, valkuilen en recepten) staat in [TECHNICAL.md](TECHNICAL.md). Plannen voor nieuwe functies (OSE, Asset Management, carrièremodus) en de architectuur staan in de [roadmap](ROADMAP.md). `build.ps1` plakt de bestanden in strikte naamvolgorde aan elkaar tot één `index.html`.
 
 | Bestanden | Inhoud |
 |---|---|
@@ -587,7 +588,7 @@ Na het samenvoegen zet `tests/stamp.mjs` een **versie-ID** in `index.html`: een 
 
 Zet na het bouwen en vóór de commit een **korte samenvatting** bij de versie: `node tests/note.mjs "Datacenter realistischer met koude gang"`. Die komt in `version.json` (`notes`) en verschijnt bij de updateknop onder *Wat is er nieuw?*. Bouw je daarna opnieuw, zet de samenvatting dan opnieuw (hij hoort bij de versie-ID).
 
-URL-parameters om te testen: `?autostart`, `?t=18.5` (starttijd), `?view=0..12`, `?night`, `?play=zkh|storm|piek|blackout|hitte|winter|dubbel|aanrijding|cyber|overstroming|zonnepiek|pinksteren|aardonweer|kraan|brand|evenement|laadpiek|les1…les11|day|eve|free&diff=rustig|normaal|zwaar`.
+URL-parameters om te testen: `?autostart`, `?t=18.5` (starttijd), `?view=0..12`, `?night`, `?play=zkh|storm|piek|blackout|hitte|winter|dubbel|aanrijding|cyber|overstroming|zonnepiek|pinksteren|aardonweer|kraan|brand|datacenter|evenement|laadpiek|les1…les11|day|eve|free&diff=rustig|normaal|zwaar`.
 
 ## 🧪 Tests
 

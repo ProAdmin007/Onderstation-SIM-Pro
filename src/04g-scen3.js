@@ -52,4 +52,35 @@ Object.assign(MODES,{
     obj:()=>[{t:'Geen doorgeslagen zekeringen',check:()=>GAME.stats.fuses?'fail':null,final:()=>true},
       {t:'Geen kabel doorgebrand',check:()=>GAME.stats.burn?'fail':null,final:()=>true},
       {t:'Minder dan 3.000 klantminuten',check:()=>SIM.cml>3000?'fail':null,final:()=>SIM.cml<=3000},noIncidents]},
+  // brand in het datacenter: de gasblussing faalt, de SCADA-servers branden af en het herstel duurt uren
+  datacenter:{scen:true,name:'Brand in het datacenter',tag:'Scenario · zwaar',start:20.5,dur:160,season:'winter',weather:'bewolkt',
+    desc:'Een accu van UPS B raakt oververhit en vat vlam. De gasblussing gaat niet goed: de servers branden af en SCADA valt voor uren uit. Houd het net draaiende door ter plaatse te schakelen – en blijf zelf uit het datacenter.',
+    setup(){pushAlarm('Rustige winteravond. In het datacenter draaien de SCADA-servers, de UPS wordt gevoed uit het eigenbedrijf.','info');
+      const room=()=>ROOMS.find(r=>r.id==='SRV');
+      at(2,()=>pushAlarm('Rookaanzuiging datacenter (VESDA): voor-alarm – rook gedetecteerd bij de accukast van UPS B','warn'));
+      at(4,()=>{GAME.flags.dcAlarm=true;GAME.flags.dcDanger=true;GAME.countdown={label:'Gasblussing datacenter',until:SIM.t+1};
+        pushAlarm('BRANDALARM datacenter: blussing start na de vertraging – niemand naar binnen! Brandweer gealarmeerd','crit');});
+      at(5,()=>{const r=room(),c=V3((r.x0+r.x1)/2,1.5,(r.z0+r.z1)/2);if(camera.position.distanceTo(c)<60)AudioSys.burst({type:'highpass',f:1600,q:0.6,gain:0.35*distGain(c),dur:7,attack:0.4});
+        fireStart({bld:'SRV',off:0,ladder:false});GAME.countdown=null;
+        pushAlarm('INERGEN-blussing geactiveerd, maar slechts 2 van de 6 flessen lossen (pilootventiel defect). De concentratie is te laag – de brand gaat door!','crit');});
+      at(7,()=>{GAME.flags.scadaDown=true;$('#scada').classList.add('down');dcBurnt();
+        pushAlarm('SCADA-verbinding verbroken: de SCADA-servers en front-ends in het datacenter zijn uitgevallen. Bedienen op afstand kan niet meer.','crit');
+        pushAlarm('Tip: loop het station in (V) en schakel lokaal aan het veld (F). Voor de MS-stations loop of ren je naar het station in de wijk. Het datacenter zelf blijft verboden terrein.','info');});
+      at(18,()=>{fireDouse();pushAlarm('Brandweer: we gaan met ademlucht het datacenter in en blussen','ok');});
+      at(24,()=>{feederFault('F6',10);GAME.flags.f6At=SIM.t;pushAlarm('Telefoon van de tuinders: de kassen zitten zonder stroom – SCADA ziet niets','warn');});
+      at(48,()=>{fireStop();GAME.flags.dcAlarm=false;
+        readyNotice('Brandweer: brand meester, rook afgezogen. Het datacenter is zwaar beschadigd: SCADA A en B, de front-ends en het netwerk zijn verloren.',null);});
+      at(55,()=>{GAME.flags.dcDanger=false;GAME.countdown={label:'Nood-front-end (MS-stations)',until:SIM.t+40};
+        pushAlarm('Bedrijfsvoering werkt vanuit het uitwijkcentrum. De leverancier richt een nood-front-end in die de RTU’s in de MS-stations via LTE bereikt (±40 min).','info');});
+      at(70,()=>{feederFault('F4');pushAlarm('Melding via de telefoon: storing in de woonwijk oost','warn');});
+      at(95,()=>{GAME.flags.scadaDown='os';GAME.countdown={label:'SCADA-container onderstation',until:SIM.t+50};
+        readyNotice('Nood-front-end via LTE in bedrijf: de MS-stations zijn weer op afstand te bedienen. Het onderstation zelf nog niet – daar blijft lokaal schakelen nodig.',null);});
+      at(145,()=>{GAME.flags.scadaDown=false;$('#scada').classList.remove('down');GAME.countdown=null;
+        readyNotice('SCADA-container op het terrein in bedrijf: bediening op afstand van het hele onderstation is hersteld. Het nieuwe datacenter laat nog maanden op zich wachten.',null);});},
+    tick(){const r=ROOMS.find(r=>r.id==='SRV');
+      if(GAME.flags.dcDanger&&FP.on&&camInside()===r.idx&&!GAME.flags.dcEntered){GAME.flags.dcEntered=true;incident();
+        pushAlarm('Je bent het datacenter in gelopen tijdens brand en gasblussing – levensgevaarlijk (rook, te weinig zuurstof)! Direct naar buiten.','crit');}},
+    obj:()=>[{t:'Niemand het datacenter in tijdens brand en blussing',check:()=>GAME.flags.dcEntered?'fail':null,final:()=>true},
+      {t:'Kassen (F6) binnen 30 min weer gevoed',check:()=>GAME.flags.f6At==null?null:EN.has('F6')&&D['V-F6'].state?'done':SIM.t>GAME.flags.f6At+30?'fail':null},
+      {t:'Minder dan 40.000 klantminuten',check:()=>SIM.cml>40000?'fail':null,final:()=>SIM.cml<=40000},noIncidents]},
 });

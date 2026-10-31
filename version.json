@@ -1,7 +1,10 @@
 {
-  "build": "73cc78206e14",
+  "build": "a3b18a06d6fe",
   "date": "2026-10-31",
   "previous": [
+    "2d315dc44abf",
+    "1e7db070af8d",
+    "73cc78206e14",
     "13b3bb04c146",
     "a7e53a4dec73",
     "a459d889da25",
@@ -85,6 +88,10 @@
     "73cc78206e14": {
       "date": "2026-10-31",
       "text": "Gebouwen in en uit via echte deuren met bordes; realistischere straatverlichting; ambulance klinkt anders dan brandweer en politie"
+    },
+    "a3b18a06d6fe": {
+      "date": "2026-10-31",
+      "text": "Nieuw scenario: brand in het datacenter – de gasblussing faalt en SCADA is urenlang weg; technische documentatie (TECHNICAL.md)"
     }
   }
 }
