@@ -112,6 +112,7 @@ Alle `.js`-bestanden delen **één module-scope**. Er zijn geen imports tussen d
 | `03b-district.js` | Woonwijk, MS-stations (`kiosk`), straatverlichting, `DISTRICT_RECTS` |
 | `03c-weather.js` | Seizoenen, weertypen, `WX`, `weatherTick` |
 | `03d-streets.js` … `03g-industry.js` | Straatbeeld, grote afnemers (ziekenhuis, kassen, RWZI), kleine afnemers, bedrijventerrein |
+| `03h-meppel.js` | OS Meppel (alleen beeld) aan de noordkant van de stad: `MEPPEL`, `buildMeppel()`; de inrit zoekt het grootste gat in de bomenrij langs de hoofdweg |
 | `04-1-net.js` | `SIM`, rails, lijnen, voeders, apparaten `D`, ringen, LS-groepen, netgraaf, `EN`/`ER`, `computeFlows` |
 | `04-2-bediening.js` | `operate()`, vergrendelingen, trips, 110 kV-lijnen |
 | `04-3-trafo.js` | Trappenschakelaar en AVR, oliemodel, uitschakelrelais 86, omschakelbare T3 |
@@ -465,7 +466,7 @@ Elke plaatsing in de wereld meldt zich met `lay(kind, x0, z0, x1, z1)`: `road`, 
 - **Weer (`03c-weather.js`):** `WX`, met regen- en sneeuwdeeltjes die met de camera meebewegen (`updateRain`).
 - **Effecten (`FX`):** objecten met `update(dt)`; geeft `update` `false` terug, dan worden ze verwijderd. Voorbeelden: vlamboog (`spawnArc`), bliksem, rook, water en schuim.
 - **Geluid (`AudioSys`, `05-fx-audio.js`):**
-  - Volledig gesynthetiseerd met Web Audio: `tone()` (oscillator, eventueel glijdend met `f2`) en `burst()` (gefilterde ruis).
+  - Volledig gesynthetiseerd met Web Audio: `tone()` en `burst()` (gefilterde ruis). `tone()` is een oscillator die met `f2` kan glijden (met `back` naar `f2` en weer terug), met `hold` de toon aanhoudt in plaats van te laten uitsterven, en met `lp` door een laagdoorlaatfilter gaat.
   - Bussen `omgeving`, `schakel`, `alarm` en `telefoon` met eigen volumes.
   - Loops voor trafobrom, ventilatoren, wind, regen en verkeer.
   - `distGain(p)` regelt het volume op afstand. `updatePlaceAudio` past het geluid aan de plek aan (binnen, kiosk, terrein, wijk).
@@ -652,4 +653,5 @@ Opties: `tow` (aggregaat op aanhanger, in het gras gezet met rook en geluid), `m
 | RTU | Remote terminal unit: het SCADA-buitenstation in een MS-station |
 | Front-end | De SCADA-server die met de RTU's praat |
 | KLIC | Melding van graafwerk: vooraf kabels opvragen |
+| BEI BHS / BEI LS | Bedrijfsvoeringsvoorschriften van de netbeheerders voor hoog- en laagspanning (op basis van NEN 3840 en NEN 3140): rollen, aanwijzingen en de vijf veiligheidsregels |
 | VESDA / INERGEN | Rookaanzuiging / blusgas (stikstof, argon, CO₂) |

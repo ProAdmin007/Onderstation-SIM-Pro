@@ -68,7 +68,7 @@ const GARB={g:null,len:8.5,r:cityRoute(GARB_PTS),d:0,v:0,vmax:5,wait:0,stops:[],
 const PARCEL_PTS=[[25,101],[63,101],[63,239],[25,239],[25,273],[109,273],[109,387],[25,387],[25,101]];
 const PARCEL={g:null,len:5.6,r:cityRoute(PARCEL_PTS),d:0,v:0,vmax:8,wait:0,stops:[],on:false,cour:null};
 // ---- ambulance: af en toe met sirene naar de spoedeisende hulp van het ziekenhuis, daarna rustig terug
-const AMB={g:null,len:6.2,r:null,d:0,v:0,vmax:13,wait:0,stops:[],state:'idle',next:rnd(60,140),sir:0};
+const AMB={g:null,len:6.2,r:null,d:0,v:0,vmax:13,wait:0,stops:[],state:'idle',next:rnd(150,360),sir:0,quiet:false};
 
 // ---- trein: sprinter stopt bij het station (spoor aan de perronkant), intercity rijdt door; overweg met bomen, lichten en bel
 const TRAIN={cars:[],state:'idle',next:rnd(15,40),dir:1,x:0,v:0,kind:'sprinter',wait:0,z:419.25,ring:0,rumble:0};
@@ -175,9 +175,9 @@ function cityTick(dt){const show=GFX.life&&!camInside(),run=!SIM.paused&&!GAME.e
     if(want&&!f.on){f.on=true;f.x=-70+j*13+rnd(-3,3);f.z=413.2+rnd(-0.6,0.6);f.yaw=Math.PI;f.walk=false;f.s=1;}if(!want)f.on=false;});}}
 function ambTick(dt,run,h){const A=AMB;if(!SITE?.zkh)return;
   if(A.state==='idle'){if(run&&(A.next-=dt)<=0){A.g??=ambulanceModel();const S=SITE.zkh,sx=S.x+34,sz=S.z-34;
-      A.r=cityRoute([[25,560],[25,239],[-176,239],[-176,262],[sx,262],[sx,sz-4]]);A.d=0;A.v=0;A.stops=[];A.on=true;A.state='heen';A.vmax=13;}}
+      A.r=cityRoute([[25,560],[25,239],[-176,239],[-176,262],[sx,262],[sx,sz-4]]);A.d=0;A.v=0;A.stops=[];A.on=true;A.state='heen';A.vmax=13;A.quiet=(h>=22||h<7)&&Math.random()<0.7;}}
   else if(A.state==='heen'){A.emergency=true;driveVehicle(A,run?dt:0);if(A.d>=A.r.total-0.3){A.state='seh';A.wait=rnd(18,30);}}
   else if(A.state==='seh'){if(run)A.wait-=dt;if(A.wait<=0){A.r=cityRoute([[SITE.zkh.x+34,SITE.zkh.z-38],[SITE.zkh.x+34,262],[-176,262],[-176,239],[25,239],[25,560]]);A.d=0;A.v=0;A.state='terug';A.vmax=9;}}
-  else if(A.state==='terug'){A.emergency=false;driveVehicle(A,run?dt:0);if(A.d>=A.r.total-0.3){A.state='idle';A.on=false;A.next=rnd(240,480);}}
-  const sir=A.state==='heen';CM.blink.emissiveIntensity=(A.state==='heen'||A.state==='seh')&&(performance.now()%300)<150?6:0.2;
-  if(sir&&run&&A.g){A.sir-=dt;if(A.sir<=0){A.sir=1.2;const v=distGain(A.g.position);if(camera.position.distanceTo(A.g.position)<400)AudioSys.siren?.(v*0.8,'ambulance');}}}
+  else if(A.state==='terug'){A.emergency=false;driveVehicle(A,run?dt:0);if(A.d>=A.r.total-0.3){A.state='idle';A.on=false;A.next=rnd(480,900);}}
+  const sir=A.state==='heen'&&!A.quiet;CM.blink.emissiveIntensity=(A.state==='heen'||A.state==='seh')&&(performance.now()%300)<150?6:0.2;
+  if(sir&&run&&A.g){A.sir-=dt;if(A.sir<=0){A.sir=2.5;const v=distGain(A.g.position);if(camera.position.distanceTo(A.g.position)<300)AudioSys.siren?.(v*0.55,'ambulance');}}}

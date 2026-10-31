@@ -1,7 +1,11 @@
 {
-  "build": "a3b18a06d6fe",
+  "build": "3392c8085a95",
   "date": "2026-10-31",
   "previous": [
+    "af516478fcc4",
+    "aee4710321bf",
+    "9666f9809047",
+    "a3b18a06d6fe",
     "2d315dc44abf",
     "1e7db070af8d",
     "73cc78206e14",
@@ -92,6 +96,10 @@
     "a3b18a06d6fe": {
       "date": "2026-10-31",
       "text": "Nieuw scenario: brand in het datacenter – de gasblussing faalt en SCADA is urenlang weg; technische documentatie (TECHNICAL.md)"
+    },
+    "3392c8085a95": {
+      "date": "2026-10-31",
+      "text": "OS Meppel aan de noordkant van de stad; aggregaat vanuit het MS-stationspaneel; realistischer graafwerk en kabeltreffer; lichtere, realistischere nachten; rustigere ambulance; BEI BHS"
     }
   }
 }

@@ -191,7 +191,10 @@ function rowsFor(d){const r=[],A=(k,f)=>r.push([k,f]);
     A('Gevoed via',()=>{const t=FLOW.TAG[s.node];return t&&t.cb?`${t.cb} (rail ${BUS_BAND[t.bus][2]})`:'<span class="bad">geen voeding</span>';});
     const kab=sec=>()=>sec?(EN.has(sec.node)?`<span class="${sec.load>1||sec.temp>CABLE.max?'bad':sec.load>0.85||sec.temp>CABLE.warn?'warnc':''}">${Math.round(sec.I)} A · ${Math.round(sec.load*100)}% · ${Math.round(sec.temp??0)} °C</span>`:'spanningsloos'):'—';
     A('Kabel links',kab(RING.secs.find(x=>x.b===s.id)));A('Kabel rechts',kab(RING.secs.find(x=>x.a===s.id)));
-    A('Kortsluitverklikker',()=>s.flag?'<span class="warnc">⚑ AANGESPROKEN</span>':'normaal');}
+    A('Kortsluitverklikker',()=>s.flag?'<span class="warnc">⚑ AANGESPROKEN</span>':'normaal');
+    A('Noodaggregaat',()=>{const o=LS_ORDERS.find(o=>o.st===s.id&&/^gs/.test(o.kind)),gs=s.gs,m=o?` · monteur ${fmtClock(o.at)}`:'';
+      if(gs)return gs.state==='aan'?`draait · <b class="${gs.load>1?'bad':''}">${Math.round((gs.load||0)*100)}%</b> van 400 kVA${m}`:`<span class="bad">uitgevallen (overbelast)</span>${m}`;
+      if(o)return `<span class="warnc">onderweg · aankomst ±${fmtClock(o.at)}</span>`;return `${GENSET.units-GENSET.busy} van ${GENSET.units} beschikbaar${stationLive(s)?' · niet nodig':''}`;});}
   if(d.type==='es')A(d.cb?'Spanning kabelzijde':'Spanning lijnzijde',()=>fmtKV(nodeU(d.a)));
   if(['ct','sa','bb','line','kiosk'].includes(d.type))A('Spanning',()=>fmtKV(nodeU(d.node)));
   if(['cb','ds','ct','lbs'].includes(d.type))A('Stroom',()=>`${Math.round(D[d.ref||d.id].I)} A`);
@@ -227,7 +230,8 @@ function renderDevPanel(){
   else if(d.type==='ds'||d.type==='es'||d.type==='lbs')ctl=`<div class="dp-ctl"><button class="b1" data-act="1">SLUITEN</button><button class="b0" data-act="0">OPENEN</button></div>`;
   else if(d.type==='lvs')ctl=`<div class="dp-ctl"><button class="b1" data-act="1">IN</button><button class="b0" data-act="0">UIT</button></div>`;
   else if(d.type==='kiosk'){const s=d.st,ids=[s.id+'-L',s.id+'-R',s.id+'-T',...(D[s.id+'-K']?[s.id+'-K']:[]),...s.groups.map(g=>g.id)];
-    ctl=`<div class="swlist">${ids.map(id=>`<div class="swr"><span><b>${id.slice(s.id.length+1)}</b>${D[id].type==='lvs'?D[id].lvg.name:D[id].label}</span><button class="b1" data-op="${id}:1">${D[id].type==='lvs'?'IN':'DICHT'}</button><button class="b0" data-op="${id}:0">${D[id].type==='lvs'?'UIT':'OPEN'}</button></div>`).join('')}</div>`;}
+    ctl=`<div class="swlist">${ids.map(id=>`<div class="swr"><span><b>${id.slice(s.id.length+1)}</b>${D[id].type==='lvs'?D[id].lvg.name:D[id].label}</span><button class="b1" data-op="${id}:1">${D[id].type==='lvs'?'IN':'DICHT'}</button><button class="b0" data-op="${id}:0">${D[id].type==='lvs'?'UIT':'OPEN'}</button></div>`).join('')}</div>`+
+      `<div class="dp-ctl gsctl"><button data-act="gs" title="Een monteur brengt een noodaggregaat op een aanhanger en sluit het aan op het LS-rek">⚡ Aggregaat sturen</button><button data-act="gsoff">Afkoppelen</button><button data-act="gsrestart">Herstarten</button></div>`;}
   else if(d.type==='tr')ctl=`<div class="dp-ctl"><button data-act="avr"></button><button data-act="tap-1" title="Trap lager">▼ trap</button><button data-act="tap1" title="Trap hoger">▲ trap</button></div>`;
   const sub=[];if(VIEWS[SEL])sub.push(`<button data-act="fly">Bekijk in 3D</button>`);if(d.type==='bld')sub.push(`<button data-act="inside">Ga naar binnen</button>`);if(d.type==='bld'||VIEWS[SEL]?.inside)sub.push(`<button data-act="scada">Toon in SCADA</button>`);
   if(d.type==='tr')sub.push(`<button data-act="reset">Reset blokkeerrelais 86</button>`);
@@ -251,11 +255,13 @@ function refreshDevPanel(){if(!SEL)return;const p=$('#devpanel'),d=D[SEL];
   const avr=p.querySelector('[data-act="avr"]');if(avr)avr.textContent=d.avr==='auto'?'AUTO → HAND':'HAND → AUTO';
   p.querySelectorAll('[data-act^="tap"]').forEach(b=>b.disabled=d.avr==='auto'||d.tapBusy);
   const rs=p.querySelector('[data-act="reset"]');if(rs)rs.disabled=!d.blocked;p.querySelectorAll('[data-act^="ratio"]').forEach(b=>b.disabled=d.ratioBusy||b.dataset.act==='ratio'+d.ratio);
+  if(d.type==='kiosk'){const s=d.st,o=LS_ORDERS.some(o=>o.st===s.id&&/^gs/.test(o.kind)),q=k=>p.querySelector(`[data-act="${k}"]`);
+    if(q('gs'))q('gs').disabled=!!(s.gs||s.genset||o||stationLive(s)||GENSET.busy>=GENSET.units);if(q('gsoff'))q('gsoff').disabled=!s.gs||o;if(q('gsrestart'))q('gsrestart').disabled=s.gs?.state!=='trip'||o;}
   const ar=p.querySelector('[data-act="ar"]');if(ar)ar.textContent=SIM.lines[d.line].ar?'AR uitzetten':'AR aanzetten';}
 $('#devpanel').addEventListener('click',e=>{const op=e.target.closest('[data-op]');if(op){const [id,v]=op.dataset.op.split(':');operate(id,+v);return;}
   const b=e.target.closest('[data-act]');if(!b||b.disabled)return;const a=b.dataset.act;
   if(a==='1'||a==='0')operate(SEL,+a);else if(a==='x')selectDevice(null);else if(a==='fly')flyToDevice(SEL);else if(a==='inside'){const v=VIEWPOS[SEL==='MS20'?6:5];flyTo(v[0].clone(),v[1].clone(),2);}
-  else if(a.startsWith('ratio'))setRatio(a.slice(5));else if(a==='kin')enterKiosk(SEL);else if(a==='lvsend')dispatchLV(SEL);
+  else if(a.startsWith('ratio'))setRatio(a.slice(5));else if(a==='kin')enterKiosk(SEL);else if(a==='gs')gsSend(D[SEL].st);else if(a==='gsoff')gsOff(D[SEL].st);else if(a==='gsrestart')gsRestart(D[SEL].st);else if(a==='lvsend')dispatchLV(SEL);
   else if(a==='avr')setAVR(SEL,D[SEL].avr==='auto'?'hand':'auto');else if(a.startsWith('tap'))tapStep(SEL,+a.slice(3));
   else if(a==='reset')resetLockout(SEL);else if(a==='prot')openProt();else if(a==='ar')toggleAR(D[SEL].line);else if(a.startsWith('sel:'))selectDevice(a.slice(4));
   else if(a==='scada'){$('#scada').classList.remove('min');$('#scada').animate([{boxShadow:'0 0 0 3px #f0a43a'},{boxShadow:'0 0 0 0 transparent'}],{duration:900});}});
@@ -295,10 +301,11 @@ function updateHover(){if(FP.on||!moveEv)return;const e=moveEv;moveEv=null;const
   else tt.style.display='none';}
 
 // ============================================================ camera
+const VIEWPOS_MP=[V3(14,30,440),V3(88,3,508)];
 const VIEWPOS_SRV=[V3(-27.6,1.9,47.4),V3(-37,1.4,51.2)];   // datacenter (index 12)
 const VIEWPOS=[[V3(100,52,118),V3(22,3,8)],[V3(-4,13,-2),V3(-30,5,-22)],[V3(88,17,14),V3(32,3,32)],[V3(64,11,32),V3(30,3,50)],[V3(22.1,215,34),V3(22,0,10)],
   [V3(-2.2,2.5,47.6),V3(0.4,1.6,54.2)],[V3(58.8,2.5,47.6),V3(61.4,1.6,54.2)],[V3(30,95,330),V3(10,0,175)],[V3(40,90,470),V3(30,0,330)],
-  [V3(-250,48,172),V3(-295,6,307)],[V3(410,85,-40),V3(440,4,190)],[V3(-160,70,-270),V3(-300,2,-140)],VIEWPOS_SRV];   // ziekenhuis, kassen, waterzuivering
+  [V3(-250,48,172),V3(-295,6,307)],[V3(410,85,-40),V3(440,4,190)],[V3(-160,70,-270),V3(-300,2,-140)],VIEWPOS_SRV,VIEWPOS_MP];   // ziekenhuis, kassen, waterzuivering
 let fly=null;
 function flyTo(pos,target,dur=1.5){if(FP.on)exitFP();fly={t:0,dur,p0:camera.position.clone(),t0:controls.target.clone(),p1:pos,t1:target};controls.autoRotate=false;}
 function fmtClock(t){const m=((t%1440)+1440)%1440;return `${String(Math.floor(m/60)).padStart(2,'0')}:${String(Math.floor(m%60)).padStart(2,'0')}`;}

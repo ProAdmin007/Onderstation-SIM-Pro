@@ -24,7 +24,7 @@ function briefOpen(){if(!TASK||!TASK.pool)return;TASK.briefMode=true;modalOpen('
 function briefClose(){$('#brief').classList.add('hidden');modalClose('brief');}
 function briefRender(msg=''){const t=TASK;if(!t)return briefClose();
   const left=t.pool.filter(k=>!t.brief.includes(k));
-  $('#brief').innerHTML=`<div class="card bf"><div class="eyebrow">Schakelbrief · ${t.code}</div><h2>${t.title}</h2><p class="bf-desc">${t.desc}</p>
+  $('#brief').innerHTML=`<div class="card bf"><div class="eyebrow">Schakelbrief (BEI BHS) · ${t.code}</div><h2>${t.title}</h2><p class="bf-desc">${t.desc}</p>
     <div class="bf-cols"><div><div class="mh">Mogelijke handelingen</div>${left.map(k=>`<button class="bf-act" data-add="${k}">${actLabel(k)}</button>`).join('')||'<div class="idle">Alles is gebruikt.</div>'}</div>
     <div><div class="mh">Jouw schakelbrief</div><ol class="bf-list">${t.brief.map((k,i)=>`<li><span>${actLabel(k)}</span><button class="mini" data-up="${i}" title="Omhoog">↑</button><button class="mini" data-del="${i}" title="Verwijderen">✕</button></li>`).join('')||'<div class="idle">Klik links op handelingen om ze in volgorde toe te voegen.</div>'}</ol></div></div>
     ${msg?`<div class="bf-msg">${msg}</div>`:''}

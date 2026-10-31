@@ -36,7 +36,7 @@ function relayTex(){const c=cnv(256,512),g=c.getContext('2d');g.fillStyle='#c9cc
 function posterTex(){const c=cnv(512,700),g=c.getContext('2d');g.fillStyle='#fbfbf7';g.fillRect(0,0,512,700);g.fillStyle='#1d2b45';g.fillRect(0,0,512,90);
   g.fillStyle='#fff';g.font='bold 34px Arial';g.fillText('VIJF VEILIGHEIDSREGELS',28,58);g.fillStyle='#1a1a1a';g.font='bold 27px Arial';
   ['1. Vrijschakelen','2. Beveiligen tegen','    herinschakelen','3. Spanningsloosheid','    vaststellen','4. Aarden en','    kortsluiten','5. Afschermen van','    naastgelegen delen'].forEach((s,i)=>g.fillText(s,32,150+i*52));
-  g.fillStyle='#f5c400';g.fillRect(0,640,512,60);g.fillStyle='#111';g.font='bold 24px Arial';g.fillText('NEN 3140  ·  VIAG',32,680);
+  g.fillStyle='#f5c400';g.fillRect(0,640,512,60);g.fillStyle='#111';g.font='bold 24px Arial';g.fillText('BEI BHS  ·  NEN 3840',32,680);
   const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t;}
 
 const PANELS=[{title:'Reserve'},{id:'V-T1',kind:'inc',node:'T1l'},{id:'V-F1',kind:'feed',node:'F1'},{id:'V-F2',kind:'feed',node:'F2'},{id:'V-F3',kind:'feed',node:'F3'},

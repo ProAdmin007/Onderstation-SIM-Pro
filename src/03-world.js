@@ -170,6 +170,7 @@ const flashLight=new THREE.DirectionalLight(0xdfe8ff,0);flashLight.position.set(
 const arcLight=new THREE.PointLight(0xcfe0ff,0,0,2);scene.add(arcLight);
 const stars=(()=>{const n=1800,p=new Float32Array(n*3);for(let i=0;i<n;i++){const th=R()*Math.PI*2,ph=Math.acos(rr(0.05,1));const r=2000;p[i*3]=r*Math.sin(ph)*Math.cos(th);p[i*3+1]=r*Math.cos(ph);p[i*3+2]=r*Math.sin(ph)*Math.sin(th);}
   const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(p,3));const s=new THREE.Points(g,new THREE.PointsMaterial({color:0xffffff,size:1.6,sizeAttenuation:false,transparent:true,opacity:0,fog:false,depthWrite:false}));scene.add(s);return s;})();
+const hemiDaySky=new THREE.Color(0xbfd4ff),hemiDayGround=new THREE.Color(0x4a4436),hemiNightSky=new THREE.Color(0x5d74a8),hemiNightGround=new THREE.Color(0x4a3a2a),cityGlow=new THREE.Color(0x3a2e26);
 const fogDay=new THREE.Color(0xc3cfd9),fogDusk=new THREE.Color(0xc9a184),fogNight=new THREE.Color(0x0b1119),tmpC=new THREE.Color();
 let NIGHT=0;
 function sunAngles(h){const S=SEASON,rise=S.rise,set=S.set,len=set-rise;let el;
@@ -182,16 +183,19 @@ function updateSky(h){
   const day=smooth(-6,8,el);NIGHT=1-smooth(-7,2,el);
   if(el>-1.5){sun.position.copy(sun.target.position).addScaledVector(dir,260);sun.intensity=3.0*smooth(-1,14,el);
     sun.color.setRGB(1,lerp(0.62,0.96,smooth(0,25,el)),lerp(0.4,0.9,smooth(0,25,el)));}
-  else{sun.position.copy(sun.target.position).add(V3(-90,200,80));sun.intensity=0.12*NIGHT;sun.color.setHex(0x9db4ff);}
-  hemi.intensity=0.06+0.3*day;scene.environmentIntensity=0.1+0.9*day;
-  renderer.toneMappingExposure=lerp(1.05,0.6,day);
+  else{sun.position.copy(sun.target.position).add(V3(-90,200,80));sun.intensity=0.32*NIGHT;sun.color.setHex(0xa9c0ff);}
+  // 's nachts: hemellicht blauw van boven en warm van onderen (gloed van de stad en de straatverlichting)
+  hemi.intensity=0.17+0.19*day;hemi.color.copy(hemiNightSky).lerp(hemiDaySky,day);hemi.groundColor.copy(hemiNightGround).lerp(hemiDayGround,day);scene.environmentIntensity=0.17+0.83*day;
+  renderer.toneMappingExposure=lerp(1.25,0.6,day);
   tmpC.copy(fogNight).lerp(fogDusk,smooth(-7,1,el)).lerp(fogDay,smooth(2,16,el));scene.fog.color.copy(tmpC);
   envGroundMat.color.setRGB(0.3*day+0.01,0.32*day+0.012,0.27*day+0.015);
-  stars.material.opacity=NIGHT;
+  stars.material.opacity=NIGHT*(1-WX.cur.cloud)**2;
   SPOTS.forEach(s=>s.intensity=NIGHT>0.35?900:0);MAT.lamp.emissiveIntensity=NIGHT>0.35?6:0;
   // weer: bewolking dempt de zon, neerslag en mist maken het zicht korter
   const W=WX.cur,cl=W.cloud;
-  sun.intensity*=1-0.85*cl;hemi.intensity*=1-0.2*cl;scene.environmentIntensity*=1-0.5*cl;
+  sun.intensity*=1-0.85*cl;hemi.intensity*=(1-0.2*cl)*(1+0.5*cl*NIGHT);scene.environmentIntensity*=1-0.5*cl;
+  // bewolkte nacht: de wolken weerkaatsen het oranje licht van de stad
+  if(NIGHT>0)scene.fog.color.lerp(cityGlow,0.55*cl*NIGHT);
   scene.fog.density=0.0008+0.0016*cl*(0.3+W.rain+W.snow)+0.006*W.fog;scene.fog.color.multiplyScalar(1-0.35*cl*(1-W.fog));
   su.turbidity.value=5.5+14.5*cl;su.rayleigh.value=1.5-0.9*cl;su.mieCoefficient.value=0.004+0.026*cl;
   applySnowCover();

@@ -55,8 +55,11 @@ const AudioSys={ctx:null,muted:false,vol:0.9,busVol:{},route:null,
   burst({type='bandpass',f=1000,q=1,gain=0.5,dur=0.3,attack=0.003,delay=0}={}){if(!this.ctx||gain<=0.001)return;const c=this.ctx,t=c.currentTime+delay;const s=c.createBufferSource();s.buffer=this.nbuf;
     const fl=c.createBiquadFilter();fl.type=type;fl.frequency.value=f;fl.Q.value=q;const g=c.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(gain,t+attack);g.gain.exponentialRampToValueAtTime(0.0005,t+dur);
     s.connect(fl);fl.connect(g);g.connect(this.out());s.start(t,Math.random()*1.5);s.stop(t+dur+0.05);},
-  tone({f=440,f2=null,type='sine',gain=0.2,dur=0.2,delay=0}={}){if(!this.ctx||gain<=0.001)return;const c=this.ctx,t=c.currentTime+delay;const o=c.createOscillator();o.type=type;o.frequency.setValueAtTime(f,t);if(f2)o.frequency.exponentialRampToValueAtTime(f2,t+dur);
-    const g=c.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(gain,t+0.005);g.gain.exponentialRampToValueAtTime(0.0005,t+dur);o.connect(g);g.connect(this.out());o.start(t);o.stop(t+dur+0.05);},
+  // hold: toon aanhouden en kort laten uitgaan (sirenes), lp: laagdoorlaatfilter in Hz, back: naar f2 en weer terug naar f (wail)
+  tone({f=440,f2=null,type='sine',gain=0.2,dur=0.2,delay=0,hold=false,lp=0,back=false}={}){if(!this.ctx||gain<=0.001)return;const c=this.ctx,t=c.currentTime+delay;const o=c.createOscillator();o.type=type;o.frequency.setValueAtTime(f,t);
+    if(f2){if(back){o.frequency.exponentialRampToValueAtTime(f2,t+dur*0.5);o.frequency.exponentialRampToValueAtTime(f,t+dur);}else o.frequency.exponentialRampToValueAtTime(f2,t+dur);}
+    const g=c.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(gain,t+(hold?0.03:0.005));if(hold){g.gain.setValueAtTime(gain,t+dur-0.04);g.gain.linearRampToValueAtTime(0,t+dur);}else g.gain.exponentialRampToValueAtTime(0.0005,t+dur);
+    let n=o;if(lp){const fl=c.createBiquadFilter();fl.type='lowpass';fl.frequency.value=lp;fl.Q.value=0.7;o.connect(fl);n=fl;}n.connect(g);g.connect(this.out());o.start(t);o.stop(t+dur+0.05);},
   breaker(v=1){this.tone({f:95,f2:38,gain:0.9*v,dur:0.35});this.burst({type:'highpass',f:2500,gain:0.35*v,dur:0.09});this.burst({f:700,q:0.8,gain:0.45*v,dur:0.25,delay:0.01});this.burst({f:3200,q:3,gain:0.12*v,dur:0.5,delay:0.05});},
   motor(dur=2.8,v=0.5){const c=this.ctx;if(!c)return;const t=c.currentTime;const o=c.createOscillator();o.type='sawtooth';o.frequency.setValueAtTime(60,t);o.frequency.linearRampToValueAtTime(92,t+0.4);
     const fl=c.createBiquadFilter();fl.type='lowpass';fl.frequency.value=480;const g=c.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(0.07*v,t+0.2);g.gain.setValueAtTime(0.07*v,t+dur-0.3);g.gain.linearRampToValueAtTime(0,t+dur);
@@ -70,12 +73,13 @@ const AudioSys={ctx:null,muted:false,vol:0.9,busVol:{},route:null,
   carPass(v=1){this.burst({type:'lowpass',f:420,q:0.6,gain:0.07*v,dur:3.6,attack:1.6});this.tone({f:95,f2:72,type:'sawtooth',gain:0.012*v,dur:3.2,delay:0.4});},
   cricket(v=1){for(let i=0;i<4;i++)this.tone({f:4300+Math.random()*200,gain:0.007*v,dur:0.035,delay:i*0.065});},
   // brandbel: snelle slagen op een metalen bel.
-  // Sirenes (elke 1,2 s een cyclus): brandweer lage twee-toon als een hoorn, ambulance een elektronische wail (op en neer glijdend), politie een snelle hoge twee-toon
+  // Sirenes: brandweer lage twee-toon als een hoorn (cyclus 1,2 s), politie een snelle hoge twee-toon (1,2 s),
+  // ambulance een elektronische wail die in 2,5 s rustig op en neer glijdt, gefilterd zodat hij niet schel klinkt
   fireBell(v=1){for(let i=0;i<12;i++){this.tone({f:1850,type:'triangle',gain:0.06*v,dur:0.07,delay:i*0.083});this.tone({f:2950,gain:0.02*v,dur:0.05,delay:i*0.083});}},
   siren(v=1,kind='brandweer'){
-    if(kind==='ambulance'){for(const [f,f2,d] of[[620,1350,0],[1350,620,0.6]]){this.tone({f,f2,type:'sawtooth',gain:0.016*v,dur:0.6,delay:d});this.tone({f:f/2,f2:f2/2,type:'triangle',gain:0.02*v,dur:0.6,delay:d});}return;}
-    if(kind==='politie'){[[700,0],[930,0.3],[700,0.6],[930,0.9]].forEach(([f,d])=>{this.tone({f,type:'square',gain:0.012*v,dur:0.28,delay:d});this.tone({f:f*2,gain:0.008*v,dur:0.28,delay:d});});return;}
-    [[392,0],[523,0.6]].forEach(([f,d])=>{this.tone({f,type:'sawtooth',gain:0.025*v,dur:0.58,delay:d});this.tone({f:f*1.5,type:'square',gain:0.007*v,dur:0.58,delay:d});this.tone({f:f*2,gain:0.012*v,dur:0.58,delay:d});});},
+    if(kind==='ambulance'){this.tone({f:640,f2:1420,back:true,type:'square',lp:1800,gain:0.009*v,dur:2.5,hold:true});this.tone({f:640,f2:1420,back:true,type:'sine',gain:0.011*v,dur:2.5,hold:true});return;}
+    if(kind==='politie'){[[700,0],[930,0.3],[700,0.6],[930,0.9]].forEach(([f,d])=>{this.tone({f,type:'square',lp:2600,gain:0.012*v,dur:0.3,delay:d,hold:true});this.tone({f:f*2,gain:0.006*v,dur:0.3,delay:d,hold:true});});return;}
+    [[392,0],[523,0.6]].forEach(([f,d])=>{this.tone({f,type:'sawtooth',lp:2200,gain:0.025*v,dur:0.6,delay:d,hold:true});this.tone({f:f*1.5,type:'square',lp:2200,gain:0.006*v,dur:0.6,delay:d,hold:true});this.tone({f:f*2,gain:0.01*v,dur:0.6,delay:d,hold:true});});},
   chime(){this.tone({f:660,gain:0.08,dur:0.3});this.tone({f:990,gain:0.07,dur:0.4,delay:0.12});},
   deny(){this.tone({f:200,type:'square',gain:0.045,dur:0.2});},
   ring(){this.tone({f:440,gain:0.045,dur:0.35});this.tone({f:480,gain:0.045,dur:0.35,delay:0.42});},

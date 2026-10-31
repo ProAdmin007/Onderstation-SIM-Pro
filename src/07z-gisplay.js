@@ -112,7 +112,16 @@ function gisSimTick(){klicTick();gisWorkTick();autoMeasure();}
 // ---- graafplek in 3D: graafmachine die echt graaft (giek, steel en bak), groeiende sleuf en grondhoop, afzetting en grondwerkers
 // Bij graafschade: vlamboog met vonken en rook, de machine stopt met de giek omhoog, de grondwerkers rennen weg en de geraakte kabel ligt zwartgeblakerd in de sleuf.
 const DIGS=new Map(),DIGM={yel:mat({color:0xe8b81c,roughness:0.5}),dark:mat({color:0x2a2c30,roughness:0.7}),red:mat({color:0xd8262c,roughness:0.5}),white:mat({color:0xf0f0ea,roughness:0.5}),
-  sand:mat({color:0xb89a6a,roughness:1}),pit:mat({color:0x3b2f22,roughness:1}),cable:mat({color:0x151515,roughness:0.6}),burn:mat({color:0x220800,emissive:0xff5a10,emissiveIntensity:0})};
+  sand:mat({color:0xb89a6a,roughness:1}),pit:mat({color:0x3b2f22,roughness:1}),cable:mat({color:0x151515,roughness:0.6}),burn:mat({color:0x220800,emissive:0xff5a10,emissiveIntensity:0}),
+  deep:mat({color:0x1d1710,roughness:1}),plate:mat({color:0x4a4f55,roughness:0.55,metalness:0.6}),tape:mat({color:0xd8262c,roughness:0.6}),
+  amber:mat({color:0x3a2200,emissive:0xffa012,emissiveIntensity:0}),beacon:mat({color:0x3a2200,emissive:0xff9a10,emissiveIntensity:0}),
+  sign:mat({map:(()=>{const c=cnv(128),g=c.getContext('2d');g.fillStyle='#fff';g.beginPath();g.moveTo(64,8);g.lineTo(122,116);g.lineTo(6,116);g.closePath();g.fill();g.strokeStyle='#d8262c';g.lineWidth=12;g.stroke();
+    g.fillStyle='#111';g.beginPath();g.arc(58,56,7,0,7);g.fill();g.fillRect(50,64,12,22);g.fillRect(62,70,18,5);g.fillRect(44,86,8,16);g.fillRect(60,86,8,16);g.fillRect(74,88,22,8);const t=toTex(c);t.wrapS=t.wrapT=THREE.ClampToEdgeWrapping;return t;})(),transparent:true,alphaTest:0.5,side:THREE.DoubleSide}),
+  scorch:new THREE.MeshBasicMaterial({map:(()=>{const c=cnv(128),g=c.getContext('2d'),gr=g.createRadialGradient(64,64,4,64,64,62);gr.addColorStop(0,'rgba(8,6,4,0.95)');gr.addColorStop(0.5,'rgba(14,11,8,0.6)');gr.addColorStop(1,'rgba(20,16,12,0)');g.fillStyle=gr;g.fillRect(0,0,128,128);return toTex(c);})(),transparent:true,depthWrite:false})};
+const DIRT_MAT=new THREE.SpriteMaterial({map:smokeTex,color:0x5a4632,transparent:true,depthWrite:false}),BALL_MAT=new THREE.SpriteMaterial({map:glowTex,color:0xffa040,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending});
+// grond uit de bak of uit de sleuf: brokjes met zwaartekracht
+function dirtBit(p,v,life=1.2,s=0.35){const m=new THREE.Sprite(DIRT_MAT);m.scale.setScalar(s*(0.6+Math.random()*0.8));m.position.copy(p);scene.add(m);
+  FX.push({t:0,update(dt){this.t+=dt;v.y-=9.8*dt;m.position.addScaledVector(v,dt);if(m.position.y<0.08){m.position.y=0.08;v.set(0,0,0);}if(this.t>life){scene.remove(m);return false;}return true;}});}
 function digStart(key){if(!key||DIGS.has(key))return;const g=new THREE.Group();g.position.set(key.x,0,key.z);g.userData.dyn=true;
   // de machine staat aan de straatkant (lokale +x wijst naar de weg), de sleuf ligt in de lengte van de kabel (lokale z)
   {const sn=gisSnap(key.x,key.z);if(sn&&sn.d>0.5)g.rotation.y=Math.atan2(-(sn.z-key.z),sn.x-key.x);}
@@ -125,13 +134,22 @@ function digStart(key){if(!key||DIGS.has(key))return;const g=new THREE.Group();g
   const bucket=new THREE.Group();bucket.position.set(0,-2.0,0);stick.add(bucket);box(0.8,0.55,0.7,DIGM.dark,bucket,-0.15,-0.2,0);
   Object.assign(U,{tur,boom,stick,bucket});
   // sleuf, grondhoop, afzetting met rood-witte hekken
-  U.pit=mesh(new THREE.PlaneGeometry(0.9,1),DIGM.pit,g,0,0.045,0);U.pit.rotation.x=-Math.PI/2;U.pit.receiveShadow=false;
+  U.trench=new THREE.Group();g.add(U.trench);{const pt=mesh(new THREE.PlaneGeometry(0.9,1),DIGM.pit,U.trench,0,0.045,0);pt.rotation.x=-Math.PI/2;pt.receiveShadow=false;
+    const dp=mesh(new THREE.PlaneGeometry(0.5,0.9),DIGM.deep,U.trench,0,0.05,0);dp.rotation.x=-Math.PI/2;dp.receiveShadow=false;
+    for(const s of[-1,1])box(0.3,0.16,1,DIGM.sand,U.trench,s*0.6,0.08,0).castShadow=false;
+    const tp=mesh(new THREE.PlaneGeometry(0.12,0.8),DIGM.tape,U.trench,0.08,0.055,0);tp.rotation.x=-Math.PI/2;tp.receiveShadow=false;}
+  // rijplaten over de stoep, een bord 'werk in uitvoering' en een zwaailicht op de cabine
+  for(const dz of[-1.6,1.6])box(1.5,0.03,3.0,DIGM.plate,g,1.2,0.05,dz).castShadow=false;
+  cyl(0.03,0.03,1.5,DIGM.white,g,-1.8,0.75,-4.6,6);const sg=mesh(new THREE.PlaneGeometry(0.75,0.7),DIGM.sign,g,-1.8,1.65,-4.6);sg.castShadow=false;
+  cyl(0.11,0.11,0.16,DIGM.beacon,tur,0.3,2.3,0.7,10);box(0.08,0.6,0.08,DIGM.dark,tur,1.0,1.3,-0.9);Object.assign(U,{exh:V3(1.0,1.65,-0.9)});
   U.pile=cyl(0.15,1.3,0.9,DIGM.sand,g,2.0,0.45,3.3,10);U.pile.castShadow=false;
   // afzetting om sleuf, machine en grondhoop
   for(let i=0;i<10;i++){const a=i/10*Math.PI*2,a2=(i+1)/10*Math.PI*2,x=1.7+Math.cos(a)*4.4,z=0.6+Math.sin(a)*3.8,x2=1.7+Math.cos(a2)*4.4,z2=0.6+Math.sin(a2)*3.8;
-    box(0.06,1.0,0.06,DIGM.white,g,x,0.5,z);const r=box(Math.hypot(x2-x,z2-z),0.16,0.04,i%2?DIGM.red:DIGM.white,g,(x+x2)/2,0.85,(z+z2)/2);r.rotation.y=-Math.atan2(z2-z,x2-x);}
+    box(0.06,1.0,0.06,DIGM.white,g,x,0.5,z);if(i%2===0)box(0.12,0.12,0.12,DIGM.amber,g,x,1.06,z);const r=box(Math.hypot(x2-x,z2-z),0.16,0.04,i%2?DIGM.red:DIGM.white,g,(x+x2)/2,0.85,(z+z2)/2);r.rotation.y=-Math.atan2(z2-z,x2-x);}
   // grondwerkers van de aannemer (alleen bij graafwerk van derden)
   if(key.c)for(const [x,z,ry] of[[-1.4,-1.6,0.9],[0.4,-2.4,0.2]]){const P=makePerson(Math.floor(Math.random()*6));g.add(P.g);P.g.position.set(x,0,z);P.g.rotation.y=ry;U.workers.push({P,x,z,ry});}
+  {const P=makePerson(3);g.add(P.g);P.g.position.set(-0.9,0,0.9);P.g.rotation.y=Math.PI/2;const sh=new THREE.Group();sh.position.set(0,1.05,0.35);P.g.add(sh);rod(V3(0,0,0),V3(0,-1.0,0.25),0.02,DIGM.dark,sh,5);box(0.22,0.28,0.03,DIGM.plate,sh,0,-1.1,0.28);
+    U.workers.push({P,x:-0.9,z:0.9,ry:Math.PI/2,shovel:sh});}
   scene.add(g);DIGS.set(key,g);return g;}
 function digStop(key){const g=key&&DIGS.get(key);if(g){scene.remove(g);disposeTree(g);DIGS.delete(key);}}
 // graafwerk van derden raakt een kabel: de graafplek blijft dezelfde (nu de foutplek), met de effecten
@@ -139,9 +157,17 @@ function digHit(key,spot,kind,live=true){let g=DIGS.get(key)||digStart(key);if(s
   const k=kind==='ls'?0.6:1.3;g.updateMatrixWorld(true);const p=U.bucket.getWorldPosition(V3());p.y=Math.max(0.4,p.y);
   if(!live){U.cable=cyl(0.09,0.09,2.6,DIGM.cable,g,0,0.12,0,10);U.cable.rotation.x=Math.PI/2;U.sparks=0;U.smoke=0;return;}
   const sh=shake;spawnArc(p,k);shake=Math.max(sh,0.5*k*clamp((distGain(p)-0.12)*1.2,0,1));   // geen schok als je ver weg kijkt
+  digBlast(g,p,k);
   // de geraakte kabel in de sleuf, met een gloeiend uiteinde
   U.cable=cyl(0.09,0.09,2.6,DIGM.cable,g,0,0.12,0,10);U.cable.rotation.x=Math.PI/2;const end=cyl(0.1,0.1,0.25,DIGM.burn,g,0,0.12,-0.15,10);end.rotation.x=Math.PI/2;U.end=end;
-  U.sparks=2.5;U.smoke=40;}
+  U.sparks=4;U.smoke=70;}
+function digBlast(g,p,k){const near=camera.position.distanceTo(p)<220;
+  if(near){const b=new THREE.Sprite(BALL_MAT.clone());b.position.copy(p).setY(0.6);scene.add(b);FX.push({t:0,update(dt){this.t+=dt;const q=this.t/0.9;b.scale.setScalar(3.6*k*Math.min(1,this.t/0.12));b.material.opacity=Math.max(0,1-q);if(q>=1){scene.remove(b);b.material.dispose();return false;}return true;}});
+    for(let i=0;i<Math.round(16*k);i++){const a=Math.random()*Math.PI*2,s=2+Math.random()*4;dirtBit(V3(p.x,0.3,p.z),V3(Math.cos(a)*s,3+Math.random()*4,Math.sin(a)*s),1.6);}
+    for(let i=0;i<Math.round(40*k);i++)spark(V3(p.x,0.35,p.z));}
+  const sc=mesh(new THREE.PlaneGeometry(2.4*k,2.4*k),DIGM.scorch,g,0,0.058,0);sc.rotation.x=-Math.PI/2;sc.receiveShadow=false;sc.castShadow=false;
+  const v=distGain(p);if(camera.position.distanceTo(p)<500){AudioSys.burst({type:'lowpass',f:500,q:0.7,gain:0.9*v*k,dur:0.6});AudioSys.tone({f:70,f2:40,gain:0.4*v*k,dur:0.5});AudioSys.tone({f:100,type:'sawtooth',lp:900,gain:0.05*v*k,dur:1.4,hold:true});
+    for(let i=0;i<14;i++)AudioSys.burst({type:'highpass',f:2500+Math.random()*2000,gain:(0.08+Math.random()*0.12)*v,dur:0.04,delay:0.3+Math.random()*3});}}
 // elke frame: graven, de effecten na een treffer en de piketpaaltjes bij aangewezen kabels
 const MARKS=new Map();
 function digTick(dt){const run=!SIM.paused;
@@ -152,7 +178,11 @@ function digTick(dt){const run=!SIM.paused;
       if(p<0.4){const q=p/0.4;bd=0.3*Math.sin(q*Math.PI)-0.05;st=0.35*Math.sin(q*Math.PI);bk=q>0.5?-0.9:0;}
       else if(p<0.55){sw=sm((p-0.4)/0.15)*1.2;bd=-0.25;bk=-0.9;}else if(p<0.7){sw=1.2;bd=-0.25;bk=-0.9+sm((p-0.55)/0.15)*1.6;}else if(p<0.85){sw=1.2-sm((p-0.7)/0.15)*1.2;bd=-0.2;bk=0.7;}
       U.tur.rotation.y=sw;U.boom.rotation.z=bd;U.stick.rotation.z=st;U.bucket.rotation.z=bk;if(digging&&run)U.prog=Math.min(1,U.prog+dt*0.012);
-      U.workers.forEach((w,i)=>{w.P.head.rotation.y=Math.sin(U.t*0.6+i)*0.5;});}
+      const near=run&&camera.position.distanceTo(g.position)<160;
+      if(near&&digging&&p>0.58&&p<0.68&&Math.random()<dt*10){g.updateMatrixWorld(true);dirtBit(U.bucket.getWorldPosition(V3()),V3((Math.random()-0.5)*0.6,-0.5,(Math.random()-0.5)*0.6),1.0,0.3);}
+      if(near&&digging){U.ex=(U.ex||0)+dt;if(U.ex>(p<0.4?0.5:1.1)){U.ex=0;g.updateMatrixWorld(true);const e=U.tur.localToWorld(U.exh.clone());smokePuff(e.x,e.y+0.3,e.z,0.35,0x6a6a66);}}
+      U.workers.forEach((w,i)=>{if(w.shovel){const q=(U.t*0.9+i)%2,s=q<1?Math.sin(q*Math.PI):0;w.shovel.rotation.x=-0.3+s*0.9;w.P.armL.rotation.x=w.P.armR.rotation.x=-0.6-s*0.5;w.P.g.rotation.x=0.15*s;}
+        else w.P.head.rotation.y=Math.sin(U.t*0.6+i)*0.5;});}
     else{U.hit+=dt;U.boom.rotation.z+=(-0.45-U.boom.rotation.z)*Math.min(1,dt*2);U.tur.rotation.y*=0.98;
       // grondwerkers rennen weg van de sleuf
       U.workers.forEach(w=>{const f=clamp(U.hit/2,0,1),L=Math.hypot(w.x,w.z)||1;w.P.g.position.set(w.x+w.x/L*6*f,0,w.z+w.z/L*6*f);w.P.g.rotation.y=Math.atan2(w.x,w.z);
@@ -161,7 +191,9 @@ function digTick(dt){const run=!SIM.paused;
       if(U.sparks>0&&run){U.sparks-=dt;if(Math.random()<dt*14)spark(g.position.clone().add(V3(0,0.25,0)));}
       if(U.smoke>0&&run){U.smoke-=dt;U.sm=(U.sm||0)+dt;if(U.sm>0.6){U.sm=0;smokePuff(g.position.x,0.4,g.position.z,0.5,0x3a3a3a);}}
       if(U.end)DIGM.burn.emissiveIntensity=U.hit<8?3*(0.6+0.4*Math.sin(U.hit*20)):Math.max(0,2-(U.hit-8)*0.2);}
-    const len=0.6+2.6*U.prog;U.pit.scale.set(1,len,1);U.pile.scale.setScalar(0.35+0.85*U.prog);}
+    const len=0.6+2.6*U.prog;U.trench.scale.z=len;U.pile.scale.setScalar(0.35+0.85*U.prog);}
+  // knipperlampen op de hekken (bij schemer en donker) en het zwaailicht op de graafmachine
+  if(DIGS.size){const now=performance.now();DIGM.amber.emissiveIntensity=NIGHT>0.2&&now%1000<400?4:0;DIGM.beacon.emissiveIntensity=now%600<300?5:0.3;}
   // piketpaaltjes en gespoten lijnen langs de aangewezen kabels in het graafgebied
   for(const j of KLIC.jobs)if(j.marked&&!MARKS.has(j))MARKS.set(j,klicMarks(j));
   for(const [j,g] of MARKS)if(!KLIC.jobs.includes(j)){scene.remove(g);disposeTree(g);MARKS.delete(j);}}

@@ -194,15 +194,15 @@ function streetLight(x,z){if(!layFree([x-0.3,z-0.3,x+0.3,z+0.3],['road'],0))retu
   const cone=new THREE.Mesh(new THREE.ConeGeometry(2.8,H,14,1,true),s.coneMat);cone.position.set(ax,H/2+0.05,az);cone.renderOrder=3;cone.castShadow=false;staticRoot.add(cone);}
 // gloed rond de lampen: één puntenwolk per station (en per defecte lamp)
 function lampHalo(pos){const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
-  const m=new THREE.PointsMaterial({map:haloTex,size:2.4,sizeAttenuation:true,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false,color:0xffe9cc});const p=new THREE.Points(g,m);p.frustumCulled=false;scene.add(p);return m;}
+  const m=new THREE.PointsMaterial({map:haloTex,size:3.2,sizeAttenuation:true,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false,color:0xffe9cc});const p=new THREE.Points(g,m);p.frustumCulled=false;scene.add(p);return m;}
 // aan bij schemer (centraal geschakeld per station, met een klein verschil per circuit), 23–6 uur gedimd, alleen als het LS-veld OVL spanning heeft
 function updateStreetLights(){const h=hourOf(),dim=h>=23||h<6?0.6:1,W=WX.cur,wet=clamp(W.rain*1.6,0,1),haze=clamp(W.fog*1.3+W.rain*0.7+W.snow*0.8,0,1);
   const lvl=s=>NIGHT>0.3+s.lampOff&&EN.has(s.ovl)?dim:0;
   RING.stations.forEach(s=>{if(!s.lampMat)return;if(!s.haloMat&&s.haloPos.length)s.haloMat=lampHalo(s.haloPos);const on=lvl(s);
-    s.lampMat.emissiveIntensity=on*5;s.poolMat.opacity=on*0.68*NIGHT*(1+0.5*wet);s.coneMat.opacity=on*NIGHT*0.045*haze;if(s.haloMat)s.haloMat.opacity=on*NIGHT*(0.55+0.4*haze);});
+    s.lampMat.emissiveIntensity=on*7;s.poolMat.opacity=on*NIGHT*(1+0.35*wet);s.coneMat.opacity=on*NIGHT*0.045*haze;if(s.haloMat)s.haloMat.opacity=on*NIGHT*(0.55+0.4*haze);});
   // defecte lamp: brandt onregelmatig en valt soms even helemaal uit
   LAMPS.defect.forEach(d=>{if(!d.hm&&d.halo.length)d.hm=lampHalo(d.halo);const on=lvl(d.s),f=on?(Math.random()<0.75?1:Math.random()*0.2):0;
-    d.lm.emissiveIntensity=on*5*f;d.pm.opacity=on*0.68*NIGHT*f*(1+0.5*wet);if(d.hm)d.hm.opacity=on*NIGHT*0.6*f;});}
+    d.lm.emissiveIntensity=on*7*f;d.pm.opacity=on*NIGHT*f*(1+0.35*wet);if(d.hm)d.hm.opacity=on*NIGHT*0.6*f;});}
 function buildDistrict(){
   // straten
   groundQuad(-150,98,165,104,0.04,MAT.asphalt,6);groundQuad(-150,236,165,242,0.04,MAT.asphalt,6);

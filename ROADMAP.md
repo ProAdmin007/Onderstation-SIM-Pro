@@ -22,7 +22,7 @@ Spoor C bouwt op A en B; spoor F verdiept A; spoor D maakt A, B, C, E en F eenvo
 | A1 | Slimme meters: storingen en spanning per adres | OSE | klein | ⏳ gepland |
 | A2 | Distributieautomatisering (FLISR) | OSE | middel | ⏳ gepland |
 | A3 | Nieuwe storingen: nulbreuk, koperdiefstal, brandende trafo | OSE | klein | 🔄 deels klaar: koperdiefstal en trafobrand ✅, nulbreuk gepland |
-| A4 | Werkvergunningen en rollen (NEN 3140/3840, VIAG) | OSE | middel | ⏳ gepland |
+| A4 | Werkvergunningen en rollen (BEI BHS en BEI LS) | OSE | middel | ⏳ gepland |
 | A5 | Storingskaart en communicatie | OSE | klein | ⏳ gepland |
 | B1 | Aansluitaanvragen en netuitbreiding | AM | groot | ⏳ gepland |
 | B2 | Asset management met budget en risico | AM | groot | ⏳ gepland |
@@ -77,7 +77,7 @@ Een deel van de MS-stations krijgt op afstand bedienbare schakelaars en kortslui
 
 ### A4. Werkvergunningen en rollen
 
-Volgens NEN 3140/3840 en de VIAG hoort bij elk werk een **werkverantwoordelijke** (de monteur ter plaatse) en een **installatieverantwoordelijke** (de bedrijfsvoerder). De schakelbrief wordt een echte werkvergunning:
+Volgens de BEI BHS en BEI LS (de bedrijfsvoeringsvoorschriften van de netbeheerders, op basis van NEN 3840 en NEN 3140) hoort bij elk werk een **werkverantwoordelijke** (de monteur ter plaatse) en een **installatieverantwoordelijke** (de bedrijfsvoerder). De schakelbrief wordt een echte werkvergunning:
 
 - **vrijgave** met de genomen maatregelen;
 - **aanwijzing** aan de werkploeg;
@@ -148,7 +148,7 @@ Een spelmodus over meerdere jaren, waarin je groeit van monteur naar asset manag
 
 - **Opbouw:**
   - je begint met de lessen;
-  - na goede diensten en de juiste certificaten (bijvoorbeeld **VOP**, **VP** en **AVP** volgens NEN 3140/3840) word je bedrijfsvoerder;
+  - na goede diensten en de juiste certificaten (bijvoorbeeld de aanwijzingen **VOP**, **VP** en **AVP** volgens de BEI) word je bedrijfsvoerder;
   - later word je asset manager.
 - **Een levend net:**
   - beslissingen als asset manager bepalen het net waarin je als bedrijfsvoerder de diensten speelt;
@@ -257,7 +257,7 @@ De interface, meldingen, lessen en begeleiding vertalen, met een taalkeuze in de
 
 Nu schakel je met één klik en gaan veiligheid en communicatie grotendeels vanzelf. In het echt zitten daar juist de leermomenten. Dit spoor maakt het werk van de monteur (in het veld, met rondlopen) en de operator (in de meldkamer, met SCADA) realistischer. Het sluit aan op de werkvergunningen en rollen (A4).
 
-**Aanraders om mee te beginnen:** F1 en F6 (de kern van veilig werken volgens NEN 3140 en de VIAG), F8 (herkenbaar voor bedrijfsvoerders) en F11 (prioriteren bij drukte).
+**Aanraders om mee te beginnen:** F1 en F6 (de kern van veilig werken volgens de BEI BHS en BEI LS), F8 (herkenbaar voor bedrijfsvoerders) en F11 (prioriteren bij drukte).
 
 ### Monteurs
 

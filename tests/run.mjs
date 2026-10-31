@@ -695,18 +695,38 @@ const TESTS = [
   } },
   { name: 'straatverlichting: brandt alleen in het donker en met spanning op het OVL-veld, gedimd na 23 uur, lichtkegel bij mist', query: '?autostart&t=21.5', async run(p) {
       const r = await p.evaluate(async () => { const O = OS, s = O.RING.stations.find(x => x.lampMat && x.lamps > 2), t0 = O.SIM.t; O.updateSky(0.5); O.setWeather('helder', true, true); O.updateStreetLights();
-        const aan = s.lampMat.emissiveIntensity > 4 && s.poolMat.opacity > 0.2 && s.coneMat.opacity < 0.01; O.SIM.t = t0 + 2 * 60; O.updateStreetLights(); const gedimd = Math.abs(s.lampMat.emissiveIntensity - 3) < 0.01; O.SIM.t = t0;
+        const aan = s.lampMat.emissiveIntensity > 4 && s.poolMat.opacity > 0.2 && s.coneMat.opacity < 0.01; O.SIM.t = t0 + 2 * 60; O.updateStreetLights(); const gedimd = Math.abs(s.lampMat.emissiveIntensity - 4.2) < 0.01; O.SIM.t = t0;
         O.setWeather('mist', true, true); O.updateStreetLights(); const kegel = s.coneMat.opacity > 0.02;
         O.D[s.ovl].state = 0; O.computeFlows(); O.updateStreetLights(); const zonderSpanning = s.lampMat.emissiveIntensity === 0; O.D[s.ovl].state = 1; O.computeFlows();
         O.updateSky(12); O.updateStreetLights(); const dag = s.lampMat.emissiveIntensity === 0;
         return { lampen: O.LAMPS.n > 30, aan, gedimd, kegel, zonderSpanning, dag, defect: O.LAMPS.defect.length > 0 }; });
       for (const [k, v] of Object.entries(r)) assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
   } },
+  { name: 'aggregaat vanuit het MS-stationspaneel: sturen als het station spanningsloos is, daarna afkoppelen', query: '?autostart&t=11', async run(p) {
+      const r = await p.evaluate(async () => { const O = OS, D = O.D; T.quiet(); const s = O.RING.stations.find(x => x.id === 'MS2');
+        O.selectDevice('MS2'); O.refreshDevPanel(); const btn = k => document.querySelector(`#devpanel [data-act="${k}"]`);
+        const knoppen = !!btn('gs') && !!btn('gsoff') && !!btn('gsrestart') && btn('gs').disabled && /beschikbaar/.test(document.querySelector('#devpanel').textContent);
+        D['MS2-L'].state = 0; D['MS2-R'].state = 0; O.computeFlows(); O.refreshDevPanel(); const kan = !btn('gs').disabled;
+        btn('gs').click(); O.refreshDevPanel(); const onderweg = O.LS_ORDERS.some(o => o.st === 'MS2' && o.kind === 'gs') && btn('gs').disabled && /onderweg/.test(document.querySelector('#devpanel').textContent);
+        T.step(30); O.refreshDevPanel(); const draait = !!s.gs && !btn('gsoff').disabled && /draait/.test(document.querySelector('#devpanel').textContent);
+        btn('gsoff').click(); const af = O.LS_ORDERS.some(o => o.st === 'MS2' && o.kind === 'gsoff');
+        return { knoppen, kan, onderweg, draait, af }; });
+      for (const [k, v] of Object.entries(r)) assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
+  } },
+  { name: 'OS Meppel staat aan de noordkant van de stad, met een inrit tussen de bomen door en een eigen camerastandpunt', query: '?autostart', async run(p) {
+      const r = await p.evaluate(() => { const O = OS, M = O.MEPPEL, L = O.LAYOUT;
+        const gebouwd = !!M.gate && L.some(e => e.kind === 'site' && e.r[0] === M.x0 && e.r[1] === M.z0) && M.z0 > 440;
+        const vrij = !L.some(e => e.kind === 'tree' && e.r[0] < 37 && e.r[2] > 27 && e.r[3] > M.gate[0] && e.r[1] < M.gate[1]);
+        const binnen = !L.some(e => e.kind === 'tree' && e.r[2] > M.x0 && e.r[0] < M.x1 && e.r[3] > M.z0 && e.r[1] < M.z1);
+        const view = O.VIEWPOS.length === 14 && !!document.querySelector('[data-v="13"]');
+        return { gebouwd, vrij, binnen, view }; });
+      for (const [k, v] of Object.entries(r)) assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
+  } },
   { name: 'sirenes: brandweer, ambulance en politie klinken verschillend', query: '?autostart', async run(p) {
       const r = await p.evaluate(() => { const A = OS.AudioSys, orig = A.tone, rec = []; A.tone = function (o) { rec.push(o); };
         const take = k => { rec.length = 0; A.siren(1, k); return rec.map(o => `${o.type || 'sine'}:${Math.round(o.f)}>${o.f2 ? Math.round(o.f2) : ''}@${o.delay || 0}`).join(' '); };
         const b = take('brandweer'), a = take('ambulance'), po = take('politie'); A.tone = orig;
-        return { verschillend: new Set([b, a, po]).size === 3 && b.length > 0, wail: /620>1350/.test(a) && /1350>620/.test(a), b, a, po }; });
+        return { verschillend: new Set([b, a, po]).size === 3 && b.length > 0, wail: /640>1420/.test(a), b, a, po }; });
       assert(r.verschillend && r.wail, `sirenes: ${JSON.stringify(r)}`);
   } },
   { name: 'aanwijzen: gebouwen zonder apparaat (datacenter) geven geen fout bij hover en rondlopen', query: '?autostart&t=11', async run(p) {
