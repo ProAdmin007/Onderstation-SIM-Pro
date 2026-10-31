@@ -244,7 +244,7 @@ Bedoeld voor **bedrijfsvoerders en monteurs in opleiding**, studenten **elektrot
   - een compacte RMU met de velden L, T en R, met standmelders, spanningslampjes en een kortsluitverklikker (KSV);
   - een laagspanningsrek met een hoofdschakelaar en NH-lastscheiders per LS-veld (de klep gaat echt open of dicht);
   - de distributietransformator achter een gaashek;
-  - een **RTU-kast** aan de muur (RTU, I/O, LTE-router met antennes, firewall, glasvezelaansluiting en accu), met een LTE-antenne op het dak en de glasvezel uit de vloer. De LEDs knipperen en worden rood als de SCADA-verbinding wegvalt (cyberaanval).
+  - een **RTU-kast** aan de muur, met de deur open: op de montageplaat zitten DIN-rails en kabelgoten met een 24 V-voeding, de RTU met I/O-kaarten, een LTE-router met antennes, een firewall, een glasvezellas (ODF) met gele patchkabels, automaten, rijgklemmen en accu's. In de deur zit de schemahouder. De LTE-antenne staat op het dak; glasvezel (oranje microbuis), voeding en signaalkabels komen van onderen binnen. De LEDs knipperen en worden rood als de SCADA-verbinding wegvalt (cyberaanval).
   Schakelen gaat met het richtkruis: `F` voor direct schakelen, `E` voor het paneel.
 </details>
 
@@ -253,7 +253,16 @@ Bedoeld voor **bedrijfsvoerders en monteurs in opleiding**, studenten **elektrot
 
 Binnen staat een rij van 13 metaalomsloten schakelvelden (V-T1, F1–F3, meetveld, koppeling V-K, F4–F6, V-T3). In het 20 kV-gebouw staan W-T2, G1, G2, meetveld C1 met RC-Q8, koppeling W-K, meetveld C2 met RD-Q8, G3, G4 en W-T3. Elk veld heeft een live display, mimic-schema met standmelder en spanningslampjes. Klik op een veld om het te bedienen. Verder: beveiligingskasten, bedieningsbureau met live SCADA- en meldingenscherm, accubatterij en eigenbedrijfstransformator.
 
-Links van het 10 kV-gebouw staat de **serverruimte** (gebouw *SCADA · Servers*, camerastandpunt *Serverruimte*): twee rijen racks met knipperende servers (SCADA A en B, historian, front-end voor de RTU-communicatie, firewall, netwerk, glasvezel-ODF, LTE-gateway en GPS-tijdserver) met een koude gang ertussen, kabelgoten met glasvezel, een UPS, koeling, gasblussing en een bedienplek met de SCADA-schermen. Buiten staan de buitendelen van de koeling, een LTE-mast en een GPS-antenne. Bij een cyberaanval kleuren de LEDs rood.
+Links van het 10 kV-gebouw staat het **datacenter** (gebouw *SCADA · Datacenter*, camerastandpunt *Datacenter*):
+
+- **Racks:** twee rijen van acht 19"-racks (600 × 1200 mm) met geperforeerde deuren en knipperende apparatuur: SCADA A en B, historian, front-ends voor de RTU-communicatie, domeinserver, back-up en opslag, netwerk met patchkabels, glasvezel-ODF, LTE-gateway, GPS-tijdserver, firewall, beheer/KVM en twee reserveracks. Achter de racks zie je de stekkerdozen en kabelbundels.
+- **Koude gang:** de fronten staan naar een afgesloten koude gang met geperforeerde vloertegels, een glazen dak en glazen schuifdeuren. Aan de oostkant staan de deuren open, zodat je er bij rondlopen in kunt.
+- **Kabels:** kabelladders boven de rijen met kabelbundels en afgangen naar elk rack, en gele glasvezelgoten.
+- **Stroom en koeling:** twee precisiekoelers, twee UPS-kasten met accukasten en een UPS-verdeler.
+- **Brandbeveiliging:** gasblussing met INERGEN-flessen, leidingen en sproeiers, rookaanzuiging (VESDA) en rookmelders. Bij de deur hangen een waarschuwing met flitslicht, een blusknop, een nood-uitknop en een pasjeslezer.
+- **Bediening:** een bewakingsscherm aan de wand en een bedienplek met de SCADA-schermen.
+
+Buiten staan de buitendelen van de koeling, een LTE-mast en een GPS-antenne. Bij een cyberaanval kleuren de LEDs rood.
 </details>
 
 <details>

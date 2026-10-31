@@ -66,7 +66,7 @@ function buildFence(){
 
 const BUILDINGS=[{id:'MS',x0:-20,x1:20,z0:46,z1:56,doors:[-14,-6,6],label:'OS ZUIDWOLDE  ·  10 kV'},
   {id:'MS20',x0:46,x1:76,z0:46,z1:56,doors:[51,59,69],label:'OS ZUIDWOLDE  ·  20 kV'},
-  {id:'SRV',x0:-42,x1:-26,z0:46,z1:55.5,doors:[-36],label:'SCADA · SERVERS'}];
+  {id:'SRV',x0:-42,x1:-26,z0:46,z1:55.5,doors:[-36],label:'SCADA · DATACENTER'}];
 function buildBuilding({id,x0,x1,z0,z1,doors,label}){
   const H=5.2,root=grp(),bt=C.brick,W=x1-x0,Dz=z1-z0,cx=(x0+x1)/2,cz=(z0+z1)/2;
   const brick=(len)=>{const t=toTex(bt,len/1.76,H/1.5);return mat({map:t,bumpMap:toTex(bt,len/1.76,H/1.5,false),bumpScale:0.8,roughness:0.88});};

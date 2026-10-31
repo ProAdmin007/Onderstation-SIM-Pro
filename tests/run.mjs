@@ -661,7 +661,7 @@ const TESTS = [
         return { eerste, tweede, geweigerd, geannuleerd, download, ongeldig }; });
       for (const [k, v] of Object.entries(r)) assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
   } },
-  { name: 'aanwijzen: gebouwen zonder apparaat (serverruimte) geven geen fout bij hover en rondlopen', query: '?autostart&t=11', async run(p) {
+  { name: 'aanwijzen: gebouwen zonder apparaat (datacenter) geven geen fout bij hover en rondlopen', query: '?autostart&t=11', async run(p) {
       const r = await p.evaluate(() => { const O = OS, c = O.VIEWS.SRV.center; O.camera.position.set(c.x, c.y + 40, c.z + 25); O.camera.lookAt(c); O.camera.updateMatrixWorld();
         const v = c.clone().project(O.camera), x = (v.x + 1) / 2 * innerWidth, y = (1 - v.y) / 2 * innerHeight; let fout = null, id;
         try { id = O.pickAt(x, y); } catch (e) { fout = e.message; } return { fout, id: id ?? null }; });

@@ -83,7 +83,7 @@ function buildRoomShell(r){
   r.doors.forEach(x=>{box(2.1,2.65,0.05,MAT.door,staticRoot,x,Y+1.32,r.z0+0.03);box(0.04,0.04,0.12,MAT.trim,staticRoot,x+0.15,Y+1.2,r.z0+0.1);});
   box(W-0.6,0.04,0.012,MAT.copper,staticRoot,cx,Y+0.4,r.z0+0.02);
   for(let x=r.x0+4;x<r.x1-2;x+=6)for(const z of[49,53]){box(1.4,0.06,0.22,IM.led,staticRoot,x,r.y1-0.35,z);for(const s of[-0.6,0.6])rod(V3(x+s,r.y1-0.32,z),V3(x+s,r.y1,z),0.006,MAT.galv,staticRoot,4);}
-  if(r.id!=='SRV')for(let x=r.x0+W/6;x<r.x1;x+=W/3){const l=new THREE.PointLight(0xf4f2ea,70,9,2);l.position.set(x,r.y1-0.5,51);scene.add(l);}   // serverruimte: verplaatsbare lamp (zie updateKioskLight)
+  if(r.id!=='SRV')for(let x=r.x0+W/6;x<r.x1;x+=W/3){const l=new THREE.PointLight(0xf4f2ea,70,9,2);l.position.set(x,r.y1-0.5,51);scene.add(l);}   // datacenter: verplaatsbare lamp (zie updateKioskLight)
   r.doors.forEach(x=>{cyl(0.08,0.08,0.55,IM.redPaint,staticRoot,x+1.6,Y+0.3,r.z0+0.15,14);cyl(0.03,0.03,0.08,MAT.black,staticRoot,x+1.6,Y+0.61,r.z0+0.15,8);});
 }
 function buildPanelRow(panels,cx,room){
