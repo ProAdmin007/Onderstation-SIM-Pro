@@ -102,7 +102,7 @@ function frame(){
   if((hudT+=dt)>0.25){hudT=0;hudStep=0;progT++;}
   if(hudStep<4){const k=hudStep++;
     if(k===0){if(!RP.on)updateHUD();updateSLD();refreshDevPanel();updateAudio();}
-    else if(k===1){if(!LITE)drawPanelScreens();renderTasks();updateStreetLights();updateWindows();}
+    else if(k===1){meppelLod();if(!LITE)drawPanelScreens();renderTasks();updateStreetLights();updateWindows();}
     else if(k===2){renderFaults();renderCoach();progTick();if(progT%4===0)renderProg();}
     else if(progT%2===0){renderCables();renderLSTab();if(lsOpen()&&progT%4===0)renderLS();}}
   if(!LITE){updateHover();updateLabels();}if(GFX.particles)updateRain(dt);else RAIN.ls.visible=SNOW.p.visible=false;updateNPCs(dt);doorTick(dt);updateKioskLight();updateHotspot();phoneTick(dt);replayTick(dt);updateLife(dt);fireTick(dt);gisTick(dt);serverTick(dt);updateSites(dt);updateSmall();

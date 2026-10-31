@@ -112,7 +112,7 @@ Alle `.js`-bestanden delen **één module-scope**. Er zijn geen imports tussen d
 | `03b-district.js` | Woonwijk, MS-stations (`kiosk`), straatverlichting, `DISTRICT_RECTS` |
 | `03c-weather.js` | Seizoenen, weertypen, `WX`, `weatherTick` |
 | `03d-streets.js` … `03g-industry.js` | Straatbeeld, grote afnemers (ziekenhuis, kassen, RWZI), kleine afnemers, bedrijventerrein |
-| `03h-meppel.js` | OS Meppel (alleen beeld) aan de noordkant van de stad: `MEPPEL`, `buildMeppel()`; de inrit zoekt het grootste gat in de bomenrij langs de hoofdweg |
+| `03h-meppel.js` | OS Meppel (alleen beeld) aan de noordkant van de stad. `buildMeppel()` gebruikt dezelfde bouwers als Zuidwolde in lokale coördinaten, zet de apparaten in hun stand, haalt registraties en klikvakken weg en draait en verplaatst alles in één groep. Eigen samenvoegzone `meppel`; `meppelLod()` verbergt op meer dan 280 m de fijne delen. De inrit zoekt het grootste gat in de bomenrij. |
 | `04-1-net.js` | `SIM`, rails, lijnen, voeders, apparaten `D`, ringen, LS-groepen, netgraaf, `EN`/`ER`, `computeFlows` |
 | `04-2-bediening.js` | `operate()`, vergrendelingen, trips, 110 kV-lijnen |
 | `04-3-trafo.js` | Trappenschakelaar en AVR, oliemodel, uitschakelrelais 86, omschakelbare T3 |
@@ -427,7 +427,7 @@ De wereld bestaat uit tienduizenden kleine meshes. `bakeStatic()` voegt aan het 
 
 1. Alle vlakken (`PlaneGeometry`) krijgen `polygonOffset`. Gevels, ramen en bordjes zitten vlak voor een blok en zouden anders flikkeren.
 2. Overslaan: meshes met `userData.noBake`, en alles onder een ouder met `userData.dyn = true`.
-3. De geometrie wordt naar wereldcoördinaten omgezet, teruggebracht tot positie, normaal en UV, en per *bucket* samengevoegd. Een bucket is materiaal + schaduw + zone; de zones zijn `station`, `wijk`, `centrum`, `zkh`, `kassen`, `rwzi` of een rastercel van 400 m.
+3. De geometrie wordt naar wereldcoördinaten omgezet, teruggebracht tot positie, normaal en UV, en per *bucket* samengevoegd. Een bucket is materiaal + schaduw + zone; de zones zijn `station`, `wijk`, `centrum`, `zkh`, `kassen`, `rwzi`, `meppel` of een rastercel van 400 m. De samengevoegde mesh onthoudt zijn zone in `userData.zone`, zodat je een zone als geheel kunt verbergen (detailniveau).
 
 **De regel:** alles wat beweegt of van materiaal verandert, hangt onder een groep met `userData.dyn = true` (deurbladen, scheidersarmen, voertuigen, wieken). Een materiaal waarvan alleen de *eigenschappen* veranderen (kleur, emissive, opacity) mag wel samengevoegd worden. Zo schakelt de straatverlichting met één materiaal per MS-station. **Gedeelde materialen** houden het aantal tekenbeurten laag: gebruik er geen nieuwe per object.
 

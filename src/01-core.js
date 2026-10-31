@@ -203,7 +203,7 @@ function mergeGroup(g){g.updateMatrixWorld(true);const inv=g.matrixWorld.clone()
   for(const [m,geos] of buckets){const mg=mergeGeometries(geos,false);if(!mg)continue;const me=new THREE.Mesh(mg,m);me.castShadow=true;me.receiveShadow=true;g.add(me);}return g;}
 // alle statische meshes samenvoegen per materiaal én per zone (minder draw calls). Per zone, zodat de GPU wat buiten beeld
 // (of buiten het schaduwgebied) ligt niet hoeft te tekenen; grote vlakken (grond, spoor) houden één stuk. Elders vakken van 400 m.
-const BAKE_ZONES=[['station',-130,-130,150,90],['wijk',-160,90,215,262],['centrum',-160,262,215,440],['zkh',-420,220,-160,440],['kassen',230,20,650,380],['rwzi',-430,-260,-160,60]];
+const BAKE_ZONES=[['station',-130,-130,150,90],['wijk',-160,90,215,262],['centrum',-160,262,215,440],['zkh',-420,220,-160,440],['kassen',230,20,650,380],['rwzi',-430,-260,-160,60],['meppel',44,446,116,560]];
 const bakeZone=(x,z)=>(BAKE_ZONES.find(q=>x>=q[1]&&x<q[3]&&z>=q[2]&&z<q[4])||[Math.floor(x/400)+','+Math.floor(z/400)])[0];
 function bakeStatic(){
   scene.updateMatrixWorld(true);
@@ -220,9 +220,9 @@ function bakeStatic(){
     g.computeBoundingBox();bb.copy(g.boundingBox).getCenter(bc);bb.getSize(bs);
     const cell=Math.max(bs.x,bs.z)>300?'big':bakeZone(bc.x,bc.z);
     const key=o.material.uuid+(o.castShadow?'s':'n')+(g.index?'i':'x')+cell;
-    if(!buckets.has(key))buckets.set(key,{m:o.material,cast:o.castShadow,geos:[]});
+    if(!buckets.has(key))buckets.set(key,{m:o.material,cast:o.castShadow,geos:[],cell});
     buckets.get(key).geos.push(g);remove.push(o);
   });
   remove.forEach(o=>o.parent.remove(o));
-  for(const {m,cast,geos} of buckets.values()){const mg=mergeGeometries(geos,false);if(!mg)continue;mg.computeBoundingSphere();const o=new THREE.Mesh(mg,m);o.castShadow=cast;o.receiveShadow=true;o.userData.noBake=true;o.userData.baked=true;scene.add(o);}
+  for(const {m,cast,geos,cell} of buckets.values()){const mg=mergeGeometries(geos,false);if(!mg)continue;mg.computeBoundingSphere();const o=new THREE.Mesh(mg,m);o.castShadow=cast;o.receiveShadow=true;o.userData.noBake=true;o.userData.baked=true;o.userData.zone=cell;scene.add(o);}
 }

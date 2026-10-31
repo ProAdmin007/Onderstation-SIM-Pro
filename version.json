@@ -1,7 +1,13 @@
 {
-  "build": "b2834237b22b",
+  "build": "4095ed3ccaca",
   "date": "2026-10-31",
   "previous": [
+    "7d9129c18a0b",
+    "6802195abb5b",
+    "8df27b14eb05",
+    "42b5fc208748",
+    "42a04aad047c",
+    "b2834237b22b",
     "3392c8085a95",
     "af516478fcc4",
     "aee4710321bf",
@@ -105,6 +111,10 @@
     "b2834237b22b": {
       "date": "2026-10-31",
       "text": "Brand in het datacenter staat nu in het hoofdmenu en komt in de vrije dienst voor als groot incident"
+    },
+    "4095ed3ccaca": {
+      "date": "2026-10-31",
+      "text": "OS Meppel ziet er nu uit als OS Zuidwolde, met echte velden, portalen en een bakstenen gebouw; op afstand tekent het alleen de grote delen"
     }
   }
 }

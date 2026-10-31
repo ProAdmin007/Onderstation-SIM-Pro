@@ -679,7 +679,7 @@ const TESTS = [
       for (const [k, v] of Object.entries(r)) assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
   } },
   { name: 'gebouwen in- en uitlopen: open deuropening, bordes op vloerhoogte, deur gaat open bij nadering en weer dicht; monteurs lopen op de vloer', query: '?autostart&t=11', async run(p) {
-      const r = await p.evaluate(async () => { const O = OS, bld = O.DOORS.filter(d => d.leaves.length === 2);
+      const r = await p.evaluate(async () => { const O = OS, bld = O.DOORS.filter(d => d.leaves.length === 2 && d.p.z < 440);
         // door elke deur van de stationsgebouwen kun je recht naar binnen lopen
         const vrij = bld.length >= 7 && bld.every(d => { for (let z = d.p.z - 2.2; z < d.p.z + 1.5; z += 0.1) if (O.blockedAt(d.p.x, z)) return false; return true; });
         const d = bld[0], bordes = Math.abs(O.floorAt(d.p.x, d.p.z - 0.6) - 0.45) < 0.01 && Math.abs(O.floorAt(d.p.x, d.p.z - 1.5) - 0.22) < 0.01 && Math.abs(O.floorAt(d.p.x, d.p.z + 1) - 0.45) < 0.01;
