@@ -1,7 +1,7 @@
 
 // Net: toestand, velden en apparaten, 10 kV-ringen, netgraaf (spanning/aarding) en belastingstromen
 // ============================================================ simulatie
-const SIM={t:9*60,speed:60,paused:true,interlock:true,cml:0,incidents:0,tasksDone:0,off:0,
+const SIM={t:9*60,speed:30,paused:true,interlock:true,cml:0,incidents:0,tasksDone:0,off:0,
   nextEvent:9*60+16,nextTaskAt:9*60+3,timers:[],
   lines:{L1:{name:'Hoogeveen',avail:true,reason:'',maint:false,ar:true},L2:{name:'Meppel',avail:true,reason:'',maint:false,ar:true}},
   meppel:{avail:true,reason:''}};   // OS Meppel: 110 kV-zijde en trafo van Netbeheer Noord

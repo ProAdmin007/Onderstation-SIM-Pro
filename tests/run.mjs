@@ -745,6 +745,13 @@ const TESTS = [
         return { route, opSlot, veld, geweigerd, toegang, geschakeld, verlopen }; });
       for (const [k, v] of Object.entries(r)) assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
   } },
+  { name: 'speelsnelheid: start op 30×, knoppen 1×, 10×, 30×, 60× en 300×', query: '?autostart', async run(p) {
+      const r = await p.evaluate(() => { const O = OS, b = [...document.querySelectorAll('#speed button')].map(x => +x.dataset.s);
+        const knoppen = [0, 1, 10, 30, 60, 300].every(v => b.includes(v)), start = O.SIM.speed === 30 && document.querySelector('#speed [data-s="30"]').classList.contains('on');
+        document.querySelector('#speed [data-s="10"]').click(); const tien = O.SIM.speed === 10 && !O.SIM.paused; O.setSpeed(30);
+        return { knoppen, start, tien }; });
+      for (const [k, v] of Object.entries(r)) assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
+  } },
   { name: 'onderste balk: alle standpunten in één menu, de andere knoppen blijven', query: '?autostart', async run(p) {
       const r = await p.evaluate(async () => { const bar = document.querySelector('#views'), menu = document.querySelector('#viewMenu');
         const los = [...bar.children].filter(b => b.matches('button[data-v]')).length === 0, inMenu = menu.querySelectorAll('[data-v]').length === 14, dicht = menu.classList.contains('hidden');

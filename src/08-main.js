@@ -51,7 +51,7 @@ $('#pauseMenu').addEventListener('click',e=>{const b=e.target.closest('[data-pm]
   else if(a==='menu'){if(canSave())saveGame(true);else{finalizeGame();saveBest();}location.search='';}});
 addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
 function startGame(id){$('#intro').classList.add('hidden');AudioSys.init();controls.autoRotate=false;
-  applyMode(id);pushAlarm(`${MODES[id]?.name||'Vrije dienst'} gestart (${DIFFS[GAME.diff].label})`,'ok');setSpeed(60);if(GAME.handover)openHandover();
+  applyMode(id);pushAlarm(`${MODES[id]?.name||'Vrije dienst'} gestart (${DIFFS[GAME.diff].label})`,'ok');setSpeed(30);if(GAME.handover)openHandover();
   const v=VIEWPOS[0];flyTo(v[0].clone(),v[1].clone(),2);}
 $('#menu').addEventListener('click',e=>{const rs=e.target.closest('[data-resume]');if(rs)return void(location.search='?resume='+rs.dataset.resume);const ds=e.target.closest('[data-delsave]');if(ds){deleteSave(ds.dataset.delsave);return renderMenu();}const b=e.target.closest('[data-mode]');if(b)startGame(b.dataset.mode);});
 $('#diff').addEventListener('click',e=>{const b=e.target.closest('[data-d]');if(b){GAME.diff=b.dataset.d;renderMenu();}});
@@ -70,7 +70,7 @@ if(params.has('resume')&&readSave(RESUME_SLOT)){try{resumeGame(readSave(RESUME_S
   try{localStorage.setItem(slotKey(RESUME_SLOT)+'-defect',localStorage.getItem(slotKey(RESUME_SLOT)));}catch(_){}deleteSave(RESUME_SLOT);
   alert('Het opgeslagen spel kon niet worden geladen (mogelijk van een oudere versie). Er is een reservekopie bewaard; je begint opnieuw.');location.search='';}}
 else if(params.has('play'))startGame(params.get('play'));
-else if(params.has('autostart')){$('#intro').classList.add('hidden');applyMode('free');setSpeed(60);}
+else if(params.has('autostart')){$('#intro').classList.add('hidden');applyMode('free');setSpeed(30);}
 else{renderMenu();$('#intro').classList.remove('hidden');controls.autoRotate=true;controls.autoRotateSpeed=0.35;}
 if(params.has('night'))updateSky(22);
 if(params.has('view')){const v=VIEWPOS[+params.get('view')];camera.position.copy(v[0]);controls.target.copy(v[1]);controls.autoRotate=false;controls.update();}

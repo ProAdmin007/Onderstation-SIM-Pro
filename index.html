@@ -381,8 +381,10 @@ body.previewing #tasks,body.previewing #alarms,body.previewing #faults{opacity:.
   <div id="wx" class="wx" title="Weer en buitentemperatuur – klik voor weer en tijd (T)"></div><button id="wxSkip" class="mini hidden" title="Bui laten overtrekken">⏭</button>
   <div class="speed" id="speed">
     <button data-s="0" title="Pauze (spatie)">❚❚</button>
-    <button data-s="1">1×</button>
-    <button data-s="60" class="on">60×</button>
+    <button data-s="1" title="Echte tijd">1×</button>
+    <button data-s="10" title="Een spelminuut per 6 seconden">10×</button>
+    <button data-s="30" class="on" title="Standaard: een dienst van 8 uur duurt 16 minuten; monteurs en voertuigen bewegen op normaal tempo">30×</button>
+    <button data-s="60" title="Een spelminuut per seconde">60×</button>
     <button data-s="300">300×</button>
   </div>
   <div class="kpis">
@@ -1950,7 +1952,7 @@ function buildMeppel(){const M=MEPPEL,P=Math.PI;
 
 // Net: toestand, velden en apparaten, 10 kV-ringen, netgraaf (spanning/aarding) en belastingstromen
 // ============================================================ simulatie
-const SIM={t:9*60,speed:60,paused:true,interlock:true,cml:0,incidents:0,tasksDone:0,off:0,
+const SIM={t:9*60,speed:30,paused:true,interlock:true,cml:0,incidents:0,tasksDone:0,off:0,
   nextEvent:9*60+16,nextTaskAt:9*60+3,timers:[],
   lines:{L1:{name:'Hoogeveen',avail:true,reason:'',maint:false,ar:true},L2:{name:'Meppel',avail:true,reason:'',maint:false,ar:true}},
   meppel:{avail:true,reason:''}};   // OS Meppel: 110 kV-zijde en trafo van Netbeheer Noord
@@ -3057,7 +3059,7 @@ $('#report').addEventListener('click',e=>{const b=e.target.closest('[data-r]');i
   if(a==='replay')return startReplay();
   if(a==='again')location.search=`?play=${GAME.mode}&diff=${GAME.diff}`;
   else if(a==='menu')location.search='';
-  else{$('#report').classList.add('hidden');GAME.endT=null;GAME.ended=false;GAME.events=true;GAME.tasks=true;GAME.countdown=null;SIM.nextTaskAt=SIM.t+5;setSpeed(60);}});
+  else{$('#report').classList.add('hidden');GAME.endT=null;GAME.ended=false;GAME.events=true;GAME.tasks=true;GAME.countdown=null;SIM.nextTaskAt=SIM.t+5;setSpeed(30);}});
 function renderMenu(){
   const card=id=>{const m=MODES[id],b=getBest(id,GAME.diff);return `<button class="mode" data-mode="${id}"><span class="mt">${m.tag}</span><b>${m.name}</b><span class="md">${m.desc}</span>${b?`<span class="mb">Beste: ${b.toLocaleString('nl-NL')} ${MODES[id].les?'':` (${grade(b,id,true)[0]})`}</span>`:''}</button>`;};
   const svs=listSaves(),svHtml=svs.length?`<div class="mh">Verder spelen</div><div class="mgrid">${svs.map(({k,d})=>`<div class="savecard"><button class="mode resume" data-resume="${k}"><span class="mt">💾 ${slotName(k)}</span><b>${MODES[d.mode].name} · ${fmtClock(d.SIM.t)}</b><span class="md">${DIFFS[d.diff].label} · ${SEASONS[d.season].name} · score ${Math.round(d.GAME.score).toLocaleString('nl-NL')}<br>opgeslagen ${new Date(d.at).toLocaleString('nl-NL',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</span></button><button class="mini delsave" data-delsave="${k}" title="Dit opgeslagen spel verwijderen">✕ verwijderen</button></div>`).join('')}</div>`:'';
@@ -5351,7 +5353,7 @@ function resumeGame(d){$('#intro').classList.add('hidden');SAVE_SLOT=d.slot||'au
     KLIC.next=d.GIS.k.next;KLIC.seq=d.GIS.k.seq;KLIC.jobs=d.GIS.k.jobs.map(j=>({...j,c:CABLES.find(c=>c.id===j.c)})).filter(j=>j.c);
     KLIC.jobs.forEach(j=>{if(j.state==='graaf')digStart(j);if(j.order&&!j.marked)addTimer(rnd(3,6),()=>klicMarked(j));});}
   resumeTimers();computeFlows();FEEDERS.concat(RING.stations).forEach(f=>{f.wasOn=EN.has(f.node);});
-  updateSky(hourOf());refreshAll();renderTasks();setSpeed(d.SIM.speed||60);
+  updateSky(hourOf());refreshAll();renderTasks();setSpeed(d.SIM.speed||30);
   const v=VIEWPOS[0];flyTo(v[0].clone(),v[1].clone(),2);
   pushAlarm(`💾 Spel hervat: ${MODES[d.mode].name} (${DIFFS[d.diff].label}), opgeslagen ${new Date(d.at).toLocaleString('nl-NL',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}`,'ok');}
 // een incident dat liep tijdens het opslaan: netjes afronden
@@ -6727,7 +6729,7 @@ function gisDrawExtra(g,cv){const s=TAB.zoom,now=performance.now();
 // ============================================================ updatecontrole in het hoofdmenu: is er op GitHub een nieuwere versie?
 // De build zet een vingerafdruk in BUILD_ID (tests/stamp.mjs) en houdt version.json bij met eerdere versies.
 // Staat onze versie bij de eerdere versies op GitHub, dan is er een update; staat hij er niet in, dan is het eigen (nieuwer) werk.
-const BUILD_ID='bda8cb2c9967';
+const BUILD_ID='ebdd11fd1475';
 const UPD_REPO='https://github.com/ProAdmin007/Onderstation-SIM-Pro';
 const UPD_URL='https://raw.githubusercontent.com/ProAdmin007/Onderstation-SIM-Pro/main/version.json';
 // toestand van de controle: idle, bezig, actueel, nieuw, eigen of fout
@@ -6990,7 +6992,7 @@ $('#pauseMenu').addEventListener('click',e=>{const b=e.target.closest('[data-pm]
   else if(a==='menu'){if(canSave())saveGame(true);else{finalizeGame();saveBest();}location.search='';}});
 addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
 function startGame(id){$('#intro').classList.add('hidden');AudioSys.init();controls.autoRotate=false;
-  applyMode(id);pushAlarm(`${MODES[id]?.name||'Vrije dienst'} gestart (${DIFFS[GAME.diff].label})`,'ok');setSpeed(60);if(GAME.handover)openHandover();
+  applyMode(id);pushAlarm(`${MODES[id]?.name||'Vrije dienst'} gestart (${DIFFS[GAME.diff].label})`,'ok');setSpeed(30);if(GAME.handover)openHandover();
   const v=VIEWPOS[0];flyTo(v[0].clone(),v[1].clone(),2);}
 $('#menu').addEventListener('click',e=>{const rs=e.target.closest('[data-resume]');if(rs)return void(location.search='?resume='+rs.dataset.resume);const ds=e.target.closest('[data-delsave]');if(ds){deleteSave(ds.dataset.delsave);return renderMenu();}const b=e.target.closest('[data-mode]');if(b)startGame(b.dataset.mode);});
 $('#diff').addEventListener('click',e=>{const b=e.target.closest('[data-d]');if(b){GAME.diff=b.dataset.d;renderMenu();}});
@@ -7009,7 +7011,7 @@ if(params.has('resume')&&readSave(RESUME_SLOT)){try{resumeGame(readSave(RESUME_S
   try{localStorage.setItem(slotKey(RESUME_SLOT)+'-defect',localStorage.getItem(slotKey(RESUME_SLOT)));}catch(_){}deleteSave(RESUME_SLOT);
   alert('Het opgeslagen spel kon niet worden geladen (mogelijk van een oudere versie). Er is een reservekopie bewaard; je begint opnieuw.');location.search='';}}
 else if(params.has('play'))startGame(params.get('play'));
-else if(params.has('autostart')){$('#intro').classList.add('hidden');applyMode('free');setSpeed(60);}
+else if(params.has('autostart')){$('#intro').classList.add('hidden');applyMode('free');setSpeed(30);}
 else{renderMenu();$('#intro').classList.remove('hidden');controls.autoRotate=true;controls.autoRotateSpeed=0.35;}
 if(params.has('night'))updateSky(22);
 if(params.has('view')){const v=VIEWPOS[+params.get('view')];camera.position.copy(v[0]);controls.target.copy(v[1]);controls.autoRotate=false;controls.update();}

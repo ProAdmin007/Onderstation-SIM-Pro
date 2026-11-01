@@ -154,6 +154,8 @@ Bedoeld voor **bedrijfsvoerders en monteurs in opleiding**, studenten **elektrot
 | `U` | begeleiding | | |
 | `Ctrl+S` | opslaan | `L` / `M` | labels / geluid |
 
+**Speelsnelheid** (bovenaan): 1× (echte tijd), 10×, **30× (standaard)**, 60× en 300×. Op 30× duurt een dienst van 8 uur 16 minuten en bewegen monteurs, busjes en brandweer op normaal tempo; 60× en 300× zijn om door te spoelen.
+
 <details>
 <summary><b>Alle details over bediening, instellingen en opslaan</b></summary>
 

@@ -85,7 +85,7 @@ function resumeGame(d){$('#intro').classList.add('hidden');SAVE_SLOT=d.slot||'au
     KLIC.next=d.GIS.k.next;KLIC.seq=d.GIS.k.seq;KLIC.jobs=d.GIS.k.jobs.map(j=>({...j,c:CABLES.find(c=>c.id===j.c)})).filter(j=>j.c);
     KLIC.jobs.forEach(j=>{if(j.state==='graaf')digStart(j);if(j.order&&!j.marked)addTimer(rnd(3,6),()=>klicMarked(j));});}
   resumeTimers();computeFlows();FEEDERS.concat(RING.stations).forEach(f=>{f.wasOn=EN.has(f.node);});
-  updateSky(hourOf());refreshAll();renderTasks();setSpeed(d.SIM.speed||60);
+  updateSky(hourOf());refreshAll();renderTasks();setSpeed(d.SIM.speed||30);
   const v=VIEWPOS[0];flyTo(v[0].clone(),v[1].clone(),2);
   pushAlarm(`💾 Spel hervat: ${MODES[d.mode].name} (${DIFFS[d.diff].label}), opgeslagen ${new Date(d.at).toLocaleString('nl-NL',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}`,'ok');}
 // een incident dat liep tijdens het opslaan: netjes afronden

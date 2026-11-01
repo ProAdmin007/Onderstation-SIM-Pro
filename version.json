@@ -1,7 +1,8 @@
 {
-  "build": "bda8cb2c9967",
-  "date": "2026-10-31",
+  "build": "ebdd11fd1475",
+  "date": "2026-11-01",
   "previous": [
+    "bda8cb2c9967",
     "b717f6dee2e0",
     "aaba6cf0f4c9",
     "cc45e675aa27",
@@ -137,6 +138,10 @@
     "bda8cb2c9967": {
       "date": "2026-10-31",
       "text": "Lopen naar OS Meppel en bellen met Netbeheer Noord om daar lokaal aan onze velden te schakelen; straatlantaarns knipperen niet meer; standpunten in één menu in de onderste balk"
+    },
+    "ebdd11fd1475": {
+      "date": "2026-11-01",
+      "text": "Speelsnelheid: nieuwe stappen 10× en 30×, standaard 30× (dienst van 8 uur in 16 minuten, alles beweegt op normaal tempo)"
     }
   }
 }
