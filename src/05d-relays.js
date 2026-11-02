@@ -91,7 +91,6 @@ function drawRelayCabinets(){const cp=camera.position;for(const C of RCAB){if(Ma
 // Omzetten en het hangslot kan alleen aan het veld zelf. De aardschakelaar van een uitgaand veld hoort bij dat veld.
 let LR_MAP=null;
 function lrPanel(id){if(!LR_MAP){LR_MAP=new Map();SCREENS.forEach(s=>{LR_MAP.set(s.id,s.id);if(s.es)LR_MAP.set(s.es,s.id);});}return LR_MAP.get(id)||null;}
-const lrLocal=id=>{const p=lrPanel(id);return !!p&&D[p].lr==='L';};
 // echt ter plaatse (rondlopen bij het veld); de testmodus SIM.localTest telt hier niet
 const atPanel=id=>FP.on&&!!VIEWS[id]&&camera.position.distanceTo(VIEWS[id].center)<7;
 function lrBlock(id){const p=lrPanel(id);if(!p||SIM.localTest)return null;const d=D[p],L=d.lr==='L';

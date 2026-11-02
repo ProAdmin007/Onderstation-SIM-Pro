@@ -1,7 +1,11 @@
 {
-  "build": "5ff2ebd7b1d7",
+  "build": "fc7a783e56f8",
   "date": "2026-11-02",
   "previous": [
+    "6a997ff9fd31",
+    "2e9d0684bfb0",
+    "02a340b286f4",
+    "5ff2ebd7b1d7",
     "65bf1f4a1f94",
     "a44d84f79397",
     "4e0debb9089d",
@@ -156,6 +160,10 @@
     "5ff2ebd7b1d7": {
       "date": "2026-11-02",
       "text": "Lokaal/afstand-schakelaar per veld met hangslot (LOTO); credits in het hoofdmenu"
+    },
+    "fc7a783e56f8": {
+      "date": "2026-11-02",
+      "text": "SCADA toont per veld een kleine R (afstand) of L (lokaal) in plaats van een gekleurde gloed"
     }
   }
 }

@@ -242,7 +242,7 @@ body.fp:not(.fplocked) #fpPause{display:flex;position:fixed;left:50%;top:84px;tr
 #fpPause b{font-size:13px;color:var(--accent)}#fpPause .k{color:var(--muted);font-size:12px;font-family:var(--mono)}
 .vwrap{position:relative}#viewMenu{position:absolute;left:0;bottom:calc(100% + 8px);display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:8px;min-width:330px;background:var(--panel,rgba(16,20,26,.96));border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.45);z-index:30}
 #viewMenu.hidden{display:none}#viewMenu button{text-align:left}#viewMenu kbd{display:inline!important}
-#sld .loc{filter:drop-shadow(0 0 2px #f0a43a) drop-shadow(0 0 2px #f0a43a)}
+#sld .lrm{font:600 8px var(--mono,monospace);fill:#8d99a6;pointer-events:none}
 .credits{margin-top:16px;font-size:11px;line-height:1.55;color:var(--dim,#7d8893)}.credits a{color:inherit}
 #views .walk,#views .tool{background:rgba(240,164,58,.14);border-color:rgba(240,164,58,.4)}
 #views .tool.on{background:var(--accent);color:#1a1206;border-color:var(--accent)}
@@ -4241,7 +4241,6 @@ function drawRelayCabinets(){const cp=camera.position;for(const C of RCAB){if(Ma
 // Omzetten en het hangslot kan alleen aan het veld zelf. De aardschakelaar van een uitgaand veld hoort bij dat veld.
 let LR_MAP=null;
 function lrPanel(id){if(!LR_MAP){LR_MAP=new Map();SCREENS.forEach(s=>{LR_MAP.set(s.id,s.id);if(s.es)LR_MAP.set(s.es,s.id);});}return LR_MAP.get(id)||null;}
-const lrLocal=id=>{const p=lrPanel(id);return !!p&&D[p].lr==='L';};
 // echt ter plaatse (rondlopen bij het veld); de testmodus SIM.localTest telt hier niet
 const atPanel=id=>FP.on&&!!VIEWS[id]&&camera.position.distanceTo(VIEWS[id].center)<7;
 function lrBlock(id){const p=lrPanel(id);if(!p||SIM.localTest)return null;const d=D[p],L=d.lr==='L';
@@ -4323,7 +4322,7 @@ function buildSLD(){
   const T=(x,y,t,a='middle',c='')=>o.push(`<text x="${x}" y="${y}" text-anchor="${a}" class="${c}">${t}</text>`);
   const M=(id,x,y,a='middle',c='m')=>o.push(`<text data-m="${id}" x="${x}" y="${y}" text-anchor="${a}" class="${c}"></text>`);
   const hit=(w,h,y0=-h/2)=>`<rect class="hit" x="${-w/2}" y="${y0}" width="${w}" height="${h}" rx="5"/>`;
-  const CB=(id,x,y,lbl,side=-1)=>{o.push(`<g class="dev cb" data-id="${id}" transform="translate(${x} ${y})"><title>${id} · ${D[id].label}</title>${hit(28,28)}<rect class="body" x="-8" y="-8" width="16" height="16" rx="2"/></g>`);if(lbl)T(x+side*14,y+3.5,lbl,side<0?'end':'start','dl');};
+  const CB=(id,x,y,lbl,side=-1,ly=-5)=>{o.push(`<g class="dev cb" data-id="${id}" transform="translate(${x} ${y})"><title>${id} · ${D[id].label}</title>${hit(28,28)}<rect class="body" x="-8" y="-8" width="16" height="16" rx="2"/>${lrPanel(id)===id?`<text class="lrm" x="${-side*11}" y="${ly}" text-anchor="${side<0?'start':'end'}">R</text>`:''}</g>`);if(lbl)T(x+side*14,y+3.5,lbl,side<0?'end':'start','dl');};
   const DS=(id,x,y,lbl,side=-1)=>{o.push(`<g class="dev ds" data-id="${id}" transform="translate(${x} ${y})"><title>${id} · ${D[id].label}</title>${hit(28,28)}<line class="tick" x1="-6" y1="-11" x2="6" y2="-11"/><line class="blade" x1="0" y1="11" x2="0" y2="-11" style="transform-origin:0px 11px"/><circle class="piv" cx="0" cy="11" r="2.6"/></g>`);if(lbl)T(x+side*14,y+3.5,lbl,side<0?'end':'start','dl');};
   const ES=(id,x,y,lbl='')=>{o.push(`<g class="dev es" data-id="${id}" transform="translate(${x} ${y})"><title>${id} · ${D[id].label}</title>${hit(24,38,-16)}<line class="tick" x1="-5" y1="-12" x2="5" y2="-12"/><line class="blade" x1="0" y1="8" x2="0" y2="-12" style="transform-origin:0px 8px"/><circle class="piv" cx="0" cy="8" r="2.4"/><line class="gnd" x1="-8" y1="13" x2="8" y2="13"/><line class="gnd" x1="-5" y1="16.5" x2="5" y2="16.5"/><line class="gnd" x1="-2" y1="20" x2="2" y2="20"/></g>`);if(lbl)T(x+12,y+3,lbl,'start','dl');};
   const SDS=(id,x,y)=>o.push(`<g class="dev ds sds" data-id="${id}" transform="translate(${x} ${y})"><title>${id} · ${D[id].label}</title>${hit(14,16)}<line class="tick" x1="-4" y1="-6" x2="4" y2="-6"/><line class="blade" x1="0" y1="6" x2="0" y2="-6" style="transform-origin:0px 6px"/><circle class="piv" cx="0" cy="6" r="1.8"/></g>`);
@@ -4347,7 +4346,7 @@ function buildSLD(){
   const F=id=>FEEDERS.find(f=>f.id===id);
   // tabblad 10 kV
   o=out[10];top();bay('T1',160,-1,'V-T1','RAB');bay('T3',330,1,'V-T3','RAB');
-  W(20,RA_Y,452,RA_Y,'RA','w bus');W(20,RB_Y,452,RB_Y,'RB','w bus');CB('V-K',230,412,null);T(240,400,'V-K','start','dl');
+  W(20,RA_Y,452,RA_Y,'RA','w bus');W(20,RB_Y,452,RB_Y,'RB','w bus');CB('V-K',230,412,null,1,14);T(240,400,'V-K','start','dl');
   T(14,RA_Y+3,'A','end','dl');T(14,RB_Y+3,'B','end','dl');T(20,398,'10 kV RAIL A','start','dl');M('RA',98,398,'start');T(452,398,'RAIL B','end','dl');M('RB',412,398,'end');
   M('ef10',237,104,'middle','bad');M('bf10',237,118,'middle','bad');
   W(196,RA_Y,196,426,'RA');ES('RA-Q8',196,438,'');W(264,RB_Y,264,426,'RB');ES('RB-Q8',264,438,'');
@@ -4425,7 +4424,7 @@ function setM(k,txt,cls){(SLD.meas[k]||[]).forEach(el=>{el.textContent=txt;if(cl
 function updateSLD(){
   SLD.nodes.forEach(el=>el.setAttribute('class',el.dataset.c+' '+nodeClass(el.dataset.n)));
   for(const [id,c] of READY)if(!c())READY.delete(id);
-  for(const [id,els] of Object.entries(SLD.devs)){const d=D[id],loc=lrLocal(id);els.forEach(el=>{el.classList.toggle('loc',loc);el.classList.toggle('ready',READY.has(id));if(['cb','ds','es','lbs','lvs'].includes(d.type)){el.classList.toggle('closed',d.state===1);el.classList.toggle('open',d.state!==1);
+  for(const [id,els] of Object.entries(SLD.devs)){const d=D[id],lrm=lrPanel(id)===id?(d.lr==='L'?'L':'R'):null;els.forEach(el=>{if(lrm){const t=el.querySelector('.lrm');if(t&&t.textContent!==lrm)t.textContent=lrm;}el.classList.toggle('ready',READY.has(id));if(['cb','ds','es','lbs','lvs'].includes(d.type)){el.classList.toggle('closed',d.state===1);el.classList.toggle('open',d.state!==1);
       const bl=el.querySelector('.blade');if(bl)bl.style.transform=d.state?'':'rotate(-35deg)';}
     el.classList.toggle('sel',id===SEL);});}
   const fx=(v,n=1)=>v.toFixed(n).replace('.',',');
@@ -6832,7 +6831,7 @@ function gisDrawExtra(g,cv){const s=TAB.zoom,now=performance.now();
 // ============================================================ updatecontrole in het hoofdmenu: is er op GitHub een nieuwere versie?
 // De build zet een vingerafdruk in BUILD_ID (tests/stamp.mjs) en houdt version.json bij met eerdere versies.
 // Staat onze versie bij de eerdere versies op GitHub, dan is er een update; staat hij er niet in, dan is het eigen (nieuwer) werk.
-const BUILD_ID='5ff2ebd7b1d7';
+const BUILD_ID='fc7a783e56f8';
 const UPD_REPO='https://github.com/ProAdmin007/Onderstation-SIM-Pro';
 const UPD_URL='https://raw.githubusercontent.com/ProAdmin007/Onderstation-SIM-Pro/main/version.json';
 // toestand van de controle: idle, bezig, actueel, nieuw, eigen of fout

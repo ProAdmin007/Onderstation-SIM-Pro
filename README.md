@@ -436,7 +436,7 @@ Toets `B` of de knop *Beveiliging*.
   - Het heeft gevolgen: is de instelling bij de optredende foutstroom niet selectief, dan schakelt bij een kabelfout ook het inkomende veld af en valt de hele rail uit (−50).
 - **Lokaal/afstand-schakelaar met hangslot (per veld):**
   - **AFSTAND** (standaard): je bedient het veld via SCADA. Ter plaatse schakelen wordt geweigerd.
-  - **LOKAAL:** je bedient het veld alleen ter plaatse. SCADA weigert, en in het schema krijgt het veld een oranje gloed.
+  - **LOKAAL:** je bedient het veld alleen ter plaatse. SCADA weigert. In het schema staat bij elk veld een kleine **R** (afstand) of **L** (lokaal).
   - **Omzetten** kan alleen aan het veld zelf: loop erheen (`V`), open het veldpaneel (`E`) en gebruik *→ lokaal* of *→ afstand*. Dit geldt ook voor de aardschakelaar van dat veld.
   - **Hangslot (LOTO):** met *🔒 slot erop* vergrendel je de schakelaar in zijn stand, bijvoorbeeld op LOKAAL tijdens werk, zodat niemand het veld op afstand kan inschakelen. In 3D hangt dan een rood hangslot op het veld en het relaisdisplay toont het slotje.
   - **SCADA-uitval:** zet het veld eerst op LOKAAL voordat je ter plaatse schakelt.
