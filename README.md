@@ -434,6 +434,10 @@ Toets `B` of de knop *Beveiliging*.
 
 - **Selectiviteit** (beveiligingsvenster, `B`): een log-log **tijd-stroomgrafiek** van het gekozen veld (I> standaard-invers en I>> 50 ms) tegenover de **reserve-overstroom van het inkomende veld** (V-T1, V-T3 of W-T2, instelbaar met TMS 0,05–0,3). Waar de marge kleiner is dan 0,25 s kleurt de grafiek rood: *niet selectief*.
   - Het heeft gevolgen: is de instelling bij de optredende foutstroom niet selectief, dan schakelt bij een kabelfout ook het inkomende veld af en valt de hele rail uit (−50).
+- **Beveiligingsrelais:**
+  - **In elk MS-veld** zit in de laagspanningsnis een numeriek relais met een LCD (fasestromen IL1–IL3, IE, spanning), een LED-kolom met opschriften (RUN, START, TRIP, I>, I>>, Ie>, AR, ERROR), toetsen, een lokaal/afstand-schakelaar en een testcontactdoos. Spreekt de beveiliging aan, dan licht START op.
+  - **Na een uitschakeling** blijft TRIP rood branden en toont het display de melding: functie (I> of I>>), fasen, foutstroom, uitschakeltijd en tijdstip. Dat blijft staan tot je het relais reset met de knop *Reset* op de regel *Beveiligingsrelais* in het veldpaneel. Meetvelden tonen de spanningen.
+  - **De beveiligingskasten** (+R1 tot +R6 en +R11 tot +R14) hebben per object eigen relais met live displays en LEDs: afstandsbeveiliging (21), herinschakeling (79), aardfoutrichting (67N) en storingsschrijver per lijn; differentiaal (87T), thermisch (49), overstroom en spanningsregeling (90) per transformator; railbeveiliging (87B), falen schakelaar (50BF), koppelveld en synchrocheck (25) per rail; RTU, GPS-klok, stationsnetwerk en accubewaking. Onderin zitten testklemmen, automaten en rijgklemmen.
 - **Storingsschrijver** (toets `R` of de knop *Schrijver*): bij elke kortsluiting, overbelastingstrip of aardfout een registratie van de **stroom en spanning per fase**: de foutstroom met gelijkstroomcomponent, de spanningsdip, het afschakelmoment en een eventuele niet-selectieve uitschakeling. Bij een aardfout zie je één fasespanning inzakken, de andere twee naar √3 stijgen en U0 opkomen.
 </details>
 

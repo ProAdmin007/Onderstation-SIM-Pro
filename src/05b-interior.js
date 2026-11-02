@@ -27,12 +27,6 @@ function mimicTex(kind){const c=cnv(256,96),g=c.getContext('2d');g.fillStyle='#e
   else if(kind==='coup'){g.moveTo(50,12);g.lineTo(50,48);g.lineTo(110,48);g.moveTo(146,48);g.lineTo(206,48);g.lineTo(206,12);g.stroke();g.strokeRect(110,30,36,36);}
   else if(kind==='meas'){g.moveTo(128,12);g.lineTo(128,40);g.stroke();g.beginPath();g.arc(128,54,13,0,7);g.stroke();g.beginPath();g.arc(128,72,13,0,7);g.stroke();}
   const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=MAXANISO;return t;}
-function relayTex(){const c=cnv(256,512),g=c.getContext('2d');g.fillStyle='#c9ccc6';g.fillRect(0,0,256,512);
-  for(let r=0;r<4;r++)for(let k=0;k<2;k++){const x=14+k*120,y=20+r*120;g.fillStyle='#e4e6e1';g.fillRect(x,y,108,104);g.strokeStyle='#8b8f8a';g.lineWidth=2;g.strokeRect(x,y,108,104);
-    g.fillStyle='#0f1d16';g.fillRect(x+10,y+12,88,36);g.fillStyle='#6dffa0';g.font='12px monospace';g.fillText(['I> 1,2 kA','Z1 OK','87T OK','U 10,5 kV','50/51','REC IN','TRIP: 0','DIFF 0,02'][r*2+k],x+14,y+34);
-    for(let l=0;l<5;l++){g.fillStyle=['#3fd46f','#3fd46f','#f2b33a','#555','#555'][l];g.beginPath();g.arc(x+16+l*16,y+64,4,0,7);g.fill();}
-    g.fillStyle='#555';for(let b=0;b<4;b++)g.fillRect(x+12+b*22,y+80,16,10);}
-  const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t;}
 function posterTex(){const c=cnv(512,700),g=c.getContext('2d');g.fillStyle='#fbfbf7';g.fillRect(0,0,512,700);g.fillStyle='#1d2b45';g.fillRect(0,0,512,90);
   g.fillStyle='#fff';g.font='bold 34px Arial';g.fillText('VIJF VEILIGHEIDSREGELS',28,58);g.fillStyle='#1a1a1a';g.font='bold 27px Arial';
   ['1. Vrijschakelen','2. Beveiligen tegen','    herinschakelen','3. Spanningsloosheid','    vaststellen','4. Aarden en','    kortsluiten','5. Afschermen van','    naastgelegen delen'].forEach((s,i)=>g.fillText(s,32,150+i*52));
@@ -61,8 +55,9 @@ function buildPanel(i,p,row){
   plate(label,root,-0.12,2.17,F-0.012,Math.PI,0.3);
   plate(label,root,0,0.42,F-0.012,Math.PI,0.24);
   if(!p.id)return;
-  const sc=liveTex(256,128);const sm=iplane(0.3,0.15,new THREE.MeshBasicMaterial({map:sc.t}),0,0,0,Math.PI);root.add(sm);sm.position.set(-0.1,1.98,F-0.012);
-  const esId=p.kind==='feed'?p.id.slice(2)+'-Q8':null;SCREENS.push({...sc,id:p.id,node:p.node,es:esId});
+  // numeriek beveiligingsrelais in de laagspanningsnis (05d-relays.js tekent het front)
+  const sc=liveTex(256,320);box(0.28,0.345,0.025,MAT.black,root,-0.13,1.93,F-0.0125);const sm=iplane(0.26,0.325,new THREE.MeshBasicMaterial({map:sc.t}),0,0,0,Math.PI);root.add(sm);sm.position.set(-0.13,1.93,F-0.026);
+  const esId=p.kind==='feed'?p.id.slice(2)+'-Q8':null;SCREENS.push({...sc,id:p.id,node:p.node,es:esId,kind:p.kind});
   const b1=cyl(0.028,0.028,0.03,IM.redBtn,root,0.2,1.98,F-0.02,14);b1.rotation.x=Math.PI/2;
   const b0=cyl(0.028,0.028,0.03,IM.greenBtn,root,0.28,1.98,F-0.02,14);b0.rotation.x=Math.PI/2;
   const ks=cyl(0.03,0.03,0.02,MAT.black,root,0.24,1.86,F-0.02,14);ks.rotation.x=Math.PI/2;
@@ -101,10 +96,8 @@ function buildInterior(){
   buildPanelRow(PANELS20,61,ROOMS[1]);
   const Y=IN.y0;
   // beveiligingskasten (10 kV-ruimte en 20 kV-ruimte)
-  const rt=mat({map:relayTex(),roughness:0.4}),glass=new THREE.MeshPhysicalMaterial({color:0x223038,transparent:true,opacity:0.25,roughness:0.05});
-  const cab=(x,i)=>{box(0.8,2.2,0.8,MAT.cabinet,staticRoot,x,Y+1.1,55.25);iplane(0.66,1.6,rt,x,Y+1.25,54.84,Math.PI);box(0.7,1.75,0.015,glass,staticRoot,x,Y+1.25,54.835);plate('+R'+i,staticRoot,x,Y+2.1,54.83,Math.PI,0.26);};
-  for(let k=0;k<6;k++)cab(-18.9+k*0.82,k+1);
-  for(let k=0;k<4;k++)cab(48.4+k*0.82,k+11);
+  {const U=relayUnits(),z=54.84;[[U.line('L1'),'+R1'],[U.line('L2'),'+R2'],[U.trafo('T1'),'+R3'],[U.trafo('T3'),'+R4'],[U.rail('A/B','V-K'),'+R5'],[U.scada,'+R6']].forEach(([u,l],k)=>relayCabinet(-18.9+k*0.82,z,Y,l,u));
+    [[U.trafo('T2'),'+R11'],[U.rail('C1/C2','W-K'),'+R12'],[U.trafo('T3'),'+R13'],[U.scada,'+R14']].forEach(([u,l],k)=>relayCabinet(48.4+k*0.82,z,Y,l,u));}
   iplane(1.3,1.78,mat({map:posterTex(),roughness:0.7}),-11.2,Y+1.7,IN.z1-0.02,Math.PI);
   iplane(1.3,1.78,mat({map:posterTex(),roughness:0.7}),70.5,Y+1.7,ROOMS[1].z1-0.02,Math.PI);
   // bedieningsbureau met SCADA-schermen
@@ -128,13 +121,9 @@ function buildInterior(){
 }
 // alleen schermen in de buurt van de camera, en alleen als er iets veranderd is (elke upload naar de GPU kost tijd)
 const DESK_POS=V3(-17.4,1.5,47);
-function drawPanelScreens(){const cp=camera.position;
+function drawPanelScreens(){const cp=camera.position;drawRelayCabinets();
   SCREENS.forEach(s=>{const d=D[s.id],g=s.g,c=VIEWS[s.id]?.center;if(c&&cp.distanceTo(c)>30)return;
-    const key=[d.state,d.I|0,EN.has(s.node)?nodeU(s.node).toFixed(2):0,!!(d.feeder&&d.feeder.fault),springOk(d),s.es&&D[s.es].state].join();if(key===s.key)return;s.key=key;
-    g.fillStyle='#08160f';g.fillRect(0,0,256,128);g.fillStyle='#7dffa8';g.font='bold 26px monospace';g.fillText(s.id,14,32);
-    const fault=d.feeder&&d.feeder.fault;const st=d.type==='es'?(d.state?'AARD':'OPEN'):d.state?'IN':fault?'TRIP':'UIT';
-    g.font='22px monospace';g.fillText(`I ${String(Math.round(d.I)).padStart(4)} A`,14,66);g.fillText(`U ${EN.has(s.node)?nodeU(s.node).toFixed(2).replace('.',','):' 0,00'} kV`,14,96);
-    g.fillStyle=st==='IN'?'#ff7a7a':st==='TRIP'?'#ffcc33':'#7dffa8';g.font='bold 22px monospace';g.fillText(st,190,32);if(!springOk(d)){g.fillStyle='#ffcc33';g.font='16px monospace';g.fillText('VEER',190,96);}if(s.es&&D[s.es].state){g.fillStyle='#ffd23a';g.font='bold 16px monospace';g.fillText('GEAARD',176,66);}s.t.needsUpdate=true;});
+    const key=relayKey(s,d);if(key===s.key)return;s.key=key;drawRelay(s);});
   if(!deskScreens||cp.distanceTo(DESK_POS)>25)return;
   const [a,b]=deskScreens;let g=a.g;g.fillStyle='#0d1117';g.fillRect(0,0,512,320);g.fillStyle='#e7ecf1';g.font='bold 22px Arial';g.fillText('OS ZUIDWOLDE · MS',18,34);
   g.font='16px monospace';g.fillStyle='#9fd0ff';g.font='14px monospace';g.fillText(`A ${FLOW.U.RA.toFixed(2)}  B ${FLOW.U.RB.toFixed(2)}  C1 ${FLOW.U.RC.toFixed(2)}  C2 ${FLOW.U.RD.toFixed(2)} kV`,18,60);

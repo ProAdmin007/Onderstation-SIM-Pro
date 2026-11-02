@@ -1,7 +1,10 @@
 {
-  "build": "ebdd11fd1475",
-  "date": "2026-11-01",
+  "build": "4e0debb9089d",
+  "date": "2026-11-02",
   "previous": [
+    "5fbc99a2520c",
+    "dbf4098c08e4",
+    "ebdd11fd1475",
     "bda8cb2c9967",
     "b717f6dee2e0",
     "aaba6cf0f4c9",
@@ -142,6 +145,10 @@
     "ebdd11fd1475": {
       "date": "2026-11-01",
       "text": "Speelsnelheid: nieuwe stappen 10× en 30×, standaard 30× (dienst van 8 uur in 16 minuten, alles beweegt op normaal tempo)"
+    },
+    "4e0debb9089d": {
+      "date": "2026-11-02",
+      "text": "Realistische beveiligingsrelais: numeriek relais in elk veld met LCD, LEDs en vastgehouden TRIP-melding tot reset; beveiligingskasten met live relais per lijn, trafo en rail"
     }
   }
 }

@@ -131,6 +131,7 @@ Alle `.js`-bestanden delen **één module-scope**. Er zijn geen imports tussen d
 | `05-fx-audio.js` | Effecten `FX`, `AudioSys` (Web Audio) |
 | `05b-interior.js` | Interieurs, `ROOMS`, `camInside()` |
 | `05c-servers.js` | Datacenter en RTU-kasten |
+| `05d-relays.js` | Beveiligingsrelais: `RLY` (vastgehouden TRIP per vermogensschakelaar, gevuld door `relayTrip` vanuit `tripBreaker`/`tripFrom` en aangevuld uit `FREC` door `relayFill`), `drawRelay` (relaisfront in elk veld), `relayCabinet`/`relayUnits`/`drawRelayCabinets` (beveiligingskasten), `relayReset` |
 | `06-build.js` | Bouwt de scène en roept `bakeStatic()` aan |
 | `07-ui.js` | SCADA-schema (SVG), apparaatpaneel, alarmen, camerastandpunten |
 | `07b-fp.js` … `07zb-coach.js` | Rondlopen, monteurs, schakelbrief, vensters, telefoon, tijdlijn, instellingen, opslaan, verkeer, busjes, GIS, update, begeleiding (zie §9–§11) |

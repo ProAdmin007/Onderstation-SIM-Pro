@@ -745,6 +745,16 @@ const TESTS = [
         return { route, opSlot, veld, geweigerd, toegang, geschakeld, verlopen }; });
       for (const [k, v] of Object.entries(r)) assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
   } },
+  { name: 'beveiligingsrelais: TRIP blijft staan met functie, fasen en stroom tot reset; veldpaneel toont het', query: '?autostart&t=11', async run(p) {
+      const r = await p.evaluate(async () => { const O = OS, D = O.D; T.quiet(); const voor = !O.RLY['V-F6']?.trip;
+        O.feederFault('F6', 10, 3000); T.step(2); O.relayFill('V-F6'); const R = O.RLY['V-F6'];
+        const trip = !!R?.trip && /^I/.test(R.fn) && /L1-L2/.test(R.ph) && /kA/.test(R.I);
+        O.selectDevice('V-F6'); O.refreshDevPanel(); const paneel = /TRIP/.test(document.querySelector('#devpanel').textContent) && !!document.querySelector('#devpanel [data-act="rreset"]');
+        T.step(5); const blijft = O.RLY['V-F6'].trip;
+        document.querySelector('#devpanel [data-act="rreset"]').click(); const reset = !O.RLY['V-F6'].trip;
+        return { voor, trip, paneel, blijft, reset, R: JSON.stringify(R) }; });
+      for (const [k, v] of Object.entries(r)) if (k !== 'R') assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
+  } },
   { name: 'speelsnelheid: start op 30×, knoppen 1×, 10×, 30×, 60× en 300×', query: '?autostart', async run(p) {
       const r = await p.evaluate(() => { const O = OS, b = [...document.querySelectorAll('#speed button')].map(x => +x.dataset.s);
         const knoppen = [0, 1, 10, 30, 60, 300].every(v => b.includes(v)), start = O.SIM.speed === 30 && document.querySelector('#speed [data-s="30"]').classList.contains('on');

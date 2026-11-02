@@ -2195,13 +2195,13 @@ function operate(id,to,opts={}){
 function tripFrom(node){
   const seen=new Set([node]),q=[node],tripped=[];let src=null;
   while(q.length){const n=q.pop();if(n==='L1x'||n==='L2x')src=n.slice(0,2);
-    for(const d of ADJ[n]||[]){if(d.type==='es')continue;if(d.type==='cb'){if(d.state!==1)continue;if(!d.noTrip&&!relayRefuses(d,n)&&!breakerFails(d)){d.state=0;tripped.push(d.id);wearOp(d,true);continue;}}if(d.type!=='tr'&&d.type!=='mstr'&&d.state!==1)continue;
+    for(const d of ADJ[n]||[]){if(d.type==='es')continue;if(d.type==='cb'){if(d.state!==1)continue;if(!d.noTrip&&!relayRefuses(d,n)&&!breakerFails(d)){d.state=0;tripped.push(d.id);relayTrip(d.id);wearOp(d,true);continue;}}if(d.type!=='tr'&&d.type!=='mstr'&&d.state!==1)continue;
       const m=d.a===n?d.b:d.a;if(!seen.has(m)){seen.add(m);q.push(m);}}}
   setTimeout(()=>{tripped.forEach(id=>pushAlarm(`${id}: beveiliging – UIT`,'warn'));if(tripped.length)AudioSys.breaker(0.6);},120);
   if(src){const ln=SIM.lines[src];if(ln.avail){ln.avail=false;ln.reason='afgeschakeld door TenneT (fout in station)';pushAlarm(`TenneT: lijn ${src} aan overzijde afgeschakeld – fout in OS Zuidwolde`,'crit');addTimer(rnd(10,18),()=>lineRestore(src));}}
 }
 // weigert de schakelaar of zijn relais, dan schakelt de reservebeveiliging de rail af en blijft deze schakelaar IN
-function tripBreaker(id){const d=D[id];if(d.state!==1)return false;if(relayRefuses(d)||breakerFails(d)){d.noTrip=true;tripFrom(d.a);d.noTrip=false;return false;}d.state=0;wearOp(d,true);const v=VIEWS[id];AudioSys.breaker(v?distGain(v.center):0.5);return true;}
+function tripBreaker(id){const d=D[id];if(d.state!==1)return false;if(relayRefuses(d)||breakerFails(d)){d.noTrip=true;tripFrom(d.a);d.noTrip=false;return false;}d.state=0;wearOp(d,true);relayTrip(id);const v=VIEWS[id];AudioSys.breaker(v?distGain(v.center):0.5);return true;}
 function lineRestore(L){const ln=SIM.lines[L];if(ln.avail||ln.maint)return;
   if(D[L+'-Q8'].state===1){pushAlarm(`TenneT: lijn ${L} kan niet onder spanning – ${L}-Q8 is geaard`,'warn');addTimer(5,()=>lineRestore(L));return;}
   ln.avail=true;ln.reason='';if(D[L+'-Q0'].state)pushAlarm(`TenneT: lijn ${L} ${ln.name} weer onder spanning`,'ok');else readyNotice(`TenneT: lijn ${L} ${ln.name} weer onder spanning – ${L}-Q0 mag weer IN`,L+'-Q0',()=>!D[L+'-Q0'].state&&SIM.lines[L].avail);}
@@ -3834,12 +3834,6 @@ function mimicTex(kind){const c=cnv(256,96),g=c.getContext('2d');g.fillStyle='#e
   else if(kind==='coup'){g.moveTo(50,12);g.lineTo(50,48);g.lineTo(110,48);g.moveTo(146,48);g.lineTo(206,48);g.lineTo(206,12);g.stroke();g.strokeRect(110,30,36,36);}
   else if(kind==='meas'){g.moveTo(128,12);g.lineTo(128,40);g.stroke();g.beginPath();g.arc(128,54,13,0,7);g.stroke();g.beginPath();g.arc(128,72,13,0,7);g.stroke();}
   const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=MAXANISO;return t;}
-function relayTex(){const c=cnv(256,512),g=c.getContext('2d');g.fillStyle='#c9ccc6';g.fillRect(0,0,256,512);
-  for(let r=0;r<4;r++)for(let k=0;k<2;k++){const x=14+k*120,y=20+r*120;g.fillStyle='#e4e6e1';g.fillRect(x,y,108,104);g.strokeStyle='#8b8f8a';g.lineWidth=2;g.strokeRect(x,y,108,104);
-    g.fillStyle='#0f1d16';g.fillRect(x+10,y+12,88,36);g.fillStyle='#6dffa0';g.font='12px monospace';g.fillText(['I> 1,2 kA','Z1 OK','87T OK','U 10,5 kV','50/51','REC IN','TRIP: 0','DIFF 0,02'][r*2+k],x+14,y+34);
-    for(let l=0;l<5;l++){g.fillStyle=['#3fd46f','#3fd46f','#f2b33a','#555','#555'][l];g.beginPath();g.arc(x+16+l*16,y+64,4,0,7);g.fill();}
-    g.fillStyle='#555';for(let b=0;b<4;b++)g.fillRect(x+12+b*22,y+80,16,10);}
-  const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t;}
 function posterTex(){const c=cnv(512,700),g=c.getContext('2d');g.fillStyle='#fbfbf7';g.fillRect(0,0,512,700);g.fillStyle='#1d2b45';g.fillRect(0,0,512,90);
   g.fillStyle='#fff';g.font='bold 34px Arial';g.fillText('VIJF VEILIGHEIDSREGELS',28,58);g.fillStyle='#1a1a1a';g.font='bold 27px Arial';
   ['1. Vrijschakelen','2. Beveiligen tegen','    herinschakelen','3. Spanningsloosheid','    vaststellen','4. Aarden en','    kortsluiten','5. Afschermen van','    naastgelegen delen'].forEach((s,i)=>g.fillText(s,32,150+i*52));
@@ -3868,8 +3862,9 @@ function buildPanel(i,p,row){
   plate(label,root,-0.12,2.17,F-0.012,Math.PI,0.3);
   plate(label,root,0,0.42,F-0.012,Math.PI,0.24);
   if(!p.id)return;
-  const sc=liveTex(256,128);const sm=iplane(0.3,0.15,new THREE.MeshBasicMaterial({map:sc.t}),0,0,0,Math.PI);root.add(sm);sm.position.set(-0.1,1.98,F-0.012);
-  const esId=p.kind==='feed'?p.id.slice(2)+'-Q8':null;SCREENS.push({...sc,id:p.id,node:p.node,es:esId});
+  // numeriek beveiligingsrelais in de laagspanningsnis (05d-relays.js tekent het front)
+  const sc=liveTex(256,320);box(0.28,0.345,0.025,MAT.black,root,-0.13,1.93,F-0.0125);const sm=iplane(0.26,0.325,new THREE.MeshBasicMaterial({map:sc.t}),0,0,0,Math.PI);root.add(sm);sm.position.set(-0.13,1.93,F-0.026);
+  const esId=p.kind==='feed'?p.id.slice(2)+'-Q8':null;SCREENS.push({...sc,id:p.id,node:p.node,es:esId,kind:p.kind});
   const b1=cyl(0.028,0.028,0.03,IM.redBtn,root,0.2,1.98,F-0.02,14);b1.rotation.x=Math.PI/2;
   const b0=cyl(0.028,0.028,0.03,IM.greenBtn,root,0.28,1.98,F-0.02,14);b0.rotation.x=Math.PI/2;
   const ks=cyl(0.03,0.03,0.02,MAT.black,root,0.24,1.86,F-0.02,14);ks.rotation.x=Math.PI/2;
@@ -3908,10 +3903,8 @@ function buildInterior(){
   buildPanelRow(PANELS20,61,ROOMS[1]);
   const Y=IN.y0;
   // beveiligingskasten (10 kV-ruimte en 20 kV-ruimte)
-  const rt=mat({map:relayTex(),roughness:0.4}),glass=new THREE.MeshPhysicalMaterial({color:0x223038,transparent:true,opacity:0.25,roughness:0.05});
-  const cab=(x,i)=>{box(0.8,2.2,0.8,MAT.cabinet,staticRoot,x,Y+1.1,55.25);iplane(0.66,1.6,rt,x,Y+1.25,54.84,Math.PI);box(0.7,1.75,0.015,glass,staticRoot,x,Y+1.25,54.835);plate('+R'+i,staticRoot,x,Y+2.1,54.83,Math.PI,0.26);};
-  for(let k=0;k<6;k++)cab(-18.9+k*0.82,k+1);
-  for(let k=0;k<4;k++)cab(48.4+k*0.82,k+11);
+  {const U=relayUnits(),z=54.84;[[U.line('L1'),'+R1'],[U.line('L2'),'+R2'],[U.trafo('T1'),'+R3'],[U.trafo('T3'),'+R4'],[U.rail('A/B','V-K'),'+R5'],[U.scada,'+R6']].forEach(([u,l],k)=>relayCabinet(-18.9+k*0.82,z,Y,l,u));
+    [[U.trafo('T2'),'+R11'],[U.rail('C1/C2','W-K'),'+R12'],[U.trafo('T3'),'+R13'],[U.scada,'+R14']].forEach(([u,l],k)=>relayCabinet(48.4+k*0.82,z,Y,l,u));}
   iplane(1.3,1.78,mat({map:posterTex(),roughness:0.7}),-11.2,Y+1.7,IN.z1-0.02,Math.PI);
   iplane(1.3,1.78,mat({map:posterTex(),roughness:0.7}),70.5,Y+1.7,ROOMS[1].z1-0.02,Math.PI);
   // bedieningsbureau met SCADA-schermen
@@ -3935,13 +3928,9 @@ function buildInterior(){
 }
 // alleen schermen in de buurt van de camera, en alleen als er iets veranderd is (elke upload naar de GPU kost tijd)
 const DESK_POS=V3(-17.4,1.5,47);
-function drawPanelScreens(){const cp=camera.position;
+function drawPanelScreens(){const cp=camera.position;drawRelayCabinets();
   SCREENS.forEach(s=>{const d=D[s.id],g=s.g,c=VIEWS[s.id]?.center;if(c&&cp.distanceTo(c)>30)return;
-    const key=[d.state,d.I|0,EN.has(s.node)?nodeU(s.node).toFixed(2):0,!!(d.feeder&&d.feeder.fault),springOk(d),s.es&&D[s.es].state].join();if(key===s.key)return;s.key=key;
-    g.fillStyle='#08160f';g.fillRect(0,0,256,128);g.fillStyle='#7dffa8';g.font='bold 26px monospace';g.fillText(s.id,14,32);
-    const fault=d.feeder&&d.feeder.fault;const st=d.type==='es'?(d.state?'AARD':'OPEN'):d.state?'IN':fault?'TRIP':'UIT';
-    g.font='22px monospace';g.fillText(`I ${String(Math.round(d.I)).padStart(4)} A`,14,66);g.fillText(`U ${EN.has(s.node)?nodeU(s.node).toFixed(2).replace('.',','):' 0,00'} kV`,14,96);
-    g.fillStyle=st==='IN'?'#ff7a7a':st==='TRIP'?'#ffcc33':'#7dffa8';g.font='bold 22px monospace';g.fillText(st,190,32);if(!springOk(d)){g.fillStyle='#ffcc33';g.font='16px monospace';g.fillText('VEER',190,96);}if(s.es&&D[s.es].state){g.fillStyle='#ffd23a';g.font='bold 16px monospace';g.fillText('GEAARD',176,66);}s.t.needsUpdate=true;});
+    const key=relayKey(s,d);if(key===s.key)return;s.key=key;drawRelay(s);});
   if(!deskScreens||cp.distanceTo(DESK_POS)>25)return;
   const [a,b]=deskScreens;let g=a.g;g.fillStyle='#0d1117';g.fillRect(0,0,512,320);g.fillStyle='#e7ecf1';g.font='bold 22px Arial';g.fillText('OS ZUIDWOLDE · MS',18,34);
   g.font='16px monospace';g.fillStyle='#9fd0ff';g.font='14px monospace';g.fillText(`A ${FLOW.U.RA.toFixed(2)}  B ${FLOW.U.RB.toFixed(2)}  C1 ${FLOW.U.RC.toFixed(2)}  C2 ${FLOW.U.RD.toFixed(2)} kV`,18,60);
@@ -4153,6 +4142,93 @@ function dcRestore(){if(!SRV.burnt)return;SRV.burnt=false;dcMats().forEach((m,i)
 function serverTick(dt){SVM.flash.emissiveIntensity=GAME.flags.dcAlarm&&performance.now()%700<300?5:0;SRV.t+=dt;if(SRV.t<0.22)return;SRV.t=0;const down=GAME.flags.scadaDown===true;
   SRV.ledTex.offset.y=Math.floor(Math.random()*8)/8;SVM.led.color.setHex(down?0xff3030:0xffffff);
   const b=performance.now()%1000<500;SVM.rtuOk.emissive.setHex(down?0xff2020:0x2cff6a);SVM.rtuOk.emissiveIntensity=b?2.5:0.6;SVM.rtuLte.emissiveIntensity=down?0:(Math.random()<0.5?2.5:0.5);SVM.rtuFo.emissiveIntensity=down?0:Math.random()<0.6?2.5:0.6;}
+
+
+// ============================================================ beveiligingsrelais: numeriek relais in elk veld en de beveiligingskasten
+// Elk MS-veld heeft in de laagspanningsnis een numeriek relais (zoals in echte installaties): LCD met fasestromen, een LED-kolom
+// (RUN, START, TRIP, I>, I>>, Ie>, AR, ERROR), toetsen en een testcontactdoos. Bij een beveiligingsuitschakeling blijft TRIP branden
+// en toont het display de foutmelding (functie, fasen, stroom, uitschakeltijd) tot iemand het relais reset.
+// De beveiligingskasten (+R) hebben per object een eigen relais (afstand 21, differentiaal 87T, rail 87B, ...) met live LEDs.
+const RLY={};
+// uitschakeling door de beveiliging (aangeroepen vanuit tripBreaker en tripFrom); wat er aansprak volgt uit de storingsschrijver
+function relayTrip(id){const R=RLY[id]??={};Object.assign(R,{trip:true,t:SIM.t,pending:true,fn:'…',ph:'',I:'',tt:''});}
+function relayReset(id){const R=RLY[id];if(!R?.trip)return;R.trip=false;pushAlarm(`${id}: beveiligingsrelais gereset (LEDs en melding gewist)`,'op');refreshDevPanel?.();}
+function relayFill(id){const R=RLY[id];if(!R?.pending)return;const rec=FREC.find(r=>(r.dev===id||r.inc===id)&&Math.abs(r.t-R.t)<2);
+  if(rec){R.pending=false;const kA_=x=>(x/1000).toFixed(1).replace('.',',')+' kA',sec=x=>x!=null?x.toFixed(2).replace('.',','):'–';
+    if(rec.kind==='kortsluiting'){R.fn=rec.inc===id?'I> RES':rec.tTrip<0.15?'I>>':'I>';R.ph=rec.phases===3?'L1-L2-L3':'L1-L2';R.I=kA_(rec.Ik);R.tt=sec(rec.inc===id?rec.tInc:rec.tTrip);}
+    else{R.fn='I> OVERL';R.ph='L1-L2-L3';R.I=Math.round(rec.Ik||rec.Ipre||0)+' A';R.tt=sec(rec.tTrip);}return;}
+  if(SIM.t-R.t>1){R.pending=false;R.fn=/^L\d-/.test(id)?'21 Z1':/^T\d-|^[VW]-T/.test(id)?'86 EXTERN':'EXTERN';R.ph='';R.I='';R.tt='';}}
+// ---- relaisfront in het veld (canvas 256×320 op 0,26×0,325 m)
+const RLY_LED=[['RUN','#3fe07a'],['START','#ffcf33'],['TRIP','#ff3b30'],['I>','#ff3b30'],['I>>','#ff3b30'],['Ie>','#ff3b30'],['AR','#3fe07a'],['ERROR','#ff3b30']];
+function relayStart(d){const f=d.feeder;return !!(f&&d.state===1&&(f.oc>0.02||(f.fault&&f.fault.stage==='search')));}
+function relayKey(s,d){const R=RLY[s.id]||{},I=Math.round(d.I||0);return [d.state,I,EN.has(s.node)?nodeU(s.node).toFixed(2):0,R.trip,R.fn,relayStart(d),s.es&&D[s.es]?.state].join();}
+function drawRelay(s){const g=s.g,d=D[s.id],R=RLY[s.id]||{},meas=s.kind==='meas',on=EN.has(s.node);relayFill(s.id);
+  g.fillStyle='#3a3e43';g.fillRect(0,0,256,320);g.fillStyle='#2a2d31';g.fillRect(6,6,244,308);
+  g.fillStyle='#1d2b45';g.fillRect(6,6,244,26);g.fillStyle='#fff';g.font='bold 13px Arial';g.fillText((meas?'MEETVELD ':'VELDBEVEILIGING ')+s.id,12,24);
+  g.fillStyle='#8a9aa8';g.font='10px Arial';g.textAlign='right';g.fillText(meas?'U · f':s.kind==='inc'?'51 · 51N · 86':s.kind==='coup'?'50/51':'50/51 · 50N/51N',244,24);g.textAlign='left';
+  // LCD met achtergrondverlichting
+  g.fillStyle='#1a1d20';g.fillRect(16,40,224,100);g.fillStyle=R.trip?'#e3b7a9':'#c4d8b4';g.fillRect(20,44,216,92);g.fillStyle='#17210f';g.font='bold 15px monospace';
+  const U=on?nodeU(s.node):0,kv=U.toFixed(2).replace('.',','),st=d.type==='es'?(d.state?'GEAARD':'OPEN'):d.state?'IN':'UIT';
+  if(R.trip){g.fillStyle='#4a0e06';g.fillText(`TRIP ${R.fn}`,26,64);g.fillText(R.ph||'',26,84);g.fillText(R.I?`${R.I}  t ${R.tt} s`:'',26,104);g.font='bold 13px monospace';g.fillText(`${fmtClock(R.t)}  RESET: C`,26,126);}
+  else if(meas){const u=n=>(U*(1+n*0.004)).toFixed(2).replace('.',',');g.fillText(`U12 ${u(0)} kV`,26,64);g.fillText(`U23 ${u(1)} kV`,26,84);g.fillText(`U31 ${u(-1)} kV`,26,104);g.fillText(`f 50,00 Hz  ${s.es&&D[s.es]?.state?'AARD':''}`,26,126);}
+  else{const I=d.I||0,p=k=>String(Math.round(I*(1+k*0.012))).padStart(4);g.fillText(`IL1${p(0)} A IL2${p(1)} A`,26,64);g.fillText(`IL3${p(-1)} A IE    0 A`,26,84);
+    g.fillText(`U ${kv} kV  ${st}`,26,104);g.font='bold 13px monospace';g.fillText(`BEDRIJF  ${relayStart(d)?'START':'NORMAAL'}${s.es&&D[s.es]?.state?' AARD':''}`,26,126);}
+  // LED-kolom met opschriften
+  const lit=[true,relayStart(d),!!R.trip,R.trip&&/^I> /.test(R.fn+' ')&&R.fn!=='I>>',R.trip&&R.fn==='I>>',R.trip&&/Ie/.test(R.fn),false,false];
+  RLY_LED.forEach(([t,c],i)=>{const y=158+i*19,l=!meas||i===0?lit[i]:false;g.beginPath();g.arc(30,y,5.5,0,7);if(l){g.shadowColor=c;g.shadowBlur=10;g.fillStyle=c;}else g.fillStyle='#4a4f55';g.fill();g.shadowBlur=0;
+    g.fillStyle='#d8dde2';g.font='11px Arial';g.fillText(t,42,y+4);});
+  // toetsen: pijlen met E, C (reset), ESC, functietoetsen, sleutelschakelaar lokaal/afstand
+  const key=(x,y,w,h,t,c='#5a6068')=>{g.fillStyle=c;g.fillRect(x,y,w,h);g.fillStyle='#e9edf0';g.font='bold 10px Arial';g.textAlign='center';g.fillText(t,x+w/2,y+h/2+4);g.textAlign='left';};
+  key(170,150,22,18,'▲');key(146,172,22,18,'◀');key(170,172,22,18,'E','#3b6e3b');key(194,172,22,18,'▶');key(170,194,22,18,'▼');
+  key(146,150,22,18,'ESC');key(194,150,22,18,'C','#8a2a2a');for(let k=0;k<4;k++)key(140+k*24,222,20,16,'F'+(k+1));
+  g.fillStyle='#1a1a1a';g.beginPath();g.arc(206,268,14,0,7);g.fill();g.strokeStyle='#bbb';g.lineWidth=3;g.beginPath();g.moveTo(206,268);g.lineTo(214,256);g.stroke();
+  g.fillStyle='#d8dde2';g.font='bold 10px Arial';g.fillText('L',186,262);g.fillText('R',220,262);
+  g.fillStyle='#a32020';g.fillRect(140,292,40,14);g.fillStyle='#fff';g.font='bold 9px Arial';g.fillText('TEST',148,303);g.fillStyle='#16181b';g.fillRect(188,292,14,10);
+  s.t.needsUpdate=true;}
+// statusregel in het veldpaneel
+function relayRow(id){const R=RLY[id],d=D[id];relayFill(id);if(R?.trip)return `<b class="bad">TRIP ${R.fn}</b>${R.ph?' · '+R.ph:''}${R.I?' · '+R.I:''} · ${fmtClock(R.t)} <button class="mini" data-act="rreset">Reset</button>`;
+  return relayStart(d)?'<span class="warnc">START (aangesproken)</span>':'normaal · RUN';}
+// ---- beveiligingskasten: per kast tot vier relais voor één object, met testklemmen en automaten; LEDs live
+const RCAB=[],RCAB_GLASS=new THREE.MeshPhysicalMaterial({color:0x223038,transparent:true,opacity:0.22,roughness:0.05});
+function relayCabinet(x,z,Y,label,units){const t=liveTex(256,512),m=new THREE.MeshBasicMaterial({map:t.t});const C={x,z,t,units,label,key:null};RCAB.push(C);
+  box(0.8,2.2,0.8,MAT.cabinet,staticRoot,x,Y+1.1,z+0.41);iplane(0.66,1.6,m,x,Y+1.25,z,Math.PI);
+  box(0.7,1.75,0.015,RCAB_GLASS,staticRoot,x,Y+1.25,z-0.005);
+  box(0.03,0.22,0.04,MAT.black,staticRoot,x-0.31,Y+1.25,z-0.03);plate(label,staticRoot,x,Y+2.1,z-0.01,Math.PI,0.26);return C;}
+function drawCabinet(C){const g=C.t.g;g.fillStyle='#b9bcb7';g.fillRect(0,0,256,512);g.fillStyle='#8e938e';for(const x of[8,240])g.fillRect(x,0,8,512);
+  C.units.forEach((u,k)=>{const y=12+k*102,R=u.cb?RLY[u.cb]||{}:{};if(u.cb)relayFill(u.cb);
+    g.fillStyle='#2d3136';g.fillRect(20,y,216,94);g.fillStyle='#1d2b45';g.fillRect(20,y,216,16);g.fillStyle='#fff';g.font='bold 11px Arial';g.fillText(u.t,26,y+12);
+    g.fillStyle='#1a1d20';g.fillRect(28,y+22,118,44);g.fillStyle=R.trip?'#e3b7a9':'#9fc7d8';g.fillRect(30,y+24,114,40);g.fillStyle='#10202a';g.font='bold 10px monospace';
+    const ln=R.trip?[`TRIP ${R.fn}`,R.I||R.ph||'',fmtClock(R.t)]:u.lcd();ln.forEach((s,i)=>g.fillText(s,34,y+36+i*12));
+    const leds=u.leds();leds.forEach(([t,c,on],i)=>{const lx=158+(i%2)*40,ly=y+30+Math.floor(i/2)*16;g.beginPath();g.arc(lx,ly,4.5,0,7);if(on){g.shadowColor=c;g.shadowBlur=8;g.fillStyle=c;}else g.fillStyle='#4a4f55';g.fill();g.shadowBlur=0;
+      g.fillStyle='#cfd5da';g.font='9px Arial';g.fillText(t,lx+7,ly+3);});
+    g.fillStyle='#5a6068';for(let b=0;b<5;b++)g.fillRect(30+b*22,y+72,16,12);});
+  // testklemmen (rood), automaten (wit) en rijgklemmen onderin
+  const yb=12+4*102;g.fillStyle='#d9dbd6';g.fillRect(20,yb,216,512-yb-8);
+  for(let i=0;i<8;i++){g.fillStyle='#b8241f';g.fillRect(28+i*26,yb+6,18,22);g.fillStyle='#fff';g.fillRect(33+i*26,yb+10,8,6);}
+  for(let i=0;i<10;i++){g.fillStyle='#f4f4f0';g.fillRect(28+i*20,yb+34,14,26);g.fillStyle='#222';g.fillRect(32+i*20,yb+42,6,8);}
+  g.fillStyle='#8a9196';for(let i=0;i<40;i++)g.fillRect(26+i*5.2,yb+66,4,18);
+  C.t.t.needsUpdate=true;}
+function relayCabKey(C){return C.units.map(u=>{const R=u.cb?RLY[u.cb]||{}:{};return [R.trip,R.fn,u.leds().map(l=>l[2]?1:0).join('')].join(':');}).join('|');}
+// inhoud van de kasten in de 10 kV- en 20 kV-ruimte
+function relayUnits(){const line=L=>[{t:`21  AFSTAND  ${L}`,cb:L+'-Q0',lcd:()=>[`${L} Z1 Z2 Z3`,`I ${Math.round(D[L+'-Q0'].I||0)} A`,SIM.lines[L].avail?'LIJN OK':'LIJN UIT'],leds:()=>[['RUN','#3fe07a',true],['TRIP','#ff3b30',!!RLY[L+'-Q0']?.trip],['Z1','#ff3b30',!!RLY[L+'-Q0']?.trip],['AR','#3fe07a',!!SIM.lines[L].ar]]},
+    {t:`79  HERINSCHAKELING ${L}`,lcd:()=>[`AR ${SIM.lines[L].ar?'IN':'UIT'}`,`DODE TIJD ${String(PROT.ln[L].dt).replace('.',',')} s`,SIM.lines[L].arBroken?'DEFECT':'GEREED'],leds:()=>[['RUN','#3fe07a',true],['AR','#3fe07a',!!SIM.lines[L].ar],['BLOK','#ffcf33',!SIM.lines[L].ar],['ERR','#ff3b30',!!SIM.lines[L].arBroken]]},
+    {t:`67N  AARDFOUT ${L}`,lcd:()=>['3I0  0 A','RICHTING VOORUIT','GEREED'],leds:()=>[['RUN','#3fe07a',true],['START','#ffcf33',false]]},
+    {t:'STORINGSSCHRIJVER',lcd:()=>[`OPNAMEN ${FREC.length}`,FREC[0]?`LAATST ${fmtClock(FREC[0].t)}`:'GEEN',''],leds:()=>[['RUN','#3fe07a',true],['REC','#ffcf33',FREC[0]&&SIM.t-FREC[0].t<5]]}];
+  const trafo=T=>[{t:`87T  DIFFERENTIAAL ${T}`,cb:T+'-Q0',lcd:()=>[`${T} ID 0,02 IN`,`IHS ${Math.round(D[T+'-Q0']?.I||0)} A`,D[T].blocked?'86 VERGRENDELD':'GEREED'],leds:()=>[['RUN','#3fe07a',true],['TRIP','#ff3b30',!!RLY[T+'-Q0']?.trip],['86','#ff3b30',!!D[T].blocked],['BUCH','#ff3b30',D[T].blockKind==='buchholz']]},
+    {t:`49  THERMISCH ${T}`,lcd:()=>[`OLIE ${Math.round(D[T].oil)} °C`,`KOELING ${D[T].fans?'AAN':'UIT'}`,`TRAP ${D[T].tap}`],leds:()=>[['RUN','#3fe07a',true],['ALARM','#ffcf33',D[T].oil>85],['TRIP','#ff3b30',D[T].oil>(PROT.tr[T]?.trip||100)]]},
+    {t:`50/51  OVERSTROOM HS ${T}`,lcd:()=>['I> 1,2 IN','I>> 8 IN','GEREED'],leds:()=>[['RUN','#3fe07a',true],['START','#ffcf33',false]]},
+    {t:`90  SPANNINGSREGELING ${T}`,lcd:()=>[`AVR ${D[T].avr==='auto'?'AUTO':'HAND'}`,`TRAP ${D[T].tap}/17`,''],leds:()=>[['RUN','#3fe07a',true],['AUTO','#3fe07a',D[T].avr==='auto']]}];
+  const rail=(nm,cpl)=>[{t:`87B  RAILBEVEILIGING ${nm}`,lcd:()=>['ID 0,00','ZONES OK',''],leds:()=>[['RUN','#3fe07a',true],['TRIP','#ff3b30',false]]},
+    {t:'50BF  FALEN SCHAKELAAR',lcd:()=>['T1 150 ms','GEREED',''],leds:()=>[['RUN','#3fe07a',true],['START','#ffcf33',false]]},
+    {t:`50/51  KOPPELING ${cpl}`,cb:cpl,lcd:()=>[`${cpl} ${D[cpl]?.state?'IN':'UIT'}`,`I ${Math.round(D[cpl]?.I||0)} A`,''],leds:()=>[['RUN','#3fe07a',true],['TRIP','#ff3b30',!!RLY[cpl]?.trip]]},
+    {t:'SYNCHROCHECK 25',lcd:()=>['DU < 0,25 kV','DF < 0,1 HZ',''],leds:()=>[['RUN','#3fe07a',true],['SYNC','#3fe07a',true]]}];
+  const scada=[{t:'RTU  STATION',lcd:()=>[SCADA_DOWN()?'VERBINDING WEG':'IEC 104 OK','',''],leds:()=>[['RUN','#3fe07a',true],['COM','#3fe07a',!SCADA_DOWN()],['ERR','#ff3b30',!!SCADA_DOWN()]]},
+    {t:'GPS-TIJDKLOK',lcd:()=>[fmtClock(SIM.t),'SYNC OK',''],leds:()=>[['RUN','#3fe07a',true],['SYNC','#3fe07a',true]]},
+    {t:'NETWERK STATIONSBUS',lcd:()=>['IEC 61850','8 POORTEN',''],leds:()=>[['RUN','#3fe07a',true],['LINK','#3fe07a',true]]},
+    {t:'ACCU-BEWAKING 110 V',lcd:()=>['U 112 V DC','LADEN OK',''],leds:()=>[['RUN','#3fe07a',true],['ALARM','#ffcf33',false]]}];
+  return {line,trafo,rail,scada};}
+// elke 0,25 s (met de schermen in de schakelruimte): alleen kasten in de buurt en alleen als er iets veranderd is
+function drawRelayCabinets(){const cp=camera.position;for(const C of RCAB){if(Math.hypot(cp.x-C.x,cp.z-C.z)>30&&C.key)continue;const k=relayCabKey(C);if(k===C.key)continue;C.key=k;drawCabinet(C);}}
 
 
 // ============================================================ station opbouwen
@@ -4410,6 +4486,7 @@ function rowsFor(d){const r=[],A=(k,f)=>r.push([k,f]);
   if(d.type==='es')A(d.cb?'Spanning kabelzijde':'Spanning lijnzijde',()=>fmtKV(nodeU(d.a)));
   if(['ct','sa','bb','line','kiosk'].includes(d.type))A('Spanning',()=>fmtKV(nodeU(d.node)));
   if(['cb','ds','ct','lbs'].includes(d.type))A('Stroom',()=>`${Math.round(D[d.ref||d.id].I)} A`);
+  if(d.type==='cb')A('Beveiligingsrelais',()=>relayRow(d.id));
   if(d.type==='cb'){A('Conditie',()=>`<span class="${d.refusals||cond(d)<0.25?'bad':cond(d)<0.4?'warnc':''}">${d.refusals?`weigerde ${d.refusals}× · `:''}${Math.round(cond(d)*100)}%</span> · revisie ${d.year}`);A('Inschakelveer',()=>springOk(d)?'geladen':'<span class="warnc">laden…</span>');A('Schakelingen',()=>d.ops);}
   if(d.line)A('Herinschakeling (AR)',()=>(SIM.lines[d.line].ar?'IN bedrijf':'<span class="warnc">UIT bedrijf</span>')+` · dode tijd ${protTxt('dt',PROT.ln[d.line].dt)}`);
   if(d.feeder&&!d.feeder.gen)A('Beveiliging I>',()=>`${protTxt('pick',PROT.f[d.feeder.id].pick)} · t ${protTxt('tms',PROT.f[d.feeder.id].tms)}`);
@@ -4473,7 +4550,7 @@ function refreshDevPanel(){if(!SEL)return;const p=$('#devpanel'),d=D[SEL];
 $('#devpanel').addEventListener('click',e=>{const op=e.target.closest('[data-op]');if(op){const [id,v]=op.dataset.op.split(':');operate(id,+v);return;}
   const b=e.target.closest('[data-act]');if(!b||b.disabled)return;const a=b.dataset.act;
   if(a==='1'||a==='0')operate(SEL,+a);else if(a==='x')selectDevice(null);else if(a==='fly')flyToDevice(SEL);else if(a==='inside'){const v=VIEWPOS[SEL==='MS20'?6:5];flyTo(v[0].clone(),v[1].clone(),2);}
-  else if(a.startsWith('ratio'))setRatio(a.slice(5));else if(a==='kin')enterKiosk(SEL);else if(a==='callmp')callMeppel();else if(a==='gs')gsSend(D[SEL].st);else if(a==='gsoff')gsOff(D[SEL].st);else if(a==='gsrestart')gsRestart(D[SEL].st);else if(a==='lvsend')dispatchLV(SEL);
+  else if(a.startsWith('ratio'))setRatio(a.slice(5));else if(a==='kin')enterKiosk(SEL);else if(a==='callmp')callMeppel();else if(a==='rreset')relayReset(SEL);else if(a==='gs')gsSend(D[SEL].st);else if(a==='gsoff')gsOff(D[SEL].st);else if(a==='gsrestart')gsRestart(D[SEL].st);else if(a==='lvsend')dispatchLV(SEL);
   else if(a==='avr')setAVR(SEL,D[SEL].avr==='auto'?'hand':'auto');else if(a.startsWith('tap'))tapStep(SEL,+a.slice(3));
   else if(a==='reset')resetLockout(SEL);else if(a==='prot')openProt();else if(a==='ar')toggleAR(D[SEL].line);else if(a.startsWith('sel:'))selectDevice(a.slice(4));
   else if(a==='scada'){$('#scada').classList.remove('min');$('#scada').animate([{boxShadow:'0 0 0 3px #f0a43a'},{boxShadow:'0 0 0 0 transparent'}],{duration:900});}});
@@ -6729,7 +6806,7 @@ function gisDrawExtra(g,cv){const s=TAB.zoom,now=performance.now();
 // ============================================================ updatecontrole in het hoofdmenu: is er op GitHub een nieuwere versie?
 // De build zet een vingerafdruk in BUILD_ID (tests/stamp.mjs) en houdt version.json bij met eerdere versies.
 // Staat onze versie bij de eerdere versies op GitHub, dan is er een update; staat hij er niet in, dan is het eigen (nieuwer) werk.
-const BUILD_ID='ebdd11fd1475';
+const BUILD_ID='4e0debb9089d';
 const UPD_REPO='https://github.com/ProAdmin007/Onderstation-SIM-Pro';
 const UPD_URL='https://raw.githubusercontent.com/ProAdmin007/Onderstation-SIM-Pro/main/version.json';
 // toestand van de controle: idle, bezig, actueel, nieuw, eigen of fout
@@ -7016,7 +7093,7 @@ else{renderMenu();$('#intro').classList.remove('hidden');controls.autoRotate=tru
 if(params.has('night'))updateSky(22);
 if(params.has('view')){const v=VIEWPOS[+params.get('view')];camera.position.copy(v[0]);controls.target.copy(v[1]);controls.autoRotate=false;controls.update();}
 
-window.OS={callMeppel,mpAllowed,MP_ACCESS,MEP_IDS,FX,fireSmoke,audioPause,MEPPEL,LS_ORDERS,refreshDevPanel,scadaReach,dcBurnt,LAMPS,updateSky,updateNPCs,updateStreetLights,DOORS,STEPS,floorAt,doorTick,pickAt,SVM,serverTick,setAutoMeet,measBlock,measVan,MEAS_VAN,coachRestore,coachReset,installUpdate,COACH,coachCards,setCoach,renderCoach,checkUpdate,UPD,BUILD_ID,GSV,gensetTick,gensetSpot,digStart,klicHit,digTick,digHit,MARKS,setSpeed,klicFocus,klicCard,klicCables,tabletHome,refreshInfo,XLAB,TRACES,cableDist,stationVisuals,cityRoute,CORDONS,inCordon,copperTheft,trafoFire,stationTick,stationBlock,stIsolated,stNeighborSwitches,STV,updateHUD,pushAlarm,FF,ffStart,ffStop,skipRain,openWT,closeWT,setRealWeather,autoWeather,pickWeather,wetNow,ALARM:()=>ALARM_CRIT,VANS,vanTick,crewDispatch,crewSpawn,routeAt,driveVehicle,walkActive:()=>WALK_ACTIVE,BUS,GARB,PARCEL,AMB,TRAIN,XING,HALTES,MARKET,FIG,CY,cityDay,marketOn,schoolBreak,cityTick,measDone,cableCard,isoSwitches,KLIC,klicNew,klicMark,klicHit,gisMeasure,gisMofReplace,faultOf,cableOf,cableRisk,DIGS,CABLES,GIS_NET,gisRoute,cableState,setXray,XRAY,TAB,openTablet,closeTablet,drawTablet,nearestCable,DYN,fpsTick,fireTick,WK,getWalkers:()=>WALKERS,getStrips:()=>WSTRIPS,fireStart,fireDouse,fireStop,GENSET,gsCap,SMALL,lvgLive,updateSmall,setMouseMode,getMouseMode:()=>MOUSE_MODE,cameraKeys,OVK,openPreview,closePreview,viewHour,getPreview:()=>PREVIEW,VIEWPOS,SITE,updateSites,SLD,activeFaults,renderFaults,reportPDF,listSaves,openSlots,closeSlots,SAVE_SLOTS,layoutCheck,LAYOUT,FREC,fltRec,openRec,closeRec,renderRec,selectivity,protSelect,feederT,incT,incOf,shortCircuit,EF,earthFault,efTick,efRails,efU0,railsCoupled,controls,tripBreaker,CONS,LS_LINKS,LS_ORDERS,GENSET,lsTick,lsOrder,lsSwitchOrder,lsExec,gsSend,gsOff,gsRestart,tapOrder,setEta,callPrio,lsAreas,PRIO,openLS,closeLS,renderLS,lvVolt,stationLoads,shedFactor,failP,manualP,phoneTick,refreshDevPanel,updateSLD,openKeys,closeKeys,KEY_HELP,RELAY_BAYS,relayTask,relayDue,relayDefect,initRelays,kitTests,kitMeasure,kitVerdict,kitRun,openKit,closeKit,saveGame,readSave,deleteSave,resumeGame,canSave,specOf,CABLE,soilT,FD,meppelFault,linkTick,tabAlarms,updateTabAlarms,renderTasks,INC,INCIDENTS,startIncident,endIncident,incidentTick,setTab,renderCables,GFX,setGfx,applyGfx,openSettings,closeSettings,WX_TYPES,renderer,scene,FIRE,CARS,updateWindows,updateLife,stationLive,cbMaintTask,worstCb,cond,breakerFails,CB_IDS,FLEX,setFlex,flexTick,congestion,openFlex,closeFlex,checkModel,homeBus,BUSES,SEL_BAYS,TORCH,setTorch,HO_POOL,handoverTick,REC,RP,startReplay,stopReplay,analyse,stationDamage,closeHandover,deviations,PHONE,lvFault,callFrom,phoneAnswer,dispatchLV,LVG,forecast,progAdvice,PROG,startTask:(k,...a)=>{TASK={relayTask,cbMaintTask,railTask,railBTask,stationTask,thermoTask,ringTask,feederTask,lineTask,reserveTask}[k](...a);TASK.i=0;TASK.code='WV-TEST';briefInit(TASK);renderTasks();},SIM,D,LESSONS,lessonGo,selectDevice,abortTask,railTask,stationTask,thermoTask,nearDev,VIEWS,PROT,setProt,openProt,closeProt,busFault,BUSF,RINGS,task:()=>TASK,briefSubmit,briefCheck,briefWatch,actKey,taskActs,crewNear,boxOf:id=>VIEWS[id]&&VIEWS[id].box,AudioSys,updateAudio,WX,setWeather,setSeason,SEASONS,ambient,enterKiosk,ROOMS,blockedAt,RING,NPCS,crewDispatch,ringFault,FP,enterFP,exitFP,pickCenter,camera,camInside,setRatio,setTab,GAME,MODES,applyMode,endGame,EN:()=>EN,FLOW,operate,tapStep,setAVR,resetLockout,toggleAR,regulate,computeFlows,randomEvent,lineFault,feederFault,trafoFault,offerTask,simStep,FEEDERS};
+window.OS={RLY,relayReset,relayFill,RCAB,callMeppel,mpAllowed,MP_ACCESS,MEP_IDS,FX,fireSmoke,audioPause,MEPPEL,LS_ORDERS,refreshDevPanel,scadaReach,dcBurnt,LAMPS,updateSky,updateNPCs,updateStreetLights,DOORS,STEPS,floorAt,doorTick,pickAt,SVM,serverTick,setAutoMeet,measBlock,measVan,MEAS_VAN,coachRestore,coachReset,installUpdate,COACH,coachCards,setCoach,renderCoach,checkUpdate,UPD,BUILD_ID,GSV,gensetTick,gensetSpot,digStart,klicHit,digTick,digHit,MARKS,setSpeed,klicFocus,klicCard,klicCables,tabletHome,refreshInfo,XLAB,TRACES,cableDist,stationVisuals,cityRoute,CORDONS,inCordon,copperTheft,trafoFire,stationTick,stationBlock,stIsolated,stNeighborSwitches,STV,updateHUD,pushAlarm,FF,ffStart,ffStop,skipRain,openWT,closeWT,setRealWeather,autoWeather,pickWeather,wetNow,ALARM:()=>ALARM_CRIT,VANS,vanTick,crewDispatch,crewSpawn,routeAt,driveVehicle,walkActive:()=>WALK_ACTIVE,BUS,GARB,PARCEL,AMB,TRAIN,XING,HALTES,MARKET,FIG,CY,cityDay,marketOn,schoolBreak,cityTick,measDone,cableCard,isoSwitches,KLIC,klicNew,klicMark,klicHit,gisMeasure,gisMofReplace,faultOf,cableOf,cableRisk,DIGS,CABLES,GIS_NET,gisRoute,cableState,setXray,XRAY,TAB,openTablet,closeTablet,drawTablet,nearestCable,DYN,fpsTick,fireTick,WK,getWalkers:()=>WALKERS,getStrips:()=>WSTRIPS,fireStart,fireDouse,fireStop,GENSET,gsCap,SMALL,lvgLive,updateSmall,setMouseMode,getMouseMode:()=>MOUSE_MODE,cameraKeys,OVK,openPreview,closePreview,viewHour,getPreview:()=>PREVIEW,VIEWPOS,SITE,updateSites,SLD,activeFaults,renderFaults,reportPDF,listSaves,openSlots,closeSlots,SAVE_SLOTS,layoutCheck,LAYOUT,FREC,fltRec,openRec,closeRec,renderRec,selectivity,protSelect,feederT,incT,incOf,shortCircuit,EF,earthFault,efTick,efRails,efU0,railsCoupled,controls,tripBreaker,CONS,LS_LINKS,LS_ORDERS,GENSET,lsTick,lsOrder,lsSwitchOrder,lsExec,gsSend,gsOff,gsRestart,tapOrder,setEta,callPrio,lsAreas,PRIO,openLS,closeLS,renderLS,lvVolt,stationLoads,shedFactor,failP,manualP,phoneTick,refreshDevPanel,updateSLD,openKeys,closeKeys,KEY_HELP,RELAY_BAYS,relayTask,relayDue,relayDefect,initRelays,kitTests,kitMeasure,kitVerdict,kitRun,openKit,closeKit,saveGame,readSave,deleteSave,resumeGame,canSave,specOf,CABLE,soilT,FD,meppelFault,linkTick,tabAlarms,updateTabAlarms,renderTasks,INC,INCIDENTS,startIncident,endIncident,incidentTick,setTab,renderCables,GFX,setGfx,applyGfx,openSettings,closeSettings,WX_TYPES,renderer,scene,FIRE,CARS,updateWindows,updateLife,stationLive,cbMaintTask,worstCb,cond,breakerFails,CB_IDS,FLEX,setFlex,flexTick,congestion,openFlex,closeFlex,checkModel,homeBus,BUSES,SEL_BAYS,TORCH,setTorch,HO_POOL,handoverTick,REC,RP,startReplay,stopReplay,analyse,stationDamage,closeHandover,deviations,PHONE,lvFault,callFrom,phoneAnswer,dispatchLV,LVG,forecast,progAdvice,PROG,startTask:(k,...a)=>{TASK={relayTask,cbMaintTask,railTask,railBTask,stationTask,thermoTask,ringTask,feederTask,lineTask,reserveTask}[k](...a);TASK.i=0;TASK.code='WV-TEST';briefInit(TASK);renderTasks();},SIM,D,LESSONS,lessonGo,selectDevice,abortTask,railTask,stationTask,thermoTask,nearDev,VIEWS,PROT,setProt,openProt,closeProt,busFault,BUSF,RINGS,task:()=>TASK,briefSubmit,briefCheck,briefWatch,actKey,taskActs,crewNear,boxOf:id=>VIEWS[id]&&VIEWS[id].box,AudioSys,updateAudio,WX,setWeather,setSeason,SEASONS,ambient,enterKiosk,ROOMS,blockedAt,RING,NPCS,crewDispatch,ringFault,FP,enterFP,exitFP,pickCenter,camera,camInside,setRatio,setTab,GAME,MODES,applyMode,endGame,EN:()=>EN,FLOW,operate,tapStep,setAVR,resetLockout,toggleAR,regulate,computeFlows,randomEvent,lineFault,feederFault,trafoFault,offerTask,simStep,FEEDERS};
 const clock=new THREE.Clock();let hudT=0,skyT=0,progT=0;
 let liteAcc=0,shadowT=0,hudStep=4;
 // dieptebuffer: in het overzicht schuift de near-plane mee met de kijkafstand, zodat gevels op afstand niet flikkeren
