@@ -432,6 +432,15 @@ De wereld bestaat uit tienduizenden kleine meshes. `bakeStatic()` voegt aan het 
 
 **De regel:** alles wat beweegt of van materiaal verandert, hangt onder een groep met `userData.dyn = true` (deurbladen, scheidersarmen, voertuigen, wieken). Een materiaal waarvan alleen de *eigenschappen* veranderen (kleur, emissive, opacity) mag wel samengevoegd worden. Zo schakelt de straatverlichting met één materiaal per MS-station. **Gedeelde materialen** houden het aantal tekenbeurten laag: gebruik er geen nieuwe per object.
 
+### Lampen
+
+Elke lamp in de scène kost bij elke pixel van elk materiaal rekenwerk, ook als hij uit staat (intensiteit 0). Daarom:
+
+- **Binnenlampen** zijn een gedeelde set van drie (`ROOM_LIGHTS`, de eerste is `kioskLight`). `updateKioskLight` zet ze in de ruimte waar je bent, of vlak bij staat (je kijkt dan door de deur naar binnen). De ruimtes geven alleen posities op (`r.lightPos`).
+- **`lightsTick()`** (elke 0,25 s) haalt lampen die uit staan uit de shaders met `visible = false`, **per groep**: terreinspots en straatspots alleen bij nacht, de zaklamp alleen als hij aan is, het vuurlicht alleen bij brand, de binnenlampen alleen in of bij een ruimte. Binnen een groep blijven ongebruikte lampen meetellen met intensiteit 0. Zo verandert het aantal lampen niet bij elke beweging, en hoeven de shaders alleen bij het omschakelen van een groep één keer opnieuw te worden opgebouwd.
+- Buiten en overdag rekent een pixel daardoor met 4 lampen (zon, maan, hemellicht en de lamp voor vlambogen) in plaats van 26.
+- Nieuwe lampen maak je bij het laden aan (niet tijdens het spel) en neem je op in `lightsTick`.
+
 ### Schaduw en near-plane
 
 - De schaduwkaart wordt niet elk beeld getekend (`shadowMap.autoUpdate = false`). `shadowTick` doet het alleen bij `SHADOW_DIRTY`, elke 0,5 s voor de zon, of als er iets beweegt op het terrein (monteurs, brandweer, schakelaars).

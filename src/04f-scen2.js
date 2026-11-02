@@ -9,7 +9,7 @@ const SCADA_DOWN=()=>!!GAME.flags.scadaDown;
 // is dit apparaat op afstand te bedienen? (bij scadaDown==='os' wel de schakelaars in de MS-stations)
 const scadaReach=id=>!GAME.flags.scadaDown||(GAME.flags.scadaDown==='os'&&RING.stations.some(s=>s.id===D[id]?.bay));
 // lokaal bedienen: in first person dichtbij het veld staan
-const localOk=id=>SIM.localTest||(FP.on&&!!VIEWS[id]&&camera.position.distanceTo(VIEWS[id].center)<7);
+const localOk=id=>{if(SIM.localTest)return true;const v=VIEWS[lrPanel(id)||id];return FP.on&&!!v&&camera.position.distanceTo(v.center)<7;};
 let WATER=null;
 Object.assign(MODES,{
   aanrijding:{scen:true,name:'Aanrijding MS-station',tag:'Scenario · gemiddeld',start:14,dur:75,season:'herfst',weather:'bewolkt',

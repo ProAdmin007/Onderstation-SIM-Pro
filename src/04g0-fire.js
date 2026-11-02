@@ -45,8 +45,8 @@ function fireStart(o={}){if(FIRE.on)return;Object.assign(FIRE,{bld:o.bld||'MS',o
   const r=o.inside&&ROOMS.find(r=>r.id===FIRE.bld),cb=r?new THREE.Box3(V3(x-1.5,r.y0,z-1.5),V3(x+1.5,r.y0+2.5,z+1.5)):b;
   crewDispatch({box:cb,say:r?'Brandweer (ademlucht)':'Brandweer',until:()=>!FIRE.on,n:4,kind:'fire'});}
 function fireDouse(){if(FIRE.on&&FIRE.douseAt==null)FIRE.douseAt=SIM.t;}
-function fireStop(){FIRE.on=false;FIRE.smolder=25;FIRE_LIGHT.intensity=0;if(FIRE.E){flameDispose(FIRE.E.roof);flameDispose(FIRE.E.door);flameDispose(FIRE.E.inside);FIRE.E=null;}if(FIRE.glow){scene.remove(FIRE.glow);FIRE.glow=null;}FIRE.flames.forEach(s=>{scene.remove(s);s.material.dispose();});FIRE.flames=[];
-  if(FIRE.scorch){scene.remove(FIRE.scorch);FIRE.scorch=null;}FIRE.douseAt=null;FIRE.trucks.forEach(t=>{if(t.state!=='gone')t.state='wait';t.wait=12;});}
+function fireStop(){FIRE.on=false;FIRE.smolder=25;FIRE_LIGHT.intensity=0;if(FIRE.E){flameDispose(FIRE.E.roof);flameDispose(FIRE.E.door);flameDispose(FIRE.E.inside);FIRE.E=null;}if(FIRE.glow){scene.remove(FIRE.glow);FIRE.glow.material.dispose();FIRE.glow=null;}FIRE.flames.forEach(s=>{scene.remove(s);s.material.dispose();});FIRE.flames=[];
+  if(FIRE.scorch){scene.remove(FIRE.scorch);FIRE.scorch.geometry.dispose();FIRE.scorch.material.dispose();FIRE.scorch=null;}FIRE.douseAt=null;FIRE.trucks.forEach(t=>{if(t.state!=='gone')t.state='wait';t.wait=12;});}
 // brandweerwagen: rood met geel-rode blokken, blauwe zwaailichten, (eventueel) ladder
 const FT={red:mat({color:0xc4141f,roughness:0.45,metalness:0.2}),yel:mat({color:0xe6d81a,roughness:0.5}),blk:mat({color:0x15181c,roughness:0.6}),glass:mat({color:0x1e2a34,roughness:0.1,metalness:0.5}),
   tyre:mat({color:0x111111,roughness:0.9}),ladder:mat({color:0xb8bcbf,roughness:0.4,metalness:0.7})};

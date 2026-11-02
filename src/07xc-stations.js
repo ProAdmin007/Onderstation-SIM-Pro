@@ -119,6 +119,7 @@ function stationVisuals(dt){const run=!SIM.paused,now=performance.now();POLICE_B
       const tc=VIEWS[s.id+'-TR']?.center||c,dc=camera.position.distanceTo(c);flameTick(v.fe,dt,{x:tc.x,y:bx.max.y-0.3,z:tc.z,sx:1.2,sz:0.9,size:1.9,rise:3.2},k);if(dc<50)flameTick(v.fi,dt,{x:tc.x,y:0.3,z:tc.z,sx:0.5,sz:0.4,size:1.1,rise:1.7},k*k);
       v.smoke=(v.smoke||0)+dt;if(v.smoke>(dc<300?0.14:0.3)){v.smoke=0;const col=B.phase==='blussen'?0xa8a8a4:0x35302c;fireSmoke(tc.x+rnd(-1.2,1.2),bx.max.y+0.6,tc.z+rnd(-1,1),1.2+0.9*k,col,0.85);
         if(dc<40&&Math.random()<0.4)fireSmoke(tc.x+rnd(-0.6,0.6),0.8,tc.z+rnd(-0.5,0.5),0.8,0x3a3633,0.5,bx.max.y-0.6);}
+      if(!FIRE.on&&dc>=200)FIRE_LIGHT.intensity=0;
       if(!FIRE.on&&dc<200){FIRE_LIGHT.position.set(tc.x,bx.max.y+1.5,tc.z);FIRE_LIGHT.intensity=k*(30+16*Math.sin(now/70)*Math.sin(now/43));}
       // brandweerlieden met de slang op afstand (±7 m) zodra de wagen er staat
       if(v.truck.arrived&&!v.crew){const q=v.truck.g.position;v.crew=crewSpawn({box:bx,n:3,say:'Brandweer',kind:'fire',standOff:7,from:V3(q.x+1.5,0,q.z+1.5),until:()=>!s.burn||s.burn.phase==='vervangen'});}

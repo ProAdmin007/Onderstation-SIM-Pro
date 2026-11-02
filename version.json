@@ -1,7 +1,11 @@
 {
-  "build": "fc7a783e56f8",
+  "build": "006a10c6f56b",
   "date": "2026-11-02",
   "previous": [
+    "e25bcc161f00",
+    "e4203e177a0f",
+    "7aba6c5dcca1",
+    "fc7a783e56f8",
     "6a997ff9fd31",
     "2e9d0684bfb0",
     "02a340b286f4",
@@ -164,6 +168,10 @@
     "fc7a783e56f8": {
       "date": "2026-11-02",
       "text": "SCADA toont per veld een kleine R (afstand) of L (lokaal) in plaats van een gekleurde gloed"
+    },
+    "006a10c6f56b": {
+      "date": "2026-11-02",
+      "text": "Bugfixes en snellere grafische kaart: aardschakelaar op lokaal te bedienen, niet meer opgesloten in Meppel, relaismeldingen worden opgeslagen, veel minder lampen in de shaders"
     }
   }
 }

@@ -79,7 +79,8 @@ function buildRoomShell(r){
   iplane(D2,H,IM.plaster,r.x0+0.01,cy,cz,Math.PI/2);iplane(D2,H,IM.plaster,r.x1-0.01,cy,cz,-Math.PI/2);
   iplane(W,D2,IM.ceiling,cx,r.y1-0.01,cz,0,Math.PI/2);
     for(let x=r.x0+4;x<r.x1-2;x+=6)for(const z of[49,53]){box(1.4,0.06,0.22,IM.led,staticRoot,x,r.y1-0.35,z);for(const s of[-0.6,0.6])rod(V3(x+s,r.y1-0.32,z),V3(x+s,r.y1,z),0.006,MAT.galv,staticRoot,4);}
-  if(r.id!=='SRV')for(let x=r.x0+W/6;x<r.x1;x+=W/3){const l=new THREE.PointLight(0xf4f2ea,70,9,2);l.position.set(x,r.y1-0.5,51);scene.add(l);}   // datacenter: verplaatsbare lamp (zie updateKioskLight)
+  // lampposities; de lampen zelf zijn een gedeelde set die meegaat naar de ruimte waar je bent (updateKioskLight)
+  if(r.id!=='SRV'){r.lightPos=[];for(let x=r.x0+W/6;x<r.x1;x+=W/3)r.lightPos.push(V3(x,r.y1-0.5,51));}   // datacenter: verplaatsbare lamp (zie updateKioskLight)
   r.doors.forEach(x=>{cyl(0.08,0.08,0.55,IM.redPaint,staticRoot,x+1.6,Y+0.3,r.z0+0.15,14);cyl(0.03,0.03,0.08,MAT.black,staticRoot,x+1.6,Y+0.61,r.z0+0.15,8);});
 }
 function buildPanelRow(panels,cx,room){
@@ -92,7 +93,7 @@ function buildPanelRow(panels,cx,room){
 }
 let deskScreens=null;
 function buildInterior(){
-  ROOMS.filter(r=>!r.kiosk).forEach(buildRoomShell);
+  ROOMS.filter(r=>!r.kiosk&&!r.meppel).forEach(buildRoomShell);
   buildPanelRow(PANELS,0,ROOMS[0]);
   buildPanelRow(PANELS20,61,ROOMS[1]);
   const Y=IN.y0;

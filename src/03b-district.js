@@ -54,6 +54,8 @@ function hall(cx,cz,w,d,h,label,blue,grp,hours){lay('hall',cx-w/2,cz-d/2,cx+w/2,
 // inloop-MS-station: 5 × 3,2 m, deur aan de straatkant (lokaal +z), binnen RMU, LS-rek en trafo achter gaas
 const KW=5.0,KD=3.2,KH=2.8,KT=0.15,KY=0.25;
 const kioskLight=new THREE.PointLight(0xf4f2ea,0,7,2);scene.add(kioskLight);const KUPD=[];
+// drie binnenlampen voor de ruimte waar je bent (of vlak bij staat); kioskLight is de eerste
+const ROOM_LIGHTS=[kioskLight,...[0,1].map(()=>{const l=new THREE.PointLight(0xf4f2ea,0,9,2);scene.add(l);return l;})];let ROOMLIT=false;
 function kioskVpis(on){return mat({color:0x3a3320,emissive:0xffd23a,emissiveIntensity:on?3:0});}
 function kiosk(s){
   const [x,z]=s.pos,ry=[Math.PI,-Math.PI/2,0][s.face],root=grp(x,z);root.rotation.y=ry;
@@ -137,7 +139,12 @@ function kiosk(s){
   const po=mesh(new THREE.PlaneGeometry(0.55,0.75),mat({map:posterTex(),roughness:0.7}),root,-hw+KT+0.01,Y+1.4,0.75);po.rotation.y=Math.PI/2;po.castShadow=false;
   kioskRTU(root,Y,KH,wrect);   // RTU-kast met LTE en glasvezel (05c-servers.js)
 }
-function updateKioskLight(){KUPD.forEach(f=>f());const i=camInside(),r=i&&ROOMS[i-1];if(r&&(r.kiosk||r.id==='SRV'||r.meppel)){kioskLight.position.set((r.x0+r.x1)/2,r.y1-0.3,(r.z0+r.z1)/2);kioskLight.distance=r.kiosk?7:16;kioskLight.intensity=r.kiosk?22:110;}else kioskLight.intensity=0;}
+function updateKioskLight(){KUPD.forEach(f=>f());const i=camInside(),cp=camera.position;let r=i&&ROOMS[i-1];
+  // buiten: de schakelruimte waar je vlak bij staat blijft verlicht (je kijkt door de deur naar binnen)
+  if(!r&&cp.y<12)r=ROOMS.find(q=>q.lightPos&&cp.x>q.x0-12&&cp.x<q.x1+12&&cp.z>q.z0-12&&cp.z<q.z1+12)||null;
+  ROOMLIT=!!r;ROOM_LIGHTS.forEach(l=>l.intensity=0);if(!r)return;
+  if(r.lightPos)r.lightPos.forEach((p,k)=>{const l=ROOM_LIGHTS[k];if(!l)return;l.position.copy(p);l.distance=9;l.intensity=70;});
+  else if(r.kiosk||r.id==='SRV'||r.meppel){kioskLight.position.set((r.x0+r.x1)/2,r.y1-0.3,(r.z0+r.z1)/2);kioskLight.distance=r.kiosk?7:16;kioskLight.intensity=r.kiosk?22:110;}}
 function enterKiosk(id){const r=ROOMS.find(r=>r.kioskId===id);if(!r)return;FP.last={x:r.cx,z:r.cz,yaw:r.yaw,pitch:-0.08};
   if(FP.on){FP.pos.set(r.cx,0,r.cz);FP.yaw=r.yaw;FP.pitch=-0.08;}else enterFP();if(SEL)selectDevice(null);}
 
@@ -173,7 +180,7 @@ const poolTex=(()=>{const c=cnv(128),g=c.getContext('2d'),gr=g.createRadialGradi
 const haloTex=(()=>{const c=cnv(64),g=c.getContext('2d'),gr=g.createRadialGradient(32,32,0,32,32,32);gr.addColorStop(0,'rgba(255,248,232,1)');gr.addColorStop(0.18,'rgba(255,236,205,0.55)');gr.addColorStop(1,'rgba(255,220,180,0)');g.fillStyle=gr;g.fillRect(0,0,64,64);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t;})();
 const coneMatOf=()=>new THREE.MeshBasicMaterial({color:0xfff0d8,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide});
 // vijf echte spotlights voor de lantaarns het dichtst bij de camera; al bij het laden in de scène (anders moeten alle shaders tijdens het spel opnieuw)
-const LAMPS={n:0,defect:[],list:[],spots:LITE?null:[0,1,2,3,4].map(()=>{const l=new THREE.SpotLight(0xfff0dc,0,34,1.05,0.75,1.6);scene.add(l,l.target);return l;})};
+const LAMPS={n:0,defect:[],list:[],spots:LITE?null:[0,1,2,3].map(()=>{const l=new THREE.SpotLight(0xfff0dc,0,34,1.05,0.75,1.6);scene.add(l,l.target);return l;})};
 // richting van de lantaarn naar de dichtstbijzijnde weg (de uithouder hangt boven de straat)
 function lampDir(x,z){let best=null,bd=1e9;for(const e of LAYOUT)if(e.kind==='road'){const [x0,z0,x1,z1]=e.r,cx=clamp(x,x0,x1),cz=clamp(z,z0,z1),d=Math.hypot(cx-x,cz-z);if(d<bd){bd=d;best=[cx-x,cz-z];}}
   if(!best||bd<0.01||bd>12)return [1,0];return Math.abs(best[0])>Math.abs(best[1])?[Math.sign(best[0]),0]:[0,Math.sign(best[1])];}

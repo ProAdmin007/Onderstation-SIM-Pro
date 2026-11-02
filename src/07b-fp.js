@@ -22,7 +22,7 @@ function buildColliders(){
   DISTRICT_RECTS.forEach(r=>addRect(...r));
 }
 function blockedAt(x,z){const r=0.3;if(x<-200||x>250||z<-110||z>565)return true;
-  if(!mpAllowed())for(const q of MEPPEL.lockRects||[])if(x>q[0]-r&&x<q[2]+r&&z>q[1]-r&&z<q[3]+r)return true;
+  if(!mpAllowed()&&!(FP.on&&FP.pos.z<MEPPEL.doorZ))for(const q of MEPPEL.lockRects||[])if(x>q[0]-r&&x<q[2]+r&&z>q[1]-r&&z<q[3]+r)return true;
   for(const q of FP.rects)if(x>q[0]-r&&x<q[2]+r&&z>q[1]-r&&z<q[3]+r)return true;return false;}
 function floorAt(x,z){const r=ROOMS.find(r=>x>r.x0-0.05&&x<r.x1+0.05&&z>r.z0-0.05&&z<r.z1+0.05);if(r)return r.y0;
   for(const s of STEPS)if(x>s[0]&&x<s[2]&&z>s[1]&&z<s[3])return s[4];return 0.02;}
@@ -88,10 +88,10 @@ function updateFP(dt){
   // waar kijk je naar?
   const id=pickCenter();
   if(id!==FP.look){FP.look=id;const v=id&&VIEWS[id];hovBox.visible=!!v&&id!==SEL;if(v)hovBox.box.copy(v.box).expandByScalar(0.1);}
-  const hint=$('#fpHint');
-  if(id){const d=D[id],a=actionLabel(d);hint.innerHTML=`<b>${id}</b> · ${d.label}<br>${a?`<kbd>F</kbd> ${a} &nbsp; `:''}<kbd>E</kbd> paneel`;hint.style.display='block';}
-  else if(nearMeppelDoor()&&!mpAllowed()){hint.innerHTML=MP_ACCESS.pending?'<b>OS Meppel</b> · Netbeheer Noord wordt gebeld…':'<b>OS Meppel</b> · deur op slot<br><kbd>F</kbd> bel Netbeheer Noord voor toegang';hint.style.display='block';}
-  else hint.style.display='none';
+  const hint=$('#fpHint'),setHint=h=>{if(hint._h!==h){hint._h=h;if(h){hint.innerHTML=h;hint.style.display='block';}else hint.style.display='none';}};
+  if(id){const d=D[id],a=actionLabel(d),p=lrPanel(id),lr=p?` · ${D[p].lr==='L'?'LOKAAL':'AFSTAND'}${D[p].lrLock?' 🔒':''}`:'';setHint(`<b>${id}</b> · ${d.label}${lr}<br>${a?`<kbd>F</kbd> ${a} &nbsp; `:''}<kbd>E</kbd> paneel`);}
+  else if(nearMeppelDoor()&&!mpAllowed()&&FP.pos.z>MEPPEL.doorZ)setHint(MP_ACCESS.pending?'<b>OS Meppel</b> · Netbeheer Noord wordt gebeld…':'<b>OS Meppel</b> · deur op slot<br><kbd>F</kbd> bel Netbeheer Noord voor toegang');
+  else setHint('');
 }
 addEventListener('mousemove',e=>{if(!FP.on||document.pointerLockElement!==canvasEl)return;
   FP.yaw-=e.movementX*0.0022;FP.pitch=clamp(FP.pitch-e.movementY*0.0022,-1.45,1.45);});

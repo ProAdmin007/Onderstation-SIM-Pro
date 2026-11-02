@@ -16,7 +16,8 @@ function relayFill(id){const R=RLY[id];if(!R?.pending)return;const rec=FREC.find
 // ---- relaisfront in het veld (canvas 256×320 op 0,26×0,325 m)
 const RLY_LED=[['RUN','#3fe07a'],['START','#ffcf33'],['TRIP','#ff3b30'],['I>','#ff3b30'],['I>>','#ff3b30'],['Ie>','#ff3b30'],['AR','#3fe07a'],['ERROR','#ff3b30']];
 function relayStart(d){const f=d.feeder;return !!(f&&d.state===1&&(f.oc>0.02||(f.fault&&f.fault.stage==='search')));}
-function relayKey(s,d){const R=RLY[s.id]||{},I=Math.round(d.I||0);return [d.lr,d.lrLock,d.state,I,EN.has(s.node)?nodeU(s.node).toFixed(2):0,R.trip,R.fn,relayStart(d),s.es&&D[s.es]?.state].join();}
+function relayKey(s,d){const R=RLY[s.id]||{},st=[d.lr,d.lrLock,d.state,EN.has(s.node),R.trip,R.fn,relayStart(d),s.es&&D[s.es]?.state].join(),now=performance.now();
+  if(st!==s.st||now-(s.mt||0)>1000){s.st=st;s.mt=now;s.mk=[Math.round(d.I||0),EN.has(s.node)?nodeU(s.node).toFixed(2):0].join();}return st+'|'+s.mk;}
 function drawRelay(s){const g=s.g,d=D[s.id],R=RLY[s.id]||{},meas=s.kind==='meas',on=EN.has(s.node);relayFill(s.id);
   g.fillStyle='#3a3e43';g.fillRect(0,0,256,320);g.fillStyle='#2a2d31';g.fillRect(6,6,244,308);
   g.fillStyle='#1d2b45';g.fillRect(6,6,244,26);g.fillStyle='#fff';g.font='bold 13px Arial';g.fillText((meas?'MEETVELD ':'VELDBEVEILIGING ')+s.id,12,24);
@@ -90,9 +91,10 @@ function drawRelayCabinets(){const cp=camera.position;for(const C of RCAB){if(Ma
 // Op AFSTAND bedien je het veld via SCADA; ter plaatse bedienen kan dan niet. Op LOKAAL alleen ter plaatse, SCADA weigert.
 // Omzetten en het hangslot kan alleen aan het veld zelf. De aardschakelaar van een uitgaand veld hoort bij dat veld.
 let LR_MAP=null;
-function lrPanel(id){if(!LR_MAP){LR_MAP=new Map();SCREENS.forEach(s=>{LR_MAP.set(s.id,s.id);if(s.es)LR_MAP.set(s.es,s.id);});}return LR_MAP.get(id)||null;}
+// (meetvelden met de railaarding hebben geen lokaal/afstand-schakelaar)
+function lrPanel(id){if(!LR_MAP&&SCREENS.length){LR_MAP=new Map();SCREENS.forEach(s=>{if(s.kind==='meas')return;LR_MAP.set(s.id,s.id);if(s.es)LR_MAP.set(s.es,s.id);});}return LR_MAP?.get(id)||null;}
 // echt ter plaatse (rondlopen bij het veld); de testmodus SIM.localTest telt hier niet
-const atPanel=id=>FP.on&&!!VIEWS[id]&&camera.position.distanceTo(VIEWS[id].center)<7;
+const atPanel=id=>{const v=VIEWS[lrPanel(id)||id];return FP.on&&!!v&&camera.position.distanceTo(v.center)<7;};
 function lrBlock(id){const p=lrPanel(id);if(!p||SIM.localTest)return null;const d=D[p],L=d.lr==='L';
   if(L&&!atPanel(id))return `${p} staat op LOKAAL${d.lrLock?' en is vergrendeld met een hangslot':''} – bedienen op afstand kan niet. Zet hem ter plaatse terug op AFSTAND.`;
   if(!L&&atPanel(id))return `${p} staat op AFSTAND – zet de lokaal/afstand-schakelaar op LOKAAL om ter plaatse te bedienen (open het veldpaneel)`;return null;}

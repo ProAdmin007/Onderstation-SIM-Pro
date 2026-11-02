@@ -35,7 +35,7 @@ function taskLoad(s){if(!s)return;
   const st=t.steps[t.i];if(st&&st.wait!=null&&st.until!=null&&t.crew){const c=t.crew();if(c)crewDispatch({...c,until:()=>!TASK||TASK.steps[TASK.i]!==st});}}
 // ---- opslaan
 function saveGame(silent,slot){if(!canSave())return false;slot=slot||(silent?'auto':SAVE_SLOT);
-  const data={v:SAVE_V,slot,at:Date.now(),mode:GAME.mode,diff:GAME.diff,season:Object.keys(SEASONS).find(k=>SEASONS[k]===SEASON),
+  const data={v:SAVE_V,slot,at:Date.now(),mode:GAME.mode,diff:GAME.diff,rly:JSON.parse(JSON.stringify(RLY)),mpUntil:MP_ACCESS.until,season:Object.keys(SEASONS).find(k=>SEASONS[k]===SEASON),
     SIM:{...grab(SIM,['t','speed','cml','incidents','tasksDone','nextEvent','nextTaskAt','interlock']),lines:JSON.parse(JSON.stringify(SIM.lines)),meppel:{...SIM.meppel}},
     GAME:{...grab(GAME,['score','stats','flags','endT','t0','countdown','planCb','hold']),obj:GAME.obj.map(o=>o.state)},
     ho:GAME.handover?GAME.handover.items.map(i=>({id:i.id,done:!!i.done,f:grab(i,['L','until'])})):null,hoOp:GAME.handover?.op,
@@ -65,7 +65,7 @@ $('#slotWin').addEventListener('click',e=>{if(e.target.closest('[data-slotclose]
 // ---- hervatten
 function resumeGame(d){$('#intro').classList.add('hidden');SAVE_SLOT=d.slot||'auto';AudioSys.init();controls.autoRotate=false;
   GAME.diff=d.diff;GAME.season=d.season;RESUMING=true;try{applyMode(d.mode);}finally{RESUMING=false;}
-  Object.assign(SIM,d.SIM);LINES.forEach(L=>Object.assign(SIM.lines[L],d.SIM.lines[L]));
+  Object.assign(SIM,d.SIM);LINES.forEach(L=>Object.assign(SIM.lines[L],d.SIM.lines[L]));if(d.rly)Object.assign(RLY,d.rly);if(d.mpUntil!=null)MP_ACCESS.until=d.mpUntil;
   Object.assign(GAME,d.GAME,{obj:GAME.obj,ended:false});GAME.obj.forEach((o,k)=>{o.state=d.GAME.obj[k]??null;});
   if(d.ho){GAME.handover={op:d.hoOp,open:false,dev:[],items:d.ho.map(h=>{const o=Object.create(HO_POOL.find(x=>x.id===h.id));Object.assign(o,h.f);o.done=h.done;return o;})};}
   for(const id in d.D)if(D[id])Object.assign(D[id],d.D[id]);

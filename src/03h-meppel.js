@@ -78,7 +78,7 @@ function buildMeppel(){const M=MEPPEL,P=Math.PI;
   // bewegende delen vastzetten (worden dan samengevoegd), behalve de deurbladen; deur- en tredeposities naar de wereld
   const doors=DOORS.slice(before.doors),keep=new Set(doors.flatMap(d=>d.leaves.map(l=>l.g)));KEEPV.forEach(id=>VIEWS[id]?.root.traverse(o=>keep.add(o)));
   grpM.traverse(o=>{if(o.userData.dyn&&!keep.has(o))o.userData.dyn=false;});
-  doors.forEach(d=>{d.p=grpM.localToWorld(d.p.clone());d.locked=()=>!mpAllowed();});M.doorPts=doors.map(d=>d.p);
+  doors.forEach(d=>{d.p=grpM.localToWorld(d.p.clone());d.locked=()=>!mpAllowed()&&!(FP.on&&FP.pos.z<M.doorZ);});M.doorPts=doors.map(d=>d.p);
   // de bedienbare velden: kijkpunten en vakken naar de wereld (ze zijn 4 m naar voren geschoven en daarna gedraaid)
   KEEPV.forEach(id=>{const v=VIEWS[id];if(!v)return;v.root.updateMatrixWorld(true);v.box=new THREE.Box3().setFromObject(v.root);v.center=v.box.getCenter(V3());
     for(const k of['labelPos','arcPos','flyPos','flyTarget'])if(v[k])v[k]=grpM.localToWorld(v[k].clone().setZ(v[k].z-4));});
@@ -88,7 +88,7 @@ function buildMeppel(){const M=MEPPEL,P=Math.PI;
   for(const bx of[M.cx-14,M.cx+14]){RX(bx-4,M.cz+5,bx+4,M.cz+38.5);RX(bx-5.6,M.cz-35,bx+5.6,M.cz-5);}
   const wx0=M.cx-22,wx1=M.cx+22,wz0=M.cz-52,wz1=M.cz-43;RX(wx0,wz0,wx1,wz0+0.3);RX(wx0,wz0,wx0+0.3,wz1);RX(wx1-0.3,wz0,wx1,wz1);
   const dxs=[M.cx+14,M.cx-10].sort((a,b)=>a-b);let xc=wx0;dxs.forEach(d=>{RX(xc,wz1-0.3,d-1.05,wz1);xc=d+1.05;});RX(xc,wz1-0.3,wx1,wz1);
-  M.lockRects=dxs.map(d=>[d-1.05,wz1-0.4,d+1.05,wz1+0.1]);RX(M.cx-0.8,wz0+0.3,M.cx+7.2,wz0+2.1);
+  M.doorZ=wz1;M.lockRects=dxs.map(d=>[d-1.05,wz1-0.4,d+1.05,wz1+0.1]);RX(M.cx-0.8,wz0+0.3,M.cx+7.2,wz0+2.1);
   for(let i=before.steps;i<STEPS.length;i++){const s=STEPS[i],a=grpM.localToWorld(V3(s[0],0,s[1])),b=grpM.localToWorld(V3(s[2],0,s[3]));STEPS[i]=[Math.min(a.x,b.x),Math.min(a.z,b.z),Math.max(a.x,b.x),Math.max(a.z,b.z),s[4]];}
   LAYOUT.splice(before.lay);
   // inrit vanaf de hoofdweg (in wereldcoördinaten)
