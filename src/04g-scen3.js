@@ -65,7 +65,7 @@ Object.assign(MODES,{
         pushAlarm('INERGEN-blussing geactiveerd, maar slechts 2 van de 6 flessen lossen (pilootventiel defect). De concentratie is te laag – de brand gaat door!','crit');});
       at(7,()=>{GAME.flags.scadaDown=true;$('#scada').classList.add('down');dcBurnt();
         pushAlarm('SCADA-verbinding verbroken: de SCADA-servers en front-ends in het datacenter zijn uitgevallen. Bedienen op afstand kan niet meer.','crit');
-        pushAlarm('Tip: loop het station in (V) en schakel lokaal aan het veld (F). Voor de MS-stations loop of ren je naar het station in de wijk. Het datacenter zelf blijft verboden terrein.','info');});
+        pushAlarm('Tip: loop het station in (V), zet het veld op LOKAAL (veldpaneel, E) en schakel ter plaatse (F). Voor de MS-stations loop of ren je naar het station in de wijk. Het datacenter zelf blijft verboden terrein.','info');});
       at(18,()=>{fireDouse();pushAlarm('Brandweer: we gaan met ademlucht het datacenter in en blussen','ok');});
       at(24,()=>{feederFault('F6',10);GAME.flags.f6At=SIM.t;pushAlarm('Telefoon van de tuinders: de kassen zitten zonder stroom – SCADA ziet niets','warn');});
       at(48,()=>{fireStop();GAME.flags.dcAlarm=false;

@@ -38,7 +38,7 @@ const PANELS=[{title:'Reserve'},{id:'V-T1',kind:'inc',node:'T1l'},{id:'V-F1',kin
   {id:'V-F4',kind:'feed',node:'F4'},{id:'V-F5',kind:'feed',node:'F5'},{id:'V-F6',kind:'feed',node:'F6'},{title:'Reserve'},{id:'V-T3',kind:'inc',node:'T3l'}];
 const PANELS20=[{title:'Reserve'},{id:'W-T2',kind:'inc',node:'T2l'},{id:'W-G1',kind:'feed',node:'G1'},{id:'W-G2',kind:'feed',node:'G2'},{id:'RC-Q8',kind:'meas',node:'RC'},
   {id:'W-K',kind:'coup',node:'RD'},{id:'RD-Q8',kind:'meas',node:'RD'},{id:'W-G3',kind:'feed',node:'G3'},{id:'W-G4',kind:'feed',node:'G4'},{id:'W-T3',kind:'inc',node:'T3l'}];
-const SCREENS=[];
+const SCREENS=[],PADLOCK=mat({color:0xd8262c,roughness:0.4});
 function buildPanel(i,p,row){
   const x=row.cx+(row.n-1)/2*0.8-i*0.8,Y=row.room.y0,F=-0.66,root=grp(x,54.85,Y);
   box(0.8,0.1,1.3,MAT.black,root,0,0.05,0);
@@ -62,11 +62,12 @@ function buildPanel(i,p,row){
   const b0=cyl(0.028,0.028,0.03,IM.greenBtn,root,0.28,1.98,F-0.02,14);b0.rotation.x=Math.PI/2;
   const ks=cyl(0.03,0.03,0.02,MAT.black,root,0.24,1.86,F-0.02,14);ks.rotation.x=Math.PI/2;
   const ind=mat({color:0x111111,emissive:0xff2020,emissiveIntensity:2.2});const im=box(0.07,0.07,0.02,ind,root,0,1.5,F-0.02);im.userData.dyn=true;
+  const lk=new THREE.Group();lk.position.set(-0.21,1.80,F-0.05);lk.userData.dyn=true;lk.visible=false;root.add(lk);box(0.034,0.034,0.016,PADLOCK,lk,0,0,0);rod(V3(-0.01,0.016,0),V3(0.01,0.016,0),0.004,MAT.galv,lk,5);for(const s of[-1,1])rod(V3(s*0.01,0.016,0),V3(s*0.01,0.034,0.004),0.004,MAT.galv,lk,5);
   const lamp=mat({color:0x3a3320,emissive:0xffd23a,emissiveIntensity:0});
   for(let k=0;k<3;k++){const l=cyl(0.013,0.013,0.02,lamp,root,0.15+k*0.06,1.76,F-0.015,10);l.rotation.x=Math.PI/2;l.userData.dyn=true;}
   const eMat=mat({color:0x222222,emissive:0xffc400,emissiveIntensity:0});if(esId){const em=box(0.09,0.05,0.02,eMat,root,-0.2,0.62,F-0.02);em.userData.dyn=true;}
   regView(p.id,root,()=>{const d=D[p.id];if(d.busy){d._bt??=performance.now();if(performance.now()-d._bt>2200){d.busy=false;d._bt=null;}}   // motoraandrijving (railaarding) klaar na 2,2 s
-    ind.emissive.setHex(d.state?0xff2020:0x20ff50);lamp.emissiveIntensity=EN.has(p.node)?3:0;if(esId)eMat.emissiveIntensity=D[esId].state?2.5:0;},
+    ind.emissive.setHex(d.state?0xff2020:0x20ff50);lk.visible=!!d.lrLock;lamp.emissiveIntensity=EN.has(p.node)?3:0;if(esId)eMat.emissiveIntensity=D[esId].state?2.5:0;},
     {inside:row.room.idx,labelPos:V3(x,Y+2.75,54.2),arcPos:V3(x,Y+1.0,54.1),flyPos:V3(x-0.7,Y+1.7,51.6),flyTarget:V3(x,Y+1.35,54.2)});
 }
 function buildRoomShell(r){

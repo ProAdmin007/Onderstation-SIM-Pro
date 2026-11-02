@@ -434,6 +434,12 @@ Toets `B` of de knop *Beveiliging*.
 
 - **Selectiviteit** (beveiligingsvenster, `B`): een log-log **tijd-stroomgrafiek** van het gekozen veld (I> standaard-invers en I>> 50 ms) tegenover de **reserve-overstroom van het inkomende veld** (V-T1, V-T3 of W-T2, instelbaar met TMS 0,05–0,3). Waar de marge kleiner is dan 0,25 s kleurt de grafiek rood: *niet selectief*.
   - Het heeft gevolgen: is de instelling bij de optredende foutstroom niet selectief, dan schakelt bij een kabelfout ook het inkomende veld af en valt de hele rail uit (−50).
+- **Lokaal/afstand-schakelaar met hangslot (per veld):**
+  - **AFSTAND** (standaard): je bedient het veld via SCADA. Ter plaatse schakelen wordt geweigerd.
+  - **LOKAAL:** je bedient het veld alleen ter plaatse. SCADA weigert, en in het schema krijgt het veld een oranje gloed.
+  - **Omzetten** kan alleen aan het veld zelf: loop erheen (`V`), open het veldpaneel (`E`) en gebruik *→ lokaal* of *→ afstand*. Dit geldt ook voor de aardschakelaar van dat veld.
+  - **Hangslot (LOTO):** met *🔒 slot erop* vergrendel je de schakelaar in zijn stand, bijvoorbeeld op LOKAAL tijdens werk, zodat niemand het veld op afstand kan inschakelen. In 3D hangt dan een rood hangslot op het veld en het relaisdisplay toont het slotje.
+  - **SCADA-uitval:** zet het veld eerst op LOKAAL voordat je ter plaatse schakelt.
 - **Beveiligingsrelais:**
   - **In elk MS-veld** zit in de laagspanningsnis een numeriek relais met een LCD (fasestromen IL1–IL3, IE, spanning), een LED-kolom met opschriften (RUN, START, TRIP, I>, I>>, Ie>, AR, ERROR), toetsen, een lokaal/afstand-schakelaar en een testcontactdoos. Spreekt de beveiliging aan, dan licht START op.
   - **Na een uitschakeling** blijft TRIP rood branden en toont het display de melding: functie (I> of I>>), fasen, foutstroom, uitschakeltijd en tijdstip. Dat blijft staan tot je het relais reset met de knop *Reset* op de regel *Beveiligingsrelais* in het veldpaneel. Meetvelden tonen de spanningen.

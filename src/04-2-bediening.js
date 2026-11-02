@@ -26,7 +26,8 @@ function operate(id,to,opts={}){
   {const msg=stationBlock(dst,id,to,d.type==='lvs'||localOk(id));if(msg)return deny(msg);}   // koperdiefstal, trafobrand
   if(d.type==='lvs'&&!opts.crew&&!localOk(id))return lsSwitchOrder(id,to);   // LS: lokaal of via een monteur
   if(MEP_IDS.has(id)&&localOk(id)&&!mpAllowed())return deny('Geen toestemming van Netbeheer Noord om in OS Meppel te schakelen – bel eerst (knop in het veldpaneel of F bij de deur)');
-  if(!scadaReach(id)&&!localOk(id))return deny('SCADA-verbinding verbroken – loop erheen (V) en bedien lokaal aan het veld');
+  {const lr=lrBlock(id);if(lr)return deny(lr);}
+  if(!scadaReach(id)&&!localOk(id))return deny('SCADA-verbinding verbroken – loop erheen (V), zet het veld op LOKAAL (veldpaneel, E) en bedien het ter plaatse');
   if(to===1&&/-T$/.test(id)&&RING.stations.find(s=>s.id+'-T'===id)?.fuse)return deny('Zekeringen nog niet vervangen – wacht op de monteur');
   if(d.busy)return deny('Bediening loopt nog…');
   if(d.type==='cb'&&manualRefuses(d)){pushAlarm(`${id} reageert niet op het ${to?'in':'uit'}schakelcommando (weigerde eerder ${d.refusals}×) – probeer het opnieuw en laat hem reviseren`,'warn');return deny(`${id} weigert – probeer het opnieuw`);}

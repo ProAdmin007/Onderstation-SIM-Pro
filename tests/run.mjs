@@ -740,9 +740,24 @@ const TESTS = [
         O.enterFP(); O.FP.pos.set(v.center.x, 0, v.center.z + (v.center.z < 460 ? 1.6 : -1.6)); O.camera.position.set(O.FP.pos.x, 2.1, O.FP.pos.z);
         O.SIM.localTest = false; const st0 = D['M-MP1'].state; O.operate('M-MP1', 0); const geweigerd = D['M-MP1'].state === st0;
         O.callMeppel(); T.step(3); const toegang = O.mpAllowed() && !O.blockedAt(dx, dz);
-        D['M-MP1'].springAt = 0; O.operate('M-MP1', 0); T.step(0.2); const geschakeld = D['M-MP1'].state === 0; O.operate('M-MP1', 1); O.exitFP();
+        O.setLR('M-MP1', 'L'); D['M-MP1'].springAt = 0; O.operate('M-MP1', 0); T.step(0.2); const geschakeld = D['M-MP1'].state === 0; O.operate('M-MP1', 1); O.exitFP();
         T.step(95); const verlopen = !O.mpAllowed() && O.blockedAt(dx, dz);
         return { route, opSlot, veld, geweigerd, toegang, geschakeld, verlopen }; });
+      for (const [k, v] of Object.entries(r)) assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
+  } },
+  { name: 'lokaal/afstand-schakelaar met hangslot: afstand via SCADA, lokaal alleen ter plaatse, slot vergrendelt de stand', query: '?autostart&t=11', async run(p) {
+      const r = await p.evaluate(async () => { const O = OS, D = O.D; T.quiet(); const op = (id, to) => { D[id].springAt = 0; O.operate(id, to); T.step(0.1); return D[id].state === to; };
+        const vanAfstand = op('V-F6', 0) && op('V-F6', 1);
+        const omzettenOpAfstand = (O.setLR('V-F6', 'L'), D['V-F6'].lr !== 'L');
+        const v = O.VIEWS['V-F6']; O.enterFP(); O.FP.pos.set(v.center.x, 0, v.center.z - 1.6); O.camera.position.set(O.FP.pos.x, 2.1, O.FP.pos.z);
+        const terPlaatsGeweigerd = !op('V-F6', 0);
+        O.setLR('V-F6', 'L'); const lokaal = D['V-F6'].lr === 'L' && op('V-F6', 0) && op('V-F6', 1);
+        const aard = O.lrPanel('F6-Q8') === 'V-F6';
+        O.setLock('V-F6', true); O.setLR('V-F6', 'R'); const slotHoudt = D['V-F6'].lr === 'L' && D['V-F6'].lrLock;
+        O.exitFP(); const scadaGeweigerd = !op('V-F6', 0) && /LOKAAL/.test(O.lrBlock('V-F6') || '');
+        O.enterFP(); O.FP.pos.set(v.center.x, 0, v.center.z - 1.6); O.camera.position.set(O.FP.pos.x, 2.1, O.FP.pos.z); O.setLock('V-F6', false); O.setLR('V-F6', 'R'); O.exitFP();
+        const terug = D['V-F6'].lr === 'R' && !D['V-F6'].lrLock && op('V-F6', 0) && op('V-F6', 1);
+        return { vanAfstand, omzettenOpAfstand, terPlaatsGeweigerd, lokaal, aard, slotHoudt, scadaGeweigerd, terug }; });
       for (const [k, v] of Object.entries(r)) assert(v === true, `${k} klopt niet: ${JSON.stringify(r)}`);
   } },
   { name: 'beveiligingsrelais: TRIP blijft staan met functie, fasen en stroom tot reset; veldpaneel toont het', query: '?autostart&t=11', async run(p) {

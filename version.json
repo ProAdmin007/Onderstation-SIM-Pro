@@ -1,7 +1,10 @@
 {
-  "build": "4e0debb9089d",
+  "build": "5ff2ebd7b1d7",
   "date": "2026-11-02",
   "previous": [
+    "65bf1f4a1f94",
+    "a44d84f79397",
+    "4e0debb9089d",
     "5fbc99a2520c",
     "dbf4098c08e4",
     "ebdd11fd1475",
@@ -149,6 +152,10 @@
     "4e0debb9089d": {
       "date": "2026-11-02",
       "text": "Realistische beveiligingsrelais: numeriek relais in elk veld met LCD, LEDs en vastgehouden TRIP-melding tot reset; beveiligingskasten met live relais per lijn, trafo en rail"
+    },
+    "5ff2ebd7b1d7": {
+      "date": "2026-11-02",
+      "text": "Lokaal/afstand-schakelaar per veld met hangslot (LOTO); credits in het hoofdmenu"
     }
   }
 }

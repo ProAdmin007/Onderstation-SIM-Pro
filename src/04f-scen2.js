@@ -27,7 +27,7 @@ Object.assign(MODES,{
     desc:'Het SCADA-systeem wordt aangevallen en de verbinding met het station valt weg. Bedien de installatie ter plaatse – lopend (V).',
     setup(){Object.assign(SIM.lines.L1,{ar:false});pushAlarm('AR van L1 staat uit voor onderhoud aan de beveiliging','info');
       at(3,()=>{GAME.flags.scadaDown=true;$('#scada').classList.add('down');pushAlarm('CERT: cyberaanval op het bedrijfsvoeringssysteem – SCADA-verbinding met OS Zuidwolde verbroken!','crit');
-        pushAlarm('Bedienen op afstand is niet meer mogelijk. Loop het station in (V) en schakel lokaal aan het veld (richt op de schakelaar, F).','info');});
+        pushAlarm('Bedienen op afstand is niet meer mogelijk. Loop het station in (V), zet het veld op LOKAAL (veldpaneel, E) en schakel ter plaatse (richt op de schakelaar, F).','info');});
       at(9,()=>feederFault('F6',10));at(28,()=>{lineFault('L1',false);GAME.flags.lineAt=SIM.t;});
       at(58,()=>{GAME.flags.scadaDown=false;$('#scada').classList.remove('down');readyNotice('SCADA-verbinding hersteld – bediening op afstand weer mogelijk',null);});},
     obj:()=>[{t:'L1 binnen 12 min na de trip weer in bedrijf',check:()=>GAME.flags.lineAt==null?null:D['L1-Q0'].state&&SIM.lines.L1.avail?'done':SIM.t>GAME.flags.lineAt+12?'fail':null},

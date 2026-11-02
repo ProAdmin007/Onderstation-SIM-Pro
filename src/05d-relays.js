@@ -16,7 +16,7 @@ function relayFill(id){const R=RLY[id];if(!R?.pending)return;const rec=FREC.find
 // ---- relaisfront in het veld (canvas 256×320 op 0,26×0,325 m)
 const RLY_LED=[['RUN','#3fe07a'],['START','#ffcf33'],['TRIP','#ff3b30'],['I>','#ff3b30'],['I>>','#ff3b30'],['Ie>','#ff3b30'],['AR','#3fe07a'],['ERROR','#ff3b30']];
 function relayStart(d){const f=d.feeder;return !!(f&&d.state===1&&(f.oc>0.02||(f.fault&&f.fault.stage==='search')));}
-function relayKey(s,d){const R=RLY[s.id]||{},I=Math.round(d.I||0);return [d.state,I,EN.has(s.node)?nodeU(s.node).toFixed(2):0,R.trip,R.fn,relayStart(d),s.es&&D[s.es]?.state].join();}
+function relayKey(s,d){const R=RLY[s.id]||{},I=Math.round(d.I||0);return [d.lr,d.lrLock,d.state,I,EN.has(s.node)?nodeU(s.node).toFixed(2):0,R.trip,R.fn,relayStart(d),s.es&&D[s.es]?.state].join();}
 function drawRelay(s){const g=s.g,d=D[s.id],R=RLY[s.id]||{},meas=s.kind==='meas',on=EN.has(s.node);relayFill(s.id);
   g.fillStyle='#3a3e43';g.fillRect(0,0,256,320);g.fillStyle='#2a2d31';g.fillRect(6,6,244,308);
   g.fillStyle='#1d2b45';g.fillRect(6,6,244,26);g.fillStyle='#fff';g.font='bold 13px Arial';g.fillText((meas?'MEETVELD ':'VELDBEVEILIGING ')+s.id,12,24);
@@ -36,7 +36,8 @@ function drawRelay(s){const g=s.g,d=D[s.id],R=RLY[s.id]||{},meas=s.kind==='meas'
   const key=(x,y,w,h,t,c='#5a6068')=>{g.fillStyle=c;g.fillRect(x,y,w,h);g.fillStyle='#e9edf0';g.font='bold 10px Arial';g.textAlign='center';g.fillText(t,x+w/2,y+h/2+4);g.textAlign='left';};
   key(170,150,22,18,'▲');key(146,172,22,18,'◀');key(170,172,22,18,'E','#3b6e3b');key(194,172,22,18,'▶');key(170,194,22,18,'▼');
   key(146,150,22,18,'ESC');key(194,150,22,18,'C','#8a2a2a');for(let k=0;k<4;k++)key(140+k*24,222,20,16,'F'+(k+1));
-  g.fillStyle='#1a1a1a';g.beginPath();g.arc(206,268,14,0,7);g.fill();g.strokeStyle='#bbb';g.lineWidth=3;g.beginPath();g.moveTo(206,268);g.lineTo(214,256);g.stroke();
+  g.fillStyle='#1a1a1a';g.beginPath();g.arc(206,268,14,0,7);g.fill();g.strokeStyle='#bbb';g.lineWidth=3;g.beginPath();g.moveTo(206,268);g.lineTo(d.lr==='L'?198:214,256);g.stroke();
+  if(d.lrLock){g.fillStyle='#d8262c';g.fillRect(222,268,16,13);g.strokeStyle='#ccc';g.lineWidth=2.5;g.beginPath();g.arc(230,268,5,Math.PI,0);g.stroke();}
   g.fillStyle='#d8dde2';g.font='bold 10px Arial';g.fillText('L',186,262);g.fillText('R',220,262);
   g.fillStyle='#a32020';g.fillRect(140,292,40,14);g.fillStyle='#fff';g.font='bold 9px Arial';g.fillText('TEST',148,303);g.fillStyle='#16181b';g.fillRect(188,292,14,10);
   s.t.needsUpdate=true;}
@@ -84,3 +85,22 @@ function relayUnits(){const line=L=>[{t:`21  AFSTAND  ${L}`,cb:L+'-Q0',lcd:()=>[
   return {line,trafo,rail,scada};}
 // elke 0,25 s (met de schermen in de schakelruimte): alleen kasten in de buurt en alleen als er iets veranderd is
 function drawRelayCabinets(){const cp=camera.position;for(const C of RCAB){if(Math.hypot(cp.x-C.x,cp.z-C.z)>30&&C.key)continue;const k=relayCabKey(C);if(k===C.key)continue;C.key=k;drawCabinet(C);}}
+
+// ---- lokaal/afstand-schakelaar per veld, te vergrendelen met een hangslot (LOTO)
+// Op AFSTAND bedien je het veld via SCADA; ter plaatse bedienen kan dan niet. Op LOKAAL alleen ter plaatse, SCADA weigert.
+// Omzetten en het hangslot kan alleen aan het veld zelf. De aardschakelaar van een uitgaand veld hoort bij dat veld.
+let LR_MAP=null;
+function lrPanel(id){if(!LR_MAP){LR_MAP=new Map();SCREENS.forEach(s=>{LR_MAP.set(s.id,s.id);if(s.es)LR_MAP.set(s.es,s.id);});}return LR_MAP.get(id)||null;}
+const lrLocal=id=>{const p=lrPanel(id);return !!p&&D[p].lr==='L';};
+// echt ter plaatse (rondlopen bij het veld); de testmodus SIM.localTest telt hier niet
+const atPanel=id=>FP.on&&!!VIEWS[id]&&camera.position.distanceTo(VIEWS[id].center)<7;
+function lrBlock(id){const p=lrPanel(id);if(!p||SIM.localTest)return null;const d=D[p],L=d.lr==='L';
+  if(L&&!atPanel(id))return `${p} staat op LOKAAL${d.lrLock?' en is vergrendeld met een hangslot':''} – bedienen op afstand kan niet. Zet hem ter plaatse terug op AFSTAND.`;
+  if(!L&&atPanel(id))return `${p} staat op AFSTAND – zet de lokaal/afstand-schakelaar op LOKAAL om ter plaatse te bedienen (open het veldpaneel)`;return null;}
+function setLR(p,mode){const d=D[p];if(!d)return;if(d.lrLock)return deny('Er hangt een hangslot op de lokaal/afstand-schakelaar – haal het eerst weg');
+  if(!atPanel(p)&&!SIM.localTest)return deny('De lokaal/afstand-schakelaar zit op het veld zelf – loop erheen (V)');if(d.lr===mode||(!d.lr&&mode==='R'))return;
+  d.lr=mode;AudioSys.burst({type:'highpass',f:2200,gain:0.12,dur:0.04});pushAlarm(`${p}: lokaal/afstand-schakelaar op ${mode==='L'?'LOKAAL':'AFSTAND'}`,'op');refreshAll?.();}
+function setLock(p,on){const d=D[p];if(!d)return;if(!atPanel(p)&&!SIM.localTest)return deny('Het hangslot hang je ter plaatse aan het veld – loop erheen (V)');if(!!d.lrLock===on)return;
+  d.lrLock=on;AudioSys.burst({type:'bandpass',f:1400,gain:0.15,dur:0.06});pushAlarm(`${p}: hangslot ${on?'op':'van'} de lokaal/afstand-schakelaar${on?` (vergrendeld op ${d.lr==='L'?'LOKAAL':'AFSTAND'})`:''}`,'op');refreshAll?.();}
+function lrRow(id){const p=lrPanel(id),d=D[p],L=d.lr==='L',here=atPanel(p)||SIM.localTest;
+  return `<b class="${L?'warnc':''}">${L?'LOKAAL':'AFSTAND'}</b>${d.lrLock?' · 🔒 hangslot':''} ${here?`<button class="mini" data-act="lr" ${d.lrLock?'disabled':''}>${L?'→ afstand':'→ lokaal'}</button><button class="mini" data-act="lock">${d.lrLock?'slot eraf':'🔒 slot erop'}</button>`:'<span class="dl">· omzetten alleen ter plaatse</span>'}`;}

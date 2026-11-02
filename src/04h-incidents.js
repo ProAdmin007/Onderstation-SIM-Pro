@@ -25,7 +25,7 @@ const INCIDENTS=[
     start(){const live=()=>INC.active?.def.id==='datacenter';pushAlarm('Rookaanzuiging datacenter (VESDA): voor-alarm – rook bij de accukast van UPS B','warn');
       addTimer(2,()=>{if(!live())return;GAME.flags.dcAlarm=true;GAME.flags.dcDanger=true;pushAlarm('BRANDALARM datacenter: blussing start – niemand naar binnen! Brandweer gealarmeerd','crit');});
       addTimer(3,()=>{if(!live())return;fireStart({bld:'SRV',hot:[-34,53.6],inside:true});pushAlarm('INERGEN-blussing geactiveerd, maar slechts 2 van de 6 flessen lossen (pilootventiel defect) – de brand gaat door!','crit');});
-      addTimer(5,()=>{if(!live())return;GAME.flags.scadaDown=true;$('#scada').classList.add('down');dcBurnt();pushAlarm('SCADA-verbinding verbroken: de servers in het datacenter zijn uitgevallen. Loop het station in (V) en schakel lokaal (F).','crit');});
+      addTimer(5,()=>{if(!live())return;GAME.flags.scadaDown=true;$('#scada').classList.add('down');dcBurnt();pushAlarm('SCADA-verbinding verbroken: de servers in het datacenter zijn uitgevallen. Loop het station in (V), zet het veld op LOKAAL en schakel ter plaatse (F).','crit');});
       addTimer(16,()=>{if(live()){fireDouse();pushAlarm('Brandweer: we gaan met ademlucht het datacenter in en blussen','ok');}});
       addTimer(rnd(20,30),()=>{if(live())feederFault();});
       addTimer(44,()=>{if(!live())return;fireStop();GAME.flags.dcAlarm=false;readyNotice('Brandweer: brand meester, rook afgezogen. SCADA blijft voorlopig uit – de servers zijn verloren.',null);});
@@ -36,7 +36,7 @@ const INCIDENTS=[
     end(){if(FIRE.on&&FIRE.bld==='SRV')fireStop();Object.assign(GAME.flags,{scadaDown:false,dcAlarm:false,dcDanger:false});$('#scada').classList.remove('down');dcRestore();
       readyNotice('Herstelploeg klaar: nieuwe racks en servers geplaatst en SCADA opnieuw opgestart. Bediening op afstand van het hele onderstation is hersteld.',null);}},
   {id:'cyber',name:'Cyberaanval op SCADA',desc:'De verbinding met het station valt weg: bedienen kan alleen nog lokaal (V).',w:1,dur:30,ok:()=>!GAME.flags.scadaDown,
-    start(){GAME.flags.scadaDown=true;$('#scada').classList.add('down');pushAlarm('CERT: cyberaanval – SCADA-verbinding verbroken! Bedien lokaal: loop het station in (V)','crit');addTimer(rnd(8,14),()=>feederFault());},
+    start(){GAME.flags.scadaDown=true;$('#scada').classList.add('down');pushAlarm('CERT: cyberaanval – SCADA-verbinding verbroken! Bedien lokaal: loop het station in (V) en zet het veld op LOKAAL','crit');addTimer(rnd(8,14),()=>feederFault());},
     end(){GAME.flags.scadaDown=false;$('#scada').classList.remove('down');readyNotice('SCADA-verbinding hersteld',null);}},
   {id:'water',name:'Wateroverlast bij De Vaart Zuid',desc:'Het water stijgt bij MS9: maak het station binnen 20 min spanningsloos zonder MS8 te verliezen.',w:1,dur:75,ok:()=>canRing()&&WX.cur.rain>0.3,
     start(){const s=RING.stations.find(x=>x.id==='MS9');this.s=s;s.evac=true;this.t0=SIM.t;

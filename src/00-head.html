@@ -242,6 +242,8 @@ body.fp:not(.fplocked) #fpPause{display:flex;position:fixed;left:50%;top:84px;tr
 #fpPause b{font-size:13px;color:var(--accent)}#fpPause .k{color:var(--muted);font-size:12px;font-family:var(--mono)}
 .vwrap{position:relative}#viewMenu{position:absolute;left:0;bottom:calc(100% + 8px);display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:8px;min-width:330px;background:var(--panel,rgba(16,20,26,.96));border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.45);z-index:30}
 #viewMenu.hidden{display:none}#viewMenu button{text-align:left}#viewMenu kbd{display:inline!important}
+#sld .loc{filter:drop-shadow(0 0 2px #f0a43a) drop-shadow(0 0 2px #f0a43a)}
+.credits{margin-top:16px;font-size:11px;line-height:1.55;color:var(--dim,#7d8893)}.credits a{color:inherit}
 #views .walk,#views .tool{background:rgba(240,164,58,.14);border-color:rgba(240,164,58,.4)}
 #views .tool.on{background:var(--accent);color:#1a1206;border-color:var(--accent)}
 body.fp #views .walk{background:var(--accent);color:#1a1206;font-weight:700}
@@ -497,6 +499,7 @@ body.previewing #tasks,body.previewing #alarms,body.previewing #faults{opacity:.
       <div class="mh">Moeilijkheid</div>
       <div class="seg" id="diff"><button data-d="rustig">Rustig</button><button data-d="normaal" class="on">Normaal</button><button data-d="zwaar">Zwaar</button></div>
       <div class="keys">links slepen: schuiven · rechts slepen: draaien · scroll: zoom · dubbelklik: erheen<br>1–9 camera · V rondlopen · spatie/P pauze · Esc menu · I instellingen · T weer &amp; tijd · G kabeltablet · X kabels · H alle toetsen</div>
+      <div class="credits">Onderstation Simulator · gemaakt door <a href="https://github.com/ProAdmin007/Onderstation-SIM-Pro" target="_blank" rel="noopener">ProAdmin007</a> met hulp van Claude (Anthropic) · 3D met three.js · licentie CC BY-NC-SA 4.0 · <a href="https://ko-fi.com/proadmin007" target="_blank" rel="noopener">☕ Ko-fi</a></div>
     </div>
     <div id="menu"></div>
   </div>
