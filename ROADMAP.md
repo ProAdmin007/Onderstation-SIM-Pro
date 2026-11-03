@@ -29,6 +29,7 @@ Spoor C bouwt op A en B; spoor F verdiept A; spoor D maakt A, B, C, E en F eenvo
 | B3 | Kwaliteitsregulering: SAIDI/SAIFI en compensatieregeling | AM | middel | ⏳ gepland |
 | B4 | Energietransitie 2030 | AM | middel | ⏳ gepland |
 | B5 | Spanningskwaliteit (EN 50160) | AM | middel | ⏳ gepland |
+| B6 | System Operations: congestiemanagement, flexcontracten en blokstroom | AM | groot | ⏳ gepland |
 | C1 | Carrièremodus | beide | groot | ⏳ gepland |
 | D1 | Opslaanbare timers | techniek | middel | ⏳ gepland |
 | D2 | Inschrijven op de lussen | techniek | klein | ⏳ gepland |
@@ -104,7 +105,7 @@ Klanten vragen een (zwaardere) aansluiting aan: een laadplein, een wijk met warm
 - **keuze**:
   - **verzwaren** (een kabel of trafo vervangen, een extra MS-station of een nieuwe ring), met kosten en doorlooptijd;
   - **wachtrij**: de klant wacht tot er capaciteit is;
-  - **non-firm contract**: aansluiten met een capaciteitsbeperking op piekmomenten, ingezet via de flexmarkt;
+  - **alternatief contract**: aansluiten met minder zekerheid, zoals blokstroom, non-firm of een groepscontract (zie B6);
 - **gevolgen**: een nieuwe aansluiting verschijnt echt in de wereld en in het net (afnemer, kabeltracé in de GIS-kaart), en verandert de belasting in de diensten daarna.
 
 Dit is het meest actuele onderwerp voor netbeheerders, omdat netcongestie juist hier ontstaat.
@@ -133,6 +134,44 @@ Een instelling of scenario met veel **warmtepompen** (een hogere winterpiek), **
 ### B5. Spanningskwaliteit (EN 50160)
 
 Klachten over flikkerende lampen, harmonischen (bijvoorbeeld door de assimilatiebelichting van de kassen) of spanningsdips. Je zet een **meetcampagne** op met meters in het net, beoordeelt de metingen tegen de norm en kiest een oplossing: een filter bij de klant, een andere netconfiguratie of verzwaren.
+
+### B6. System Operations: congestiemanagement, flexcontracten en blokstroom
+
+Bij een netbeheerder zit **System Operations** tussen asset management en de meldkamer: prognoses maken, congestie voorspellen en flexibiliteit van klanten inzetten, zodat een vol net niet overbelast raakt. Nu heeft de simulator één eenvoudig flexmodel (zeven afnemers met een maximaal aandeel, een prijs per MWh en 2 minuten reactietijd, in `04-8-flex.js`). Dit onderdeel vervangt dat door de contractvormen en het dagritme zoals ze in 2026 echt bestaan.
+
+**Contractvormen per afnemer**
+
+| Vorm | In het spel |
+|---|---|
+| **CSC met tijdsblokken** | vaste bijsturing, bijvoorbeeld de kassen elke dag 16:00–19:00, met een vaste maandvergoeding |
+| **CSC met afroep** | omlaag of omhoog, afroepen op D-1 vóór 07:00; vergoeding vast per maand plus per MW |
+| **Redispatch (GOPACS)** | op de dag zelf: een bod binnen het congestiegebied wordt gekoppeld aan een tegenbod buiten het gebied; je betaalt de spread. Met biedplicht of vrije biedingen, via een CSP |
+| **Blokstroom** | extra vermogen alleen 00:00–06:00 tegen 25 % van het tarief, bijvoorbeeld voor het laadplein en het transportbedrijf. Wie buiten het blok overschrijdt, krijgt een waarschuwing en kan het recht kwijtraken |
+| **Non-firm ATO** | het zonnepark mag invoeden zolang er ruimte is en wordt automatisch teruggeregeld |
+| **Groepscontract (GTO)** | het bedrijventerrein (MS5 en MS8) deelt één transportcapaciteit en regelt intern |
+
+**Het dagritme**
+
+1. **D-1 tot 14:30**: klanten groter dan 1 MW leveren een dagprognose (soms te laat of te optimistisch).
+2. **D-1 ochtend**: het tabblad *Prognose* laat de verwachte piek per trafo en ring zien. Afroepen vóór 07:00 is goedkoop.
+3. **Intraday**: wat overblijft los je op via redispatch, duurder en niet altijd genoeg aanbod.
+4. **Real-time**: als laatste redmiddel afschakelen, met gevolgen voor SAIDI (B3).
+
+**Verder**
+
+- **Deelnameverplichting**: een event waarbij je een grote klant (≥1 MW) verplicht flex aan te bieden.
+- **Wachtrij en maatschappelijk prioriteren**: aanvragen uit B1 komen in één wachtrij; voorrang voor bijvoorbeeld een school of woningbouw.
+- **Tijdsafhankelijke nettarieven** en **netbewust laden** (laadpalen langzamer tussen 16:00 en 21:00) verschuiven het belastingprofiel vanzelf.
+
+**Impact op de simulatie**
+
+- **Spel**: flex wordt een planningskeuze in plaats van een knop tijdens de piek. Vooruitkijken loont; te laat ingrijpen kost geld of klanten. Het past bij de bestaande dienst van 8 uur en wordt pas echt sterk in de carrièremodus (C1) en met B1, B3 en B4.
+- **Rekenmodel**: de belasting per afnemer krijgt een prognose naast de werkelijke waarde, en contracten grijpen per tijdvak in op het belastingprofiel. De loadflow zelf blijft gelijk.
+- **Bestaande code**: `04-8-flex.js` wordt herschreven; het flextabblad, de kosten in de eindscore, opslaan/laden en de tests voor flex moeten mee. Oude opgeslagen spellen krijgen standaardcontracten.
+- **Prestaties**: verwaarloosbaar. Het is rekenwerk per minuut speeltijd en een extra scherm, geen nieuwe 3D-objecten of lampen.
+- **Moeilijkheid**: op *makkelijk* doet de netbeheerder de D-1-afroep zelf; op *moeilijk* zijn prognoses onzekerder en is het redispatch-aanbod krap.
+
+Bronnen: zie het onderzoek in de projectgeschiedenis (RVO, Enexis, Stedin, GOPACS, ACM, Netbeheer Nederland).
 
 ---
 
