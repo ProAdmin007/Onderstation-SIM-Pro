@@ -171,7 +171,7 @@ Bij een netbeheerder zit **System Operations** tussen asset management en de mel
 - **Prestaties**: verwaarloosbaar. Het is rekenwerk per minuut speeltijd en een extra scherm, geen nieuwe 3D-objecten of lampen.
 - **Moeilijkheid**: op *makkelijk* doet de netbeheerder de D-1-afroep zelf; op *moeilijk* zijn prognoses onzekerder en is het redispatch-aanbod krap.
 
-Bronnen: zie het onderzoek in de projectgeschiedenis (RVO, Enexis, Stedin, GOPACS, ACM, Netbeheer Nederland).
+Bronnen: [RVO – flexibel contract](https://www.rvo.nl/onderwerpen/netcongestie/flexibel-contract), [Enexis – CSC](https://www.enexis.nl/zakelijk/netcapaciteit/flexibiliteitsoplossingen/capaciteitssturingscontract), [Enexis – blokstroom](https://www.enexis.nl/zakelijk/netcapaciteit/flexibiliteitsoplossingen/blokstroom), [GOPACS](https://www.gopacs.eu/en/how-does-gopacs-work/), [ACM – alternatieve transportrechten](https://www.acm.nl/nl/publicaties/codebesluit-alternatieve-transportrechten), [ACM – groepstransportovereenkomst](https://www.acm.nl/nl/publicaties/acm-energiehubs-kunnen-groepstransportovereenkomst-aanvragen-bij-hun-netbeheerder), [Enexis – dagprognoses](https://www.enexis.nl/zakelijk/netcapaciteit/transportcapaciteit/dagprognoses), [Netbeheer Nederland – prioriteringskader](https://www.netbeheernederland.nl/artikelen/nieuws/nieuwe-prioriteringskader-acm-regels-voor-prioriteit-bij-vol-stroomnet), [Stedin – netbewust laden](https://www.stedin.net/zakelijk/energietransitie/beschikbare-netcapaciteit/congestie/netbewust-laden).
 
 ---
 
