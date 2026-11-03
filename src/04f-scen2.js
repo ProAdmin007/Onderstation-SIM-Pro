@@ -46,7 +46,7 @@ Object.assign(MODES,{
     obj:()=>[{t:'MS9 spanningsloos voordat het water er is',check:()=>SIM.t<GAME.flags.floodAt?null:GAME.flags.floodFail?'fail':'done'},
       {t:'MS8 blijft gevoed',check:()=>GAME.flags.m8off>3?'fail':null,final:()=>true},
       {t:'MS9 weer in bedrijf vóór het einde',check:()=>!stn('MS9').evac&&EN.has('M9')?'done':null,final:()=>EN.has('M9')},noIncidents]},
-  zonnepiek:{scen:true,name:'Zonnepiek',tag:'Scenario · gemiddeld',start:11,dur:120,season:'lente',weather:'helder',
+  zonnepiek:{scen:true,firmPV:true,name:'Zonnepiek',tag:'Scenario · gemiddeld',start:11,dur:120,season:'lente',weather:'helder',
     desc:'Een strakblauwe lentedag. Het uitgebreide zonnepark (G1) levert zoveel terug dat T2 het niet alleen aankan. Houd T2 heel en het zonnepark zo veel mogelijk in bedrijf.',
     setup(){const g=FEEDERS.find(f=>f.id==='G1');g.base=64;g.name='Zonnepark De Hoeve (uitgebreid, 66 MWp)';D.T2.oil=60;initTaps();
       pushAlarm('Zonnepark De Hoeve is uitgebreid tot 66 MWp – vandaag een recordopbrengst verwacht','info');

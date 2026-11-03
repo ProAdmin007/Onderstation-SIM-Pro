@@ -77,7 +77,7 @@ async function bot(process_full) {
     O.RING.stations.forEach(s => { if ((s.trLoad || 0) > 0.98) O.FLEX.forEach(f => { if (f.c.st === s) need.add(f.id); }); });
     O.RING.secs.forEach(s => { if (s.load > 0.95) O.FLEX.forEach(f => { if (f.c.st && f.c.st.ring === s.ring) need.add(f.id); }); });
     if (lim && O.FLOW.P110 > lim * 0.9) O.FLEX.forEach(f => { if (!f.gen) need.add(f.id); });
-    for (const f of O.FLEX) { if (need.has(f.id)) { f.botIdle = 0; if (f.req !== 1) { O.setFlex(f.id, 1); note('flex ' + f.id); } } else if (f.req) { f.botIdle = (f.botIdle || 0) + 0.5; if (f.botIdle > 15) O.setFlex(f.id, 0); } }
+    for (const f of O.FLEX) { if (f.type === 'blokstroom' || f.type === 'nonfirm') continue; if (need.has(f.id)) { f.botIdle = 0; if (f.req !== 1) { O.setFlex(f.id, 1); note('flex ' + f.id); } } else if (f.req) { f.botIdle = (f.botIdle || 0) + 0.5; if (f.botIdle > 15) O.setFlex(f.id, 0); } }
     // 1. lijnen: weer inschakelen zodra TenneT spanning geeft
     for (const L of ['L1', 'L2']) if (S.lines[L].avail && !mine(L + '-Q0') && D[L + '-Q0'].state === 0 && D[L + '-Q9'].state && D[L + '-Q1'].state) await op(L + '-Q0', 1);
     // aardfout: de bot kijkt de foutplaats af en maakt die spanningsloos (dan wordt het een gewone kabelfout)

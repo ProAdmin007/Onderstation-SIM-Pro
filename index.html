@@ -354,6 +354,7 @@ body.previewing #tasks,body.previewing #alarms,body.previewing #faults{opacity:.
 #kit{position:fixed;inset:0;display:grid;place-items:center;background:rgba(6,9,12,.66);z-index:12;overflow:auto;padding:20px 0}#kit.hidden{display:none}
 #kit .pv span{display:inline;color:var(--muted);font-size:11px}.kit-open{margin:6px 0 2px}
 #assets{position:fixed;inset:0;display:grid;place-items:center;background:rgba(6,9,12,.66);z-index:12;overflow:auto;padding:20px 0}#assets.hidden{display:none}
+#flex .fcall{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 8px}#flex .fcall select{background:#1b232c;color:inherit;border:1px solid #33404c;border-radius:4px;padding:4px 6px;font:inherit}#flex .ok{color:var(--green)}
 #flex{position:fixed;inset:0;display:grid;place-items:center;background:rgba(6,9,12,.66);z-index:12;overflow:auto;padding:20px 0}#flex.hidden{display:none}
 .fx{padding:3px 6px;margin-right:2px;font-size:11px}.fx.on{background:var(--accent);color:#1a1206;border-color:var(--accent)}
 .cgs{display:grid;gap:4px;margin-bottom:8px}.cg{display:grid;grid-template-columns:1.4fr 2fr 48px;gap:8px;align-items:center;font-size:12px}.cg i{height:7px;background:rgba(255,255,255,.07);border-radius:4px;overflow:hidden}.cg b{display:block;height:100%;background:var(--green)}.cg b.warnc{background:var(--accent)}.cg b.bad{background:var(--red)}.cg em{font-style:normal;text-align:right}
@@ -2564,15 +2565,21 @@ function simStep(dtReal){
 
 // Netcongestie en flexibel vermogen: afnemers die tegen vergoeding hun vermogen tijdelijk terugregelen,
 // en overbelastingsbeveiliging van de distributietransformatoren in de MS-stations
+// contractvormen (zoals bij Nederlandse netbeheerders in 2026):
+//  afroep     capaciteitssturingscontract (CSC) met afroep: vooraf afroepen voor een tijdvak
+//  blok       CSC met tijdsblok: elke dag vast terugregelen in hetzelfde tijdvak
+//  blokstroom tijdsblokgebonden transportrecht: het extra vermogen alleen 00:00–06:00 (geen vergoeding, wel korting op het tarief)
+//  nonfirm    non-firm ATO: de netbeheerder regelt automatisch terug als het net vol zit (geen vergoeding)
+// afroep- en blokklanten kunnen daarnaast intraday een bod doen (redispatch), voor het dubbele tarief
 const FLEX_DEF=[
-  {id:'MS4-G3',name:'Laadplein Zuiderveld',how:'slim laden: laadstroom begrenzen',max:0.7,eur:180},
-  {id:'MS5-G1',name:'Transportbedrijf',how:'e-trucks later laden',max:0.6,eur:150},
-  {id:'MS5-G2',name:'Koelhuis',how:'koeling 2 uur uitstellen',max:0.5,eur:120},
-  {id:'MS8-G1',name:'Metaalbewerking Smit',how:'ovens terugregelen',max:0.3,eur:260},
-  {id:'MS9-G1',name:'Distributiecentrum',how:'batterij ontladen',max:0.4,eur:200},
-  {id:'F6',name:'Glastuinbouw Oost',how:'belichting dimmen',max:0.8,eur:90},
-  {id:'G1',name:'Zonnepark De Hoeve',how:'omvormers terugregelen',max:0.8,eur:70,gen:true}];
-const FLEX=FLEX_DEF.map(f=>({...f,c:CONS.find(c=>c.id===f.id),req:0,at:0}));
+  {id:'MS4-G3',name:'Laadplein Zuiderveld',how:'slim laden: laadstroom begrenzen',max:0.7,eur:180,type:'afroep'},
+  {id:'MS5-G1',name:'Transportbedrijf',how:'e-trucks laden in de nacht',max:0.5,eur:0,type:'blokstroom',night:0.6},
+  {id:'MS5-G2',name:'Koelhuis',how:'koeling 2 uur uitstellen',max:0.5,eur:120,type:'afroep'},
+  {id:'MS8-G1',name:'Metaalbewerking Smit',how:'ovens terugregelen',max:0.3,eur:260,type:'afroep'},
+  {id:'MS9-G1',name:'Distributiecentrum',how:'batterij ontladen',max:0.4,eur:200,type:'blok',blk:[17,20]},
+  {id:'F6',name:'Glastuinbouw Oost',how:'belichting dimmen',max:0.8,eur:90,type:'afroep'},
+  {id:'G1',name:'Zonnepark De Hoeve',how:'omvormers terugregelen',max:0.8,eur:0,gen:true,type:'nonfirm'}];
+const FLEX=FLEX_DEF.map(f=>({...f,c:CONS.find(c=>c.id===f.id),req:0,at:0,live:0,calls:[],nf:0,viol:0,violN:0}));
 const FLEX_DELAY=2;   // minuten reactietijd van de aggregator
 // distributietransformatoren: kleinste standaardmaat met marge boven de winterpiek (zo geeft een normale dienst geen congestie)
 const KVA_SIZES=[1000,1600,2000,2500,3150,4000];
@@ -2581,16 +2588,57 @@ RING.stations.forEach(s=>{let pk=0;for(let h=0;h<24;h+=0.25)pk=Math.max(pk,s.gro
 const trMW=s=>s.kva*0.95/1000;
 // veldkabels (niet-ring) op dezelfde manier: rating = winterpiek + 20% marge
 FEEDERS.filter(f=>!f.ring&&!f.gen&&!f.link).forEach(f=>{let pk=0;for(let h=0;h<24;h+=0.25)pk=Math.max(pk,f.base*profile(f.kind,h)*(SEASONS.winter.load[f.kind]??1));f.rate=pk*1.2;});   // vermogen (MW) bij cos φ 0,95
-// verzoek om vermogen terug te regelen (fractie van het maximum: 0 … 1)
-function setFlex(id,frac){const f=FLEX.find(x=>x.id===id);if(!f)return;frac=clamp(frac,0,1);if(f.req===frac)return;f.req=frac;f.at=SIM.t+FLEX_DELAY;
-  pushAlarm(frac?`Flex-verzoek: ${f.name} ${Math.round(frac*f.max*100)}% terugregelen (${f.how}) – actief over ±${FLEX_DELAY} min`:`Flex: ${f.name} vrijgegeven – weer normaal vermogen`,'op');renderFlex?.();}
-const flexSaved=f=>{const c=f.c,k=c.cut||0;return k&&EN.has(c.node)?Math.abs(c.demand)/(1-k)*k:0;};   // MW die nu niet afgenomen of opgewekt wordt
+const FLEX_LEAD=180;   // minuten: een CSC-afroep moet zo lang vooraf (in het echt de dag ervoor, bij Enexis vóór 07:00)
+const FLEX_TYPE={afroep:'CSC · afroep',blok:'CSC · tijdsblok',blokstroom:'Blokstroom 00–06 u',nonfirm:'Non-firm ATO'};
+const flexIntra=f=>!f.type||f.type==='afroep'||f.type==='blok';   // kan een intraday-bod doen
+const intraEur=f=>f.type?f.eur*2:f.eur;   // intraday (redispatch) kost het dubbele van een tijdige afroep
+const inHours=(h,a,b)=>h>=a&&h<b;
+const flexOf=id=>FLEX.find(x=>x.id===id);
+// gewenste terugregeling op tijdstip t (minuten), plan=true voor de prognose (zonder toevallige overschrijdingen)
+function flexWant(f,t,plan){const h=((t/60)%24+24)%24;let k=0,src='';
+  const up=(v,s)=>{if(v>k){k=v;src=s;}};
+  if(f.type==='blokstroom'){if(inHours(h,0,6))return {k:-f.night,src:'bs'};return (!plan&&f.viol)?{k:0,src:''}:{k:f.max,src:'bs'};}
+  if(f.type==='blok'&&inHours(h,f.blk[0],f.blk[1]))up(f.max,'blok');
+  for(const c of f.calls||[])if(t>=c.from&&t<c.to)up(c.frac*f.max,'afroep');
+  up((plan?f.req:f.live||0)*f.max,'intra');
+  if(f.type==='nonfirm'&&!plan)up(f.nf,'nf');
+  return {k,src};}
+// geplande terugregeling voor afnemer c op tijdstip t (voor de prognose)
+function planCut(c,t){const f=FLEX.find(x=>x.c===c);return f?flexWant(f,t,true).k:0;}
+// intraday-bod: fractie van het maximum (0 … 1)
+function setFlex(id,frac){const f=flexOf(id);if(!f||!flexIntra(f))return;frac=clamp(frac,0,1);if(f.req===frac)return;f.req=frac;f.at=SIM.t+FLEX_DELAY;
+  pushAlarm(frac?`Intraday-flex: ${f.name} ${Math.round(frac*f.max*100)}% terugregelen (${f.how}) – actief over ±${FLEX_DELAY} min, € ${intraEur(f)}/MWh`:`Flex: ${f.name} vrijgegeven – weer normaal vermogen`,'op');renderFlex?.();}
+// CSC-afroep voor een tijdvak (minuten), uiterlijk FLEX_LEAD minuten vooraf
+function flexCall(id,from,to,frac=1){const f=flexOf(id);if(!f||f.type!=='afroep')return false;
+  if(from<SIM.t+FLEX_LEAD-0.01){pushAlarm(`Afroep ${f.name} te laat: een CSC-afroep moet minstens ${FLEX_LEAD/60} uur vooraf. Gebruik intraday-flex (duurder)`,'warn');return false;}
+  if(f.calls.some(c=>from<c.to&&to>c.from)){pushAlarm(`${f.name}: er is al een afroep in dat tijdvak`,'warn');return false;}
+  f.calls.push({from,to,frac});f.calls.sort((a,b)=>a.from-b.from);
+  pushAlarm(`CSC-afroep: ${f.name} regelt ${fmtClock(from)}–${fmtClock(to)} ${Math.round(frac*f.max*100)}% terug (${f.how})`,'op');renderFlex?.();return true;}
+// annuleren kan tot de afroeptermijn verstreken is
+function flexCancel(id,i){const f=flexOf(id),c=f?.calls[i];if(!c||SIM.t>c.from-FLEX_LEAD)return false;f.calls.splice(i,1);pushAlarm(`Afroep ${f.name} ${fmtClock(c.from)} geannuleerd`,'op');renderFlex?.();return true;}
+// blokstroomklant aanspreken op laden buiten het tijdsblok
+function flexWarn(id){const f=flexOf(id);if(!f?.viol)return;f.viol=0;f.violEnd=0;f.violN++;
+  pushAlarm(f.violN>=3?`${f.name} aangesproken (${f.violN}e keer). Bij herhaling vervalt het blokstroomrecht – de klant zegt toe zich aan 00:00–06:00 te houden`:`${f.name} aangesproken – de trucks laden weer alleen in het blok 00:00–06:00`,'ok');renderFlex?.();}
+const FLEX_EUR={blok:f=>f.eur*0.6,afroep:f=>f.eur,intra:intraEur};
+const flexSaved=f=>{const c=f.c,k=c.cut||0;return k>0&&EN.has(c.node)?Math.abs(c.demand)/(1-k)*k:0;};   // MW die nu niet afgenomen of opgewekt wordt
 // koppelkabel naar Meppel: parallel met het net van Netbeheer Noord is niet toegestaan – hun beveiliging schakelt de koppeling af
 function linkTick(){const k=D['MS5-K'];if(!k.state||!D['M-MP3'].state||!EN.has('MP3'))return;k.state=0;const par=energized().has('M5');k.state=1;
   if(par){tripBreaker('M-MP3');award(-40,'Parallel met ander net');pushAlarm('Netbeheer Noord: uw net staat parallel met het onze via de koppelkabel – M-MP3 afgeschakeld. Open eerst MS5-K voordat u de ring weer vanuit Zuidwolde voedt','warn');}}
 function flexTick(dm){linkTick();
-  FLEX.forEach(f=>{const want=f.req*f.max;if((f.c.cut||0)!==want&&SIM.t>=f.at){f.c.cut=want;if(want)pushAlarm(`Flex actief: ${f.name} regelt ${fx1(flexSaved(f))} MW terug`,'ok');}
-    const mw=flexSaved(f);if(mw>0){const eur=mw*f.eur*dm/60;GAME.stats.flexEur=(GAME.stats.flexEur||0)+eur;GAME.score-=eur/100;}});
+  const t=SIM.t,h=((t/60)%24+24)%24;
+  FLEX.forEach(f=>{if(SIM.t>=f.at)f.live=f.req;
+    f.calls=(f.calls||[]).filter(c=>c.to>t-60);
+    if(f.type==='blokstroom'){
+      // overschrijding: de klant laadt overdag toch op vol vermogen
+      if(!f.viol&&!inHours(h,0,6)&&GAME.mode&&!GAME.lesson&&Math.random()<dm/900){f.viol=1;f.violEnd=t+60;
+        pushAlarm(`${f.name} laadt buiten het blokstroomvenster (00:00–06:00): ±${fx1(Math.abs(f.c.demand)/(1-f.max)*f.max)} MW extra op ${f.c.st?.id||f.id}. Spreek de klant aan (C)`,'warn');renderFlex?.();}
+      if(f.viol&&(t>=f.violEnd||inHours(h,0,6)))f.viol=0;}
+    if(f.type==='nonfirm'&&!MODES[GAME.mode]?.firmPV){const cap=capNow().c20,back=-FLOW.load20;
+      if(cap>0&&back>cap*0.95){if(!f.nf)pushAlarm(`Non-firm: ${f.name} wordt automatisch teruggeregeld – de 20 kV-teruglevering zit aan de grens`,'op');f.nf=Math.min(f.max,f.nf+0.1*dm);}
+      else if(back<cap*0.85)f.nf=Math.max(0,f.nf-0.05*dm);}
+    const w=flexWant(f,t),was=f.c.cut||0;
+    if(Math.abs(was-w.k)>1e-6){f.c.cut=w.k;if(w.src==='afroep'&&!(was>0))pushAlarm(`CSC-afroep actief: ${f.name} regelt terug (${f.how})`,'ok');else if(w.src==='intra'&&w.k>was)pushAlarm(`Flex actief: ${f.name} regelt terug (${f.how})`,'ok');}
+    f.src=w.src;const mw=flexSaved(f),pr=FLEX_EUR[w.src];if(mw>0&&pr){const eur=mw*pr(f)*dm/60;GAME.stats.flexEur=(GAME.stats.flexEur||0)+eur;GAME.score-=eur/100;}});
   // distributietransformator: zekeringen slaan door na langdurige overbelasting
   RING.stations.forEach(s=>{const k=s.P/trMW(s);s.trLoad=k;
     if(k>1.05&&!s.trWarn&&D[s.id+'-T'].state){s.trWarn=true;pushAlarm(`${s.id} ${s.name}: distributietrafo ${Math.round(k*100)}% belast – boven 120% slaan de zekeringen na enkele minuten door. Zet flexibel vermogen in (C)`,'warn');}
@@ -3378,7 +3426,7 @@ Object.assign(MODES,{
     obj:()=>[{t:'MS9 spanningsloos voordat het water er is',check:()=>SIM.t<GAME.flags.floodAt?null:GAME.flags.floodFail?'fail':'done'},
       {t:'MS8 blijft gevoed',check:()=>GAME.flags.m8off>3?'fail':null,final:()=>true},
       {t:'MS9 weer in bedrijf vóór het einde',check:()=>!stn('MS9').evac&&EN.has('M9')?'done':null,final:()=>EN.has('M9')},noIncidents]},
-  zonnepiek:{scen:true,name:'Zonnepiek',tag:'Scenario · gemiddeld',start:11,dur:120,season:'lente',weather:'helder',
+  zonnepiek:{scen:true,firmPV:true,name:'Zonnepiek',tag:'Scenario · gemiddeld',start:11,dur:120,season:'lente',weather:'helder',
     desc:'Een strakblauwe lentedag. Het uitgebreide zonnepark (G1) levert zoveel terug dat T2 het niet alleen aankan. Houd T2 heel en het zonnepark zo veel mogelijk in bedrijf.',
     setup(){const g=FEEDERS.find(f=>f.id==='G1');g.base=64;g.name='Zonnepark De Hoeve (uitgebreid, 66 MWp)';D.T2.oil=60;initTaps();
       pushAlarm('Zonnepark De Hoeve is uitgebreid tot 66 MWp – vandaag een recordopbrengst verwacht','info');
@@ -3401,11 +3449,11 @@ Object.assign(MODES,{
     desc:'Een mobiele kraan raakt lijn L1 Hoogeveen. De mast is beschadigd: L1 blijft urenlang uit en TenneT kan via L2 maar beperkt leveren. Kom de avondpiek door zonder klanten af te schakelen.',
     setup(){pushAlarm('Bouwverkeer langs de A28 – een mobiele kraan werkt vlak bij lijn L1','info');
       at(3,()=>{lineFault('L1',true);setTimeout(()=>{const ln=SIM.lines.L1;ln.reason='mast beschadigd door kraan';SIM.timers=SIM.timers.filter(t=>!/lineRestore/.test(String(t.fn)));addTimer(75,()=>lineRestore('L1'));},2500);
-        GAME.flags.lineLimit=33;GAME.flags.limitAt=SIM.t;
-        pushAlarm('TenneT: mast van L1 beschadigd door een kraan – herstel duurt uren. L2 draait in noodbedrijf: neem maximaal 33 MW af!','crit');
-        pushAlarm('Tip: kijk op het tabblad Prognose naar de avondpiek en zet op tijd flexibel vermogen in (C) – de kassen, het transportbedrijf, het koelhuis en de batterij van het distributiecentrum.','info');});},
+        GAME.flags.lineLimit=31;GAME.flags.limitAt=SIM.t;
+        pushAlarm('TenneT: mast van L1 beschadigd door een kraan – herstel duurt uren. L2 draait in noodbedrijf: neem maximaal 31 MW af!','crit');
+        pushAlarm('Tip: kijk op het tabblad Prognose naar de avondpiek en roep op tijd flex af (C, minstens 3 uur vooraf) – de kassen, het laadplein en het koelhuis. De batterij van het distributiecentrum ontlaadt al vanzelf van 17 tot 20 uur.','info');});},
     tick(dm){if(p110Over())GAME.flags.overMin=(GAME.flags.overMin||0)+dm;},
-    obj:()=>[{t:'Via L2 nooit langer dan 5 min boven 33 MW',check:()=>(GAME.flags.overMin||0)>5?'fail':null,final:()=>true},
+    obj:()=>[{t:'Via L2 nooit langer dan 5 min boven 31 MW',check:()=>(GAME.flags.overMin||0)>5?'fail':null,final:()=>true},
       {t:'Ziekenhuis (F5) blijft onder spanning',check:()=>GAME.flags.hospRun>1?'fail':null,final:()=>true},
       {t:'Minder dan 3.000 klantminuten',check:()=>SIM.cml>3000?'fail':null,final:()=>SIM.cml<=3000},noIncidents]},
   brand:{scen:true,name:'Brand in het 10 kV-gebouw',tag:'Scenario · moeilijk',start:14,dur:90,season:'herfst',weather:'bewolkt',
@@ -3439,7 +3487,7 @@ Object.assign(MODES,{
     desc:'Het laadplein in Zuiderveld is uitgebreid en half de wijk heeft een thuislader. Iedereen komt tegelijk thuis: de woonwijk loopt tegen de grenzen van het net aan.',
     setup(){LVG.find(x=>x.id==='MS4-G3').base=2.6;LVG.filter(g=>RINGS[0].stations.includes(g.st)&&g.kind==='res').forEach(g=>{g.base*=1.3;});
       pushAlarm('Laadplein Zuiderveld uitgebreid tot 40 snelladers; 45% van de woningen in de woonwijk heeft een thuislader','info');
-      pushAlarm('Tip: kijk in het overzicht Flex (C) welke trafo’s en kabels het zwaarst belast zijn. Het laadplein kan slim laden.','info');},
+      pushAlarm('Tip: kijk in het overzicht Flex (C) welke trafo’s en kabels het zwaarst belast zijn. Het laadplein kan slim laden: intraday direct (duurder), of goedkoper met een afroep minstens 3 uur vooraf.','info');},
     obj:()=>[{t:'Geen doorgeslagen zekeringen',check:()=>GAME.stats.fuses?'fail':null,final:()=>true},
       {t:'Geen kabel doorgebrand',check:()=>GAME.stats.burn?'fail':null,final:()=>true},
       {t:'Minder dan 3.000 klantminuten',check:()=>SIM.cml>3000?'fail':null,final:()=>SIM.cml<=3000},noIncidents]},
@@ -4965,27 +5013,29 @@ function selChart(){const fs=FEEDERS.filter(f=>!f.gen&&f.bus!=='MP'),f=FD(PROT_S
 // ============================================================ belastingprognose: verwachte belasting komende 8 uur tegen de transformatorcapaciteit
 const PROG={hist:[],lastQ:-1,warned:{}};
 // verwachte vraag per spanningsniveau op uur h (zonder storingen, met seizoen en het huidige weer)
-function demandAt(h){let p10=0,p20=0;h=((h%24)+24)%24;
-  CONS.forEach(c=>{if(c.bus==='MP')return;const v=c.base*profile(c.kind,h)*(c.gen?1:seasonMul(c.kind));if(!c.st&&is20(c.bus))p20+=v;else p10+=v;});return {p10,p20};}
+// met flex=true telt de geplande flex mee (tijdsblokken, afroepen, intraday, blokstroom)
+function demandAt(ha,flex=true){let p10=0,p20=0;const h=((ha%24)+24)%24;
+  CONS.forEach(c=>{if(c.bus==='MP')return;const v=c.base*profile(c.kind,h)*(c.gen?1:seasonMul(c.kind))*(flex?1-planCut(c,ha*60):1);if(!c.st&&is20(c.bus))p20+=v;else p10+=v;});return {p10,p20};}
 const trCap=T=>(D[T].fanFail?D[T].rON:D[T].rAF)*0.95;
 function capNow(){const on=id=>D[id].state===1&&!D[D[id].tr].blocked;
   const c10=(on('V-T1')?trCap('T1'):0)+(on('V-T3')?trCap('T3'):0),c20=(on('W-T2')?trCap('T2'):0)+(on('W-T3')?trCap('T3'):0);
   const t3free=!D.T3.blocked&&!D['V-T3'].state&&!D['W-T3'].state;return {c10,c20,t3:t3free?trCap('T3'):0};}
-function forecast(hours=8){const h0=SIM.t/60,pts=[];for(let k=0;k<=hours*4;k++){const h=h0+k/4;pts.push({h,...demandAt(h)});}return pts;}
+function forecast(hours=8){const h0=SIM.t/60,pts=[];for(let k=0;k<=hours*4;k++){const h=h0+k/4;const r=demandAt(h,false);pts.push({h,...demandAt(h),r10:r.p10});}return pts;}
 // advies: eerste moment waarop de vraag boven de capaciteit uitkomt
 function progAdvice(){const f=forecast(),cap=capNow(),out=[];
   const pk10=f.reduce((a,p)=>p.p10>a.p10?p:a),pk20=f.reduce((a,p)=>Math.abs(p.p20)>Math.abs(a.p20)?p:a);
   const over10=f.find(p=>p.p10>cap.c10*0.97),over20=f.find(p=>Math.abs(p.p20)>cap.c20*0.97);
   out.push({lvl:'info',t:`Piek 10 kV: <b>${fx1(pk10.p10)} MW</b> om ${fmtClock(pk10.h*60)} (${cap.c10?Math.round(pk10.p10/cap.c10*100)+'% van '+fx1(cap.c10)+' MW':'geen voeding'})`});
   out.push({lvl:'info',t:`Piek 20 kV: <b>${fx1(pk20.p20)} MW</b>${pk20.p20<0?' (teruglevering zonnepark)':''} om ${fmtClock(pk20.h*60)} (${cap.c20?Math.round(Math.abs(pk20.p20)/cap.c20*100)+'% van '+fx1(cap.c20)+' MW':'geen voeding'})`});
-  if(over10)out.push({lvl:'warn',key:'10',at:over10.h,t:cap.c10?`Om <b>${fmtClock(over10.h*60)}</b> komt de 10 kV-vraag boven de capaciteit. ${cap.t3?'Neem T3 tijdig bij op 10 kV (V-T3)':'T3 is niet vrij'} of schakel de kassen (F6) af.`:`Rail A/B heeft nu <b>geen transformator</b> in bedrijf. ${cap.t3?`T3 kan ${fx1(cap.t3)} MW leveren`:'T3 is niet vrij'}.`});
+  const dl=over10&&over10.h*60-FLEX_LEAD,fl=!over10?'':dl>SIM.t?` Of roep vóór <b>${fmtClock(dl)}</b> flex af (C).`:' Afroepen kan niet meer: zet intraday-flex in (C).';
+  if(over10)out.push({lvl:'warn',key:'10',at:over10.h,t:cap.c10?`Om <b>${fmtClock(over10.h*60)}</b> komt de 10 kV-vraag boven de capaciteit. ${cap.t3?'Neem T3 tijdig bij op 10 kV (V-T3)':'T3 is niet vrij'}.${fl}`:`Rail A/B heeft nu <b>geen transformator</b> in bedrijf. ${cap.t3?`T3 kan ${fx1(cap.t3)} MW leveren`:'T3 is niet vrij'}.`});
   if(over20)out.push({lvl:'warn',key:'20',at:over20.h,t:cap.c20?`Om <b>${fmtClock(over20.h*60)}</b> komt de 20 kV-belasting${over20.p20<0?' (teruglevering)':''} boven de capaciteit. ${cap.t3?'Zet T3 op 20 kV parallel (W-T3)':'T3 is niet vrij'}.`:`Rail C1/C2 heeft nu <b>geen transformator</b> in bedrijf. ${cap.t3?'Zet T3 op 20 kV in (W-T3)':'T3 is niet vrij'}.`});
   if(!over10&&cap.c10&&D['V-T1'].state&&pk10.p10>trCap('T3'))out.push({lvl:'tip',t:`N-1: valt T1 uit, dan kan T3 (${fx1(trCap('T3'))} MW) de piek van ${fx1(pk10.p10)} MW niet alleen dragen – houd de kassen als afschakelbare reserve achter de hand.`});
   if(!over10&&!over20)out.push({lvl:'ok',t:'Geen overbelasting verwacht in de komende 8 uur met de huidige transformatoren.'});
   return {f,cap,out};}
 const fx1=v=>v.toFixed(1).replace('.',',');
 // elke 15 min: geschiedenis bijhouden en tijdig waarschuwen (eenmalig per dreigende overbelasting)
-function progTick(){const q=Math.floor(SIM.t/15);if(q===PROG.lastQ)return;PROG.lastQ=q;
+function progTick(){const q=Math.floor(SIM.t/15);if(q===PROG.lastQ)return;PROG.lastQ=q;if(!document.activeElement?.closest?.('#flex'))renderFlex();
   PROG.hist.push({h:SIM.t/60,p10:FLOW.load,p20:FLOW.load20});if(PROG.hist.length>12)PROG.hist.shift();
   if(!GAME.mode||SIM.paused&&!GAME.ended)return;const {out}=progAdvice();
   for(const k of ['10','20']){const w=out.find(o=>o.key===k);
@@ -4995,7 +5045,7 @@ function renderProg(){const g=$('#progG');if(!g||SLD.tab!=='P')return;const {f,c
   const all=f.flatMap(p=>[p.p10,p.p20]).concat(PROG.hist.flatMap(p=>[p.p10,p.p20]),[cap.c10,cap.c20,cap.c10+cap.t3]);
   const top=Math.ceil(Math.max(...all)*1.1/10)*10||10,bot=Math.min(0,Math.floor(Math.min(...all)*1.1/10)*10);
   const x=h=>X0+(h-(h0-2))/10*(X1-X0),y=v=>Y1-(v-bot)/(top-bot)*(Y1-Y0),pl=(pts,k)=>pts.map(p=>`${x(p.h).toFixed(1)},${y(p[k]).toFixed(1)}`).join(' ');
-  const o=[`<text x="235" y="22" text-anchor="middle" class="h">BELASTINGSPROGNOSE · KOMENDE 8 UUR</text>`,`<text x="235" y="36" text-anchor="middle" class="fs dl">verwachte vraag (seizoen + huidig weer) · stippel = capaciteit in bedrijf</text>`];
+  const o=[`<text x="235" y="22" text-anchor="middle" class="h">BELASTINGSPROGNOSE · KOMENDE 8 UUR</text>`,`<text x="235" y="36" text-anchor="middle" class="fs dl">verwachte vraag met geplande flex (╌ zonder) · stippel = capaciteit</text>`];
   for(let v=bot;v<=top;v+=10)o.push(`<line x1="${X0}" x2="${X1}" y1="${y(v)}" y2="${y(v)}" stroke="rgba(255,255,255,${v===0?0.25:0.07})"/><text x="${X0-5}" y="${y(v)+3}" text-anchor="end" class="fs dl">${v}</text>`);
   for(let hh=Math.ceil(h0-2);hh<=h0+8;hh++)if(hh%2===0)o.push(`<line x1="${x(hh)}" x2="${x(hh)}" y1="${Y0}" y2="${Y1}" stroke="rgba(255,255,255,0.06)"/><text x="${x(hh)}" y="${Y1+13}" text-anchor="middle" class="fs dl">${String(((hh%24)+24)%24).padStart(2,'0')}:00</text>`);
   o.push(`<text x="${X0-5}" y="${Y0-6}" text-anchor="end" class="fs dl">MW</text>`);
@@ -5003,6 +5053,12 @@ function renderProg(){const g=$('#progG');if(!g||SLD.tab!=='P')return;const {f,c
   const same=Math.abs(cap.c10-cap.c20)<1.5;
   if(cap.c10)capL(cap.c10,'var(--mv)','cap. 10 kV','6 4',false);if(cap.t3)capL(cap.c10+cap.t3,'rgba(74,163,255,.5)','10 kV met T3','2 4',false);
   if(cap.c20)capL(cap.c20,'var(--mv20)','cap. 20 kV','3 5',true,same?12:-4);if(bot<0&&cap.c20)capL(-cap.c20,'var(--mv20)','max. teruglevering','3 5',true);
+  const bands=[],H0=h0-2,H1=h0+8;
+  FLEX.forEach(fl=>{(fl.calls||[]).forEach(c=>bands.push({a:c.from/60,b:c.to/60,l:'afroep '+fl.name}));
+    if(fl.type==='blok')for(let d=Math.floor(H0/24);d<=Math.floor(H1/24);d++)bands.push({a:d*24+fl.blk[0],b:d*24+fl.blk[1],l:'tijdsblok '+fl.name});});
+  bands.filter(q=>q.b>H0&&q.a<H1).forEach((q,i)=>{const a=x(Math.max(q.a,H0)),b=x(Math.min(q.b,H1));
+    o.push(`<rect x="${a.toFixed(1)}" y="${Y0}" width="${(b-a).toFixed(1)}" height="${Y1-Y0}" fill="rgba(111,227,154,.07)" stroke="rgba(111,227,154,.25)" stroke-dasharray="2 3"/><text x="${(a>X1-170?b-3:a+3).toFixed(1)}" y="${Y0+11+(i%4)*11}" text-anchor="${a>X1-170?'end':'start'}" class="fs" style="fill:#6fe39a">${q.l}</text>`);});
+  if(f.some(p=>p.r10-p.p10>0.05))o.push(`<polyline fill="none" stroke="rgba(74,163,255,.35)" stroke-width="1.4" stroke-dasharray="3 3" points="${pl(f,'r10')}"/>`);
   o.push(`<line x1="${x(h0)}" x2="${x(h0)}" y1="${Y0-4}" y2="${Y1}" stroke="var(--accent)" stroke-width="1.2"/><text x="${x(h0)}" y="${Y0-8}" text-anchor="middle" class="fs" style="fill:var(--accent)">nu</text>`);
   const hist=PROG.hist.concat([{h:h0,p10:FLOW.load,p20:FLOW.load20}]);
   for(const [k,col] of [['p10','var(--mv)'],['p20','var(--mv20)']]){o.push(`<polyline fill="none" style="stroke:${col}" stroke-width="2.6" points="${pl(hist,k)}"/>`,`<polyline fill="none" style="stroke:${col}" stroke-width="2" opacity="0.75" stroke-dasharray="1 0" points="${pl(f,k)}"/>`);}
@@ -5185,21 +5241,47 @@ let flexPrev=false;
 const flexOpen=()=>!$('#flex').classList.contains('hidden');
 function openFlex(){if(flexOpen())return;modalOpen('flex');if(FP.on)unlockPointer();$('#flex').classList.remove('hidden');renderFlex();}
 function closeFlex(){$('#flex').classList.add('hidden');modalClose('flex');}
-function renderFlex(){if(!flexOpen())return;const pct=v=>Math.round(v*100)+'%',cls=k=>k>1?'bad':k>0.9?'warnc':'';
-  const rows=FLEX.map(f=>{const c=f.c,on=EN.has(c.node),now=Math.abs(c.demand||0),act=c.cut||0,pend=f.req*f.max!==act;
-    return `<tr><td><b>${f.name}</b><span>${f.id} · ${f.how}</span></td><td class="pv">${on?fx1(now)+' MW':'<span class="bad">geen spanning</span>'}</td>
-      <td>${[0,0.25,0.5,0.75,1].map(v=>`<button class="mini fx ${f.req===v?'on':''}" data-fx="${f.id}:${v}">${v?'−'+pct(v*f.max):'uit'}</button>`).join('')}</td>
-      <td class="pv">${act?`−${fx1(flexSaved(f))} MW`:pend?'<span class="warnc">wordt actief…</span>':'—'}</td><td class="pv">€ ${f.eur}/MWh</td></tr>`;}).join('');
+// keuzes in het afroepformulier blijven staan als het venster opnieuw wordt opgebouwd
+const FLEXUI={id:'F6',from:null,dur:2,frac:1};
+function flexStatus(f){const t=SIM.t,h=((t/60)%24+24)%24,cur=(f.calls||[]).find(c=>t>=c.from&&t<c.to),nxt=(f.calls||[]).find(c=>c.from>t);
+  if(f.type==='blokstroom')return f.viol?'<span class="bad">laadt buiten het blok</span>':inHours(h,0,6)?'nachtladen (blok actief)':'vast deel, laadt 00:00–06:00';
+  if(f.type==='nonfirm')return MODES[GAME.mode]?.firmPV?'uitbreiding met vast transportrecht':f.nf>0?`<span class="warnc">automatisch −${Math.round(f.nf*100)}%</span>`:'vol vermogen (net heeft ruimte)';
+  if(f.type==='blok')return inHours(h,f.blk[0],f.blk[1])?`<span class="ok">tijdsblok actief tot ${String(f.blk[1]).padStart(2,'0')}:00</span>`:`tijdsblok elke dag ${String(f.blk[0]).padStart(2,'0')}–${String(f.blk[1]).padStart(2,'0')} u`;
+  if(cur)return `<span class="ok">afroep actief tot ${fmtClock(cur.to)}</span>`;if(nxt)return `afroep gepland ${fmtClock(nxt.from)}–${fmtClock(nxt.to)}`;return f.type?'geen afroep':'alleen intraday';}
+function renderFlex(){if(!flexOpen())return;const pct=v=>Math.round(v*100)+'%',cls=k=>k>1?'bad':k>0.9?'warnc':'',t=SIM.t;
+  const rows=FLEX.map(f=>{const c=f.c,on=EN.has(c.node),now=Math.abs(c.demand||0),act=c.cut||0,pend=f.req!==(f.live||0);
+    const ctl=flexIntra(f)?[0,0.25,0.5,0.75,1].map(v=>`<button class="mini fx ${f.req===v?'on':''}" data-fx="${f.id}:${v}">${v?'−'+pct(v*f.max):'uit'}</button>`).join('')
+      :f.type==='blokstroom'?(f.viol?`<button class="mini fx on" data-fwarn="${f.id}">klant aanspreken</button>`:'<span class="dl">—</span>'):'<span class="dl">automatisch</span>';
+    const eff=act>0?`−${fx1(flexSaved(f))} MW`:act<0?`+${fx1(now-now/(1-act))} MW`:pend?'<span class="warnc">wordt actief…</span>':'—';
+    const price=f.type==='blokstroom'?'korting tarief':f.type==='nonfirm'?'geen':`${f.type?`€ ${f.type==='blok'?Math.round(f.eur*0.6):f.eur} · `:''}intraday € ${intraEur(f)}`;
+    return `<tr><td><b>${f.name}</b><span>${f.id} · ${f.how}</span></td><td><b>${FLEX_TYPE[f.type]||'flexcontract'}</b><span>${flexStatus(f)}</span></td><td class="pv">${on?fx1(now)+' MW':'<span class="bad">geen spanning</span>'}</td>
+      <td>${ctl}</td><td class="pv">${eff}</td><td class="pv">${price}</td></tr>`;}).join('');
   const cg=congestion().map(x=>`<div class="cg"><span>${x.t}</span><i><b class="${cls(x.k)}" style="width:${Math.min(100,x.k*80)}%"></b></i><em class="${cls(x.k)}">${pct(x.k)}</em></div>`).join('');
-  $('#flex').innerHTML=`<div class="card pr"><div class="eyebrow">Netcongestie · flexibel vermogen</div><h2>Flexmarkt</h2>
-    <p class="bf-desc">Zit een kabel of transformator aan zijn grens? Vraag klanten met een flexcontract om tijdelijk minder af te nemen (of het zonnepark om minder terug te leveren). Na ±${FLEX_DELAY} min is het actief; de vergoeding gaat van je score af (1 punt per € 100) – meestal veel goedkoper dan uitval.</p>
+  // afroepformulier: begin op een heel uur, minstens FLEX_LEAD vooraf
+  const first=Math.ceil((t+FLEX_LEAD)/60)*60,starts=[...Array(12)].map((_,i)=>first+i*60);if(FLEXUI.from==null||FLEXUI.from<first)FLEXUI.from=first;
+  const af=FLEX.filter(f=>f.type==='afroep'),opt=(v,l,sel)=>`<option value="${v}"${sel?' selected':''}>${l}</option>`;
+  const calls=af.flatMap(f=>f.calls.map((c,i)=>({f,c,i}))).sort((a,b)=>a.c.from-b.c.from).map(({f,c,i})=>{const st=t>=c.to?'afgerond':t>=c.from?'<span class="ok">actief</span>':t>c.from-FLEX_LEAD?'vast (binnen afroeptermijn)':`gepland · <button class="mini" data-fcancel="${f.id}:${i}">annuleren</button>`;
+    return `<tr><td><b>${f.name}</b></td><td class="pv">${fmtClock(c.from)}–${fmtClock(c.to)}</td><td class="pv">−${Math.round(c.frac*f.max*100)}%</td><td>${st}</td></tr>`;}).join('');
+  $('#flex').innerHTML=`<div class="card pr"><div class="eyebrow">Netcongestie · congestiemanagement</div><h2>Flexcontracten</h2>
+    <p class="bf-desc">Zit een kabel of transformator straks aan zijn grens? Kijk op het tabblad <b>Prognose</b> en <b>roep tijdig af</b>: een CSC-afroep moet minstens ${FLEX_LEAD/60} uur vooraf (in het echt de dag ervoor, bij Enexis vóór 07:00) en is het goedkoopst. Te laat? Dan kan alleen nog <b>intraday</b> (redispatch): actief na ±${FLEX_DELAY} min, maar voor het dubbele tarief. Blokstroom en non-firm werken vanzelf. Kosten gaan van je score af (1 punt per € 100).</p>
     <div class="mh">Zwaarst belaste netdelen</div><div class="cgs">${cg}</div>
-    <div class="mh">Flexcontracten</div><table><tr><th>Klant</th><th>Nu</th><th>Terugregelen</th><th>Effect</th><th>Vergoeding</th></tr>${rows}</table>
+    <div class="mh">CSC-afroep plannen</div>
+    <div class="fcall"><select data-fui="id">${af.map(f=>opt(f.id,f.name,f.id===FLEXUI.id)).join('')}</select>
+      <select data-fui="from">${starts.map(v=>opt(v,'vanaf '+fmtClock(v),v===FLEXUI.from)).join('')}</select>
+      <select data-fui="dur">${[1,2,3,4].map(v=>opt(v,v+' uur',v===FLEXUI.dur)).join('')}</select>
+      <select data-fui="frac">${[0.5,1].map(v=>opt(v,v===1?'volledig':'half',v===FLEXUI.frac)).join('')}</select>
+      <button class="primary" data-fcall>Afroepen</button></div>
+    ${calls?`<table><tr><th>Klant</th><th>Tijdvak</th><th>Omvang</th><th>Status</th></tr>${calls}</table>`:'<p class="bf-desc">Nog geen afroepen.</p>'}
+    <div class="mh">Contracten</div><table><tr><th>Klant</th><th>Contract</th><th>Nu</th><th>Intraday</th><th>Effect</th><th>Vergoeding (€/MWh)</th></tr>${rows}</table>
     <p class="bf-desc">Flexkosten deze dienst: <b>€ ${Math.round(GAME.stats.flexEur||0).toLocaleString('nl-NL')}</b></p>
-    <div class="rep-btns"><button class="primary" data-fclose>Sluiten <kbd>C</kbd></button><button data-fall>Alles vrijgeven</button></div></div>`;}
+    <div class="rep-btns"><button class="primary" data-fclose>Sluiten <kbd>C</kbd></button><button data-fall>Intraday alles vrijgeven</button></div></div>`;}
 $('#flex').addEventListener('click',e=>{if(e.target.closest('[data-fclose]')||e.target.id==='flex')return closeFlex();
   const b=e.target.closest('[data-fx]');if(b){const [id,v]=b.dataset.fx.split(':');setFlex(id,+v);return;}
+  const w=e.target.closest('[data-fwarn]');if(w)return flexWarn(w.dataset.fwarn);
+  const x=e.target.closest('[data-fcancel]');if(x){const [id,i]=x.dataset.fcancel.split(':');flexCancel(id,+i);return;}
+  if(e.target.closest('[data-fcall]')){flexCall(FLEXUI.id,FLEXUI.from,FLEXUI.from+FLEXUI.dur*60,FLEXUI.frac);return;}
   if(e.target.closest('[data-fall]'))FLEX.forEach(f=>f.req&&setFlex(f.id,0));});
+$('#flex').addEventListener('change',e=>{const k=e.target.dataset?.fui;if(k)FLEXUI[k]=k==='id'?e.target.value:+e.target.value;});
 $('#flexBtn').addEventListener('click',()=>flexOpen()?closeFlex():openFlex());
 addEventListener('keydown',e=>{if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT')return;if((e.key==='c'||e.key==='C')&&$('#intro').classList.contains('hidden'))flexOpen()?closeFlex():openFlex();});
 
@@ -5422,7 +5504,7 @@ function saveGame(silent,slot){if(!canSave())return false;slot=slot||(silent?'au
     D:Object.fromEntries(Object.values(D).map(d=>[d.id,grab(d,KEYS.dev)])),F:Object.fromEntries(FEEDERS.map(f=>[f.id,grab(f,KEYS.feed)])),
     LV:Object.fromEntries(LVG.map(g=>[g.id,grab(g,KEYS.lvg)])),SEC:Object.fromEntries(RING.secs.map(s=>[s.id,grab(s,KEYS.sec)])),
     ST:Object.fromEntries(RING.stations.map(s=>[s.id,grab(s,KEYS.st)])),BUSF:Object.keys(BUSF),
-    WX:{type:WX.type,lock:WX.lock,next:WX.next,cur:{...WX.cur},cover:WX.cover},FLEX:FLEX.map(f=>({id:f.id,req:f.req,at:f.at})),PROT:JSON.parse(JSON.stringify(PROT)),
+    WX:{type:WX.type,lock:WX.lock,next:WX.next,cur:{...WX.cur},cover:WX.cover},FLEX:FLEX.map(f=>({id:f.id,req:f.req,at:f.at,live:f.live,calls:f.calls,nf:f.nf,viol:f.viol,violEnd:f.violEnd,violN:f.violN})),PROT:JSON.parse(JSON.stringify(PROT)),
     TASK:taskSave(),taskSeq,taskCycle,INC:{next:INC.next,done:INC.done,active:INC.active?.def.id||null},PHONE:{...PHONE.stats},EF:EF.on,LS:{busy:GENSET.busy,orders:LS_ORDERS.map(o=>({...o}))},
     REC:{samples:REC.samples.slice(-600),events:REC.events.slice(-1500)},
     GIS:{m:Object.fromEntries(CABLES.map(c=>[c.id,c.moffen.map(m=>[m.d,m.x,m.z,m.year])])),w:Object.fromEntries(CABLES.filter(c=>c.work).map(c=>[c.id,c.work])),k:{next:KLIC.next,seq:KLIC.seq,jobs:KLIC.jobs.map(j=>({...j,c:j.c.id}))}}};
@@ -5456,7 +5538,7 @@ function resumeGame(d){$('#intro').classList.add('hidden');SAVE_SLOT=d.slot||'au
   for(const k in BUSF)delete BUSF[k];d.BUSF.forEach(b=>BUSF[b]=true);
   setSeason(d.season);Object.assign(WX,d.WX);WX.cur={...d.WX.cur};applySnowCover?.();
   for(let i=FLEX.length-1;i>=0;i--)if(!FLEX_DEF.some(x=>x.id===FLEX[i].id))FLEX.splice(i,1);
-  d.FLEX.forEach(s=>{const f=FLEX.find(x=>x.id===s.id);if(f){f.req=s.req;f.at=s.at;}});
+  d.FLEX.forEach(s=>{const f=FLEX.find(x=>x.id===s.id);if(f){f.req=s.req;f.at=s.at;f.live=s.live??s.req;f.calls=s.calls||[];f.nf=s.nf||0;f.viol=s.viol||0;f.violEnd=s.violEnd||0;f.violN=s.violN||0;}});
   for(const k of ['f','ln','tr'])for(const id in d.PROT[k])if(PROT[k][id])Object.assign(PROT[k][id],d.PROT[k][id]);
   TASK=null;taskSeq=d.taskSeq;taskCycle=d.taskCycle;taskLoad(d.TASK);
   Object.assign(PHONE.stats,d.PHONE);EF.on=d.EF||null;if(d.LS){GENSET.busy=d.LS.busy;LS_ORDERS.splice(0,LS_ORDERS.length,...d.LS.orders);}REC.samples=d.REC.samples;REC.events=d.REC.events;REC.lastM=null;
@@ -6842,7 +6924,7 @@ function gisDrawExtra(g,cv){const s=TAB.zoom,now=performance.now();
 // ============================================================ updatecontrole in het hoofdmenu: is er op GitHub een nieuwere versie?
 // De build zet een vingerafdruk in BUILD_ID (tests/stamp.mjs) en houdt version.json bij met eerdere versies.
 // Staat onze versie bij de eerdere versies op GitHub, dan is er een update; staat hij er niet in, dan is het eigen (nieuwer) werk.
-const BUILD_ID='006a10c6f56b';
+const BUILD_ID='5621a66f374c';
 const UPD_REPO='https://github.com/ProAdmin007/Onderstation-SIM-Pro';
 const UPD_URL='https://raw.githubusercontent.com/ProAdmin007/Onderstation-SIM-Pro/main/version.json';
 // toestand van de controle: idle, bezig, actueel, nieuw, eigen of fout
@@ -7132,7 +7214,7 @@ else{renderMenu();$('#intro').classList.remove('hidden');controls.autoRotate=tru
 if(params.has('night'))updateSky(22);
 if(params.has('view')){const v=VIEWPOS[+params.get('view')];camera.position.copy(v[0]);controls.target.copy(v[1]);controls.autoRotate=false;controls.update();}
 
-window.OS={lightsTick,setLR,setLock,lrPanel,lrBlock,RLY,relayReset,relayFill,RCAB,callMeppel,mpAllowed,MP_ACCESS,MEP_IDS,FX,fireSmoke,audioPause,MEPPEL,LS_ORDERS,refreshDevPanel,scadaReach,dcBurnt,LAMPS,updateSky,updateNPCs,updateStreetLights,DOORS,STEPS,floorAt,doorTick,pickAt,SVM,serverTick,setAutoMeet,measBlock,measVan,MEAS_VAN,coachRestore,coachReset,installUpdate,COACH,coachCards,setCoach,renderCoach,checkUpdate,UPD,BUILD_ID,GSV,gensetTick,gensetSpot,digStart,klicHit,digTick,digHit,MARKS,setSpeed,klicFocus,klicCard,klicCables,tabletHome,refreshInfo,XLAB,TRACES,cableDist,stationVisuals,cityRoute,CORDONS,inCordon,copperTheft,trafoFire,stationTick,stationBlock,stIsolated,stNeighborSwitches,STV,updateHUD,pushAlarm,FF,ffStart,ffStop,skipRain,openWT,closeWT,setRealWeather,autoWeather,pickWeather,wetNow,ALARM:()=>ALARM_CRIT,VANS,vanTick,crewDispatch,crewSpawn,routeAt,driveVehicle,walkActive:()=>WALK_ACTIVE,BUS,GARB,PARCEL,AMB,TRAIN,XING,HALTES,MARKET,FIG,CY,cityDay,marketOn,schoolBreak,cityTick,measDone,cableCard,isoSwitches,KLIC,klicNew,klicMark,klicHit,gisMeasure,gisMofReplace,faultOf,cableOf,cableRisk,DIGS,CABLES,GIS_NET,gisRoute,cableState,setXray,XRAY,TAB,openTablet,closeTablet,drawTablet,nearestCable,DYN,fpsTick,fireTick,WK,getWalkers:()=>WALKERS,getStrips:()=>WSTRIPS,fireStart,fireDouse,fireStop,GENSET,gsCap,SMALL,lvgLive,updateSmall,setMouseMode,getMouseMode:()=>MOUSE_MODE,cameraKeys,OVK,openPreview,closePreview,viewHour,getPreview:()=>PREVIEW,VIEWPOS,SITE,updateSites,SLD,activeFaults,renderFaults,reportPDF,listSaves,openSlots,closeSlots,SAVE_SLOTS,layoutCheck,LAYOUT,FREC,fltRec,openRec,closeRec,renderRec,selectivity,protSelect,feederT,incT,incOf,shortCircuit,EF,earthFault,efTick,efRails,efU0,railsCoupled,controls,tripBreaker,CONS,LS_LINKS,LS_ORDERS,GENSET,lsTick,lsOrder,lsSwitchOrder,lsExec,gsSend,gsOff,gsRestart,tapOrder,setEta,callPrio,lsAreas,PRIO,openLS,closeLS,renderLS,lvVolt,stationLoads,shedFactor,failP,manualP,phoneTick,refreshDevPanel,updateSLD,openKeys,closeKeys,KEY_HELP,RELAY_BAYS,relayTask,relayDue,relayDefect,initRelays,kitTests,kitMeasure,kitVerdict,kitRun,openKit,closeKit,saveGame,readSave,deleteSave,resumeGame,canSave,specOf,CABLE,soilT,FD,meppelFault,linkTick,tabAlarms,updateTabAlarms,renderTasks,INC,INCIDENTS,startIncident,endIncident,incidentTick,setTab,renderCables,GFX,setGfx,applyGfx,openSettings,closeSettings,WX_TYPES,renderer,scene,FIRE,CARS,updateWindows,updateLife,stationLive,cbMaintTask,worstCb,cond,breakerFails,CB_IDS,FLEX,setFlex,flexTick,congestion,openFlex,closeFlex,checkModel,homeBus,BUSES,SEL_BAYS,TORCH,setTorch,HO_POOL,handoverTick,REC,RP,startReplay,stopReplay,analyse,stationDamage,closeHandover,deviations,PHONE,lvFault,callFrom,phoneAnswer,dispatchLV,LVG,forecast,progAdvice,PROG,startTask:(k,...a)=>{TASK={relayTask,cbMaintTask,railTask,railBTask,stationTask,thermoTask,ringTask,feederTask,lineTask,reserveTask}[k](...a);TASK.i=0;TASK.code='WV-TEST';briefInit(TASK);renderTasks();},SIM,D,LESSONS,lessonGo,selectDevice,abortTask,railTask,stationTask,thermoTask,nearDev,VIEWS,PROT,setProt,openProt,closeProt,busFault,BUSF,RINGS,task:()=>TASK,briefSubmit,briefCheck,briefWatch,actKey,taskActs,crewNear,boxOf:id=>VIEWS[id]&&VIEWS[id].box,AudioSys,updateAudio,WX,setWeather,setSeason,SEASONS,ambient,enterKiosk,ROOMS,blockedAt,RING,NPCS,crewDispatch,ringFault,FP,enterFP,exitFP,pickCenter,camera,camInside,setRatio,setTab,GAME,MODES,applyMode,endGame,EN:()=>EN,FLOW,operate,tapStep,setAVR,resetLockout,toggleAR,regulate,computeFlows,randomEvent,lineFault,feederFault,trafoFault,offerTask,simStep,FEEDERS};
+window.OS={flexCall,flexCancel,flexWarn,flexWant,planCut,FLEX_LEAD,demandAt,FLEXUI,lightsTick,setLR,setLock,lrPanel,lrBlock,RLY,relayReset,relayFill,RCAB,callMeppel,mpAllowed,MP_ACCESS,MEP_IDS,FX,fireSmoke,audioPause,MEPPEL,LS_ORDERS,refreshDevPanel,scadaReach,dcBurnt,LAMPS,updateSky,updateNPCs,updateStreetLights,DOORS,STEPS,floorAt,doorTick,pickAt,SVM,serverTick,setAutoMeet,measBlock,measVan,MEAS_VAN,coachRestore,coachReset,installUpdate,COACH,coachCards,setCoach,renderCoach,checkUpdate,UPD,BUILD_ID,GSV,gensetTick,gensetSpot,digStart,klicHit,digTick,digHit,MARKS,setSpeed,klicFocus,klicCard,klicCables,tabletHome,refreshInfo,XLAB,TRACES,cableDist,stationVisuals,cityRoute,CORDONS,inCordon,copperTheft,trafoFire,stationTick,stationBlock,stIsolated,stNeighborSwitches,STV,updateHUD,pushAlarm,FF,ffStart,ffStop,skipRain,openWT,closeWT,setRealWeather,autoWeather,pickWeather,wetNow,ALARM:()=>ALARM_CRIT,VANS,vanTick,crewDispatch,crewSpawn,routeAt,driveVehicle,walkActive:()=>WALK_ACTIVE,BUS,GARB,PARCEL,AMB,TRAIN,XING,HALTES,MARKET,FIG,CY,cityDay,marketOn,schoolBreak,cityTick,measDone,cableCard,isoSwitches,KLIC,klicNew,klicMark,klicHit,gisMeasure,gisMofReplace,faultOf,cableOf,cableRisk,DIGS,CABLES,GIS_NET,gisRoute,cableState,setXray,XRAY,TAB,openTablet,closeTablet,drawTablet,nearestCable,DYN,fpsTick,fireTick,WK,getWalkers:()=>WALKERS,getStrips:()=>WSTRIPS,fireStart,fireDouse,fireStop,GENSET,gsCap,SMALL,lvgLive,updateSmall,setMouseMode,getMouseMode:()=>MOUSE_MODE,cameraKeys,OVK,openPreview,closePreview,viewHour,getPreview:()=>PREVIEW,VIEWPOS,SITE,updateSites,SLD,activeFaults,renderFaults,reportPDF,listSaves,openSlots,closeSlots,SAVE_SLOTS,layoutCheck,LAYOUT,FREC,fltRec,openRec,closeRec,renderRec,selectivity,protSelect,feederT,incT,incOf,shortCircuit,EF,earthFault,efTick,efRails,efU0,railsCoupled,controls,tripBreaker,CONS,LS_LINKS,LS_ORDERS,GENSET,lsTick,lsOrder,lsSwitchOrder,lsExec,gsSend,gsOff,gsRestart,tapOrder,setEta,callPrio,lsAreas,PRIO,openLS,closeLS,renderLS,lvVolt,stationLoads,shedFactor,failP,manualP,phoneTick,refreshDevPanel,updateSLD,openKeys,closeKeys,KEY_HELP,RELAY_BAYS,relayTask,relayDue,relayDefect,initRelays,kitTests,kitMeasure,kitVerdict,kitRun,openKit,closeKit,saveGame,readSave,deleteSave,resumeGame,canSave,specOf,CABLE,soilT,FD,meppelFault,linkTick,tabAlarms,updateTabAlarms,renderTasks,INC,INCIDENTS,startIncident,endIncident,incidentTick,setTab,renderCables,GFX,setGfx,applyGfx,openSettings,closeSettings,WX_TYPES,renderer,scene,FIRE,CARS,updateWindows,updateLife,stationLive,cbMaintTask,worstCb,cond,breakerFails,CB_IDS,FLEX,setFlex,flexTick,congestion,openFlex,closeFlex,checkModel,homeBus,BUSES,SEL_BAYS,TORCH,setTorch,HO_POOL,handoverTick,REC,RP,startReplay,stopReplay,analyse,stationDamage,closeHandover,deviations,PHONE,lvFault,callFrom,phoneAnswer,dispatchLV,LVG,forecast,progAdvice,PROG,startTask:(k,...a)=>{TASK={relayTask,cbMaintTask,railTask,railBTask,stationTask,thermoTask,ringTask,feederTask,lineTask,reserveTask}[k](...a);TASK.i=0;TASK.code='WV-TEST';briefInit(TASK);renderTasks();},SIM,D,LESSONS,lessonGo,selectDevice,abortTask,railTask,stationTask,thermoTask,nearDev,VIEWS,PROT,setProt,openProt,closeProt,busFault,BUSF,RINGS,task:()=>TASK,briefSubmit,briefCheck,briefWatch,actKey,taskActs,crewNear,boxOf:id=>VIEWS[id]&&VIEWS[id].box,AudioSys,updateAudio,WX,setWeather,setSeason,SEASONS,ambient,enterKiosk,ROOMS,blockedAt,RING,NPCS,crewDispatch,ringFault,FP,enterFP,exitFP,pickCenter,camera,camInside,setRatio,setTab,GAME,MODES,applyMode,endGame,EN:()=>EN,FLOW,operate,tapStep,setAVR,resetLockout,toggleAR,regulate,computeFlows,randomEvent,lineFault,feederFault,trafoFault,offerTask,simStep,FEEDERS};
 const clock=new THREE.Clock();let hudT=0,skyT=0,progT=0;
 let liteAcc=0,shadowT=0,hudStep=4;
 // dieptebuffer: in het overzicht schuift de near-plane mee met de kijkafstand, zodat gevels op afstand niet flikkeren

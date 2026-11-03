@@ -1,7 +1,10 @@
 {
-  "build": "006a10c6f56b",
-  "date": "2026-11-02",
+  "build": "5621a66f374c",
+  "date": "2026-11-03",
   "previous": [
+    "bda055136a22",
+    "4894dbf32e6a",
+    "006a10c6f56b",
     "e25bcc161f00",
     "e4203e177a0f",
     "7aba6c5dcca1",
@@ -172,6 +175,10 @@
     "006a10c6f56b": {
       "date": "2026-11-02",
       "text": "Bugfixes en snellere grafische kaart: aardschakelaar op lokaal te bedienen, niet meer opgesloten in Meppel, relaismeldingen worden opgeslagen, veel minder lampen in de shaders"
+    },
+    "5621a66f374c": {
+      "date": "2026-11-03",
+      "text": "Flexcontracten zoals bij echte netbeheerders: CSC met afroep (minstens 3 uur vooraf, goedkoopst), CSC met tijdsblok (batterij 17–20 u), blokstroom voor het transportbedrijf (00–06 u, met overschrijdingen) en non-firm voor het zonnepark. Intraday blijft mogelijk voor het dubbele tarief. Afroep plannen in het flexvenster (C); de prognose rekent met de geplande flex en toont afroepen als groene banden"
     }
   }
 }

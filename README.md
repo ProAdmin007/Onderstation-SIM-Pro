@@ -108,7 +108,7 @@ Bedoeld voor **bedrijfsvoerders en monteurs in opleiding**, studenten **elektrot
   - *Aanrijding MS-station*: een vrachtwagen ramt MS5. De RMU is onbedienbaar; isoleer vanaf MS4 en voed terug via het normaal-open punt. Later volgt een noodaggregaat.
   - *Cyberaanval op SCADA*: bediening op afstand valt weg. Loop het station in (`V`) en schakel lokaal aan het veld, terwijl de kassen en lijn L1 uitvallen.
   - *Overstroming De Vaart*: het water stijgt bij MS9. Sluit het normaal-open punt, haal MS9 uit de ring (MS8-R open, V-F2 uit) vóór het water er is, en neem MS9 na het droogvallen weer in bedrijf.
-  - *Kraan raakt de 110 kV-lijn*: L1 is urenlang weg en TenneT laat via L2 maar 33 MW toe tijdens de avondpiek; blijf eronder met flexibel vermogen.
+  - *Kraan raakt de 110 kV-lijn*: L1 is urenlang weg en TenneT laat via L2 maar 31 MW toe tijdens de avondpiek; blijf eronder met flexibel vermogen.
   - *Brand in het 10 kV-gebouw*: de brandbel gaat, er slaan vlammen uit het dak en er komt rook. Twee brandweerwagens rijden met sirene en zwaailichten naar de poort en vier brandweerlieden gaan op verkenning. De brandweer wil de hele 10 kV spanningsloos voordat ze naar binnen gaat; het ziekenhuis draait op noodstroom. Is de 10 kV spanningsloos, dan steekt de ladderwagen de ladder op en blust met een waterstraal; de vlammen worden kleiner en de rook wordt stoom. Daarna stap voor stap herstellen (V-F6 heeft rookschade).
   - *Brand in het datacenter* (zwaar): een accu van UPS B vat vlam. De gasblussing gaat niet goed (een defect pilootventiel, maar 2 van de 6 flessen lossen), de SCADA-servers branden af en bedienen kan alleen nog ter plaatse. Loop je zelf het datacenter in tijdens brand en blussing, dan is dat een veiligheidsincident. Het herstel duurt uren: na ruim anderhalf uur bereikt een nood-front-end de MS-stations via LTE, en pas na ruim twee uur draait SCADA voor het hele onderstation vanuit een container. Tussendoor vallen de kassen en ring oost uit.
   - *Concert op het Marktplein*: podium, lichtshow en foodtrucks overbelasten MS6; het podium heeft een flexcontract.
@@ -366,8 +366,14 @@ Klantminuten blijven tellen, maar je kunt met acties punten terugverdienen:
 Toets `C` of de knop *Flex*.
 
 - Een overzicht toont de zwaarst belaste kabels en transformatoren.
-  - Zeven klanten hebben een flexcontract: het laadplein (slim laden), het transportbedrijf (e-trucks later laden), het koelhuis, de metaalbewerking, de batterij van het distributiecentrum, de kassen (belichting dimmen) en het zonnepark (terugregelen).
-  - Je vraagt ze 25–100% terug te regelen. Na ±2 min is het actief; de vergoeding (€/MWh) gaat van je score af (1 punt per € 100). Dat is meestal veel goedkoper dan uitval.
+  - Zeven klanten hebben een contract zoals netbeheerders die in 2026 echt gebruiken:
+    - **CSC met afroep** (capaciteitssturingscontract): het laadplein, het koelhuis, de metaalbewerking en de kassen. Je roept een tijdvak af, minstens 3 uur vooraf (in het echt de dag ervoor, bij Enexis vóór 07:00). Dat is de goedkoopste flex.
+    - **CSC met tijdsblok**: de batterij van het distributiecentrum ontlaadt elke dag van 17 tot 20 uur.
+    - **Blokstroom**: het transportbedrijf laadt zijn e-trucks alleen van 00:00 tot 06:00. Soms laadt de klant toch overdag; dan krijg je een melding en spreek je de klant aan.
+    - **Non-firm ATO**: het zonnepark wordt automatisch teruggeregeld als de 20 kV-teruglevering aan de grens zit.
+  - Te laat voor een afroep? Afroep- en tijdsblokklanten kunnen ook **intraday** terugregelen (25–100%, actief na ±2 min), maar dat kost het dubbele.
+  - De vergoeding (€/MWh) gaat van je score af (1 punt per € 100). Dat is meestal veel goedkoper dan uitval.
+  - Het tabblad *Prognose* rekent met de geplande flex: afroepen en tijdsblokken staan als groene banden in de grafiek, met een gestreepte lijn voor de vraag zonder flex. Dreigt overbelasting, dan zegt het advies tot hoe laat je nog kunt afroepen.
   - De distributietrafo's in de MS-stations zijn gedimensioneerd op hun winterpiek (2500–4000 kVA). Zit een trafo lang boven 120%, dan slaan de MS-zekeringen door; de monteur plaatst nieuwe en pas daarna mag de transformatorschakelaar weer dicht. Vanaf 105% krijg je een waarschuwing.
 </details>
 

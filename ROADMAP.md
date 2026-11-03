@@ -29,7 +29,7 @@ Spoor C bouwt op A en B; spoor F verdiept A; spoor D maakt A, B, C, E en F eenvo
 | B3 | Kwaliteitsregulering: SAIDI/SAIFI en compensatieregeling | AM | middel | ⏳ gepland |
 | B4 | Energietransitie 2030 | AM | middel | ⏳ gepland |
 | B5 | Spanningskwaliteit (EN 50160) | AM | middel | ⏳ gepland |
-| B6 | System Operations: congestiemanagement, flexcontracten en blokstroom | AM | groot | ⏳ gepland |
+| B6 | System Operations: congestiemanagement, flexcontracten en blokstroom | AM | groot | 🔄 deels klaar: contractvormen en afroep via de prognose ✅, GOPACS, dagprognoses en tarieven gepland |
 | C1 | Carrièremodus | beide | groot | ⏳ gepland |
 | D1 | Opslaanbare timers | techniek | middel | ⏳ gepland |
 | D2 | Inschrijven op de lussen | techniek | klein | ⏳ gepland |
@@ -138,6 +138,8 @@ Klachten over flikkerende lampen, harmonischen (bijvoorbeeld door de assimilatie
 ### B6. System Operations: congestiemanagement, flexcontracten en blokstroom
 
 Bij een netbeheerder zit **System Operations** tussen asset management en de meldkamer: prognoses maken, congestie voorspellen en flexibiliteit van klanten inzetten, zodat een vol net niet overbelast raakt. Nu heeft de simulator één eenvoudig flexmodel (zeven afnemers met een maximaal aandeel, een prijs per MWh en 2 minuten reactietijd, in `04-8-flex.js`). Dit onderdeel vervangt dat door de contractvormen en het dagritme zoals ze in 2026 echt bestaan.
+
+*Klaar: de contractvormen per afnemer (CSC met afroep en tijdsblok, blokstroom, non-firm), intraday als duurdere terugval en de afroep vanuit de prognose (zie de README). Nog te doen: het GOPACS-orderboek, dagprognoses van klanten, de GTO, de deelnameverplichting, de wachtrij en tijdsafhankelijke tarieven.*
 
 **Contractvormen per afnemer**
 

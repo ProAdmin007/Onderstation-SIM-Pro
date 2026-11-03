@@ -314,6 +314,20 @@ const TESTS = [
       assert(r.aan && r.I > 0 && r.x < 1, `zaklamp ging niet aan: ${JSON.stringify(r)}`);
       assert(!r.naUit && r.I2 === 0, `zaklamp blijft aan na stoppen met rondlopen: ${JSON.stringify(r)}`);
   } },
+  { name: 'flexcontracten: CSC-afroep, tijdsblok, blokstroom en prognose', query: '?autostart&t=18.5', async run(p) {
+      const r = await p.evaluate(() => { T.quiet(); const O = OS, F = id => O.FLEX.find(f => f.id === id); O.SIM.paused = false; T.step(0.5);
+        const t0 = O.SIM.t, kas = F('F6'), from = Math.ceil((t0 + O.FLEX_LEAD) / 60) * 60;
+        const teLaat = !O.flexCall('F6', t0 + 60, t0 + 120), ok = O.flexCall('F6', from, from + 60), dubbel = !O.flexCall('F6', from + 30, from + 90);
+        const gepland = O.planCut(kas.c, from + 10) === kas.max, prog = O.demandAt((from + 10) / 60).p10 < O.demandAt((from + 10) / 60, false).p10 - 0.5;
+        const blok = F('MS9-G1').c.cut === F('MS9-G1').max, bs = F('MS5-G1'), bsDag = bs.c.cut === bs.max, bsNacht = O.flexWant(bs, 2 * 60).k < 0;
+        O.setFlex('MS5-G1', 1); const geenIntra = bs.req === 0;
+        bs.viol = 1; bs.violEnd = O.SIM.t + 60; T.step(0.5); const overschrijding = bs.c.cut === 0; O.flexWarn('MS5-G1'); T.step(0.5); const aangesproken = bs.c.cut === bs.max && bs.violN === 1;
+        O.openFlex(); const venster = document.querySelector('#flex').textContent.includes('CSC-afroep plannen') && document.querySelector('#flex').textContent.includes('Blokstroom'); O.closeFlex();
+        const eur0 = O.GAME.stats.flexEur || 0; T.step(from + 5 - O.SIM.t); const actief = kas.c.cut === kas.max && kas.src === 'afroep', kost = (O.GAME.stats.flexEur || 0) > eur0;
+        const vast = !O.flexCancel('F6', 0); T.step(60); const klaar = kas.c.cut === 0;
+        return { teLaat, ok, dubbel, gepland, prog, blok, bsDag, bsNacht, geenIntra, overschrijding, aangesproken, venster, actief, kost, vast, klaar }; });
+      for (const [k, v] of Object.entries(r)) assert(v, `${k} klopt niet: ${JSON.stringify(r)}`);
+  } },
   { name: 'flexibel vermogen en overbelaste distributietrafo', query: '?autostart&t=18.5', async run(p) {
       const r = await p.evaluate(() => { T.quiet(); const O = OS, f = O.FEEDERS.find(x => x.id === 'F6'); O.SIM.paused = false; T.step(0.5); const p0 = f.P;
         O.setFlex('F6', 1); T.step(1); const teVroeg = !f.cut; T.step(2); const p1 = f.P, eur = O.GAME.stats.flexEur;

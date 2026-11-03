@@ -42,7 +42,7 @@ function saveGame(silent,slot){if(!canSave())return false;slot=slot||(silent?'au
     D:Object.fromEntries(Object.values(D).map(d=>[d.id,grab(d,KEYS.dev)])),F:Object.fromEntries(FEEDERS.map(f=>[f.id,grab(f,KEYS.feed)])),
     LV:Object.fromEntries(LVG.map(g=>[g.id,grab(g,KEYS.lvg)])),SEC:Object.fromEntries(RING.secs.map(s=>[s.id,grab(s,KEYS.sec)])),
     ST:Object.fromEntries(RING.stations.map(s=>[s.id,grab(s,KEYS.st)])),BUSF:Object.keys(BUSF),
-    WX:{type:WX.type,lock:WX.lock,next:WX.next,cur:{...WX.cur},cover:WX.cover},FLEX:FLEX.map(f=>({id:f.id,req:f.req,at:f.at})),PROT:JSON.parse(JSON.stringify(PROT)),
+    WX:{type:WX.type,lock:WX.lock,next:WX.next,cur:{...WX.cur},cover:WX.cover},FLEX:FLEX.map(f=>({id:f.id,req:f.req,at:f.at,live:f.live,calls:f.calls,nf:f.nf,viol:f.viol,violEnd:f.violEnd,violN:f.violN})),PROT:JSON.parse(JSON.stringify(PROT)),
     TASK:taskSave(),taskSeq,taskCycle,INC:{next:INC.next,done:INC.done,active:INC.active?.def.id||null},PHONE:{...PHONE.stats},EF:EF.on,LS:{busy:GENSET.busy,orders:LS_ORDERS.map(o=>({...o}))},
     REC:{samples:REC.samples.slice(-600),events:REC.events.slice(-1500)},
     GIS:{m:Object.fromEntries(CABLES.map(c=>[c.id,c.moffen.map(m=>[m.d,m.x,m.z,m.year])])),w:Object.fromEntries(CABLES.filter(c=>c.work).map(c=>[c.id,c.work])),k:{next:KLIC.next,seq:KLIC.seq,jobs:KLIC.jobs.map(j=>({...j,c:j.c.id}))}}};
@@ -76,7 +76,7 @@ function resumeGame(d){$('#intro').classList.add('hidden');SAVE_SLOT=d.slot||'au
   for(const k in BUSF)delete BUSF[k];d.BUSF.forEach(b=>BUSF[b]=true);
   setSeason(d.season);Object.assign(WX,d.WX);WX.cur={...d.WX.cur};applySnowCover?.();
   for(let i=FLEX.length-1;i>=0;i--)if(!FLEX_DEF.some(x=>x.id===FLEX[i].id))FLEX.splice(i,1);
-  d.FLEX.forEach(s=>{const f=FLEX.find(x=>x.id===s.id);if(f){f.req=s.req;f.at=s.at;}});
+  d.FLEX.forEach(s=>{const f=FLEX.find(x=>x.id===s.id);if(f){f.req=s.req;f.at=s.at;f.live=s.live??s.req;f.calls=s.calls||[];f.nf=s.nf||0;f.viol=s.viol||0;f.violEnd=s.violEnd||0;f.violN=s.violN||0;}});
   for(const k of ['f','ln','tr'])for(const id in d.PROT[k])if(PROT[k][id])Object.assign(PROT[k][id],d.PROT[k][id]);
   TASK=null;taskSeq=d.taskSeq;taskCycle=d.taskCycle;taskLoad(d.TASK);
   Object.assign(PHONE.stats,d.PHONE);EF.on=d.EF||null;if(d.LS){GENSET.busy=d.LS.busy;LS_ORDERS.splice(0,LS_ORDERS.length,...d.LS.orders);}REC.samples=d.REC.samples;REC.events=d.REC.events;REC.lastM=null;

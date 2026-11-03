@@ -281,7 +281,7 @@ Dit is **geen iteratieve loadflow**, maar een snelle algebraïsche benadering di
   - Koppelingen via kabelkasten (`LS_LINKS`).
   - Drie aggregaten (`GENSET`).
   - Opdrachten aan monteurs (`lsOrder`): schakelen, aggregaat en trap. Daarnaast rotatie en afschakelen bij tekort.
-- **Flex (`04-8-flex.js`):** zeven contracten (`FLEX_DEF`) die na 2 min ingaan en geld kosten. Distributietrafo's boven 120 % laten hun zekeringen doorslaan.
+- **Flex (`04-8-flex.js`):** zeven contracten (`FLEX_DEF`) met een `type`: `afroep` (CSC, `flexCall(id,van,tot,deel)` minstens `FLEX_LEAD` = 180 min vooraf, `flexCancel`), `blok` (vast tijdvak `blk`), `blokstroom` (overdag `max` minder, 's nachts `night` meer, overschrijdingen met `flexWarn`) en `nonfirm` (automatisch via `f.nf`). `setFlex` is het intraday-bod (na 2 min, dubbel tarief). `flexWant(f,t,plan)` geeft per tijdstip de terugregeling en de bron; `flexTick` zet die op `c.cut` en rekent de kosten per bron (`FLEX_EUR`). `planCut` voedt `demandAt` in de prognose (`demandAt(h,false)` = zonder flex). Distributietrafo's boven 120 % laten hun zekeringen doorslaan.
 - **Aardfout (`04-c-aardfout.js`):** het 10 kV-net is gecompenseerd (Petersen-spoel). Een aardfout geeft een nulspanning U0 en geen trip. Na 50 min kan een dubbele aardfout ontstaan.
 
 ---
