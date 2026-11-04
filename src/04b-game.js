@@ -91,6 +91,7 @@ function restoreTrack(f,on){if(!on){f.unplanned=!SIM.manualFlag;f.wait=0;return;
   if(f.unplanned){const w=f.wait||0;if(w<=15){GAME.stats.fast++;award(40,`${f.id} bliksemsnel hersteld`);}else if(w<=40){GAME.stats.fast++;award(20,`${f.id} snel hersteld`);}f.unplanned=false;}}
 
 function applyMode(id){
+  if(!RESUMING)Object.values(D).forEach(d=>{if(d.lr)d.lr='R';if(d.lrLock)d.lrLock=false;});
   const m=MODES[id]||MODES.free;GAME.mode=MODES[id]?id:'free';const df=DIFFS[GAME.diff]||DIFFS.normaal;
   SIM.t=(params.get('t')?parseFloat(params.get('t')):m.start)*60;GAME.t0=SIM.t;GAME.endT=m.dur?SIM.t+m.dur:null;
   GAME.events=!m.scen;GAME.tasks=!m.scen;SIM.nextEvent=SIM.t+16*df.ev;SIM.nextTaskAt=m.scen?Infinity:SIM.t+3;

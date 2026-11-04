@@ -1,7 +1,8 @@
 {
-  "build": "5621a66f374c",
-  "date": "2026-11-03",
+  "build": "c0a58543db55",
+  "date": "2026-11-04",
   "previous": [
+    "5621a66f374c",
     "bda055136a22",
     "4894dbf32e6a",
     "006a10c6f56b",
@@ -179,6 +180,10 @@
     "5621a66f374c": {
       "date": "2026-11-03",
       "text": "Flexcontracten zoals bij echte netbeheerders: CSC met afroep (minstens 3 uur vooraf, goedkoopst), CSC met tijdsblok (batterij 17–20 u), blokstroom voor het transportbedrijf (00–06 u, met overschrijdingen) en non-firm voor het zonnepark. Intraday blijft mogelijk voor het dubbele tarief. Afroep plannen in het flexvenster (C); de prognose rekent met de geplande flex en toont afroepen als groene banden"
+    },
+    "c0a58543db55": {
+      "date": "2026-11-04",
+      "text": "Lokaal/afstand-schakelaar beter leesbaar: op het relais staan LOKAAL (oranje) en AFSTAND (groen), de actieve stand licht op en het display noemt de stand. Een nieuw spel begint altijd met alle velden op AFSTAND en zonder hangsloten"
     }
   }
 }

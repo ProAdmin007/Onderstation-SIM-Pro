@@ -28,7 +28,7 @@ function drawRelay(s){const g=s.g,d=D[s.id],R=RLY[s.id]||{},meas=s.kind==='meas'
   if(R.trip){g.fillStyle='#4a0e06';g.fillText(`TRIP ${R.fn}`,26,64);g.fillText(R.ph||'',26,84);g.fillText(R.I?`${R.I}  t ${R.tt} s`:'',26,104);g.font='bold 13px monospace';g.fillText(`${fmtClock(R.t)}  RESET: C`,26,126);}
   else if(meas){const u=n=>(U*(1+n*0.004)).toFixed(2).replace('.',',');g.fillText(`U12 ${u(0)} kV`,26,64);g.fillText(`U23 ${u(1)} kV`,26,84);g.fillText(`U31 ${u(-1)} kV`,26,104);g.fillText(`f 50,00 Hz  ${s.es&&D[s.es]?.state?'AARD':''}`,26,126);}
   else{const I=d.I||0,p=k=>String(Math.round(I*(1+k*0.012))).padStart(4);g.fillText(`IL1${p(0)} A IL2${p(1)} A`,26,64);g.fillText(`IL3${p(-1)} A IE    0 A`,26,84);
-    g.fillText(`U ${kv} kV  ${st}`,26,104);g.font='bold 13px monospace';g.fillText(`BEDRIJF  ${relayStart(d)?'START':'NORMAAL'}${s.es&&D[s.es]?.state?' AARD':''}`,26,126);}
+    g.fillText(`U ${kv} kV  ${st}`,26,104);g.font='bold 13px monospace';g.fillText(`${relayStart(d)?'START':'NORMAAL'}${s.es&&D[s.es]?.state?' AARD':''}  ${d.lr==='L'?'LOKAAL':'AFSTAND'}`,26,126);}
   // LED-kolom met opschriften
   const lit=[true,relayStart(d),!!R.trip,R.trip&&/^I> /.test(R.fn+' ')&&R.fn!=='I>>',R.trip&&R.fn==='I>>',R.trip&&/Ie/.test(R.fn),false,false];
   RLY_LED.forEach(([t,c],i)=>{const y=158+i*19,l=!meas||i===0?lit[i]:false;g.beginPath();g.arc(30,y,5.5,0,7);if(l){g.shadowColor=c;g.shadowBlur=10;g.fillStyle=c;}else g.fillStyle='#4a4f55';g.fill();g.shadowBlur=0;
@@ -37,9 +37,10 @@ function drawRelay(s){const g=s.g,d=D[s.id],R=RLY[s.id]||{},meas=s.kind==='meas'
   const key=(x,y,w,h,t,c='#5a6068')=>{g.fillStyle=c;g.fillRect(x,y,w,h);g.fillStyle='#e9edf0';g.font='bold 10px Arial';g.textAlign='center';g.fillText(t,x+w/2,y+h/2+4);g.textAlign='left';};
   key(170,150,22,18,'▲');key(146,172,22,18,'◀');key(170,172,22,18,'E','#3b6e3b');key(194,172,22,18,'▶');key(170,194,22,18,'▼');
   key(146,150,22,18,'ESC');key(194,150,22,18,'C','#8a2a2a');for(let k=0;k<4;k++)key(140+k*24,222,20,16,'F'+(k+1));
-  g.fillStyle='#1a1a1a';g.beginPath();g.arc(206,268,14,0,7);g.fill();g.strokeStyle='#bbb';g.lineWidth=3;g.beginPath();g.moveTo(206,268);g.lineTo(d.lr==='L'?198:214,256);g.stroke();
+  // sleutelschakelaar: wijzer naar de actieve stand, die stand verlicht (oranje LOKAAL, groen AFSTAND)
+  const loc=d.lr==='L';g.fillStyle='#1a1a1a';g.beginPath();g.arc(206,272,13,0,7);g.fill();g.strokeStyle='#e9edf0';g.lineWidth=4;g.beginPath();g.moveTo(206,272);g.lineTo(loc?194:218,260);g.stroke();
   if(d.lrLock){g.fillStyle='#d8262c';g.fillRect(222,268,16,13);g.strokeStyle='#ccc';g.lineWidth=2.5;g.beginPath();g.arc(230,268,5,Math.PI,0);g.stroke();}
-  g.fillStyle='#d8dde2';g.font='bold 10px Arial';g.fillText('L',186,262);g.fillText('R',220,262);
+  g.font='bold 9px Arial';g.textAlign='center';[[168,'LOKAAL',loc,'#f0a43a'],[222,'AFSTAND',!loc,'#3fe07a']].forEach(([x,t,on,c])=>{g.fillStyle=on?c:'#3a3f45';g.fillRect(x-22,246,44,12);g.fillStyle=on?'#111':'#8d959d';g.fillText(t,x,255);});g.textAlign='left';
   g.fillStyle='#a32020';g.fillRect(140,292,40,14);g.fillStyle='#fff';g.font='bold 9px Arial';g.fillText('TEST',148,303);g.fillStyle='#16181b';g.fillRect(188,292,14,10);
   s.t.needsUpdate=true;}
 // statusregel in het veldpaneel
