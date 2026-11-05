@@ -11,7 +11,8 @@ function updateHUD(){
 }
 // lampen die uit staan doen niet mee in de shaders (per groep, zodat er niet bij elke beweging opnieuw gecompileerd wordt)
 function lightsTick(){const vis=(l,on)=>{if(l&&l.visible!==on)l.visible=on;};SPOTS.forEach(s=>vis(s,s.intensity>0));(LAMPS.spots||[]).forEach(s=>vis(s,NIGHT>0.3));
-  vis(TORCH.light,TORCH.on);vis(FIRE_LIGHT,FIRE_LIGHT.intensity>0);ROOM_LIGHTS.forEach(l=>vis(l,ROOMLIT));}
+  vis(TORCH.light,TORCH.on||NIGHT>0.3);   // 's avonds altijd meetellen (intensiteit 0 als hij uit is): aan/uit zetten geeft dan geen nieuwe shaders
+  vis(FIRE_LIGHT,FIRE_LIGHT.intensity>0);ROOM_LIGHTS.forEach(l=>vis(l,ROOMLIT));}
 function setSpeed(s){if(GAME.ended)return;if(PREVIEW)return deny('Eerst terug naar de dienst (Weer en tijd)');if(s===0)SIM.paused=!SIM.paused;else{SIM.speed=s;SIM.paused=false;}syncSpeed();}
 function syncSpeed(){document.querySelectorAll('#speed button').forEach(b=>{const v=+b.dataset.s;b.classList.toggle('on',v===0?SIM.paused:(!SIM.paused&&v===SIM.speed));});updateHUD();}
 $('#speed').addEventListener('click',e=>{const b=e.target.closest('button');if(b)setSpeed(+b.dataset.s);});

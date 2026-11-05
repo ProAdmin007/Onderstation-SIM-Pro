@@ -6926,7 +6926,7 @@ function gisDrawExtra(g,cv){const s=TAB.zoom,now=performance.now();
 // ============================================================ updatecontrole in het hoofdmenu: is er op GitHub een nieuwere versie?
 // De build zet een vingerafdruk in BUILD_ID (tests/stamp.mjs) en houdt version.json bij met eerdere versies.
 // Staat onze versie bij de eerdere versies op GitHub, dan is er een update; staat hij er niet in, dan is het eigen (nieuwer) werk.
-const BUILD_ID='c0a58543db55';
+const BUILD_ID='bb73c813ce16';
 const UPD_REPO='https://github.com/ProAdmin007/Onderstation-SIM-Pro';
 const UPD_URL='https://raw.githubusercontent.com/ProAdmin007/Onderstation-SIM-Pro/main/version.json';
 // toestand van de controle: idle, bezig, actueel, nieuw, eigen of fout
@@ -7149,7 +7149,8 @@ function updateHUD(){
 }
 // lampen die uit staan doen niet mee in de shaders (per groep, zodat er niet bij elke beweging opnieuw gecompileerd wordt)
 function lightsTick(){const vis=(l,on)=>{if(l&&l.visible!==on)l.visible=on;};SPOTS.forEach(s=>vis(s,s.intensity>0));(LAMPS.spots||[]).forEach(s=>vis(s,NIGHT>0.3));
-  vis(TORCH.light,TORCH.on);vis(FIRE_LIGHT,FIRE_LIGHT.intensity>0);ROOM_LIGHTS.forEach(l=>vis(l,ROOMLIT));}
+  vis(TORCH.light,TORCH.on||NIGHT>0.3);   // 's avonds altijd meetellen (intensiteit 0 als hij uit is): aan/uit zetten geeft dan geen nieuwe shaders
+  vis(FIRE_LIGHT,FIRE_LIGHT.intensity>0);ROOM_LIGHTS.forEach(l=>vis(l,ROOMLIT));}
 function setSpeed(s){if(GAME.ended)return;if(PREVIEW)return deny('Eerst terug naar de dienst (Weer en tijd)');if(s===0)SIM.paused=!SIM.paused;else{SIM.speed=s;SIM.paused=false;}syncSpeed();}
 function syncSpeed(){document.querySelectorAll('#speed button').forEach(b=>{const v=+b.dataset.s;b.classList.toggle('on',v===0?SIM.paused:(!SIM.paused&&v===SIM.speed));});updateHUD();}
 $('#speed').addEventListener('click',e=>{const b=e.target.closest('button');if(b)setSpeed(+b.dataset.s);});

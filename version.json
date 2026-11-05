@@ -1,7 +1,8 @@
 {
-  "build": "c0a58543db55",
-  "date": "2026-11-04",
+  "build": "bb73c813ce16",
+  "date": "2026-11-05",
   "previous": [
+    "c0a58543db55",
     "5621a66f374c",
     "bda055136a22",
     "4894dbf32e6a",
@@ -184,6 +185,10 @@
     "c0a58543db55": {
       "date": "2026-11-04",
       "text": "Lokaal/afstand-schakelaar beter leesbaar: op het relais staan LOKAAL (oranje) en AFSTAND (groen), de actieve stand licht op en het display noemt de stand. Een nieuw spel begint altijd met alle velden op AFSTAND en zonder hangsloten"
+    },
+    "bb73c813ce16": {
+      "date": "2026-11-05",
+      "text": "Geen hapering meer bij de zaklamp: 's avonds telt de zaklamp altijd mee in de verlichting (uit = lichtsterkte 0), zodat aan- en uitzetten geen nieuwe shaders meer kost"
     }
   }
 }
