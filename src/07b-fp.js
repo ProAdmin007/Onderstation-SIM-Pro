@@ -99,12 +99,12 @@ function unlockPointer(){if(document.pointerLockElement){FP.expectUnlock=true;do
 document.addEventListener('pointerlockchange',()=>{const locked=document.pointerLockElement===canvasEl;document.body.classList.toggle('fplocked',locked);
   if(!locked&&FP.on&&!FP.expectUnlock)openMenu();   // Esc tijdens rondlopen → pauzemenu
   FP.expectUnlock=false;});
-canvasEl.addEventListener('click',()=>{if(!FP.on||menuOpen())return;if(document.pointerLockElement!==canvasEl){canvasEl.requestPointerLock?.();return;}if(FP.look)selectDevice(FP.look);});
+canvasEl.addEventListener('click',()=>{if(!FP.on||menuOpen())return;if(document.pointerLockElement!==canvasEl){canvasEl.requestPointerLock?.();return;}if(FP.look)selectDevice(FP.look,true);});
 addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;
   if(e.code==='KeyV'){toggleFP();return;}
   // E: tijdens rondlopen cursor vrijgeven (paneel open als je naar iets kijkt), nog een keer E = verder lopen
   if(e.code==='KeyE'){e.preventDefault();
-    if(FP.on){if(document.pointerLockElement===canvasEl){if(FP.look)selectDevice(FP.look);FP.keys={};unlockPointer();}else{if(SEL)selectDevice(null);if(!menuOpen())canvasEl.requestPointerLock?.();}}
+    if(FP.on){if(document.pointerLockElement===canvasEl){if(FP.look)selectDevice(FP.look,true);FP.keys={};unlockPointer();}else{if(SEL)selectDevice(null);if(!menuOpen())canvasEl.requestPointerLock?.();}}
     else if(SEL)selectDevice(null);
     return;}
   if(!FP.on)return;FP.keys[e.code]=true;

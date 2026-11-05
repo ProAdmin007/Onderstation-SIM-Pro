@@ -1,7 +1,8 @@
 {
-  "build": "bb73c813ce16",
+  "build": "15c0ecc8b255",
   "date": "2026-11-05",
   "previous": [
+    "bb73c813ce16",
     "c0a58543db55",
     "5621a66f374c",
     "bda055136a22",
@@ -189,6 +190,10 @@
     "bb73c813ce16": {
       "date": "2026-11-05",
       "text": "Geen hapering meer bij de zaklamp: 's avonds telt de zaklamp altijd mee in de verlichting (uit = lichtsterkte 0), zodat aan- en uitzetten geen nieuwe shaders meer kost"
+    },
+    "15c0ecc8b255": {
+      "date": "2026-11-05",
+      "text": "Bediening via SCADA werkt weer als je in het rondlopen toevallig bij het veld staat: een commando uit SCADA telt nu altijd als op afstand, alleen het veldpaneel ter plaatse (E of F) telt als lokaal. Duidelijkere meldingen bij LOKAAL/AFSTAND"
     }
   }
 }

@@ -2166,12 +2166,14 @@ function syncCheck(d){const c=COUPLERS[d.id];if(!c||!EN.has(c[0])||!EN.has(c[1])
 function operate(id,to,opts={}){
   const d=D[id];if(!d||!['cb','ds','es','lbs','lvs'].includes(d.type)||d.state===to)return;
   if(SIM.paused)return deny(GAME.ended?'De dienst is afgelopen':'Simulatie gepauzeerd – hervat om te schakelen');
+  // ter plaatse of via SCADA: een commando uit SCADA (opts.local===false) telt nooit als ter plaatse, ook niet als je toevallig bij het veld staat
+  const loc=opts.local===false&&!SIM.localTest?false:localOk(id);
   const dst=d.bay&&RING.stations.find(s=>s.id===d.bay);if(dst&&dst.damaged)return deny(`${dst.id} is beschadigd (${dst.damaged}) – niet bedienbaar. Isoleer vanaf het buurstation.`);
-  {const msg=stationBlock(dst,id,to,d.type==='lvs'||localOk(id));if(msg)return deny(msg);}   // koperdiefstal, trafobrand
-  if(d.type==='lvs'&&!opts.crew&&!localOk(id))return lsSwitchOrder(id,to);   // LS: lokaal of via een monteur
-  if(MEP_IDS.has(id)&&localOk(id)&&!mpAllowed())return deny('Geen toestemming van Netbeheer Noord om in OS Meppel te schakelen – bel eerst (knop in het veldpaneel of F bij de deur)');
-  {const lr=lrBlock(id);if(lr)return deny(lr);}
-  if(!scadaReach(id)&&!localOk(id))return deny('SCADA-verbinding verbroken – loop erheen (V), zet het veld op LOKAAL (veldpaneel, E) en bedien het ter plaatse');
+  {const msg=stationBlock(dst,id,to,d.type==='lvs'||loc);if(msg)return deny(msg);}   // koperdiefstal, trafobrand
+  if(d.type==='lvs'&&!opts.crew&&!loc)return lsSwitchOrder(id,to);   // LS: lokaal of via een monteur
+  if(MEP_IDS.has(id)&&loc&&!mpAllowed())return deny('Geen toestemming van Netbeheer Noord om in OS Meppel te schakelen – bel eerst (knop in het veldpaneel of F bij de deur)');
+  {const lr=lrBlock(id,opts.local===false?false:undefined);if(lr)return deny(lr);}
+  if(!scadaReach(id)&&!loc)return deny('SCADA-verbinding verbroken – loop erheen (V), zet het veld op LOKAAL (veldpaneel, E) en bedien het ter plaatse');
   if(to===1&&/-T$/.test(id)&&RING.stations.find(s=>s.id+'-T'===id)?.fuse)return deny('Zekeringen nog niet vervangen – wacht op de monteur');
   if(d.busy)return deny('Bediening loopt nog…');
   if(d.type==='cb'&&manualRefuses(d)){pushAlarm(`${id} reageert niet op het ${to?'in':'uit'}schakelcommando (weigerde eerder ${d.refusals}×) – probeer het opnieuw en laat hem reviseren`,'warn');return deny(`${id} weigert – probeer het opnieuw`);}
@@ -4303,9 +4305,10 @@ let LR_MAP=null;
 function lrPanel(id){if(!LR_MAP&&SCREENS.length){LR_MAP=new Map();SCREENS.forEach(s=>{if(s.kind==='meas')return;LR_MAP.set(s.id,s.id);if(s.es)LR_MAP.set(s.es,s.id);});}return LR_MAP?.get(id)||null;}
 // echt ter plaatse (rondlopen bij het veld); de testmodus SIM.localTest telt hier niet
 const atPanel=id=>{const v=VIEWS[lrPanel(id)||id];return FP.on&&!!v&&camera.position.distanceTo(v.center)<7;};
-function lrBlock(id){const p=lrPanel(id);if(!p||SIM.localTest)return null;const d=D[p],L=d.lr==='L';
-  if(L&&!atPanel(id))return `${p} staat op LOKAAL${d.lrLock?' en is vergrendeld met een hangslot':''} – bedienen op afstand kan niet. Zet hem ter plaatse terug op AFSTAND.`;
-  if(!L&&atPanel(id))return `${p} staat op AFSTAND – zet de lokaal/afstand-schakelaar op LOKAAL om ter plaatse te bedienen (open het veldpaneel)`;return null;}
+// here: ter plaatse (standaard: als je in het rondlopen bij het veld staat), false voor een commando via SCADA
+function lrBlock(id,here=atPanel(id)){const p=lrPanel(id);if(!p||SIM.localTest)return null;const d=D[p],L=d.lr==='L';
+  if(L&&!here)return `Commando via SCADA geweigerd: ${p} staat op LOKAAL${d.lrLock?' en is vergrendeld met een hangslot':''} – bedienen op afstand kan niet. Zet hem ter plaatse terug op AFSTAND.`;
+  if(!L&&here)return `Je bedient ${p} ter plaatse, maar het veld staat op AFSTAND (alleen via SCADA). Zet de lokaal/afstand-schakelaar in het veldpaneel op LOKAAL, of bedien het via SCADA`;return null;}
 function setLR(p,mode){const d=D[p];if(!d)return;if(d.lrLock)return deny('Er hangt een hangslot op de lokaal/afstand-schakelaar – haal het eerst weg');
   if(!atPanel(p)&&!SIM.localTest)return deny('De lokaal/afstand-schakelaar zit op het veld zelf – loop erheen (V)');if(d.lr===mode||(!d.lr&&mode==='R'))return;
   d.lr=mode;AudioSys.burst({type:'highpass',f:2200,gain:0.12,dur:0.04});pushAlarm(`${p}: lokaal/afstand-schakelaar op ${mode==='L'?'LOKAAL':'AFSTAND'}`,'op');refreshAll?.();}
@@ -4632,14 +4635,16 @@ function refreshDevPanel(){if(!SEL)return;const p=$('#devpanel'),d=D[SEL];
   if(d.type==='kiosk'){const s=d.st,o=LS_ORDERS.some(o=>o.st===s.id&&/^gs/.test(o.kind)),q=k=>p.querySelector(`[data-act="${k}"]`);
     if(q('gs'))q('gs').disabled=!!(s.gs||s.genset||o||stationLive(s)||GENSET.busy>=GENSET.units);if(q('gsoff'))q('gsoff').disabled=!s.gs||o;if(q('gsrestart'))q('gsrestart').disabled=s.gs?.state!=='trip'||o;}
   const ar=p.querySelector('[data-act="ar"]');if(ar)ar.textContent=SIM.lines[d.line].ar?'AR uitzetten':'AR aanzetten';}
-$('#devpanel').addEventListener('click',e=>{const op=e.target.closest('[data-op]');if(op){const [id,v]=op.dataset.op.split(':');operate(id,+v);return;}
+$('#devpanel').addEventListener('click',e=>{const op=e.target.closest('[data-op]');if(op){const [id,v]=op.dataset.op.split(':');operate(id,+v,{local:SEL_LOCAL});return;}
   const b=e.target.closest('[data-act]');if(!b||b.disabled)return;const a=b.dataset.act;
-  if(a==='1'||a==='0')operate(SEL,+a);else if(a==='x')selectDevice(null);else if(a==='fly')flyToDevice(SEL);else if(a==='inside'){const v=VIEWPOS[SEL==='MS20'?6:5];flyTo(v[0].clone(),v[1].clone(),2);}
+  if(a==='1'||a==='0')operate(SEL,+a,{local:SEL_LOCAL});else if(a==='x')selectDevice(null);else if(a==='fly')flyToDevice(SEL);else if(a==='inside'){const v=VIEWPOS[SEL==='MS20'?6:5];flyTo(v[0].clone(),v[1].clone(),2);}
   else if(a.startsWith('ratio'))setRatio(a.slice(5));else if(a==='kin')enterKiosk(SEL);else if(a==='callmp')callMeppel();else if(a==='rreset')relayReset(SEL);else if(a==='lr'){const p=lrPanel(SEL);setLR(p,D[p].lr==='L'?'R':'L');}else if(a==='lock'){const p=lrPanel(SEL);setLock(p,!D[p].lrLock);}else if(a==='gs')gsSend(D[SEL].st);else if(a==='gsoff')gsOff(D[SEL].st);else if(a==='gsrestart')gsRestart(D[SEL].st);else if(a==='lvsend')dispatchLV(SEL);
   else if(a==='avr')setAVR(SEL,D[SEL].avr==='auto'?'hand':'auto');else if(a.startsWith('tap'))tapStep(SEL,+a.slice(3));
-  else if(a==='reset')resetLockout(SEL);else if(a==='prot')openProt();else if(a==='ar')toggleAR(D[SEL].line);else if(a.startsWith('sel:'))selectDevice(a.slice(4));
+  else if(a==='reset')resetLockout(SEL);else if(a==='prot')openProt();else if(a==='ar')toggleAR(D[SEL].line);else if(a.startsWith('sel:'))selectDevice(a.slice(4),SEL_LOCAL);
   else if(a==='scada'){$('#scada').classList.remove('min');$('#scada').animate([{boxShadow:'0 0 0 3px #f0a43a'},{boxShadow:'0 0 0 0 transparent'}],{duration:900});}});
-function selectDevice(id){SEL=id&&D[id]?id:null;const tabs=SEL&&SLD.devTab[SEL];if(tabs&&!tabs.has(SLD.tab))setTab([...tabs][0]);renderDevPanel();updateSLD();
+// local: paneel ter plaatse geopend (rondlopen, E of klik op het veld), anders via SCADA of het overzicht
+let SEL_LOCAL=false;
+function selectDevice(id,local=false){SEL=id&&D[id]?id:null;SEL_LOCAL=!!(SEL&&local&&FP.on);const tabs=SEL&&SLD.devTab[SEL];if(tabs&&!tabs.has(SLD.tab))setTab([...tabs][0]);renderDevPanel();updateSLD();
   const v=SEL&&VIEWS[SEL];selBox.visible=!!v;if(v)selBox.box.copy(v.box).expandByScalar(0.25);}
 function flyToDevice(id){const v=VIEWS[id];if(!v)return;if(v.flyPos)return flyTo(v.flyPos.clone(),v.flyTarget.clone());const s=v.box.getSize(V3()).length();const dist=clamp(s*1.3,9,60);
   const dir=camera.position.clone().sub(v.center).setY(0).normalize();flyTo(v.center.clone().addScaledVector(dir,dist).setY(v.center.y+dist*0.45),v.center.clone());}
@@ -4792,12 +4797,12 @@ function unlockPointer(){if(document.pointerLockElement){FP.expectUnlock=true;do
 document.addEventListener('pointerlockchange',()=>{const locked=document.pointerLockElement===canvasEl;document.body.classList.toggle('fplocked',locked);
   if(!locked&&FP.on&&!FP.expectUnlock)openMenu();   // Esc tijdens rondlopen → pauzemenu
   FP.expectUnlock=false;});
-canvasEl.addEventListener('click',()=>{if(!FP.on||menuOpen())return;if(document.pointerLockElement!==canvasEl){canvasEl.requestPointerLock?.();return;}if(FP.look)selectDevice(FP.look);});
+canvasEl.addEventListener('click',()=>{if(!FP.on||menuOpen())return;if(document.pointerLockElement!==canvasEl){canvasEl.requestPointerLock?.();return;}if(FP.look)selectDevice(FP.look,true);});
 addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;
   if(e.code==='KeyV'){toggleFP();return;}
   // E: tijdens rondlopen cursor vrijgeven (paneel open als je naar iets kijkt), nog een keer E = verder lopen
   if(e.code==='KeyE'){e.preventDefault();
-    if(FP.on){if(document.pointerLockElement===canvasEl){if(FP.look)selectDevice(FP.look);FP.keys={};unlockPointer();}else{if(SEL)selectDevice(null);if(!menuOpen())canvasEl.requestPointerLock?.();}}
+    if(FP.on){if(document.pointerLockElement===canvasEl){if(FP.look)selectDevice(FP.look,true);FP.keys={};unlockPointer();}else{if(SEL)selectDevice(null);if(!menuOpen())canvasEl.requestPointerLock?.();}}
     else if(SEL)selectDevice(null);
     return;}
   if(!FP.on)return;FP.keys[e.code]=true;
@@ -6926,7 +6931,7 @@ function gisDrawExtra(g,cv){const s=TAB.zoom,now=performance.now();
 // ============================================================ updatecontrole in het hoofdmenu: is er op GitHub een nieuwere versie?
 // De build zet een vingerafdruk in BUILD_ID (tests/stamp.mjs) en houdt version.json bij met eerdere versies.
 // Staat onze versie bij de eerdere versies op GitHub, dan is er een update; staat hij er niet in, dan is het eigen (nieuwer) werk.
-const BUILD_ID='bb73c813ce16';
+const BUILD_ID='15c0ecc8b255';
 const UPD_REPO='https://github.com/ProAdmin007/Onderstation-SIM-Pro';
 const UPD_URL='https://raw.githubusercontent.com/ProAdmin007/Onderstation-SIM-Pro/main/version.json';
 // toestand van de controle: idle, bezig, actueel, nieuw, eigen of fout

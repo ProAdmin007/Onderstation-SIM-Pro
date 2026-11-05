@@ -314,6 +314,16 @@ const TESTS = [
       assert(r.aan && r.I > 0 && r.x < 1, `zaklamp ging niet aan: ${JSON.stringify(r)}`);
       assert(!r.naUit && r.I2 === 0, `zaklamp blijft aan na stoppen met rondlopen: ${JSON.stringify(r)}`);
   } },
+  { name: 'lokaal/afstand: SCADA-commando terwijl je bij het veld staat', query: '?autostart&t=12', async run(p) {
+      const r = await p.evaluate(() => { T.quiet(); const O = OS, D = O.D; O.SIM.paused = false;
+        O.enterFP(); const c = O.VIEWS['V-F6'].center; O.FP.pos.set(c.x + 1.5, 0, c.z + 1.5); O.camera.position.set(c.x + 1.5, 1.7, c.z + 1.5);
+        const bij = O.lrBlock('V-F6') !== null;
+        O.selectDevice('V-F6'); document.querySelector('#devpanel [data-act="0"]').click(); const viaScada = D['V-F6'].state === 0; for (const k in D) D[k].busy = false;
+        O.selectDevice('V-F6', true); document.querySelector('#devpanel [data-act="1"]')?.click(); const terPlaatsGeweigerd = D['V-F6'].state === 0 && /AFSTAND/.test(document.querySelector('#toast').textContent);
+        O.selectDevice(null); O.exitFP(); O.operate('V-F6', 1); for (const k in D) D[k].busy = false;
+        return { bij, viaScada, terPlaatsGeweigerd, terug: D['V-F6'].state === 1 }; });
+      for (const [k, v] of Object.entries(r)) assert(v, `${k} klopt niet: ${JSON.stringify(r)}`);
+  } },
   { name: 'flexcontracten: CSC-afroep, tijdsblok, blokstroom en prognose', query: '?autostart&t=18.5', async run(p) {
       const r = await p.evaluate(() => { T.quiet(); const O = OS, F = id => O.FLEX.find(f => f.id === id); O.SIM.paused = false; T.step(0.5);
         const t0 = O.SIM.t, kas = F('F6'), from = Math.ceil((t0 + O.FLEX_LEAD) / 60) * 60;

@@ -96,9 +96,10 @@ let LR_MAP=null;
 function lrPanel(id){if(!LR_MAP&&SCREENS.length){LR_MAP=new Map();SCREENS.forEach(s=>{if(s.kind==='meas')return;LR_MAP.set(s.id,s.id);if(s.es)LR_MAP.set(s.es,s.id);});}return LR_MAP?.get(id)||null;}
 // echt ter plaatse (rondlopen bij het veld); de testmodus SIM.localTest telt hier niet
 const atPanel=id=>{const v=VIEWS[lrPanel(id)||id];return FP.on&&!!v&&camera.position.distanceTo(v.center)<7;};
-function lrBlock(id){const p=lrPanel(id);if(!p||SIM.localTest)return null;const d=D[p],L=d.lr==='L';
-  if(L&&!atPanel(id))return `${p} staat op LOKAAL${d.lrLock?' en is vergrendeld met een hangslot':''} – bedienen op afstand kan niet. Zet hem ter plaatse terug op AFSTAND.`;
-  if(!L&&atPanel(id))return `${p} staat op AFSTAND – zet de lokaal/afstand-schakelaar op LOKAAL om ter plaatse te bedienen (open het veldpaneel)`;return null;}
+// here: ter plaatse (standaard: als je in het rondlopen bij het veld staat), false voor een commando via SCADA
+function lrBlock(id,here=atPanel(id)){const p=lrPanel(id);if(!p||SIM.localTest)return null;const d=D[p],L=d.lr==='L';
+  if(L&&!here)return `Commando via SCADA geweigerd: ${p} staat op LOKAAL${d.lrLock?' en is vergrendeld met een hangslot':''} – bedienen op afstand kan niet. Zet hem ter plaatse terug op AFSTAND.`;
+  if(!L&&here)return `Je bedient ${p} ter plaatse, maar het veld staat op AFSTAND (alleen via SCADA). Zet de lokaal/afstand-schakelaar in het veldpaneel op LOKAAL, of bedien het via SCADA`;return null;}
 function setLR(p,mode){const d=D[p];if(!d)return;if(d.lrLock)return deny('Er hangt een hangslot op de lokaal/afstand-schakelaar – haal het eerst weg');
   if(!atPanel(p)&&!SIM.localTest)return deny('De lokaal/afstand-schakelaar zit op het veld zelf – loop erheen (V)');if(d.lr===mode||(!d.lr&&mode==='R'))return;
   d.lr=mode;AudioSys.burst({type:'highpass',f:2200,gain:0.12,dur:0.04});pushAlarm(`${p}: lokaal/afstand-schakelaar op ${mode==='L'?'LOKAAL':'AFSTAND'}`,'op');refreshAll?.();}
