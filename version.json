@@ -1,7 +1,9 @@
 {
-  "build": "15c0ecc8b255",
-  "date": "2026-11-05",
+  "build": "0f210798205e",
+  "date": "2026-11-16",
   "previous": [
+    "a1167b692676",
+    "15c0ecc8b255",
     "bb73c813ce16",
     "c0a58543db55",
     "5621a66f374c",
@@ -194,6 +196,10 @@
     "15c0ecc8b255": {
       "date": "2026-11-05",
       "text": "Bediening via SCADA werkt weer als je in het rondlopen toevallig bij het veld staat: een commando uit SCADA telt nu altijd als op afstand, alleen het veldpaneel ter plaatse (E of F) telt als lokaal. Duidelijkere meldingen bij LOKAAL/AFSTAND"
+    },
+    "0f210798205e": {
+      "date": "2026-11-16",
+      "text": "Kabelkelder onder de 10 kV- en 20 kV-ruimte: loop de trap af (gele leuning bij de voorgevel) en zie per veld drie rode MS-kabels door de vloer komen en over de kabelgoot naar de brandwerende doorvoering lopen, met een label per veld"
     }
   }
 }

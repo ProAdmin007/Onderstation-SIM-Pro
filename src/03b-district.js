@@ -143,7 +143,8 @@ function updateKioskLight(){KUPD.forEach(f=>f());const i=camInside(),cp=camera.p
   // buiten: de schakelruimte waar je vlak bij staat blijft verlicht (je kijkt door de deur naar binnen)
   if(!r&&cp.y<12)r=ROOMS.find(q=>q.lightPos&&cp.x>q.x0-12&&cp.x<q.x1+12&&cp.z>q.z0-12&&cp.z<q.z1+12)||null;
   ROOMLIT=!!r;ROOM_LIGHTS.forEach(l=>l.intensity=0);if(!r)return;
-  if(r.lightPos)r.lightPos.forEach((p,k)=>{const l=ROOM_LIGHTS[k];if(!l)return;l.position.copy(p);l.distance=9;l.intensity=70;});
+  const low=r.cellar&&FP.on&&FP.level<0;
+  if(r.lightPos)(low?r.cellar.lightPos:r.lightPos).forEach((p,k)=>{const l=ROOM_LIGHTS[k];if(!l)return;l.position.copy(p);l.distance=low?8:9;l.intensity=low?40:70;});
   else if(r.kiosk||r.id==='SRV'||r.meppel){kioskLight.position.set((r.x0+r.x1)/2,r.y1-0.3,(r.z0+r.z1)/2);kioskLight.distance=r.kiosk?7:16;kioskLight.intensity=r.kiosk?22:110;}}
 function enterKiosk(id){const r=ROOMS.find(r=>r.kioskId===id);if(!r)return;FP.last={x:r.cx,z:r.cz,yaw:r.yaw,pitch:-0.08};
   if(FP.on){FP.pos.set(r.cx,0,r.cz);FP.yaw=r.yaw;FP.pitch=-0.08;}else enterFP();if(SEL)selectDevice(null);}

@@ -10,8 +10,12 @@ const rectsOverlap=(a,b,m=0)=>Math.min(a[2],b[2])-Math.max(a[0],b[0])>-m&&Math.m
 // is deze plek vrij van objecten van deze soorten? (m = extra marge in meters)
 const layFree=(r,kinds,m=0)=>!LAYOUT.some(o=>kinds.includes(o.kind)&&rectsOverlap(o.r,r,m));
 const FENCE = {x0:-48,x1:92,z0:-44,z1:68,gate:[20,30],gateW:[36.5,45.5]};   // gateW: poort in de westkant voor de weg naar de RWZI
-function buildGround(){
-  groundQuad(-10000,-10000,10000,10000,-0.5,MAT.water,20);
+// kabelkelder onder de 10 kV- en 20 kV-ruimte: vloer op CELLAR.y, plafond op CELLAR.top (onderkant sokkel),
+// trapgat van len × wid langs de voorgevel vanaf x = at[id]; de trap daalt in de richting +x
+const CELLAR={y:-2.4,top:0,len:4.4,wid:1.3,at:{MS:9,MS20:52.8}};
+const cellarHole=b=>{const sx=CELLAR.at[b.id];return sx==null?null:[sx,b.z0+0.3,sx+CELLAR.len,b.z0+0.3+CELLAR.wid];};
+function buildGround(){const HOLES=BUILDINGS.map(cellarHole).filter(Boolean);
+  groundQuadHoles(-10000,-10000,10000,10000,-0.5,MAT.water,20,HOLES);
   // kavels met sloten (Nederlands polderlandschap)
   const xs=[-170,210],zs=[-230,420];
   for(let x=170;x<3200;x+=rr(260,460)){xs.push(x+rr(260,460));xs.unshift(-x-rr(260,460));}
@@ -22,10 +26,10 @@ function buildGround(){
   for(let i=0;i<xs.length-1;i++)for(let j=0;j<zs.length-1;j++){
     const x0=xs[i],x1=xs[i+1],z0=zs[j],z1=zs[j+1];
     const home=x0<0&&x1>0&&z0<0&&z1>0;
-    groundQuad(x0+1.6,z0+1.6,x1-1.6,z1-1.6,0,home?MAT.grass:types[Math.floor(R()*types.length)],home?5:7);
+    groundQuadHoles(x0+1.6,z0+1.6,x1-1.6,z1-1.6,0,home?MAT.grass:types[Math.floor(R()*types.length)],home?5:7,HOLES);
   }
   const g=FENCE;
-  groundQuad(g.x0,g.z0,g.x1,g.z1,0.02,MAT.gravel,3);
+  groundQuadHoles(g.x0,g.z0,g.x1,g.z1,0.02,MAT.gravel,3,HOLES);
   // wegen
   groundQuad(22,38,28,3000,0.04,MAT.asphalt,6);lay('road',22,38,28,3000);lay('road',-30,38,86,44);
   groundQuad(-30,38,22,44,0.04,MAT.asphalt,6);
@@ -79,7 +83,10 @@ function buildBuilding({id,x0,x1,z0,z1,doors,label}){
   {let xc=x0;[...doors].sort((a,c)=>a-c).forEach(d=>{brickPart(xc,d-1.1,0,H);brickPart(d-1.1,d+1.1,DH,H);xc=d+1.1;});brickPart(xc,x1,0,H);}
   box(W,H,0.3,bl,root,cx,H/2,z1-0.15);
   box(0.3,H,Dz,bs,root,x0+0.15,H/2,cz);box(0.3,H,Dz,bs,root,x1-0.15,H/2,cz);
-  box(W+0.1,0.45,Dz+0.1,MAT.concreteDark,root,cx,0.22,cz);
+  // sokkel; met een kabelkelder eronder blijft het trapgat open (de onderkant is het kelderplafond)
+  const hole=cellarHole({id,z0});if(!hole)box(W+0.1,0.45,Dz+0.1,MAT.concreteDark,root,cx,0.22,cz);
+  else{const [hx0,hz0,hx1,hz1]=hole,pb=(a,b,c,d)=>box(b-a,0.45,d-c,MAT.concreteDark,root,(a+b)/2,0.225,(c+d)/2);
+    pb(x0-0.05,x1+0.05,z0-0.05,hz0);pb(x0-0.05,x1+0.05,hz1,z1+0.05);pb(x0-0.05,hx0,hz0,hz1);pb(hx1,x1+0.05,hz0,hz1);}
   box(W+0.3,0.25,Dz+0.3,MAT.roof,root,cx,H+0.12,cz);
   for(const z of[z0-0.03,z1+0.03])box(W+0.5,0.3,0.12,MAT.trim,root,cx,H+0.22,z);
   for(const x of[x0-0.03,x1+0.03])box(0.12,0.3,Dz+0.5,MAT.trim,root,x,H+0.22,cz);

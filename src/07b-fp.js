@@ -4,7 +4,9 @@ const FP={on:false,yaw:0,pitch:0,keys:{},pos:new THREE.Vector3(),y:null,bob:0,st
 const REACH=6;
 function addRect(x0,z0,x1,z1){FP.rects.push([Math.min(x0,x1),Math.min(z0,z1),Math.max(x0,x1),Math.max(z0,z1)]);}
 function buildColliders(){
-  FP.rects=[];
+  FP.rects=[];CELLAR_RECTS.length=0;
+  ROOMS.forEach(q=>{const h=q.cellar?.hole;if(!h)return;addRect(h[0],h[3],h[2]+0.06,h[3]+0.06);addRect(h[2],h[1],h[2]+0.06,h[3]+0.06);
+    CELLAR_RECTS.push([h[0]-0.05,h[1],h[0],h[3]],[h[0],h[3],h[2]-0.5,h[3]+0.1]);});
   // apparatuur: de selectieboxen van alle velden en panelen
   Object.values(VIEWS).forEach(v=>{const d=D[v.id];if(!d||['bld','line','bb','es','kiosk','mstr'].includes(d.type))return;addRect(v.box.min.x,v.box.min.z,v.box.max.x,v.box.max.z);});
   // portaalkolommen en railsteunen
@@ -21,10 +23,19 @@ function buildColliders(){
   addRect(F.x0,F.z1-t,F.gate[0],F.z1+t);addRect(F.gate[1],F.z1-t,F.x1,F.z1+t);addRect(F.gate[1],F.z1+0.2,F.gate[1]+10.2,F.z1+1.1);
   DISTRICT_RECTS.forEach(r=>addRect(...r));
 }
-function blockedAt(x,z){const r=0.3;if(x<-200||x>250||z<-110||z>565)return true;
+// lvl -1: in de kabelkelder (alleen voor jezelf, de monteurs blijven boven)
+const CELLAR_RECTS=[];
+const cellarOf=(x,z,m=0)=>ROOMS.find(q=>q.cellar&&x>q.x0-m&&x<q.x1+m&&z>q.z0-m&&z<q.z1+m)?.cellar||null;
+function blockedAt(x,z,lvl=0){const r=0.3;
+  if(lvl<0){const c=cellarOf(x,z,1);if(!c||x<c.x0+r||x>c.x1-r||z<c.z0+r||z>c.z1-r)return true;return CELLAR_RECTS.some(q=>x>q[0]-r&&x<q[2]+r&&z>q[1]-r&&z<q[3]+r);}
+  if(x<-200||x>250||z<-110||z>565)return true;
   if(!mpAllowed()&&!(FP.on&&FP.pos.z<MEPPEL.doorZ))for(const q of MEPPEL.lockRects||[])if(x>q[0]-r&&x<q[2]+r&&z>q[1]-r&&z<q[3]+r)return true;
   for(const q of FP.rects)if(x>q[0]-r&&x<q[2]+r&&z>q[1]-r&&z<q[3]+r)return true;return false;}
-function floorAt(x,z){const r=ROOMS.find(r=>x>r.x0-0.05&&x<r.x1+0.05&&z>r.z0-0.05&&z<r.z1+0.05);if(r)return r.y0;
+// op de keldertrap: de hoogte loopt lineair van de vloer van de schakelruimte naar de keldervloer
+function stairAt(x,z){for(const q of ROOMS){const c=q.cellar,h=c?.hole;if(h&&x>h[0]&&x<h[2]&&z>h[1]&&z<h[3])return {q,c,y:q.y0-(x-h[0])/(h[2]-h[0])*(q.y0-c.y)};}return null;}
+// lvl alleen voor jezelf: dan tellen de trap en de kelder mee
+function floorAt(x,z,lvl){if(lvl!=null){const s=stairAt(x,z);if(s)return s.y;if(lvl<0){const c=cellarOf(x,z);if(c)return c.y;}}
+  const r=ROOMS.find(r=>x>r.x0-0.05&&x<r.x1+0.05&&z>r.z0-0.05&&z<r.z1+0.05);if(r)return r.y0;
   for(const s of STEPS)if(x>s[0]&&x<s[2]&&z>s[1]&&z<s[3])return s[4];return 0.02;}
 // ---- deuren: gaan open als jij (rondlopen of camera) of een monteur in de buurt is, en vallen daarna weer dicht
 function doorTick(dt){const me=FP.on?FP.pos:camera.position.y<4?camera.position:null,crew=NPCS.filter(n=>n.state!=='out').map(n=>n.P.g.position),dist=(p,D_)=>Math.hypot(p.x-D_.p.x,p.z-D_.p.z);
@@ -47,7 +58,7 @@ function enterFP(){
   if(FP.on)return;FP.on=true;fly=null;controls.enabled=false;controls.autoRotate=false;
   const ins=camInside();
   const dir=new THREE.Vector3();camera.getWorldDirection(dir);
-  if(FP.last){FP.pos.set(FP.last.x,0,FP.last.z);FP.yaw=FP.last.yaw;FP.pitch=FP.last.pitch;}   // verder waar je was
+  FP.level=0;if(FP.last){FP.pos.set(FP.last.x,0,FP.last.z);FP.yaw=FP.last.yaw;FP.pitch=FP.last.pitch;FP.level=FP.last.level||0;}   // verder waar je was
   else if(ins&&!blockedAt(camera.position.x,camera.position.z)){FP.pos.set(camera.position.x,0,camera.position.z);FP.yaw=Math.atan2(-dir.x,-dir.z);FP.pitch=0;}
   else{FP.pos.set(25,0,62);FP.yaw=0;FP.pitch=0;}
   FP.y=null;
@@ -56,14 +67,17 @@ function enterFP(){
   canvasEl.requestPointerLock?.();if(!FP.hinted){FP.hinted=true;pushAlarm('Rondlopen: WASD lopen, Shift rennen, muis kijken, F schakelen, E paneel, Z zaklamp, V stoppen, Esc menu','info');}
 }
 function exitFP(){
-  if(!FP.on)return;FP.on=false;FP.keys={};FP.last={x:FP.pos.x,z:FP.pos.z,yaw:FP.yaw,pitch:FP.pitch};unlockPointer();
+  if(!FP.on)return;FP.on=false;FP.keys={};FP.last={x:FP.pos.x,z:FP.pos.z,yaw:FP.yaw,pitch:FP.pitch,level:FP.level||0};unlockPointer();
   const dir=new THREE.Vector3();camera.getWorldDirection(dir);
   camera.rotation.order='XYZ';camera.fov=42;camera.updateProjectionMatrix();
   controls.target.copy(camera.position).addScaledVector(dir,8);controls.enabled=true;controls.update();
   document.body.classList.remove('fp');FP.look=null;hovBox.visible=false;if(TORCH.on)setTorch(false);
 }
+// verdieping bijwerken: op de trap halverwege omslaan, en buiten een kelder altijd boven (ook na verplaatsen)
+function fpLevel(){const s=stairAt(FP.pos.x,FP.pos.z),was=FP.level||0;if(s)FP.level=s.y<(s.q.y0+s.c.y)/2?-1:0;else if(FP.level<0&&!cellarOf(FP.pos.x,FP.pos.z))FP.level=0;
+  if((FP.level||0)!==was)updateKioskLight();}
 function toggleFP(){FP.on?exitFP():enterFP();}
-function pickCenter(){camera.updateMatrixWorld();ray.setFromCamera(new THREE.Vector2(0,0),camera);ray.far=REACH;const ins=camInside();
+function pickCenter(){if(FP.level<0)return null;camera.updateMatrixWorld();ray.setFromCamera(new THREE.Vector2(0,0),camera);ray.far=REACH;const ins=camInside();
   const hits=ray.intersectObjects(pickables,false).filter(h=>h.object.userData.inside===ins&&D[h.object.userData.devId]);ray.far=Infinity;if(!hits.length)return null;
   const d0=hits[0].distance;return hits.filter(h=>h.distance<d0+2.5).sort((a,b)=>a.object.userData.vol-b.object.userData.vol)[0].object.userData.devId;}
 function actionLabel(d){if(d.type==='cb'||d.type==='lvs')return d.state?'UIT schakelen':'IN schakelen';if(['ds','es','lbs'].includes(d.type))return d.state?'openen':'sluiten';return null;}
@@ -76,11 +90,11 @@ function updateFP(dt){
   if(k.KeyD||k.ArrowRight){mx+=rx;mz+=rz;}if(k.KeyA||k.ArrowLeft){mx-=rx;mz-=rz;}
   const len=Math.hypot(mx,mz),moving=len>0&&!!document.pointerLockElement;
   if(moving){mx=mx/len*sp*dt;mz=mz/len*sp*dt;
-    if(!blockedAt(FP.pos.x+mx,FP.pos.z))FP.pos.x+=mx;if(!blockedAt(FP.pos.x,FP.pos.z+mz))FP.pos.z+=mz;
+    const lv=FP.level||0;if(!blockedAt(FP.pos.x+mx,FP.pos.z,lv))FP.pos.x+=mx;if(!blockedAt(FP.pos.x,FP.pos.z+mz,lv))FP.pos.z+=mz;
     FP.bob+=dt*sp*3.2;const ph=Math.floor(FP.bob/Math.PI);
     if(ph!==FP.stepPhase){FP.stepPhase=ph;const inside=camInside();
       if(inside)AudioSys.burst({type:'lowpass',f:500,q:0.7,gain:0.12,dur:0.07});else AudioSys.burst({f:1700+Math.random()*900,q:0.9,gain:0.1+(run?0.05:0),dur:0.13});}}
-  const fl=floorAt(FP.pos.x,FP.pos.z);FP.y=FP.y==null?fl:lerp(FP.y,fl,Math.min(1,dt*10));
+  fpLevel();const fl=floorAt(FP.pos.x,FP.pos.z,FP.level||0);FP.y=FP.y==null?fl:lerp(FP.y,fl,Math.min(1,dt*10));
   // springen: eenvoudige zwaartekracht, landen met een plof
   if(FP.jh>0||FP.vy>0){FP.jh=(FP.jh||0)+FP.vy*dt;FP.vy-=13*dt;if(FP.jh<=0){FP.jh=0;FP.vy=0;AudioSys.burst({type:'lowpass',f:camInside()?400:900,q:0.7,gain:0.18,dur:0.12});}}
   camera.position.set(FP.pos.x,FP.y+1.68+(FP.jh||0)+(moving&&!FP.jh?Math.sin(FP.bob)*0.035:0),FP.pos.z);

@@ -669,6 +669,11 @@ function mesh(geo,m,p,x=0,y=0,z=0){const o=new THREE.Mesh(geo,m);o.position.set(
 const box = (w,h,d,m,p,x,y,z) => mesh(new THREE.BoxGeometry(w,h,d),m,p,x,y,z);
 const cyl = (rt,rb,h,m,p,x,y,z,seg=20) => mesh(new THREE.CylinderGeometry(rt,rb,h,seg),m,p,x,y,z);
 function rod(a,b,r,m,p,seg=8){const d=new THREE.Vector3().subVectors(b,a);const len=d.length();const o=mesh(new THREE.CylinderGeometry(r,r,len,seg,1),m,p);o.position.copy(a).addScaledVector(d,0.5);o.quaternion.setFromUnitVectors(V3(0,1,0),d.normalize());return o;}
+// vlak met rechthoekige gaten (bijvoorbeeld het trapgat naar de kabelkelder): in stroken opgedeeld
+function groundQuadHoles(x0,z0,x1,z1,y,m,s=4,holes=[],p=staticRoot){holes=holes.filter(h=>h&&h[0]<x1&&h[2]>x0&&h[1]<z1&&h[3]>z0);if(!holes.length)return groundQuad(x0,z0,x1,z1,y,m,s,p);
+  const xs=[...new Set([x0,x1,...holes.flatMap(h=>[Math.max(x0,h[0]),Math.min(x1,h[2])])])].sort((a,b)=>a-b);
+  for(let i=0;i<xs.length-1;i++){const a=xs[i],b=xs[i+1],mx=(a+b)/2,hs=holes.filter(h=>h[0]<mx&&h[2]>mx).sort((u,v)=>u[1]-v[1]);let z=z0;
+    for(const h of hs){if(h[1]>z)groundQuad(a,z,b,h[1],y,m,s,p);z=Math.max(z,h[3]);}if(z<z1)groundQuad(a,z,b,z1,y,m,s,p);}}
 function groundQuad(x0,z0,x1,z1,y,m,s=4,p=staticRoot){const g=new THREE.BufferGeometry();
   g.setAttribute('position',new THREE.Float32BufferAttribute([x0,y,z0,x1,y,z0,x1,y,z1,x0,y,z1],3));
   g.setAttribute('normal',new THREE.Float32BufferAttribute([0,1,0,0,1,0,0,1,0,0,1,0],3));
@@ -958,8 +963,12 @@ const rectsOverlap=(a,b,m=0)=>Math.min(a[2],b[2])-Math.max(a[0],b[0])>-m&&Math.m
 // is deze plek vrij van objecten van deze soorten? (m = extra marge in meters)
 const layFree=(r,kinds,m=0)=>!LAYOUT.some(o=>kinds.includes(o.kind)&&rectsOverlap(o.r,r,m));
 const FENCE = {x0:-48,x1:92,z0:-44,z1:68,gate:[20,30],gateW:[36.5,45.5]};   // gateW: poort in de westkant voor de weg naar de RWZI
-function buildGround(){
-  groundQuad(-10000,-10000,10000,10000,-0.5,MAT.water,20);
+// kabelkelder onder de 10 kV- en 20 kV-ruimte: vloer op CELLAR.y, plafond op CELLAR.top (onderkant sokkel),
+// trapgat van len × wid langs de voorgevel vanaf x = at[id]; de trap daalt in de richting +x
+const CELLAR={y:-2.4,top:0,len:4.4,wid:1.3,at:{MS:9,MS20:52.8}};
+const cellarHole=b=>{const sx=CELLAR.at[b.id];return sx==null?null:[sx,b.z0+0.3,sx+CELLAR.len,b.z0+0.3+CELLAR.wid];};
+function buildGround(){const HOLES=BUILDINGS.map(cellarHole).filter(Boolean);
+  groundQuadHoles(-10000,-10000,10000,10000,-0.5,MAT.water,20,HOLES);
   // kavels met sloten (Nederlands polderlandschap)
   const xs=[-170,210],zs=[-230,420];
   for(let x=170;x<3200;x+=rr(260,460)){xs.push(x+rr(260,460));xs.unshift(-x-rr(260,460));}
@@ -970,10 +979,10 @@ function buildGround(){
   for(let i=0;i<xs.length-1;i++)for(let j=0;j<zs.length-1;j++){
     const x0=xs[i],x1=xs[i+1],z0=zs[j],z1=zs[j+1];
     const home=x0<0&&x1>0&&z0<0&&z1>0;
-    groundQuad(x0+1.6,z0+1.6,x1-1.6,z1-1.6,0,home?MAT.grass:types[Math.floor(R()*types.length)],home?5:7);
+    groundQuadHoles(x0+1.6,z0+1.6,x1-1.6,z1-1.6,0,home?MAT.grass:types[Math.floor(R()*types.length)],home?5:7,HOLES);
   }
   const g=FENCE;
-  groundQuad(g.x0,g.z0,g.x1,g.z1,0.02,MAT.gravel,3);
+  groundQuadHoles(g.x0,g.z0,g.x1,g.z1,0.02,MAT.gravel,3,HOLES);
   // wegen
   groundQuad(22,38,28,3000,0.04,MAT.asphalt,6);lay('road',22,38,28,3000);lay('road',-30,38,86,44);
   groundQuad(-30,38,22,44,0.04,MAT.asphalt,6);
@@ -1027,7 +1036,10 @@ function buildBuilding({id,x0,x1,z0,z1,doors,label}){
   {let xc=x0;[...doors].sort((a,c)=>a-c).forEach(d=>{brickPart(xc,d-1.1,0,H);brickPart(d-1.1,d+1.1,DH,H);xc=d+1.1;});brickPart(xc,x1,0,H);}
   box(W,H,0.3,bl,root,cx,H/2,z1-0.15);
   box(0.3,H,Dz,bs,root,x0+0.15,H/2,cz);box(0.3,H,Dz,bs,root,x1-0.15,H/2,cz);
-  box(W+0.1,0.45,Dz+0.1,MAT.concreteDark,root,cx,0.22,cz);
+  // sokkel; met een kabelkelder eronder blijft het trapgat open (de onderkant is het kelderplafond)
+  const hole=cellarHole({id,z0});if(!hole)box(W+0.1,0.45,Dz+0.1,MAT.concreteDark,root,cx,0.22,cz);
+  else{const [hx0,hz0,hx1,hz1]=hole,pb=(a,b,c,d)=>box(b-a,0.45,d-c,MAT.concreteDark,root,(a+b)/2,0.225,(c+d)/2);
+    pb(x0-0.05,x1+0.05,z0-0.05,hz0);pb(x0-0.05,x1+0.05,hz1,z1+0.05);pb(x0-0.05,hx0,hz0,hz1);pb(hx1,x1+0.05,hz0,hz1);}
   box(W+0.3,0.25,Dz+0.3,MAT.roof,root,cx,H+0.12,cz);
   for(const z of[z0-0.03,z1+0.03])box(W+0.5,0.3,0.12,MAT.trim,root,cx,H+0.22,z);
   for(const x of[x0-0.03,x1+0.03])box(0.12,0.3,Dz+0.5,MAT.trim,root,x,H+0.22,cz);
@@ -1296,7 +1308,8 @@ function updateKioskLight(){KUPD.forEach(f=>f());const i=camInside(),cp=camera.p
   // buiten: de schakelruimte waar je vlak bij staat blijft verlicht (je kijkt door de deur naar binnen)
   if(!r&&cp.y<12)r=ROOMS.find(q=>q.lightPos&&cp.x>q.x0-12&&cp.x<q.x1+12&&cp.z>q.z0-12&&cp.z<q.z1+12)||null;
   ROOMLIT=!!r;ROOM_LIGHTS.forEach(l=>l.intensity=0);if(!r)return;
-  if(r.lightPos)r.lightPos.forEach((p,k)=>{const l=ROOM_LIGHTS[k];if(!l)return;l.position.copy(p);l.distance=9;l.intensity=70;});
+  const low=r.cellar&&FP.on&&FP.level<0;
+  if(r.lightPos)(low?r.cellar.lightPos:r.lightPos).forEach((p,k)=>{const l=ROOM_LIGHTS[k];if(!l)return;l.position.copy(p);l.distance=low?8:9;l.intensity=low?40:70;});
   else if(r.kiosk||r.id==='SRV'||r.meppel){kioskLight.position.set((r.x0+r.x1)/2,r.y1-0.3,(r.z0+r.z1)/2);kioskLight.distance=r.kiosk?7:16;kioskLight.intensity=r.kiosk?22:110;}}
 function enterKiosk(id){const r=ROOMS.find(r=>r.kioskId===id);if(!r)return;FP.last={x:r.cx,z:r.cz,yaw:r.yaw,pitch:-0.08};
   if(FP.on){FP.pos.set(r.cx,0,r.cz);FP.yaw=r.yaw;FP.pitch=-0.08;}else enterFP();if(SEL)selectDevice(null);}
@@ -3941,7 +3954,7 @@ function buildPanel(i,p,row){
 }
 function buildRoomShell(r){
   const Y=r.y0,W=r.x1-r.x0,H=r.y1-Y,cx=(r.x0+r.x1)/2,cy=(Y+r.y1)/2,cz=(r.z0+r.z1)/2,D2=r.z1-r.z0;
-  groundQuad(r.x0,r.z0,r.x1,r.z1,Y+0.004,IM.floor,4);
+  groundQuadHoles(r.x0,r.z0,r.x1,r.z1,Y+0.004,IM.floor,4,[cellarHole(BUILDINGS.find(b=>b.id===r.id)||{})]);
   const holes=[...r.doors].sort((a,c)=>a-c);{let xc=r.x0;holes.forEach(d=>{const a=d-1.1;if(a>xc){iplane(a-xc,H,IM.plaster,(xc+a)/2,cy,r.z0+0.01,0);box(a-xc,0.04,0.012,MAT.copper,staticRoot,(xc+a)/2,Y+0.4,r.z0+0.02);}
     iplane(2.2,r.y1-3.0,IM.plaster,d,(3.0+r.y1)/2,r.z0+0.01,0);xc=d+1.1;});iplane(r.x1-xc,H,IM.plaster,(xc+r.x1)/2,cy,r.z0+0.01,0);box(r.x1-xc,0.04,0.012,MAT.copper,staticRoot,(xc+r.x1)/2,Y+0.4,r.z0+0.02);}
   iplane(W,H,IM.plaster,cx,cy,r.z1-0.01,Math.PI);
@@ -3952,6 +3965,48 @@ function buildRoomShell(r){
   if(r.id!=='SRV'){r.lightPos=[];for(let x=r.x0+W/6;x<r.x1;x+=W/3)r.lightPos.push(V3(x,r.y1-0.5,51));}   // datacenter: verplaatsbare lamp (zie updateKioskLight)
   r.doors.forEach(x=>{cyl(0.08,0.08,0.55,IM.redPaint,staticRoot,x+1.6,Y+0.3,r.z0+0.15,14);cyl(0.03,0.03,0.08,MAT.black,staticRoot,x+1.6,Y+0.61,r.z0+0.15,8);});
 }
+// ---- kabelkelder: trap vanuit de schakelruimte, per veld drie rode enkeladerige XLPE-kabels die door de vloer naar beneden komen
+// en over een kabelgoot onder het plafond naar de brandwerende doorvoering in de voorgevel lopen (naar het terrein)
+const XLPE=mat({color:0xb3141c,roughness:0.5,metalness:0.05}),YELLOW=mat({color:0xe2b714,roughness:0.5,metalness:0.2});
+// kelderbeton: donkerder dan buiten (weinig daglicht), plafond nog iets donkerder
+const CELL_C=mat({map:toTex(C.conc,3,3),color:0x8f8b83,roughness:0.95}),CELL_CEIL=mat({map:toTex(C.conc,3,3),color:0x77746d,roughness:0.95});
+function buildCellar(r,panels,cx,kv){const h=cellarHole(BUILDINGS.find(b=>b.id===r.id));if(!h)return;
+  const Y=CELLAR.y,T=CELLAR.top,W=r.x1-r.x0,D2=r.z1-r.z0,mx=(r.x0+r.x1)/2,mz=(r.z0+r.z1)/2,H=T-Y,cy=(Y+T)/2,c=CELL_C;
+  r.cellar={x0:r.x0,x1:r.x1,z0:r.z0,z1:r.z1,y:Y,hole:h,lightPos:[0.2,0.5,0.8].map(f=>V3(r.x0+W*f,T-0.25,mz))};
+  // vloer, wanden, lampen, aardstrip en pompput
+  groundQuad(r.x0,r.z0,r.x1,r.z1,Y,c,3);
+  // plafond (naar beneden gericht) rondom het trapgat
+  const ceil=(a,b,d,e)=>{if(b>a&&e>d)iplane(b-a,e-d,CELL_CEIL,(a+b)/2,T-0.01,(d+e)/2,0,Math.PI/2);};
+  ceil(r.x0,r.x1,h[3],r.z1);ceil(r.x0,h[0],r.z0,h[3]);ceil(h[2],r.x1,r.z0,h[3]);
+  iplane(W,H,c,mx,cy,r.z0+0.01,0);iplane(W,H,c,mx,cy,r.z1-0.01,Math.PI);iplane(D2,H,c,r.x0+0.01,cy,mz,Math.PI/2);iplane(D2,H,c,r.x1-0.01,cy,mz,-Math.PI/2);
+  r.cellar.lightPos.forEach(p=>{box(0.36,0.08,0.16,IM.led,staticRoot,p.x,T-0.05,p.z);box(0.4,0.03,0.2,MAT.galvDark,staticRoot,p.x,T-0.01,p.z);});
+  for(const z of[r.z0+0.02,r.z1-0.02])box(W-0.4,0.03,0.006,MAT.copper,staticRoot,mx,Y+0.3,z);
+  box(0.7,0.02,0.7,MAT.galvDark,staticRoot,r.x0+0.9,Y+0.01,r.z1-0.9);
+  plate(`KABELKELDER ${kv}`,staticRoot,mx,Y+1.9,r.z1-0.02,Math.PI,0.9);plate('KABELKELDER',staticRoot,h[0]+0.7,r.y0+2.2,r.z0+0.02,0,0.7);
+  // trap: treden met gele neus, leuning langs de gevel, borstwering aan de binnenkant
+  const n=16,len=h[2]-h[0],run=len/n,rise=(r.y0-Y)/n,wid=h[3]-h[1],zc=(h[1]+h[3])/2;
+  for(let k=0;k<n;k++){const x=h[0]+k*run,yt=r.y0-(k+1)*rise;box(run+0.02,0.18,wid-0.04,c,staticRoot,x+run/2,yt-0.09,zc);box(0.05,0.012,wid-0.04,YELLOW,staticRoot,x+0.03,yt+0.006,zc);}
+  rod(V3(h[0]+0.25,r.y0+0.9-0.25/len*(r.y0-Y),h[1]+0.07),V3(h[2],Y+0.95,h[1]+0.07),0.022,MAT.galv,staticRoot,8);
+  for(let k=0;k<n;k++){const yt=r.y0-(k+1)*rise;if(yt>Y+0.05)box(run+0.02,yt-Y,0.1,c,staticRoot,h[0]+k*run+run/2,(yt+Y)/2,h[3]+0.05);}   // trapwand aan de binnenkant
+  // boven: gele leuning om het trapgat (de ingang aan de kant van de bovenste trede blijft open)
+  for(let x=h[0]+0.05;x<=h[2]+0.05;x+=1.1)rod(V3(x,r.y0,h[3]+0.03),V3(x,r.y0+1.1,h[3]+0.03),0.025,YELLOW,staticRoot,8);
+  rod(V3(h[2]+0.03,r.y0,h[1]+0.05),V3(h[2]+0.03,r.y0+1.1,h[1]+0.05),0.025,YELLOW,staticRoot,8);
+  for(const y of[0.55,1.1]){rod(V3(h[0]+0.05,r.y0+y,h[3]+0.03),V3(h[2]+0.03,r.y0+y,h[3]+0.03),0.022,YELLOW,staticRoot,8);rod(V3(h[2]+0.03,r.y0+y,h[1]+0.05),V3(h[2]+0.03,r.y0+y,h[3]+0.03),0.022,YELLOW,staticRoot,8);}
+  box(0.08,0.006,wid,MAT.hazard,staticRoot,h[0]-0.04,r.y0+0.008,zc);
+  // kabels per veld (inkomend veld en uitgaande velden), op een kabelgoot onder het plafond
+  const xs=[],nP=panels.length,zF=r.z0;
+  panels.forEach((p,i)=>{if(p.kind!=='feed'&&p.kind!=='inc')return;const X=cx+(nP-1)/2*0.8-i*0.8;xs.push(X);
+    [-0.075,0,0.075].forEach(o=>{const x=X+o,y=T-0.25;
+      const pts=[V3(x,T+0.05,54.85),V3(x,T-0.12,54.85),V3(x,y+0.02,54.5),V3(x,y,54.0),V3(x,y,zF+1.0),V3(x,y-0.06,zF+0.4),V3(x,y-0.1,zF-0.05)];
+      mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts),36,0.034,7),XLPE,staticRoot);});
+    plate(p.id,staticRoot,X,T-0.42,53.7,Math.PI,0.3);rod(V3(X,T-0.26,53.7),V3(X,T-0.36,53.7),0.004,MAT.black,staticRoot,4);});
+  if(!xs.length)return;
+  const xa=Math.min(...xs)-0.25,xb=Math.max(...xs)+0.25,za=zF+0.5,zb=54.5,yt=T-0.3;
+  for(const x of[xa,xb])box(0.03,0.08,zb-za,MAT.galv,staticRoot,x,yt,(za+zb)/2);
+  for(let z=za+0.15;z<zb;z+=0.35)box(xb-xa,0.02,0.04,MAT.galv,staticRoot,(xa+xb)/2,yt-0.02,z);
+  for(let z=za+0.3;z<zb;z+=1.8)for(const x of[xa,xb])rod(V3(x,yt,z),V3(x,T,z),0.008,MAT.galv,staticRoot,4);
+  box(xb-xa+0.2,0.34,0.1,mat({color:0x9a9c98,roughness:0.9}),staticRoot,(xa+xb)/2,T-0.35,zF+0.06);
+  plate('BRANDWERENDE DOORVOERING',staticRoot,(xa+xb)/2,T-0.72,zF+0.03,0,0.9);}
 function buildPanelRow(panels,cx,room){
   const n=panels.length,Y=room.y0,half=n*0.4;
   panels.forEach((p,i)=>buildPanel(i,p,{cx,n,room}));
@@ -3965,6 +4020,7 @@ function buildInterior(){
   ROOMS.filter(r=>!r.kiosk&&!r.meppel).forEach(buildRoomShell);
   buildPanelRow(PANELS,0,ROOMS[0]);
   buildPanelRow(PANELS20,61,ROOMS[1]);
+  buildCellar(ROOMS[0],PANELS,0,'10 kV');buildCellar(ROOMS[1],PANELS20,61,'20 kV');
   const Y=IN.y0;
   // beveiligingskasten (10 kV-ruimte en 20 kV-ruimte)
   {const U=relayUnits(),z=54.84;[[U.line('L1'),'+R1'],[U.line('L2'),'+R2'],[U.trafo('T1'),'+R3'],[U.trafo('T3'),'+R4'],[U.rail('A/B','V-K'),'+R5'],[U.scada,'+R6']].forEach(([u,l],k)=>relayCabinet(-18.9+k*0.82,z,Y,l,u));
@@ -4702,7 +4758,9 @@ const FP={on:false,yaw:0,pitch:0,keys:{},pos:new THREE.Vector3(),y:null,bob:0,st
 const REACH=6;
 function addRect(x0,z0,x1,z1){FP.rects.push([Math.min(x0,x1),Math.min(z0,z1),Math.max(x0,x1),Math.max(z0,z1)]);}
 function buildColliders(){
-  FP.rects=[];
+  FP.rects=[];CELLAR_RECTS.length=0;
+  ROOMS.forEach(q=>{const h=q.cellar?.hole;if(!h)return;addRect(h[0],h[3],h[2]+0.06,h[3]+0.06);addRect(h[2],h[1],h[2]+0.06,h[3]+0.06);
+    CELLAR_RECTS.push([h[0]-0.05,h[1],h[0],h[3]],[h[0],h[3],h[2]-0.5,h[3]+0.1]);});
   // apparatuur: de selectieboxen van alle velden en panelen
   Object.values(VIEWS).forEach(v=>{const d=D[v.id];if(!d||['bld','line','bb','es','kiosk','mstr'].includes(d.type))return;addRect(v.box.min.x,v.box.min.z,v.box.max.x,v.box.max.z);});
   // portaalkolommen en railsteunen
@@ -4719,10 +4777,19 @@ function buildColliders(){
   addRect(F.x0,F.z1-t,F.gate[0],F.z1+t);addRect(F.gate[1],F.z1-t,F.x1,F.z1+t);addRect(F.gate[1],F.z1+0.2,F.gate[1]+10.2,F.z1+1.1);
   DISTRICT_RECTS.forEach(r=>addRect(...r));
 }
-function blockedAt(x,z){const r=0.3;if(x<-200||x>250||z<-110||z>565)return true;
+// lvl -1: in de kabelkelder (alleen voor jezelf, de monteurs blijven boven)
+const CELLAR_RECTS=[];
+const cellarOf=(x,z,m=0)=>ROOMS.find(q=>q.cellar&&x>q.x0-m&&x<q.x1+m&&z>q.z0-m&&z<q.z1+m)?.cellar||null;
+function blockedAt(x,z,lvl=0){const r=0.3;
+  if(lvl<0){const c=cellarOf(x,z,1);if(!c||x<c.x0+r||x>c.x1-r||z<c.z0+r||z>c.z1-r)return true;return CELLAR_RECTS.some(q=>x>q[0]-r&&x<q[2]+r&&z>q[1]-r&&z<q[3]+r);}
+  if(x<-200||x>250||z<-110||z>565)return true;
   if(!mpAllowed()&&!(FP.on&&FP.pos.z<MEPPEL.doorZ))for(const q of MEPPEL.lockRects||[])if(x>q[0]-r&&x<q[2]+r&&z>q[1]-r&&z<q[3]+r)return true;
   for(const q of FP.rects)if(x>q[0]-r&&x<q[2]+r&&z>q[1]-r&&z<q[3]+r)return true;return false;}
-function floorAt(x,z){const r=ROOMS.find(r=>x>r.x0-0.05&&x<r.x1+0.05&&z>r.z0-0.05&&z<r.z1+0.05);if(r)return r.y0;
+// op de keldertrap: de hoogte loopt lineair van de vloer van de schakelruimte naar de keldervloer
+function stairAt(x,z){for(const q of ROOMS){const c=q.cellar,h=c?.hole;if(h&&x>h[0]&&x<h[2]&&z>h[1]&&z<h[3])return {q,c,y:q.y0-(x-h[0])/(h[2]-h[0])*(q.y0-c.y)};}return null;}
+// lvl alleen voor jezelf: dan tellen de trap en de kelder mee
+function floorAt(x,z,lvl){if(lvl!=null){const s=stairAt(x,z);if(s)return s.y;if(lvl<0){const c=cellarOf(x,z);if(c)return c.y;}}
+  const r=ROOMS.find(r=>x>r.x0-0.05&&x<r.x1+0.05&&z>r.z0-0.05&&z<r.z1+0.05);if(r)return r.y0;
   for(const s of STEPS)if(x>s[0]&&x<s[2]&&z>s[1]&&z<s[3])return s[4];return 0.02;}
 // ---- deuren: gaan open als jij (rondlopen of camera) of een monteur in de buurt is, en vallen daarna weer dicht
 function doorTick(dt){const me=FP.on?FP.pos:camera.position.y<4?camera.position:null,crew=NPCS.filter(n=>n.state!=='out').map(n=>n.P.g.position),dist=(p,D_)=>Math.hypot(p.x-D_.p.x,p.z-D_.p.z);
@@ -4745,7 +4812,7 @@ function enterFP(){
   if(FP.on)return;FP.on=true;fly=null;controls.enabled=false;controls.autoRotate=false;
   const ins=camInside();
   const dir=new THREE.Vector3();camera.getWorldDirection(dir);
-  if(FP.last){FP.pos.set(FP.last.x,0,FP.last.z);FP.yaw=FP.last.yaw;FP.pitch=FP.last.pitch;}   // verder waar je was
+  FP.level=0;if(FP.last){FP.pos.set(FP.last.x,0,FP.last.z);FP.yaw=FP.last.yaw;FP.pitch=FP.last.pitch;FP.level=FP.last.level||0;}   // verder waar je was
   else if(ins&&!blockedAt(camera.position.x,camera.position.z)){FP.pos.set(camera.position.x,0,camera.position.z);FP.yaw=Math.atan2(-dir.x,-dir.z);FP.pitch=0;}
   else{FP.pos.set(25,0,62);FP.yaw=0;FP.pitch=0;}
   FP.y=null;
@@ -4754,14 +4821,17 @@ function enterFP(){
   canvasEl.requestPointerLock?.();if(!FP.hinted){FP.hinted=true;pushAlarm('Rondlopen: WASD lopen, Shift rennen, muis kijken, F schakelen, E paneel, Z zaklamp, V stoppen, Esc menu','info');}
 }
 function exitFP(){
-  if(!FP.on)return;FP.on=false;FP.keys={};FP.last={x:FP.pos.x,z:FP.pos.z,yaw:FP.yaw,pitch:FP.pitch};unlockPointer();
+  if(!FP.on)return;FP.on=false;FP.keys={};FP.last={x:FP.pos.x,z:FP.pos.z,yaw:FP.yaw,pitch:FP.pitch,level:FP.level||0};unlockPointer();
   const dir=new THREE.Vector3();camera.getWorldDirection(dir);
   camera.rotation.order='XYZ';camera.fov=42;camera.updateProjectionMatrix();
   controls.target.copy(camera.position).addScaledVector(dir,8);controls.enabled=true;controls.update();
   document.body.classList.remove('fp');FP.look=null;hovBox.visible=false;if(TORCH.on)setTorch(false);
 }
+// verdieping bijwerken: op de trap halverwege omslaan, en buiten een kelder altijd boven (ook na verplaatsen)
+function fpLevel(){const s=stairAt(FP.pos.x,FP.pos.z),was=FP.level||0;if(s)FP.level=s.y<(s.q.y0+s.c.y)/2?-1:0;else if(FP.level<0&&!cellarOf(FP.pos.x,FP.pos.z))FP.level=0;
+  if((FP.level||0)!==was)updateKioskLight();}
 function toggleFP(){FP.on?exitFP():enterFP();}
-function pickCenter(){camera.updateMatrixWorld();ray.setFromCamera(new THREE.Vector2(0,0),camera);ray.far=REACH;const ins=camInside();
+function pickCenter(){if(FP.level<0)return null;camera.updateMatrixWorld();ray.setFromCamera(new THREE.Vector2(0,0),camera);ray.far=REACH;const ins=camInside();
   const hits=ray.intersectObjects(pickables,false).filter(h=>h.object.userData.inside===ins&&D[h.object.userData.devId]);ray.far=Infinity;if(!hits.length)return null;
   const d0=hits[0].distance;return hits.filter(h=>h.distance<d0+2.5).sort((a,b)=>a.object.userData.vol-b.object.userData.vol)[0].object.userData.devId;}
 function actionLabel(d){if(d.type==='cb'||d.type==='lvs')return d.state?'UIT schakelen':'IN schakelen';if(['ds','es','lbs'].includes(d.type))return d.state?'openen':'sluiten';return null;}
@@ -4774,11 +4844,11 @@ function updateFP(dt){
   if(k.KeyD||k.ArrowRight){mx+=rx;mz+=rz;}if(k.KeyA||k.ArrowLeft){mx-=rx;mz-=rz;}
   const len=Math.hypot(mx,mz),moving=len>0&&!!document.pointerLockElement;
   if(moving){mx=mx/len*sp*dt;mz=mz/len*sp*dt;
-    if(!blockedAt(FP.pos.x+mx,FP.pos.z))FP.pos.x+=mx;if(!blockedAt(FP.pos.x,FP.pos.z+mz))FP.pos.z+=mz;
+    const lv=FP.level||0;if(!blockedAt(FP.pos.x+mx,FP.pos.z,lv))FP.pos.x+=mx;if(!blockedAt(FP.pos.x,FP.pos.z+mz,lv))FP.pos.z+=mz;
     FP.bob+=dt*sp*3.2;const ph=Math.floor(FP.bob/Math.PI);
     if(ph!==FP.stepPhase){FP.stepPhase=ph;const inside=camInside();
       if(inside)AudioSys.burst({type:'lowpass',f:500,q:0.7,gain:0.12,dur:0.07});else AudioSys.burst({f:1700+Math.random()*900,q:0.9,gain:0.1+(run?0.05:0),dur:0.13});}}
-  const fl=floorAt(FP.pos.x,FP.pos.z);FP.y=FP.y==null?fl:lerp(FP.y,fl,Math.min(1,dt*10));
+  fpLevel();const fl=floorAt(FP.pos.x,FP.pos.z,FP.level||0);FP.y=FP.y==null?fl:lerp(FP.y,fl,Math.min(1,dt*10));
   // springen: eenvoudige zwaartekracht, landen met een plof
   if(FP.jh>0||FP.vy>0){FP.jh=(FP.jh||0)+FP.vy*dt;FP.vy-=13*dt;if(FP.jh<=0){FP.jh=0;FP.vy=0;AudioSys.burst({type:'lowpass',f:camInside()?400:900,q:0.7,gain:0.18,dur:0.12});}}
   camera.position.set(FP.pos.x,FP.y+1.68+(FP.jh||0)+(moving&&!FP.jh?Math.sin(FP.bob)*0.035:0),FP.pos.z);
@@ -6931,7 +7001,7 @@ function gisDrawExtra(g,cv){const s=TAB.zoom,now=performance.now();
 // ============================================================ updatecontrole in het hoofdmenu: is er op GitHub een nieuwere versie?
 // De build zet een vingerafdruk in BUILD_ID (tests/stamp.mjs) en houdt version.json bij met eerdere versies.
 // Staat onze versie bij de eerdere versies op GitHub, dan is er een update; staat hij er niet in, dan is het eigen (nieuwer) werk.
-const BUILD_ID='15c0ecc8b255';
+const BUILD_ID='0f210798205e';
 const UPD_REPO='https://github.com/ProAdmin007/Onderstation-SIM-Pro';
 const UPD_URL='https://raw.githubusercontent.com/ProAdmin007/Onderstation-SIM-Pro/main/version.json';
 // toestand van de controle: idle, bezig, actueel, nieuw, eigen of fout
@@ -7222,7 +7292,7 @@ else{renderMenu();$('#intro').classList.remove('hidden');controls.autoRotate=tru
 if(params.has('night'))updateSky(22);
 if(params.has('view')){const v=VIEWPOS[+params.get('view')];camera.position.copy(v[0]);controls.target.copy(v[1]);controls.autoRotate=false;controls.update();}
 
-window.OS={SCREENS,drawRelay,flexCall,flexCancel,flexWarn,flexWant,planCut,FLEX_LEAD,demandAt,FLEXUI,lightsTick,setLR,setLock,lrPanel,lrBlock,RLY,relayReset,relayFill,RCAB,callMeppel,mpAllowed,MP_ACCESS,MEP_IDS,FX,fireSmoke,audioPause,MEPPEL,LS_ORDERS,refreshDevPanel,scadaReach,dcBurnt,LAMPS,updateSky,updateNPCs,updateStreetLights,DOORS,STEPS,floorAt,doorTick,pickAt,SVM,serverTick,setAutoMeet,measBlock,measVan,MEAS_VAN,coachRestore,coachReset,installUpdate,COACH,coachCards,setCoach,renderCoach,checkUpdate,UPD,BUILD_ID,GSV,gensetTick,gensetSpot,digStart,klicHit,digTick,digHit,MARKS,setSpeed,klicFocus,klicCard,klicCables,tabletHome,refreshInfo,XLAB,TRACES,cableDist,stationVisuals,cityRoute,CORDONS,inCordon,copperTheft,trafoFire,stationTick,stationBlock,stIsolated,stNeighborSwitches,STV,updateHUD,pushAlarm,FF,ffStart,ffStop,skipRain,openWT,closeWT,setRealWeather,autoWeather,pickWeather,wetNow,ALARM:()=>ALARM_CRIT,VANS,vanTick,crewDispatch,crewSpawn,routeAt,driveVehicle,walkActive:()=>WALK_ACTIVE,BUS,GARB,PARCEL,AMB,TRAIN,XING,HALTES,MARKET,FIG,CY,cityDay,marketOn,schoolBreak,cityTick,measDone,cableCard,isoSwitches,KLIC,klicNew,klicMark,klicHit,gisMeasure,gisMofReplace,faultOf,cableOf,cableRisk,DIGS,CABLES,GIS_NET,gisRoute,cableState,setXray,XRAY,TAB,openTablet,closeTablet,drawTablet,nearestCable,DYN,fpsTick,fireTick,WK,getWalkers:()=>WALKERS,getStrips:()=>WSTRIPS,fireStart,fireDouse,fireStop,GENSET,gsCap,SMALL,lvgLive,updateSmall,setMouseMode,getMouseMode:()=>MOUSE_MODE,cameraKeys,OVK,openPreview,closePreview,viewHour,getPreview:()=>PREVIEW,VIEWPOS,SITE,updateSites,SLD,activeFaults,renderFaults,reportPDF,listSaves,openSlots,closeSlots,SAVE_SLOTS,layoutCheck,LAYOUT,FREC,fltRec,openRec,closeRec,renderRec,selectivity,protSelect,feederT,incT,incOf,shortCircuit,EF,earthFault,efTick,efRails,efU0,railsCoupled,controls,tripBreaker,CONS,LS_LINKS,LS_ORDERS,GENSET,lsTick,lsOrder,lsSwitchOrder,lsExec,gsSend,gsOff,gsRestart,tapOrder,setEta,callPrio,lsAreas,PRIO,openLS,closeLS,renderLS,lvVolt,stationLoads,shedFactor,failP,manualP,phoneTick,refreshDevPanel,updateSLD,openKeys,closeKeys,KEY_HELP,RELAY_BAYS,relayTask,relayDue,relayDefect,initRelays,kitTests,kitMeasure,kitVerdict,kitRun,openKit,closeKit,saveGame,readSave,deleteSave,resumeGame,canSave,specOf,CABLE,soilT,FD,meppelFault,linkTick,tabAlarms,updateTabAlarms,renderTasks,INC,INCIDENTS,startIncident,endIncident,incidentTick,setTab,renderCables,GFX,setGfx,applyGfx,openSettings,closeSettings,WX_TYPES,renderer,scene,FIRE,CARS,updateWindows,updateLife,stationLive,cbMaintTask,worstCb,cond,breakerFails,CB_IDS,FLEX,setFlex,flexTick,congestion,openFlex,closeFlex,checkModel,homeBus,BUSES,SEL_BAYS,TORCH,setTorch,HO_POOL,handoverTick,REC,RP,startReplay,stopReplay,analyse,stationDamage,closeHandover,deviations,PHONE,lvFault,callFrom,phoneAnswer,dispatchLV,LVG,forecast,progAdvice,PROG,startTask:(k,...a)=>{TASK={relayTask,cbMaintTask,railTask,railBTask,stationTask,thermoTask,ringTask,feederTask,lineTask,reserveTask}[k](...a);TASK.i=0;TASK.code='WV-TEST';briefInit(TASK);renderTasks();},SIM,D,LESSONS,lessonGo,selectDevice,abortTask,railTask,stationTask,thermoTask,nearDev,VIEWS,PROT,setProt,openProt,closeProt,busFault,BUSF,RINGS,task:()=>TASK,briefSubmit,briefCheck,briefWatch,actKey,taskActs,crewNear,boxOf:id=>VIEWS[id]&&VIEWS[id].box,AudioSys,updateAudio,WX,setWeather,setSeason,SEASONS,ambient,enterKiosk,ROOMS,blockedAt,RING,NPCS,crewDispatch,ringFault,FP,enterFP,exitFP,pickCenter,camera,camInside,setRatio,setTab,GAME,MODES,applyMode,endGame,EN:()=>EN,FLOW,operate,tapStep,setAVR,resetLockout,toggleAR,regulate,computeFlows,randomEvent,lineFault,feederFault,trafoFault,offerTask,simStep,FEEDERS};
+window.OS={CELLAR,cellarHole,stairAt,cellarOf,fpLevel,CELLAR_RECTS,SCREENS,drawRelay,flexCall,flexCancel,flexWarn,flexWant,planCut,FLEX_LEAD,demandAt,FLEXUI,lightsTick,setLR,setLock,lrPanel,lrBlock,RLY,relayReset,relayFill,RCAB,callMeppel,mpAllowed,MP_ACCESS,MEP_IDS,FX,fireSmoke,audioPause,MEPPEL,LS_ORDERS,refreshDevPanel,scadaReach,dcBurnt,LAMPS,updateSky,updateNPCs,updateStreetLights,DOORS,STEPS,floorAt,doorTick,pickAt,SVM,serverTick,setAutoMeet,measBlock,measVan,MEAS_VAN,coachRestore,coachReset,installUpdate,COACH,coachCards,setCoach,renderCoach,checkUpdate,UPD,BUILD_ID,GSV,gensetTick,gensetSpot,digStart,klicHit,digTick,digHit,MARKS,setSpeed,klicFocus,klicCard,klicCables,tabletHome,refreshInfo,XLAB,TRACES,cableDist,stationVisuals,cityRoute,CORDONS,inCordon,copperTheft,trafoFire,stationTick,stationBlock,stIsolated,stNeighborSwitches,STV,updateHUD,pushAlarm,FF,ffStart,ffStop,skipRain,openWT,closeWT,setRealWeather,autoWeather,pickWeather,wetNow,ALARM:()=>ALARM_CRIT,VANS,vanTick,crewDispatch,crewSpawn,routeAt,driveVehicle,walkActive:()=>WALK_ACTIVE,BUS,GARB,PARCEL,AMB,TRAIN,XING,HALTES,MARKET,FIG,CY,cityDay,marketOn,schoolBreak,cityTick,measDone,cableCard,isoSwitches,KLIC,klicNew,klicMark,klicHit,gisMeasure,gisMofReplace,faultOf,cableOf,cableRisk,DIGS,CABLES,GIS_NET,gisRoute,cableState,setXray,XRAY,TAB,openTablet,closeTablet,drawTablet,nearestCable,DYN,fpsTick,fireTick,WK,getWalkers:()=>WALKERS,getStrips:()=>WSTRIPS,fireStart,fireDouse,fireStop,GENSET,gsCap,SMALL,lvgLive,updateSmall,setMouseMode,getMouseMode:()=>MOUSE_MODE,cameraKeys,OVK,openPreview,closePreview,viewHour,getPreview:()=>PREVIEW,VIEWPOS,SITE,updateSites,SLD,activeFaults,renderFaults,reportPDF,listSaves,openSlots,closeSlots,SAVE_SLOTS,layoutCheck,LAYOUT,FREC,fltRec,openRec,closeRec,renderRec,selectivity,protSelect,feederT,incT,incOf,shortCircuit,EF,earthFault,efTick,efRails,efU0,railsCoupled,controls,tripBreaker,CONS,LS_LINKS,LS_ORDERS,GENSET,lsTick,lsOrder,lsSwitchOrder,lsExec,gsSend,gsOff,gsRestart,tapOrder,setEta,callPrio,lsAreas,PRIO,openLS,closeLS,renderLS,lvVolt,stationLoads,shedFactor,failP,manualP,phoneTick,refreshDevPanel,updateSLD,openKeys,closeKeys,KEY_HELP,RELAY_BAYS,relayTask,relayDue,relayDefect,initRelays,kitTests,kitMeasure,kitVerdict,kitRun,openKit,closeKit,saveGame,readSave,deleteSave,resumeGame,canSave,specOf,CABLE,soilT,FD,meppelFault,linkTick,tabAlarms,updateTabAlarms,renderTasks,INC,INCIDENTS,startIncident,endIncident,incidentTick,setTab,renderCables,GFX,setGfx,applyGfx,openSettings,closeSettings,WX_TYPES,renderer,scene,FIRE,CARS,updateWindows,updateLife,stationLive,cbMaintTask,worstCb,cond,breakerFails,CB_IDS,FLEX,setFlex,flexTick,congestion,openFlex,closeFlex,checkModel,homeBus,BUSES,SEL_BAYS,TORCH,setTorch,HO_POOL,handoverTick,REC,RP,startReplay,stopReplay,analyse,stationDamage,closeHandover,deviations,PHONE,lvFault,callFrom,phoneAnswer,dispatchLV,LVG,forecast,progAdvice,PROG,startTask:(k,...a)=>{TASK={relayTask,cbMaintTask,railTask,railBTask,stationTask,thermoTask,ringTask,feederTask,lineTask,reserveTask}[k](...a);TASK.i=0;TASK.code='WV-TEST';briefInit(TASK);renderTasks();},SIM,D,LESSONS,lessonGo,selectDevice,abortTask,railTask,stationTask,thermoTask,nearDev,VIEWS,PROT,setProt,openProt,closeProt,busFault,BUSF,RINGS,task:()=>TASK,briefSubmit,briefCheck,briefWatch,actKey,taskActs,crewNear,boxOf:id=>VIEWS[id]&&VIEWS[id].box,AudioSys,updateAudio,WX,setWeather,setSeason,SEASONS,ambient,enterKiosk,ROOMS,blockedAt,RING,NPCS,crewDispatch,ringFault,FP,enterFP,exitFP,pickCenter,camera,camInside,setRatio,setTab,GAME,MODES,applyMode,endGame,EN:()=>EN,FLOW,operate,tapStep,setAVR,resetLockout,toggleAR,regulate,computeFlows,randomEvent,lineFault,feederFault,trafoFault,offerTask,simStep,FEEDERS};
 const clock=new THREE.Clock();let hudT=0,skyT=0,progT=0;
 let liteAcc=0,shadowT=0,hudStep=4;
 // dieptebuffer: in het overzicht schuift de near-plane mee met de kijkafstand, zodat gevels op afstand niet flikkeren

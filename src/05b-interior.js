@@ -72,7 +72,7 @@ function buildPanel(i,p,row){
 }
 function buildRoomShell(r){
   const Y=r.y0,W=r.x1-r.x0,H=r.y1-Y,cx=(r.x0+r.x1)/2,cy=(Y+r.y1)/2,cz=(r.z0+r.z1)/2,D2=r.z1-r.z0;
-  groundQuad(r.x0,r.z0,r.x1,r.z1,Y+0.004,IM.floor,4);
+  groundQuadHoles(r.x0,r.z0,r.x1,r.z1,Y+0.004,IM.floor,4,[cellarHole(BUILDINGS.find(b=>b.id===r.id)||{})]);
   const holes=[...r.doors].sort((a,c)=>a-c);{let xc=r.x0;holes.forEach(d=>{const a=d-1.1;if(a>xc){iplane(a-xc,H,IM.plaster,(xc+a)/2,cy,r.z0+0.01,0);box(a-xc,0.04,0.012,MAT.copper,staticRoot,(xc+a)/2,Y+0.4,r.z0+0.02);}
     iplane(2.2,r.y1-3.0,IM.plaster,d,(3.0+r.y1)/2,r.z0+0.01,0);xc=d+1.1;});iplane(r.x1-xc,H,IM.plaster,(xc+r.x1)/2,cy,r.z0+0.01,0);box(r.x1-xc,0.04,0.012,MAT.copper,staticRoot,(xc+r.x1)/2,Y+0.4,r.z0+0.02);}
   iplane(W,H,IM.plaster,cx,cy,r.z1-0.01,Math.PI);
@@ -83,6 +83,48 @@ function buildRoomShell(r){
   if(r.id!=='SRV'){r.lightPos=[];for(let x=r.x0+W/6;x<r.x1;x+=W/3)r.lightPos.push(V3(x,r.y1-0.5,51));}   // datacenter: verplaatsbare lamp (zie updateKioskLight)
   r.doors.forEach(x=>{cyl(0.08,0.08,0.55,IM.redPaint,staticRoot,x+1.6,Y+0.3,r.z0+0.15,14);cyl(0.03,0.03,0.08,MAT.black,staticRoot,x+1.6,Y+0.61,r.z0+0.15,8);});
 }
+// ---- kabelkelder: trap vanuit de schakelruimte, per veld drie rode enkeladerige XLPE-kabels die door de vloer naar beneden komen
+// en over een kabelgoot onder het plafond naar de brandwerende doorvoering in de voorgevel lopen (naar het terrein)
+const XLPE=mat({color:0xb3141c,roughness:0.5,metalness:0.05}),YELLOW=mat({color:0xe2b714,roughness:0.5,metalness:0.2});
+// kelderbeton: donkerder dan buiten (weinig daglicht), plafond nog iets donkerder
+const CELL_C=mat({map:toTex(C.conc,3,3),color:0x8f8b83,roughness:0.95}),CELL_CEIL=mat({map:toTex(C.conc,3,3),color:0x77746d,roughness:0.95});
+function buildCellar(r,panels,cx,kv){const h=cellarHole(BUILDINGS.find(b=>b.id===r.id));if(!h)return;
+  const Y=CELLAR.y,T=CELLAR.top,W=r.x1-r.x0,D2=r.z1-r.z0,mx=(r.x0+r.x1)/2,mz=(r.z0+r.z1)/2,H=T-Y,cy=(Y+T)/2,c=CELL_C;
+  r.cellar={x0:r.x0,x1:r.x1,z0:r.z0,z1:r.z1,y:Y,hole:h,lightPos:[0.2,0.5,0.8].map(f=>V3(r.x0+W*f,T-0.25,mz))};
+  // vloer, wanden, lampen, aardstrip en pompput
+  groundQuad(r.x0,r.z0,r.x1,r.z1,Y,c,3);
+  // plafond (naar beneden gericht) rondom het trapgat
+  const ceil=(a,b,d,e)=>{if(b>a&&e>d)iplane(b-a,e-d,CELL_CEIL,(a+b)/2,T-0.01,(d+e)/2,0,Math.PI/2);};
+  ceil(r.x0,r.x1,h[3],r.z1);ceil(r.x0,h[0],r.z0,h[3]);ceil(h[2],r.x1,r.z0,h[3]);
+  iplane(W,H,c,mx,cy,r.z0+0.01,0);iplane(W,H,c,mx,cy,r.z1-0.01,Math.PI);iplane(D2,H,c,r.x0+0.01,cy,mz,Math.PI/2);iplane(D2,H,c,r.x1-0.01,cy,mz,-Math.PI/2);
+  r.cellar.lightPos.forEach(p=>{box(0.36,0.08,0.16,IM.led,staticRoot,p.x,T-0.05,p.z);box(0.4,0.03,0.2,MAT.galvDark,staticRoot,p.x,T-0.01,p.z);});
+  for(const z of[r.z0+0.02,r.z1-0.02])box(W-0.4,0.03,0.006,MAT.copper,staticRoot,mx,Y+0.3,z);
+  box(0.7,0.02,0.7,MAT.galvDark,staticRoot,r.x0+0.9,Y+0.01,r.z1-0.9);
+  plate(`KABELKELDER ${kv}`,staticRoot,mx,Y+1.9,r.z1-0.02,Math.PI,0.9);plate('KABELKELDER',staticRoot,h[0]+0.7,r.y0+2.2,r.z0+0.02,0,0.7);
+  // trap: treden met gele neus, leuning langs de gevel, borstwering aan de binnenkant
+  const n=16,len=h[2]-h[0],run=len/n,rise=(r.y0-Y)/n,wid=h[3]-h[1],zc=(h[1]+h[3])/2;
+  for(let k=0;k<n;k++){const x=h[0]+k*run,yt=r.y0-(k+1)*rise;box(run+0.02,0.18,wid-0.04,c,staticRoot,x+run/2,yt-0.09,zc);box(0.05,0.012,wid-0.04,YELLOW,staticRoot,x+0.03,yt+0.006,zc);}
+  rod(V3(h[0]+0.25,r.y0+0.9-0.25/len*(r.y0-Y),h[1]+0.07),V3(h[2],Y+0.95,h[1]+0.07),0.022,MAT.galv,staticRoot,8);
+  for(let k=0;k<n;k++){const yt=r.y0-(k+1)*rise;if(yt>Y+0.05)box(run+0.02,yt-Y,0.1,c,staticRoot,h[0]+k*run+run/2,(yt+Y)/2,h[3]+0.05);}   // trapwand aan de binnenkant
+  // boven: gele leuning om het trapgat (de ingang aan de kant van de bovenste trede blijft open)
+  for(let x=h[0]+0.05;x<=h[2]+0.05;x+=1.1)rod(V3(x,r.y0,h[3]+0.03),V3(x,r.y0+1.1,h[3]+0.03),0.025,YELLOW,staticRoot,8);
+  rod(V3(h[2]+0.03,r.y0,h[1]+0.05),V3(h[2]+0.03,r.y0+1.1,h[1]+0.05),0.025,YELLOW,staticRoot,8);
+  for(const y of[0.55,1.1]){rod(V3(h[0]+0.05,r.y0+y,h[3]+0.03),V3(h[2]+0.03,r.y0+y,h[3]+0.03),0.022,YELLOW,staticRoot,8);rod(V3(h[2]+0.03,r.y0+y,h[1]+0.05),V3(h[2]+0.03,r.y0+y,h[3]+0.03),0.022,YELLOW,staticRoot,8);}
+  box(0.08,0.006,wid,MAT.hazard,staticRoot,h[0]-0.04,r.y0+0.008,zc);
+  // kabels per veld (inkomend veld en uitgaande velden), op een kabelgoot onder het plafond
+  const xs=[],nP=panels.length,zF=r.z0;
+  panels.forEach((p,i)=>{if(p.kind!=='feed'&&p.kind!=='inc')return;const X=cx+(nP-1)/2*0.8-i*0.8;xs.push(X);
+    [-0.075,0,0.075].forEach(o=>{const x=X+o,y=T-0.25;
+      const pts=[V3(x,T+0.05,54.85),V3(x,T-0.12,54.85),V3(x,y+0.02,54.5),V3(x,y,54.0),V3(x,y,zF+1.0),V3(x,y-0.06,zF+0.4),V3(x,y-0.1,zF-0.05)];
+      mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts),36,0.034,7),XLPE,staticRoot);});
+    plate(p.id,staticRoot,X,T-0.42,53.7,Math.PI,0.3);rod(V3(X,T-0.26,53.7),V3(X,T-0.36,53.7),0.004,MAT.black,staticRoot,4);});
+  if(!xs.length)return;
+  const xa=Math.min(...xs)-0.25,xb=Math.max(...xs)+0.25,za=zF+0.5,zb=54.5,yt=T-0.3;
+  for(const x of[xa,xb])box(0.03,0.08,zb-za,MAT.galv,staticRoot,x,yt,(za+zb)/2);
+  for(let z=za+0.15;z<zb;z+=0.35)box(xb-xa,0.02,0.04,MAT.galv,staticRoot,(xa+xb)/2,yt-0.02,z);
+  for(let z=za+0.3;z<zb;z+=1.8)for(const x of[xa,xb])rod(V3(x,yt,z),V3(x,T,z),0.008,MAT.galv,staticRoot,4);
+  box(xb-xa+0.2,0.34,0.1,mat({color:0x9a9c98,roughness:0.9}),staticRoot,(xa+xb)/2,T-0.35,zF+0.06);
+  plate('BRANDWERENDE DOORVOERING',staticRoot,(xa+xb)/2,T-0.72,zF+0.03,0,0.9);}
 function buildPanelRow(panels,cx,room){
   const n=panels.length,Y=room.y0,half=n*0.4;
   panels.forEach((p,i)=>buildPanel(i,p,{cx,n,room}));
@@ -96,6 +138,7 @@ function buildInterior(){
   ROOMS.filter(r=>!r.kiosk&&!r.meppel).forEach(buildRoomShell);
   buildPanelRow(PANELS,0,ROOMS[0]);
   buildPanelRow(PANELS20,61,ROOMS[1]);
+  buildCellar(ROOMS[0],PANELS,0,'10 kV');buildCellar(ROOMS[1],PANELS20,61,'20 kV');
   const Y=IN.y0;
   // beveiligingskasten (10 kV-ruimte en 20 kV-ruimte)
   {const U=relayUnits(),z=54.84;[[U.line('L1'),'+R1'],[U.line('L2'),'+R2'],[U.trafo('T1'),'+R3'],[U.trafo('T3'),'+R4'],[U.rail('A/B','V-K'),'+R5'],[U.scada,'+R6']].forEach(([u,l],k)=>relayCabinet(-18.9+k*0.82,z,Y,l,u));

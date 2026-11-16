@@ -314,6 +314,20 @@ const TESTS = [
       assert(r.aan && r.I > 0 && r.x < 1, `zaklamp ging niet aan: ${JSON.stringify(r)}`);
       assert(!r.naUit && r.I2 === 0, `zaklamp blijft aan na stoppen met rondlopen: ${JSON.stringify(r)}`);
   } },
+  { name: 'kabelkelder: trap af en op, lopen in de kelder, leuning en trapwand', query: '?autostart&t=12', async run(p) {
+      const r = await p.evaluate(() => { const O = OS, out = {};
+        for (const id of ['MS', 'MS20']) { const q = O.ROOMS.find(x => x.id === id), c = q.cellar, h = c.hole, zc = (h[1] + h[3]) / 2;
+          const boven = Math.abs(O.stairAt(h[0] + 0.01, zc).y - q.y0) < 0.05, beneden = Math.abs(O.stairAt(h[2] - 0.01, zc).y - c.y) < 0.05;
+          const leuning = O.blockedAt(h[0] + 2, h[3] + 0.1, 0), trapwand = O.blockedAt(h[0] + 2, h[3] + 0.2, -1), trapkop = O.blockedAt(h[0] - 0.2, zc, -1);
+          const vrij = !O.blockedAt((q.x0 + q.x1) / 2, 51, -1), buiten = O.blockedAt((q.x0 + q.x1) / 2, 40, -1);
+          O.enterFP(); O.FP.level = 0; O.FP.pos.set(h[0] + 0.3, 0, zc); O.fpLevel(); const l0 = O.FP.level === 0;
+          O.FP.pos.set(h[2] - 0.3, 0, zc); O.fpLevel(); const l1 = O.FP.level === -1; O.FP.pos.set(h[2] + 1, 0, zc); O.fpLevel();
+          const kelder = O.FP.level === -1 && O.floorAt(h[2] + 1, zc, -1) === c.y && O.floorAt(h[2] + 1, zc) === q.y0;
+          O.FP.pos.set(h[0] + 0.3, 0, zc); O.fpLevel(); const terug = O.FP.level === 0; O.FP.level = -1; O.FP.pos.set(25, 0, 62); O.fpLevel(); const weg = O.FP.level === 0; O.exitFP(); O.FP.last = null;
+          out[id] = { boven, beneden, leuning, trapwand, trapkop, vrij, buiten, l0, l1, kelder, terug, weg }; }
+        return out; });
+      for (const [id, o] of Object.entries(r)) for (const [k, v] of Object.entries(o)) assert(v, `${id} ${k} klopt niet: ${JSON.stringify(r)}`);
+  } },
   { name: 'lokaal/afstand: SCADA-commando terwijl je bij het veld staat', query: '?autostart&t=12', async run(p) {
       const r = await p.evaluate(() => { T.quiet(); const O = OS, D = O.D; O.SIM.paused = false;
         O.enterFP(); const c = O.VIEWS['V-F6'].center; O.FP.pos.set(c.x + 1.5, 0, c.z + 1.5); O.camera.position.set(c.x + 1.5, 1.7, c.z + 1.5);

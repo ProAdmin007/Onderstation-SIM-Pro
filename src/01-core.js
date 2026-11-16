@@ -157,6 +157,11 @@ function mesh(geo,m,p,x=0,y=0,z=0){const o=new THREE.Mesh(geo,m);o.position.set(
 const box = (w,h,d,m,p,x,y,z) => mesh(new THREE.BoxGeometry(w,h,d),m,p,x,y,z);
 const cyl = (rt,rb,h,m,p,x,y,z,seg=20) => mesh(new THREE.CylinderGeometry(rt,rb,h,seg),m,p,x,y,z);
 function rod(a,b,r,m,p,seg=8){const d=new THREE.Vector3().subVectors(b,a);const len=d.length();const o=mesh(new THREE.CylinderGeometry(r,r,len,seg,1),m,p);o.position.copy(a).addScaledVector(d,0.5);o.quaternion.setFromUnitVectors(V3(0,1,0),d.normalize());return o;}
+// vlak met rechthoekige gaten (bijvoorbeeld het trapgat naar de kabelkelder): in stroken opgedeeld
+function groundQuadHoles(x0,z0,x1,z1,y,m,s=4,holes=[],p=staticRoot){holes=holes.filter(h=>h&&h[0]<x1&&h[2]>x0&&h[1]<z1&&h[3]>z0);if(!holes.length)return groundQuad(x0,z0,x1,z1,y,m,s,p);
+  const xs=[...new Set([x0,x1,...holes.flatMap(h=>[Math.max(x0,h[0]),Math.min(x1,h[2])])])].sort((a,b)=>a-b);
+  for(let i=0;i<xs.length-1;i++){const a=xs[i],b=xs[i+1],mx=(a+b)/2,hs=holes.filter(h=>h[0]<mx&&h[2]>mx).sort((u,v)=>u[1]-v[1]);let z=z0;
+    for(const h of hs){if(h[1]>z)groundQuad(a,z,b,h[1],y,m,s,p);z=Math.max(z,h[3]);}if(z<z1)groundQuad(a,z,b,z1,y,m,s,p);}}
 function groundQuad(x0,z0,x1,z1,y,m,s=4,p=staticRoot){const g=new THREE.BufferGeometry();
   g.setAttribute('position',new THREE.Float32BufferAttribute([x0,y,z0,x1,y,z0,x1,y,z1,x0,y,z1],3));
   g.setAttribute('normal',new THREE.Float32BufferAttribute([0,1,0,0,1,0,0,1,0,0,1,0],3));
