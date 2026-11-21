@@ -687,7 +687,7 @@ function insGeo(h,cr,sr,n){const key=[h,cr,sr,n].join();if(insCache.has(key))ret
   const y0=h*0.07,y1=h*0.93,p=(y1-y0)/n;
   for(let i=0;i<n;i++){const y=y0+i*p;const r=(i%2)?cr+(sr-cr)*0.72:sr;v(cr,y+p*0.3);v(r,y+p*0.05);v(r,y+p*0.14);v(cr,y+p*0.55);}
   v(cr,h*0.94);v(cr*1.5,h*0.95);v(cr*1.5,h);v(0.001,h);
-  const g=new THREE.LatheGeometry(P,20);insCache.set(key,g);return g;}
+  const g=new THREE.LatheGeometry(P,14);insCache.set(key,g);return g;}
 function insulator(p,h,cr,sr,n,m,y=0,x=0,z=0){mesh(insGeo(h,cr,sr,n),m,p,x,y,z);cyl(cr*1.65,cr*1.65,0.09,MAT.galv,p,x,y+0.045,z);cyl(cr*1.65,cr*1.65,0.09,MAT.galv,p,x,y+h-0.045,z);}
 
 const hCache = new Map();
@@ -700,10 +700,11 @@ const plateCache = new Map();
 function plateMat(text){if(plateCache.has(text))return plateCache.get(text);const t=toTex(textCanvas(text,{font:`bold ${text.length>5?50:62}px Arial`}));t.wrapS=t.wrapT=THREE.ClampToEdgeWrapping;const m=mat({map:t,roughness:0.5});plateCache.set(text,m);return m;}
 function plate(text,p,x,y,z,ry=0,w=0.42){const o=mesh(new THREE.PlaneGeometry(w,w/2),plateMat(text),p,x,y,z);o.rotation.y=ry;o.castShadow=false;return o;}
 
+// korte draden krijgen minder segmenten (lengte / 1,2 m, minstens 6)
 function wire(a,b,sag,r=0.03,m=MAT.conductor,seg=16){const pts=[];for(let i=0;i<=seg;i++){const t=i/seg;const q=a.clone().lerp(b,t);q.y-=sag*4*t*(1-t);pts.push(q);}
-  const g=new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts),seg*2,r,6,false);const o=new THREE.Mesh(g,m);o.castShadow=true;staticRoot.add(o);return o;}
+  const g=new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts),clamp(Math.round(a.distanceTo(b)/1.2),6,seg*2),r,6,false);const o=new THREE.Mesh(g,m);o.castShadow=true;staticRoot.add(o);return o;}
 
-const discGeo = new THREE.LatheGeometry([[0.001,0.075],[0.045,0.075],[0.055,0.045],[0.135,-0.005],[0.135,-0.02],[0.05,0.0],[0.035,-0.05],[0.001,-0.05]].map(([x,y])=>new THREE.Vector2(x,y)),16);
+const discGeo = new THREE.LatheGeometry([[0.001,0.075],[0.045,0.075],[0.055,0.045],[0.135,-0.005],[0.135,-0.02],[0.05,0.0],[0.035,-0.05],[0.001,-0.05]].map(([x,y])=>new THREE.Vector2(x,y)),10);
 function insString(a,b,n,p=staticRoot){const d=new THREE.Vector3().subVectors(b,a);const q=new THREE.Quaternion().setFromUnitVectors(V3(0,1,0),d.clone().normalize());
   for(let i=0;i<n;i++){const o=mesh(discGeo,MAT.glass,p);o.position.copy(a).addScaledVector(d,(i+0.5)/n);o.quaternion.copy(q);}rod(a,b,0.02,MAT.galv,p,6);}
 
@@ -722,6 +723,11 @@ function mergeGroup(g){g.updateMatrixWorld(true);const inv=g.matrixWorld.clone()
 // (of buiten het schaduwgebied) ligt niet hoeft te tekenen; grote vlakken (grond, spoor) houden één stuk. Elders vakken van 400 m.
 const BAKE_ZONES=[['station',-130,-130,150,90],['wijk',-160,90,215,262],['centrum',-160,262,215,440],['zkh',-420,220,-160,440],['kassen',230,20,650,380],['rwzi',-430,-260,-160,60],['meppel',44,446,116,560]];
 const bakeZone=(x,z)=>(BAKE_ZONES.find(q=>x>=q[1]&&x<q[3]&&z>=q[2]&&z<q[4])||[Math.floor(x/400)+','+Math.floor(z/400)])[0];
+// binnen een schakelruimte (of het datacenter)? dan zone 'in:<id>', onder de vloer 'cel:<id>' (de buitenschil van het gebouw telt niet mee)
+function roomZone(o,c){for(let p=o;p;p=p.parent)if(p.userData.shell)return null;
+  const r=ROOMS.find(q=>!q.kiosk&&!q.meppel&&c.x>q.x0-0.05&&c.x<q.x1+0.05&&c.z>q.z0-0.05&&c.z<q.z1+0.05&&c.y<q.y1-0.02&&c.y>CELLAR.y-0.5);
+  return r?(c.y<CELLAR.top-0.02&&r.cellar?'cel:':'in:')+r.id:null;}
+const INTERIOR={};   // zone -> samengevoegde meshes (zie interiorTick)
 function bakeStatic(){
   scene.updateMatrixWorld(true);
   // gevels, ramen en borden zijn vlakken vlak vóór een blok: altijd vóór laten winnen (anders flikkeren ze tijdens het bewegen)
@@ -735,13 +741,13 @@ function bakeStatic(){
     if(!g.attributes.uv)g.setAttribute('uv',new THREE.BufferAttribute(new Float32Array(g.attributes.position.count*2),2));
     g.clearGroups();g.applyMatrix4(o.matrixWorld);
     g.computeBoundingBox();bb.copy(g.boundingBox).getCenter(bc);bb.getSize(bs);
-    const cell=Math.max(bs.x,bs.z)>300?'big':bakeZone(bc.x,bc.z);
+    const cell=Math.max(bs.x,bs.z)>300?'big':roomZone(o,bc)||bakeZone(bc.x,bc.z);
     const key=o.material.uuid+(o.castShadow?'s':'n')+(g.index?'i':'x')+cell;
     if(!buckets.has(key))buckets.set(key,{m:o.material,cast:o.castShadow,geos:[],cell});
     buckets.get(key).geos.push(g);remove.push(o);
   });
   remove.forEach(o=>o.parent.remove(o));
-  for(const {m,cast,geos,cell} of buckets.values()){const mg=mergeGeometries(geos,false);if(!mg)continue;mg.computeBoundingSphere();const o=new THREE.Mesh(mg,m);o.castShadow=cast;o.receiveShadow=true;o.userData.noBake=true;o.userData.baked=true;o.userData.zone=cell;scene.add(o);}
+  for(const {m,cast,geos,cell} of buckets.values()){const mg=mergeGeometries(geos,false);if(!mg)continue;mg.computeBoundingSphere();const o=new THREE.Mesh(mg,m);o.castShadow=cast;o.receiveShadow=true;o.userData.noBake=true;o.userData.baked=true;o.userData.zone=cell;scene.add(o);if(/^(in|cel):/.test(cell))(INTERIOR[cell]=INTERIOR[cell]||[]).push(o);}
 }
 
 
@@ -965,7 +971,7 @@ const layFree=(r,kinds,m=0)=>!LAYOUT.some(o=>kinds.includes(o.kind)&&rectsOverla
 const FENCE = {x0:-48,x1:92,z0:-44,z1:68,gate:[20,30],gateW:[36.5,45.5]};   // gateW: poort in de westkant voor de weg naar de RWZI
 // kabelkelder onder de 10 kV- en 20 kV-ruimte: vloer op CELLAR.y, plafond op CELLAR.top (onderkant sokkel),
 // trapgat van len × wid langs de voorgevel vanaf x = at[id]; de trap daalt in de richting +x
-const CELLAR={y:-2.4,top:0,len:4.4,wid:1.3,at:{MS:9,MS20:52.8}};
+const CELLAR={y:-2.4,top:0,len:4.4,wid:1.3,at:{MS:9,MS20:71}};
 const cellarHole=b=>{const sx=CELLAR.at[b.id];return sx==null?null:[sx,b.z0+0.3,sx+CELLAR.len,b.z0+0.3+CELLAR.wid];};
 function buildGround(){const HOLES=BUILDINGS.map(cellarHole).filter(Boolean);
   groundQuadHoles(-10000,-10000,10000,10000,-0.5,MAT.water,20,HOLES);
@@ -1027,7 +1033,7 @@ const BUILDINGS=[{id:'MS',x0:-20,x1:20,z0:46,z1:56,doors:[-14,-6,6],label:'OS ZU
   {id:'MS20',x0:46,x1:76,z0:46,z1:56,doors:[51,59,69],label:'OS ZUIDWOLDE  ·  20 kV'},
   {id:'SRV',x0:-42,x1:-26,z0:46,z1:55.5,doors:[-36],label:'SCADA · DATACENTER'}];
 function buildBuilding({id,x0,x1,z0,z1,doors,label}){
-  const H=5.2,root=grp(),bt=C.brick,W=x1-x0,Dz=z1-z0,cx=(x0+x1)/2,cz=(z0+z1)/2;
+  const H=5.2,root=grp(),bt=C.brick;root.userData.shell=true;const W=x1-x0,Dz=z1-z0,cx=(x0+x1)/2,cz=(z0+z1)/2;
   const brick=(len)=>{const t=toTex(bt,len/1.76,H/1.5);return mat({map:t,bumpMap:toTex(bt,len/1.76,H/1.5,false),bumpScale:0.8,roughness:0.88});};
   const bl=brick(W),bs=brick(Dz);
   // voorgevel in delen met deuropeningen (0,45–3,0 m); de baksteentextuur loopt door over de delen
@@ -3890,8 +3896,8 @@ const IM={
   door:mat({color:0xcbcec8,metalness:0.3,roughness:0.36}),
   plaster:mat({color:0xe4e2da,roughness:0.92}),
   ceiling:mat({color:0xdcdad3,roughness:0.95}),
-  floor:mat({color:0x7d8983,roughness:0.3,metalness:0.05}),
-  rubber:mat({color:0x1c1e20,roughness:0.95}),
+  floor:mat({color:0x7d8983,roughness:0.3,metalness:0.05,polygonOffset:true,polygonOffsetFactor:-1,polygonOffsetUnits:-2}),
+  rubber:mat({color:0x1c1e20,roughness:0.95,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-6}),
   led:mat({color:0xffffff,emissive:0xf2f5ff,emissiveIntensity:3}),
   battery:mat({color:0x2a2c2f,roughness:0.55}),
   redPaint:mat({color:0xb3181c,roughness:0.35,metalness:0.2}),
@@ -3987,30 +3993,36 @@ function buildCellar(r,panels,cx,kv){const h=cellarHole(BUILDINGS.find(b=>b.id==
   const n=16,len=h[2]-h[0],run=len/n,rise=(r.y0-Y)/n,wid=h[3]-h[1],zc=(h[1]+h[3])/2;
   for(let k=0;k<n;k++){const x=h[0]+k*run,yt=r.y0-(k+1)*rise;box(run+0.02,0.18,wid-0.04,c,staticRoot,x+run/2,yt-0.09,zc);box(0.05,0.012,wid-0.04,YELLOW,staticRoot,x+0.03,yt+0.006,zc);}
   rod(V3(h[0]+0.25,r.y0+0.9-0.25/len*(r.y0-Y),h[1]+0.07),V3(h[2],Y+0.95,h[1]+0.07),0.022,MAT.galv,staticRoot,8);
-  for(let k=0;k<n;k++){const yt=r.y0-(k+1)*rise;if(yt>Y+0.05)box(run+0.02,yt-Y,0.1,c,staticRoot,h[0]+k*run+run/2,(yt+Y)/2,h[3]+0.05);}   // trapwand aan de binnenkant
+  for(let k=0;k<n;k++){const yt=r.y0-(k+1)*rise;if(yt>Y+0.6)box(run+0.02,yt-Y,0.1,c,staticRoot,h[0]+k*run+run/2,(yt+Y)/2,h[3]+0.05);}   // trapwand aan de binnenkant
   // boven: gele leuning om het trapgat (de ingang aan de kant van de bovenste trede blijft open)
   for(let x=h[0]+0.05;x<=h[2]+0.05;x+=1.1)rod(V3(x,r.y0,h[3]+0.03),V3(x,r.y0+1.1,h[3]+0.03),0.025,YELLOW,staticRoot,8);
   rod(V3(h[2]+0.03,r.y0,h[1]+0.05),V3(h[2]+0.03,r.y0+1.1,h[1]+0.05),0.025,YELLOW,staticRoot,8);
   for(const y of[0.55,1.1]){rod(V3(h[0]+0.05,r.y0+y,h[3]+0.03),V3(h[2]+0.03,r.y0+y,h[3]+0.03),0.022,YELLOW,staticRoot,8);rod(V3(h[2]+0.03,r.y0+y,h[1]+0.05),V3(h[2]+0.03,r.y0+y,h[3]+0.03),0.022,YELLOW,staticRoot,8);}
   box(0.08,0.006,wid,MAT.hazard,staticRoot,h[0]-0.04,r.y0+0.008,zc);
-  // kabels per veld (inkomend veld en uitgaande velden), op een kabelgoot onder het plafond
-  const xs=[],nP=panels.length,zF=r.z0;
+  // kabels per veld (inkomend en uitgaand): verticaal langs een steunrail naar beneden, met een bocht van minstens 15 × de kabeldiameter
+  // (R = 0,7 m) naar een lage kabelladder op de vloer, en zo naar de brandwerende doorvoering in de voorgevel; drie kabels in driehoek
+  const xs=[],nP=panels.length,zF=r.z0,zv=54.85,RB=0.7,yb=Y+0.15,cz=zv-RB,cyA=yb+RB;
   panels.forEach((p,i)=>{if(p.kind!=='feed'&&p.kind!=='inc')return;const X=cx+(nP-1)/2*0.8-i*0.8;xs.push(X);
-    [-0.075,0,0.075].forEach(o=>{const x=X+o,y=T-0.25;
-      const pts=[V3(x,T+0.05,54.85),V3(x,T-0.12,54.85),V3(x,y+0.02,54.5),V3(x,y,54.0),V3(x,y,zF+1.0),V3(x,y-0.06,zF+0.4),V3(x,y-0.1,zF-0.05)];
-      mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts),36,0.034,7),XLPE,staticRoot);});
-    plate(p.id,staticRoot,X,T-0.42,53.7,Math.PI,0.3);rod(V3(X,T-0.26,53.7),V3(X,T-0.36,53.7),0.004,MAT.black,staticRoot,4);});
+    [[-0.036,0],[0.036,0],[0,-0.062]].forEach(([dx,dn])=>{const x=X+dx,rr=RB+dn,pts=[V3(x,T+0.05,zv+dn),V3(x,(T+cyA)/2,zv+dn)];
+      for(let k=0;k<=8;k++){const a=k/8*Math.PI/2;pts.push(V3(x,cyA-rr*Math.sin(a),cz+rr*Math.cos(a)));}
+      pts.push(V3(x,yb-dn,(cz+zF)/2),V3(x,yb-dn,zF-0.05));
+      mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts,false,'centripetal'),40,0.034,6),XLPE,staticRoot);});
+    // steunrail met kabelklemmen voor het verticale deel, en het label van het veld
+    box(0.05,T-Y-0.05,0.04,MAT.galv,staticRoot,X,(T+Y)/2,zv+0.07);for(const y of[T-0.4,cyA+0.2])box(0.16,0.05,0.12,MAT.black,staticRoot,X,y,zv+0.01);
+    plate(p.id,staticRoot,X,cyA+0.55,zv-0.12,Math.PI,0.26);});
   if(!xs.length)return;
-  const xa=Math.min(...xs)-0.25,xb=Math.max(...xs)+0.25,za=zF+0.5,zb=54.5,yt=T-0.3;
-  for(const x of[xa,xb])box(0.03,0.08,zb-za,MAT.galv,staticRoot,x,yt,(za+zb)/2);
-  for(let z=za+0.15;z<zb;z+=0.35)box(xb-xa,0.02,0.04,MAT.galv,staticRoot,(xa+xb)/2,yt-0.02,z);
-  for(let z=za+0.3;z<zb;z+=1.8)for(const x of[xa,xb])rod(V3(x,yt,z),V3(x,T,z),0.008,MAT.galv,staticRoot,4);
-  box(xb-xa+0.2,0.34,0.1,mat({color:0x9a9c98,roughness:0.9}),staticRoot,(xa+xb)/2,T-0.35,zF+0.06);
-  plate('BRANDWERENDE DOORVOERING',staticRoot,(xa+xb)/2,T-0.72,zF+0.03,0,0.9);}
+  const xa=Math.min(...xs)-0.2,xb=Math.max(...xs)+0.2,za=zF+0.15,zb=zv,yl=Y+0.09;
+  r.cellar.band=[xa-0.05,r.z0,xb+0.05,r.z1];
+  for(const x of[xa,xb])box(0.03,0.06,zb-za,MAT.galv,staticRoot,x,yl,(za+zb)/2);
+  for(let z=za+0.1;z<zb;z+=0.3)box(xb-xa,0.02,0.04,MAT.galv,staticRoot,(xa+xb)/2,yl-0.01,z);
+  for(let z=za+0.3;z<zb;z+=1.2)for(const x of[xa,xb])box(0.06,yl-Y,0.06,MAT.galvDark,staticRoot,x,(yl+Y)/2,z);
+  box(xb-xa+0.2,0.3,0.1,mat({color:0x9a9c98,roughness:0.9}),staticRoot,(xa+xb)/2,Y+0.22,zF+0.06);
+  plate('BRANDWERENDE DOORVOERING',staticRoot,(xa+xb)/2,Y+0.65,zF+0.03,0,0.9);
+  plate('NIET OP DE KABELS STAPPEN',staticRoot,xb+0.6,Y+1.5,r.z1-0.02,Math.PI,0.8);}
 function buildPanelRow(panels,cx,room){
   const n=panels.length,Y=room.y0,half=n*0.4;
   panels.forEach((p,i)=>buildPanel(i,p,{cx,n,room}));
-  groundQuad(cx-half-0.6,52.7,cx+half+0.6,54.15,Y+0.008,IM.rubber,2);
+  groundQuad(cx-half-0.6,52.7,cx+half+0.6,54.15,Y+0.015,IM.rubber,2);
   box(n*0.8+0.2,0.3,0.7,IM.panel,staticRoot,cx,Y+2.45,54.9);
   for(let x=cx-half;x<cx+half;x+=0.6)rod(V3(x,Y+2.6,54.9),V3(x,room.y1,54.9),0.012,MAT.galv,staticRoot,4);
   for(const s of[-1,1])iplane(0.4,0.5,MAT.hazard,cx+s*(half+0.01),Y+1.6,54.5,s*Math.PI/2);
@@ -4760,7 +4772,7 @@ function addRect(x0,z0,x1,z1){FP.rects.push([Math.min(x0,x1),Math.min(z0,z1),Mat
 function buildColliders(){
   FP.rects=[];CELLAR_RECTS.length=0;
   ROOMS.forEach(q=>{const h=q.cellar?.hole;if(!h)return;addRect(h[0],h[3],h[2]+0.06,h[3]+0.06);addRect(h[2],h[1],h[2]+0.06,h[3]+0.06);
-    CELLAR_RECTS.push([h[0]-0.05,h[1],h[0],h[3]],[h[0],h[3],h[2]-0.5,h[3]+0.1]);});
+    CELLAR_RECTS.push([h[0]-0.05,h[1],h[0],h[3]],[h[0],h[3],h[2]-0.8,h[3]+0.1]);if(q.cellar.band)CELLAR_RECTS.push(q.cellar.band);});
   // apparatuur: de selectieboxen van alle velden en panelen
   Object.values(VIEWS).forEach(v=>{const d=D[v.id];if(!d||['bld','line','bb','es','kiosk','mstr'].includes(d.type))return;addRect(v.box.min.x,v.box.min.z,v.box.max.x,v.box.max.z);});
   // portaalkolommen en railsteunen
@@ -7001,7 +7013,7 @@ function gisDrawExtra(g,cv){const s=TAB.zoom,now=performance.now();
 // ============================================================ updatecontrole in het hoofdmenu: is er op GitHub een nieuwere versie?
 // De build zet een vingerafdruk in BUILD_ID (tests/stamp.mjs) en houdt version.json bij met eerdere versies.
 // Staat onze versie bij de eerdere versies op GitHub, dan is er een update; staat hij er niet in, dan is het eigen (nieuwer) werk.
-const BUILD_ID='0f210798205e';
+const BUILD_ID='6e75b0e5634d';
 const UPD_REPO='https://github.com/ProAdmin007/Onderstation-SIM-Pro';
 const UPD_URL='https://raw.githubusercontent.com/ProAdmin007/Onderstation-SIM-Pro/main/version.json';
 // toestand van de controle: idle, bezig, actueel, nieuw, eigen of fout
@@ -7226,6 +7238,12 @@ function updateHUD(){
 function lightsTick(){const vis=(l,on)=>{if(l&&l.visible!==on)l.visible=on;};SPOTS.forEach(s=>vis(s,s.intensity>0));(LAMPS.spots||[]).forEach(s=>vis(s,NIGHT>0.3));
   vis(TORCH.light,TORCH.on||NIGHT>0.3);   // 's avonds altijd meetellen (intensiteit 0 als hij uit is): aan/uit zetten geeft dan geen nieuwe shaders
   vis(FIRE_LIGHT,FIRE_LIGHT.intensity>0);ROOM_LIGHTS.forEach(l=>vis(l,ROOMLIT));}
+// interieurs van de schakelruimtes en het datacenter alleen tekenen als je binnen bent of dichtbij (door de deur kijken),
+// de kabelkelder alleen als je in die ruimte bent (boven kijk je door het trapgat naar beneden)
+function interiorTick(){const cp=camera.position,ins=camInside();
+  for(const r of ROOMS){const a=INTERIOR['in:'+r.id],b=INTERIOR['cel:'+r.id];if(!a&&!b)continue;
+    const dx=Math.max(r.x0-cp.x,0,cp.x-r.x1),dz=Math.max(r.z0-cp.z,0,cp.z-r.z1),near=ins===r.idx||(Math.hypot(dx,dz)<30&&cp.y<20);
+    for(const [ms,on] of [[a,near],[b,ins===r.idx]])if(ms&&ms.on!==on){ms.on=on;ms.forEach(m=>m.visible=on);SHADOW_DIRTY=true;}}}
 function setSpeed(s){if(GAME.ended)return;if(PREVIEW)return deny('Eerst terug naar de dienst (Weer en tijd)');if(s===0)SIM.paused=!SIM.paused;else{SIM.speed=s;SIM.paused=false;}syncSpeed();}
 function syncSpeed(){document.querySelectorAll('#speed button').forEach(b=>{const v=+b.dataset.s;b.classList.toggle('on',v===0?SIM.paused:(!SIM.paused&&v===SIM.speed));});updateHUD();}
 $('#speed').addEventListener('click',e=>{const b=e.target.closest('button');if(b)setSpeed(+b.dataset.s);});
@@ -7292,7 +7310,7 @@ else{renderMenu();$('#intro').classList.remove('hidden');controls.autoRotate=tru
 if(params.has('night'))updateSky(22);
 if(params.has('view')){const v=VIEWPOS[+params.get('view')];camera.position.copy(v[0]);controls.target.copy(v[1]);controls.autoRotate=false;controls.update();}
 
-window.OS={CELLAR,cellarHole,stairAt,cellarOf,fpLevel,CELLAR_RECTS,SCREENS,drawRelay,flexCall,flexCancel,flexWarn,flexWant,planCut,FLEX_LEAD,demandAt,FLEXUI,lightsTick,setLR,setLock,lrPanel,lrBlock,RLY,relayReset,relayFill,RCAB,callMeppel,mpAllowed,MP_ACCESS,MEP_IDS,FX,fireSmoke,audioPause,MEPPEL,LS_ORDERS,refreshDevPanel,scadaReach,dcBurnt,LAMPS,updateSky,updateNPCs,updateStreetLights,DOORS,STEPS,floorAt,doorTick,pickAt,SVM,serverTick,setAutoMeet,measBlock,measVan,MEAS_VAN,coachRestore,coachReset,installUpdate,COACH,coachCards,setCoach,renderCoach,checkUpdate,UPD,BUILD_ID,GSV,gensetTick,gensetSpot,digStart,klicHit,digTick,digHit,MARKS,setSpeed,klicFocus,klicCard,klicCables,tabletHome,refreshInfo,XLAB,TRACES,cableDist,stationVisuals,cityRoute,CORDONS,inCordon,copperTheft,trafoFire,stationTick,stationBlock,stIsolated,stNeighborSwitches,STV,updateHUD,pushAlarm,FF,ffStart,ffStop,skipRain,openWT,closeWT,setRealWeather,autoWeather,pickWeather,wetNow,ALARM:()=>ALARM_CRIT,VANS,vanTick,crewDispatch,crewSpawn,routeAt,driveVehicle,walkActive:()=>WALK_ACTIVE,BUS,GARB,PARCEL,AMB,TRAIN,XING,HALTES,MARKET,FIG,CY,cityDay,marketOn,schoolBreak,cityTick,measDone,cableCard,isoSwitches,KLIC,klicNew,klicMark,klicHit,gisMeasure,gisMofReplace,faultOf,cableOf,cableRisk,DIGS,CABLES,GIS_NET,gisRoute,cableState,setXray,XRAY,TAB,openTablet,closeTablet,drawTablet,nearestCable,DYN,fpsTick,fireTick,WK,getWalkers:()=>WALKERS,getStrips:()=>WSTRIPS,fireStart,fireDouse,fireStop,GENSET,gsCap,SMALL,lvgLive,updateSmall,setMouseMode,getMouseMode:()=>MOUSE_MODE,cameraKeys,OVK,openPreview,closePreview,viewHour,getPreview:()=>PREVIEW,VIEWPOS,SITE,updateSites,SLD,activeFaults,renderFaults,reportPDF,listSaves,openSlots,closeSlots,SAVE_SLOTS,layoutCheck,LAYOUT,FREC,fltRec,openRec,closeRec,renderRec,selectivity,protSelect,feederT,incT,incOf,shortCircuit,EF,earthFault,efTick,efRails,efU0,railsCoupled,controls,tripBreaker,CONS,LS_LINKS,LS_ORDERS,GENSET,lsTick,lsOrder,lsSwitchOrder,lsExec,gsSend,gsOff,gsRestart,tapOrder,setEta,callPrio,lsAreas,PRIO,openLS,closeLS,renderLS,lvVolt,stationLoads,shedFactor,failP,manualP,phoneTick,refreshDevPanel,updateSLD,openKeys,closeKeys,KEY_HELP,RELAY_BAYS,relayTask,relayDue,relayDefect,initRelays,kitTests,kitMeasure,kitVerdict,kitRun,openKit,closeKit,saveGame,readSave,deleteSave,resumeGame,canSave,specOf,CABLE,soilT,FD,meppelFault,linkTick,tabAlarms,updateTabAlarms,renderTasks,INC,INCIDENTS,startIncident,endIncident,incidentTick,setTab,renderCables,GFX,setGfx,applyGfx,openSettings,closeSettings,WX_TYPES,renderer,scene,FIRE,CARS,updateWindows,updateLife,stationLive,cbMaintTask,worstCb,cond,breakerFails,CB_IDS,FLEX,setFlex,flexTick,congestion,openFlex,closeFlex,checkModel,homeBus,BUSES,SEL_BAYS,TORCH,setTorch,HO_POOL,handoverTick,REC,RP,startReplay,stopReplay,analyse,stationDamage,closeHandover,deviations,PHONE,lvFault,callFrom,phoneAnswer,dispatchLV,LVG,forecast,progAdvice,PROG,startTask:(k,...a)=>{TASK={relayTask,cbMaintTask,railTask,railBTask,stationTask,thermoTask,ringTask,feederTask,lineTask,reserveTask}[k](...a);TASK.i=0;TASK.code='WV-TEST';briefInit(TASK);renderTasks();},SIM,D,LESSONS,lessonGo,selectDevice,abortTask,railTask,stationTask,thermoTask,nearDev,VIEWS,PROT,setProt,openProt,closeProt,busFault,BUSF,RINGS,task:()=>TASK,briefSubmit,briefCheck,briefWatch,actKey,taskActs,crewNear,boxOf:id=>VIEWS[id]&&VIEWS[id].box,AudioSys,updateAudio,WX,setWeather,setSeason,SEASONS,ambient,enterKiosk,ROOMS,blockedAt,RING,NPCS,crewDispatch,ringFault,FP,enterFP,exitFP,pickCenter,camera,camInside,setRatio,setTab,GAME,MODES,applyMode,endGame,EN:()=>EN,FLOW,operate,tapStep,setAVR,resetLockout,toggleAR,regulate,computeFlows,randomEvent,lineFault,feederFault,trafoFault,offerTask,simStep,FEEDERS};
+window.OS={INTERIOR,interiorTick,CELLAR,cellarHole,stairAt,cellarOf,fpLevel,CELLAR_RECTS,SCREENS,drawRelay,flexCall,flexCancel,flexWarn,flexWant,planCut,FLEX_LEAD,demandAt,FLEXUI,lightsTick,setLR,setLock,lrPanel,lrBlock,RLY,relayReset,relayFill,RCAB,callMeppel,mpAllowed,MP_ACCESS,MEP_IDS,FX,fireSmoke,audioPause,MEPPEL,LS_ORDERS,refreshDevPanel,scadaReach,dcBurnt,LAMPS,updateSky,updateNPCs,updateStreetLights,DOORS,STEPS,floorAt,doorTick,pickAt,SVM,serverTick,setAutoMeet,measBlock,measVan,MEAS_VAN,coachRestore,coachReset,installUpdate,COACH,coachCards,setCoach,renderCoach,checkUpdate,UPD,BUILD_ID,GSV,gensetTick,gensetSpot,digStart,klicHit,digTick,digHit,MARKS,setSpeed,klicFocus,klicCard,klicCables,tabletHome,refreshInfo,XLAB,TRACES,cableDist,stationVisuals,cityRoute,CORDONS,inCordon,copperTheft,trafoFire,stationTick,stationBlock,stIsolated,stNeighborSwitches,STV,updateHUD,pushAlarm,FF,ffStart,ffStop,skipRain,openWT,closeWT,setRealWeather,autoWeather,pickWeather,wetNow,ALARM:()=>ALARM_CRIT,VANS,vanTick,crewDispatch,crewSpawn,routeAt,driveVehicle,walkActive:()=>WALK_ACTIVE,BUS,GARB,PARCEL,AMB,TRAIN,XING,HALTES,MARKET,FIG,CY,cityDay,marketOn,schoolBreak,cityTick,measDone,cableCard,isoSwitches,KLIC,klicNew,klicMark,klicHit,gisMeasure,gisMofReplace,faultOf,cableOf,cableRisk,DIGS,CABLES,GIS_NET,gisRoute,cableState,setXray,XRAY,TAB,openTablet,closeTablet,drawTablet,nearestCable,DYN,fpsTick,fireTick,WK,getWalkers:()=>WALKERS,getStrips:()=>WSTRIPS,fireStart,fireDouse,fireStop,GENSET,gsCap,SMALL,lvgLive,updateSmall,setMouseMode,getMouseMode:()=>MOUSE_MODE,cameraKeys,OVK,openPreview,closePreview,viewHour,getPreview:()=>PREVIEW,VIEWPOS,SITE,updateSites,SLD,activeFaults,renderFaults,reportPDF,listSaves,openSlots,closeSlots,SAVE_SLOTS,layoutCheck,LAYOUT,FREC,fltRec,openRec,closeRec,renderRec,selectivity,protSelect,feederT,incT,incOf,shortCircuit,EF,earthFault,efTick,efRails,efU0,railsCoupled,controls,tripBreaker,CONS,LS_LINKS,LS_ORDERS,GENSET,lsTick,lsOrder,lsSwitchOrder,lsExec,gsSend,gsOff,gsRestart,tapOrder,setEta,callPrio,lsAreas,PRIO,openLS,closeLS,renderLS,lvVolt,stationLoads,shedFactor,failP,manualP,phoneTick,refreshDevPanel,updateSLD,openKeys,closeKeys,KEY_HELP,RELAY_BAYS,relayTask,relayDue,relayDefect,initRelays,kitTests,kitMeasure,kitVerdict,kitRun,openKit,closeKit,saveGame,readSave,deleteSave,resumeGame,canSave,specOf,CABLE,soilT,FD,meppelFault,linkTick,tabAlarms,updateTabAlarms,renderTasks,INC,INCIDENTS,startIncident,endIncident,incidentTick,setTab,renderCables,GFX,setGfx,applyGfx,openSettings,closeSettings,WX_TYPES,renderer,scene,FIRE,CARS,updateWindows,updateLife,stationLive,cbMaintTask,worstCb,cond,breakerFails,CB_IDS,FLEX,setFlex,flexTick,congestion,openFlex,closeFlex,checkModel,homeBus,BUSES,SEL_BAYS,TORCH,setTorch,HO_POOL,handoverTick,REC,RP,startReplay,stopReplay,analyse,stationDamage,closeHandover,deviations,PHONE,lvFault,callFrom,phoneAnswer,dispatchLV,LVG,forecast,progAdvice,PROG,startTask:(k,...a)=>{TASK={relayTask,cbMaintTask,railTask,railBTask,stationTask,thermoTask,ringTask,feederTask,lineTask,reserveTask}[k](...a);TASK.i=0;TASK.code='WV-TEST';briefInit(TASK);renderTasks();},SIM,D,LESSONS,lessonGo,selectDevice,abortTask,railTask,stationTask,thermoTask,nearDev,VIEWS,PROT,setProt,openProt,closeProt,busFault,BUSF,RINGS,task:()=>TASK,briefSubmit,briefCheck,briefWatch,actKey,taskActs,crewNear,boxOf:id=>VIEWS[id]&&VIEWS[id].box,AudioSys,updateAudio,WX,setWeather,setSeason,SEASONS,ambient,enterKiosk,ROOMS,blockedAt,RING,NPCS,crewDispatch,ringFault,FP,enterFP,exitFP,pickCenter,camera,camInside,setRatio,setTab,GAME,MODES,applyMode,endGame,EN:()=>EN,FLOW,operate,tapStep,setAVR,resetLockout,toggleAR,regulate,computeFlows,randomEvent,lineFault,feederFault,trafoFault,offerTask,simStep,FEEDERS};
 const clock=new THREE.Clock();let hudT=0,skyT=0,progT=0;
 let liteAcc=0,shadowT=0,hudStep=4;
 // dieptebuffer: in het overzicht schuift de near-plane mee met de kijkafstand, zodat gevels op afstand niet flikkeren
@@ -7321,7 +7339,7 @@ function frame(){
   if((hudT+=dt)>0.25){hudT=0;hudStep=0;progT++;}
   if(hudStep<4){const k=hudStep++;
     if(k===0){if(!RP.on)updateHUD();updateSLD();refreshDevPanel();updateAudio();audioPause();lightsTick();}
-    else if(k===1){meppelLod();if(!LITE)drawPanelScreens();renderTasks();updateStreetLights();updateWindows();}
+    else if(k===1){meppelLod();interiorTick();if(!LITE)drawPanelScreens();renderTasks();updateStreetLights();updateWindows();}
     else if(k===2){renderFaults();renderCoach();progTick();if(progT%4===0)renderProg();}
     else if(progT%2===0){renderCables();renderLSTab();if(lsOpen()&&progT%4===0)renderLS();}}
   if(!LITE){updateHover();updateLabels();}if(GFX.particles)updateRain(dt);else RAIN.ls.visible=SNOW.p.visible=false;updateNPCs(dt);doorTick(dt);meppelAccessTick();updateKioskLight();updateHotspot();phoneTick(dt);replayTick(dt);updateLife(dt);fireTick(dt);gisTick(dt);serverTick(dt);updateSites(dt);updateSmall();

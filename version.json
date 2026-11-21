@@ -1,7 +1,9 @@
 {
-  "build": "0f210798205e",
-  "date": "2026-11-16",
+  "build": "6e75b0e5634d",
+  "date": "2026-11-21",
   "previous": [
+    "bf4fb9da6317",
+    "0f210798205e",
     "a1167b692676",
     "15c0ecc8b255",
     "bb73c813ce16",
@@ -200,6 +202,10 @@
     "0f210798205e": {
       "date": "2026-11-16",
       "text": "Kabelkelder onder de 10 kV- en 20 kV-ruimte: loop de trap af (gele leuning bij de voorgevel) en zie per veld drie rode MS-kabels door de vloer komen en over de kabelgoot naar de brandwerende doorvoering lopen, met een label per veld"
+    },
+    "6e75b0e5634d": {
+      "date": "2026-11-21",
+      "text": "Kabels in de kabelkelder liggen nu op een kabelladder op de vloer, met een echte buigradius (0,7 m) en steunrails met klemmen. Trap in de 20 kV-ruimte naar de oostkant. Geen flikkerende vloer meer voor de MS-installatie. Sneller: interieurs en kelders worden alleen getekend als je dichtbij bent, lichtere isolatoren en draden (±20% minder driehoeken)"
     }
   }
 }

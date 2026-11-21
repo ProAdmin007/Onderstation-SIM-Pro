@@ -175,7 +175,7 @@ function insGeo(h,cr,sr,n){const key=[h,cr,sr,n].join();if(insCache.has(key))ret
   const y0=h*0.07,y1=h*0.93,p=(y1-y0)/n;
   for(let i=0;i<n;i++){const y=y0+i*p;const r=(i%2)?cr+(sr-cr)*0.72:sr;v(cr,y+p*0.3);v(r,y+p*0.05);v(r,y+p*0.14);v(cr,y+p*0.55);}
   v(cr,h*0.94);v(cr*1.5,h*0.95);v(cr*1.5,h);v(0.001,h);
-  const g=new THREE.LatheGeometry(P,20);insCache.set(key,g);return g;}
+  const g=new THREE.LatheGeometry(P,14);insCache.set(key,g);return g;}
 function insulator(p,h,cr,sr,n,m,y=0,x=0,z=0){mesh(insGeo(h,cr,sr,n),m,p,x,y,z);cyl(cr*1.65,cr*1.65,0.09,MAT.galv,p,x,y+0.045,z);cyl(cr*1.65,cr*1.65,0.09,MAT.galv,p,x,y+h-0.045,z);}
 
 const hCache = new Map();
@@ -188,10 +188,11 @@ const plateCache = new Map();
 function plateMat(text){if(plateCache.has(text))return plateCache.get(text);const t=toTex(textCanvas(text,{font:`bold ${text.length>5?50:62}px Arial`}));t.wrapS=t.wrapT=THREE.ClampToEdgeWrapping;const m=mat({map:t,roughness:0.5});plateCache.set(text,m);return m;}
 function plate(text,p,x,y,z,ry=0,w=0.42){const o=mesh(new THREE.PlaneGeometry(w,w/2),plateMat(text),p,x,y,z);o.rotation.y=ry;o.castShadow=false;return o;}
 
+// korte draden krijgen minder segmenten (lengte / 1,2 m, minstens 6)
 function wire(a,b,sag,r=0.03,m=MAT.conductor,seg=16){const pts=[];for(let i=0;i<=seg;i++){const t=i/seg;const q=a.clone().lerp(b,t);q.y-=sag*4*t*(1-t);pts.push(q);}
-  const g=new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts),seg*2,r,6,false);const o=new THREE.Mesh(g,m);o.castShadow=true;staticRoot.add(o);return o;}
+  const g=new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts),clamp(Math.round(a.distanceTo(b)/1.2),6,seg*2),r,6,false);const o=new THREE.Mesh(g,m);o.castShadow=true;staticRoot.add(o);return o;}
 
-const discGeo = new THREE.LatheGeometry([[0.001,0.075],[0.045,0.075],[0.055,0.045],[0.135,-0.005],[0.135,-0.02],[0.05,0.0],[0.035,-0.05],[0.001,-0.05]].map(([x,y])=>new THREE.Vector2(x,y)),16);
+const discGeo = new THREE.LatheGeometry([[0.001,0.075],[0.045,0.075],[0.055,0.045],[0.135,-0.005],[0.135,-0.02],[0.05,0.0],[0.035,-0.05],[0.001,-0.05]].map(([x,y])=>new THREE.Vector2(x,y)),10);
 function insString(a,b,n,p=staticRoot){const d=new THREE.Vector3().subVectors(b,a);const q=new THREE.Quaternion().setFromUnitVectors(V3(0,1,0),d.clone().normalize());
   for(let i=0;i<n;i++){const o=mesh(discGeo,MAT.glass,p);o.position.copy(a).addScaledVector(d,(i+0.5)/n);o.quaternion.copy(q);}rod(a,b,0.02,MAT.galv,p,6);}
 
@@ -210,6 +211,11 @@ function mergeGroup(g){g.updateMatrixWorld(true);const inv=g.matrixWorld.clone()
 // (of buiten het schaduwgebied) ligt niet hoeft te tekenen; grote vlakken (grond, spoor) houden één stuk. Elders vakken van 400 m.
 const BAKE_ZONES=[['station',-130,-130,150,90],['wijk',-160,90,215,262],['centrum',-160,262,215,440],['zkh',-420,220,-160,440],['kassen',230,20,650,380],['rwzi',-430,-260,-160,60],['meppel',44,446,116,560]];
 const bakeZone=(x,z)=>(BAKE_ZONES.find(q=>x>=q[1]&&x<q[3]&&z>=q[2]&&z<q[4])||[Math.floor(x/400)+','+Math.floor(z/400)])[0];
+// binnen een schakelruimte (of het datacenter)? dan zone 'in:<id>', onder de vloer 'cel:<id>' (de buitenschil van het gebouw telt niet mee)
+function roomZone(o,c){for(let p=o;p;p=p.parent)if(p.userData.shell)return null;
+  const r=ROOMS.find(q=>!q.kiosk&&!q.meppel&&c.x>q.x0-0.05&&c.x<q.x1+0.05&&c.z>q.z0-0.05&&c.z<q.z1+0.05&&c.y<q.y1-0.02&&c.y>CELLAR.y-0.5);
+  return r?(c.y<CELLAR.top-0.02&&r.cellar?'cel:':'in:')+r.id:null;}
+const INTERIOR={};   // zone -> samengevoegde meshes (zie interiorTick)
 function bakeStatic(){
   scene.updateMatrixWorld(true);
   // gevels, ramen en borden zijn vlakken vlak vóór een blok: altijd vóór laten winnen (anders flikkeren ze tijdens het bewegen)
@@ -223,11 +229,11 @@ function bakeStatic(){
     if(!g.attributes.uv)g.setAttribute('uv',new THREE.BufferAttribute(new Float32Array(g.attributes.position.count*2),2));
     g.clearGroups();g.applyMatrix4(o.matrixWorld);
     g.computeBoundingBox();bb.copy(g.boundingBox).getCenter(bc);bb.getSize(bs);
-    const cell=Math.max(bs.x,bs.z)>300?'big':bakeZone(bc.x,bc.z);
+    const cell=Math.max(bs.x,bs.z)>300?'big':roomZone(o,bc)||bakeZone(bc.x,bc.z);
     const key=o.material.uuid+(o.castShadow?'s':'n')+(g.index?'i':'x')+cell;
     if(!buckets.has(key))buckets.set(key,{m:o.material,cast:o.castShadow,geos:[],cell});
     buckets.get(key).geos.push(g);remove.push(o);
   });
   remove.forEach(o=>o.parent.remove(o));
-  for(const {m,cast,geos,cell} of buckets.values()){const mg=mergeGeometries(geos,false);if(!mg)continue;mg.computeBoundingSphere();const o=new THREE.Mesh(mg,m);o.castShadow=cast;o.receiveShadow=true;o.userData.noBake=true;o.userData.baked=true;o.userData.zone=cell;scene.add(o);}
+  for(const {m,cast,geos,cell} of buckets.values()){const mg=mergeGeometries(geos,false);if(!mg)continue;mg.computeBoundingSphere();const o=new THREE.Mesh(mg,m);o.castShadow=cast;o.receiveShadow=true;o.userData.noBake=true;o.userData.baked=true;o.userData.zone=cell;scene.add(o);if(/^(in|cel):/.test(cell))(INTERIOR[cell]=INTERIOR[cell]||[]).push(o);}
 }

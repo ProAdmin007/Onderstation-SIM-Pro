@@ -319,12 +319,12 @@ const TESTS = [
         for (const id of ['MS', 'MS20']) { const q = O.ROOMS.find(x => x.id === id), c = q.cellar, h = c.hole, zc = (h[1] + h[3]) / 2;
           const boven = Math.abs(O.stairAt(h[0] + 0.01, zc).y - q.y0) < 0.05, beneden = Math.abs(O.stairAt(h[2] - 0.01, zc).y - c.y) < 0.05;
           const leuning = O.blockedAt(h[0] + 2, h[3] + 0.1, 0), trapwand = O.blockedAt(h[0] + 2, h[3] + 0.2, -1), trapkop = O.blockedAt(h[0] - 0.2, zc, -1);
-          const vrij = !O.blockedAt((q.x0 + q.x1) / 2, 51, -1), buiten = O.blockedAt((q.x0 + q.x1) / 2, 40, -1);
+          const vrij = !O.blockedAt(h[2] - 0.3, h[3] + 0.8, -1), kabels = O.blockedAt((c.band[0] + c.band[2]) / 2, 51, -1), buiten = O.blockedAt((q.x0 + q.x1) / 2, 40, -1);
           O.enterFP(); O.FP.level = 0; O.FP.pos.set(h[0] + 0.3, 0, zc); O.fpLevel(); const l0 = O.FP.level === 0;
-          O.FP.pos.set(h[2] - 0.3, 0, zc); O.fpLevel(); const l1 = O.FP.level === -1; O.FP.pos.set(h[2] + 1, 0, zc); O.fpLevel();
-          const kelder = O.FP.level === -1 && O.floorAt(h[2] + 1, zc, -1) === c.y && O.floorAt(h[2] + 1, zc) === q.y0;
+          O.FP.pos.set(h[2] - 0.3, 0, zc); O.fpLevel(); const l1 = O.FP.level === -1; O.FP.pos.set(h[2] - 0.3, 0, h[3] + 0.8); O.fpLevel();
+          const kelder = O.FP.level === -1 && O.floorAt(h[2] - 0.3, h[3] + 0.8, -1) === c.y && O.floorAt(h[2] - 0.3, h[3] + 0.8) === q.y0;
           O.FP.pos.set(h[0] + 0.3, 0, zc); O.fpLevel(); const terug = O.FP.level === 0; O.FP.level = -1; O.FP.pos.set(25, 0, 62); O.fpLevel(); const weg = O.FP.level === 0; O.exitFP(); O.FP.last = null;
-          out[id] = { boven, beneden, leuning, trapwand, trapkop, vrij, buiten, l0, l1, kelder, terug, weg }; }
+          out[id] = { boven, beneden, leuning, trapwand, trapkop, vrij, kabels, buiten, l0, l1, kelder, terug, weg }; }
         return out; });
       for (const [id, o] of Object.entries(r)) for (const [k, v] of Object.entries(o)) assert(v, `${id} ${k} klopt niet: ${JSON.stringify(r)}`);
   } },

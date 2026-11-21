@@ -500,6 +500,7 @@ Elke plaatsing in de wereld meldt zich met `lay(kind, x0, z0, x1, z1)`: `road`, 
   `blockedAt(x, z)` test met een straal van 0,3 m.
 - **Hoogte:** `floorAt(x, z)` geeft de vloer van een ruimte, anders een `STEPS`-hoogte (bordes, trede), anders 0,02. De camerahoogte volgt die vloerhoogte vloeiend.
 - **Kabelkelder:** `CELLAR` (03-world) geeft de keldervloer, het plafond en per gebouw het begin van het trapgat; `cellarHole(b)` is het trapgat. Water, gras, grind, sokkel en de vloer van de schakelruimte hebben daar een gat (`groundQuadHoles`). `buildCellar` (05b) bouwt de kelder, de trap en de kabels en zet `room.cellar`. Bij het rondlopen houdt `FP.level` bij of je boven (0) of in de kelder (-1) bent: `fpLevel()` slaat halverwege de trap om (`stairAt`), `floorAt(x, z, lvl)` en `blockedAt(x, z, lvl)` gebruiken dan de trap en de kelder (`CELLAR_RECTS`). Zonder `lvl` (monteurs) blijft alles boven. In de kelder gaan de drie binnenlampen mee (`updateKioskLight`).
+- **Interieurs alleen dichtbij:** `bakeStatic` geeft meshes binnen een schakelruimte of het datacenter (niet de buitenschil, `userData.shell`) een eigen bakzone `in:<id>`, en onder de vloer `cel:<id>`. Ze staan in `INTERIOR`. `interiorTick` (4× per seconde) tekent het interieur alleen als je binnen bent of binnen 30 m, en de kelder alleen als je in die ruimte bent.
 - **Aanwijzen en bedienen:** `pickCenter()` richt vanuit het midden van het beeld (bereik 6 m). `F` schakelt, `E` opent het paneel en `Z` zet de zaklamp aan of uit.
 
 ### Monteurs (`07c-npc.js`)

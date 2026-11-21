@@ -6,7 +6,7 @@ function addRect(x0,z0,x1,z1){FP.rects.push([Math.min(x0,x1),Math.min(z0,z1),Mat
 function buildColliders(){
   FP.rects=[];CELLAR_RECTS.length=0;
   ROOMS.forEach(q=>{const h=q.cellar?.hole;if(!h)return;addRect(h[0],h[3],h[2]+0.06,h[3]+0.06);addRect(h[2],h[1],h[2]+0.06,h[3]+0.06);
-    CELLAR_RECTS.push([h[0]-0.05,h[1],h[0],h[3]],[h[0],h[3],h[2]-0.5,h[3]+0.1]);});
+    CELLAR_RECTS.push([h[0]-0.05,h[1],h[0],h[3]],[h[0],h[3],h[2]-0.8,h[3]+0.1]);if(q.cellar.band)CELLAR_RECTS.push(q.cellar.band);});
   // apparatuur: de selectieboxen van alle velden en panelen
   Object.values(VIEWS).forEach(v=>{const d=D[v.id];if(!d||['bld','line','bb','es','kiosk','mstr'].includes(d.type))return;addRect(v.box.min.x,v.box.min.z,v.box.max.x,v.box.max.z);});
   // portaalkolommen en railsteunen

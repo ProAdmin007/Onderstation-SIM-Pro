@@ -8,8 +8,8 @@ const IM={
   door:mat({color:0xcbcec8,metalness:0.3,roughness:0.36}),
   plaster:mat({color:0xe4e2da,roughness:0.92}),
   ceiling:mat({color:0xdcdad3,roughness:0.95}),
-  floor:mat({color:0x7d8983,roughness:0.3,metalness:0.05}),
-  rubber:mat({color:0x1c1e20,roughness:0.95}),
+  floor:mat({color:0x7d8983,roughness:0.3,metalness:0.05,polygonOffset:true,polygonOffsetFactor:-1,polygonOffsetUnits:-2}),
+  rubber:mat({color:0x1c1e20,roughness:0.95,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-6}),
   led:mat({color:0xffffff,emissive:0xf2f5ff,emissiveIntensity:3}),
   battery:mat({color:0x2a2c2f,roughness:0.55}),
   redPaint:mat({color:0xb3181c,roughness:0.35,metalness:0.2}),
@@ -105,30 +105,36 @@ function buildCellar(r,panels,cx,kv){const h=cellarHole(BUILDINGS.find(b=>b.id==
   const n=16,len=h[2]-h[0],run=len/n,rise=(r.y0-Y)/n,wid=h[3]-h[1],zc=(h[1]+h[3])/2;
   for(let k=0;k<n;k++){const x=h[0]+k*run,yt=r.y0-(k+1)*rise;box(run+0.02,0.18,wid-0.04,c,staticRoot,x+run/2,yt-0.09,zc);box(0.05,0.012,wid-0.04,YELLOW,staticRoot,x+0.03,yt+0.006,zc);}
   rod(V3(h[0]+0.25,r.y0+0.9-0.25/len*(r.y0-Y),h[1]+0.07),V3(h[2],Y+0.95,h[1]+0.07),0.022,MAT.galv,staticRoot,8);
-  for(let k=0;k<n;k++){const yt=r.y0-(k+1)*rise;if(yt>Y+0.05)box(run+0.02,yt-Y,0.1,c,staticRoot,h[0]+k*run+run/2,(yt+Y)/2,h[3]+0.05);}   // trapwand aan de binnenkant
+  for(let k=0;k<n;k++){const yt=r.y0-(k+1)*rise;if(yt>Y+0.6)box(run+0.02,yt-Y,0.1,c,staticRoot,h[0]+k*run+run/2,(yt+Y)/2,h[3]+0.05);}   // trapwand aan de binnenkant
   // boven: gele leuning om het trapgat (de ingang aan de kant van de bovenste trede blijft open)
   for(let x=h[0]+0.05;x<=h[2]+0.05;x+=1.1)rod(V3(x,r.y0,h[3]+0.03),V3(x,r.y0+1.1,h[3]+0.03),0.025,YELLOW,staticRoot,8);
   rod(V3(h[2]+0.03,r.y0,h[1]+0.05),V3(h[2]+0.03,r.y0+1.1,h[1]+0.05),0.025,YELLOW,staticRoot,8);
   for(const y of[0.55,1.1]){rod(V3(h[0]+0.05,r.y0+y,h[3]+0.03),V3(h[2]+0.03,r.y0+y,h[3]+0.03),0.022,YELLOW,staticRoot,8);rod(V3(h[2]+0.03,r.y0+y,h[1]+0.05),V3(h[2]+0.03,r.y0+y,h[3]+0.03),0.022,YELLOW,staticRoot,8);}
   box(0.08,0.006,wid,MAT.hazard,staticRoot,h[0]-0.04,r.y0+0.008,zc);
-  // kabels per veld (inkomend veld en uitgaande velden), op een kabelgoot onder het plafond
-  const xs=[],nP=panels.length,zF=r.z0;
+  // kabels per veld (inkomend en uitgaand): verticaal langs een steunrail naar beneden, met een bocht van minstens 15 × de kabeldiameter
+  // (R = 0,7 m) naar een lage kabelladder op de vloer, en zo naar de brandwerende doorvoering in de voorgevel; drie kabels in driehoek
+  const xs=[],nP=panels.length,zF=r.z0,zv=54.85,RB=0.7,yb=Y+0.15,cz=zv-RB,cyA=yb+RB;
   panels.forEach((p,i)=>{if(p.kind!=='feed'&&p.kind!=='inc')return;const X=cx+(nP-1)/2*0.8-i*0.8;xs.push(X);
-    [-0.075,0,0.075].forEach(o=>{const x=X+o,y=T-0.25;
-      const pts=[V3(x,T+0.05,54.85),V3(x,T-0.12,54.85),V3(x,y+0.02,54.5),V3(x,y,54.0),V3(x,y,zF+1.0),V3(x,y-0.06,zF+0.4),V3(x,y-0.1,zF-0.05)];
-      mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts),36,0.034,7),XLPE,staticRoot);});
-    plate(p.id,staticRoot,X,T-0.42,53.7,Math.PI,0.3);rod(V3(X,T-0.26,53.7),V3(X,T-0.36,53.7),0.004,MAT.black,staticRoot,4);});
+    [[-0.036,0],[0.036,0],[0,-0.062]].forEach(([dx,dn])=>{const x=X+dx,rr=RB+dn,pts=[V3(x,T+0.05,zv+dn),V3(x,(T+cyA)/2,zv+dn)];
+      for(let k=0;k<=8;k++){const a=k/8*Math.PI/2;pts.push(V3(x,cyA-rr*Math.sin(a),cz+rr*Math.cos(a)));}
+      pts.push(V3(x,yb-dn,(cz+zF)/2),V3(x,yb-dn,zF-0.05));
+      mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts,false,'centripetal'),40,0.034,6),XLPE,staticRoot);});
+    // steunrail met kabelklemmen voor het verticale deel, en het label van het veld
+    box(0.05,T-Y-0.05,0.04,MAT.galv,staticRoot,X,(T+Y)/2,zv+0.07);for(const y of[T-0.4,cyA+0.2])box(0.16,0.05,0.12,MAT.black,staticRoot,X,y,zv+0.01);
+    plate(p.id,staticRoot,X,cyA+0.55,zv-0.12,Math.PI,0.26);});
   if(!xs.length)return;
-  const xa=Math.min(...xs)-0.25,xb=Math.max(...xs)+0.25,za=zF+0.5,zb=54.5,yt=T-0.3;
-  for(const x of[xa,xb])box(0.03,0.08,zb-za,MAT.galv,staticRoot,x,yt,(za+zb)/2);
-  for(let z=za+0.15;z<zb;z+=0.35)box(xb-xa,0.02,0.04,MAT.galv,staticRoot,(xa+xb)/2,yt-0.02,z);
-  for(let z=za+0.3;z<zb;z+=1.8)for(const x of[xa,xb])rod(V3(x,yt,z),V3(x,T,z),0.008,MAT.galv,staticRoot,4);
-  box(xb-xa+0.2,0.34,0.1,mat({color:0x9a9c98,roughness:0.9}),staticRoot,(xa+xb)/2,T-0.35,zF+0.06);
-  plate('BRANDWERENDE DOORVOERING',staticRoot,(xa+xb)/2,T-0.72,zF+0.03,0,0.9);}
+  const xa=Math.min(...xs)-0.2,xb=Math.max(...xs)+0.2,za=zF+0.15,zb=zv,yl=Y+0.09;
+  r.cellar.band=[xa-0.05,r.z0,xb+0.05,r.z1];
+  for(const x of[xa,xb])box(0.03,0.06,zb-za,MAT.galv,staticRoot,x,yl,(za+zb)/2);
+  for(let z=za+0.1;z<zb;z+=0.3)box(xb-xa,0.02,0.04,MAT.galv,staticRoot,(xa+xb)/2,yl-0.01,z);
+  for(let z=za+0.3;z<zb;z+=1.2)for(const x of[xa,xb])box(0.06,yl-Y,0.06,MAT.galvDark,staticRoot,x,(yl+Y)/2,z);
+  box(xb-xa+0.2,0.3,0.1,mat({color:0x9a9c98,roughness:0.9}),staticRoot,(xa+xb)/2,Y+0.22,zF+0.06);
+  plate('BRANDWERENDE DOORVOERING',staticRoot,(xa+xb)/2,Y+0.65,zF+0.03,0,0.9);
+  plate('NIET OP DE KABELS STAPPEN',staticRoot,xb+0.6,Y+1.5,r.z1-0.02,Math.PI,0.8);}
 function buildPanelRow(panels,cx,room){
   const n=panels.length,Y=room.y0,half=n*0.4;
   panels.forEach((p,i)=>buildPanel(i,p,{cx,n,room}));
-  groundQuad(cx-half-0.6,52.7,cx+half+0.6,54.15,Y+0.008,IM.rubber,2);
+  groundQuad(cx-half-0.6,52.7,cx+half+0.6,54.15,Y+0.015,IM.rubber,2);
   box(n*0.8+0.2,0.3,0.7,IM.panel,staticRoot,cx,Y+2.45,54.9);
   for(let x=cx-half;x<cx+half;x+=0.6)rod(V3(x,Y+2.6,54.9),V3(x,room.y1,54.9),0.012,MAT.galv,staticRoot,4);
   for(const s of[-1,1])iplane(0.4,0.5,MAT.hazard,cx+s*(half+0.01),Y+1.6,54.5,s*Math.PI/2);

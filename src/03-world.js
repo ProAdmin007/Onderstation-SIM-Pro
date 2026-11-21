@@ -12,7 +12,7 @@ const layFree=(r,kinds,m=0)=>!LAYOUT.some(o=>kinds.includes(o.kind)&&rectsOverla
 const FENCE = {x0:-48,x1:92,z0:-44,z1:68,gate:[20,30],gateW:[36.5,45.5]};   // gateW: poort in de westkant voor de weg naar de RWZI
 // kabelkelder onder de 10 kV- en 20 kV-ruimte: vloer op CELLAR.y, plafond op CELLAR.top (onderkant sokkel),
 // trapgat van len × wid langs de voorgevel vanaf x = at[id]; de trap daalt in de richting +x
-const CELLAR={y:-2.4,top:0,len:4.4,wid:1.3,at:{MS:9,MS20:52.8}};
+const CELLAR={y:-2.4,top:0,len:4.4,wid:1.3,at:{MS:9,MS20:71}};
 const cellarHole=b=>{const sx=CELLAR.at[b.id];return sx==null?null:[sx,b.z0+0.3,sx+CELLAR.len,b.z0+0.3+CELLAR.wid];};
 function buildGround(){const HOLES=BUILDINGS.map(cellarHole).filter(Boolean);
   groundQuadHoles(-10000,-10000,10000,10000,-0.5,MAT.water,20,HOLES);
@@ -74,7 +74,7 @@ const BUILDINGS=[{id:'MS',x0:-20,x1:20,z0:46,z1:56,doors:[-14,-6,6],label:'OS ZU
   {id:'MS20',x0:46,x1:76,z0:46,z1:56,doors:[51,59,69],label:'OS ZUIDWOLDE  ·  20 kV'},
   {id:'SRV',x0:-42,x1:-26,z0:46,z1:55.5,doors:[-36],label:'SCADA · DATACENTER'}];
 function buildBuilding({id,x0,x1,z0,z1,doors,label}){
-  const H=5.2,root=grp(),bt=C.brick,W=x1-x0,Dz=z1-z0,cx=(x0+x1)/2,cz=(z0+z1)/2;
+  const H=5.2,root=grp(),bt=C.brick;root.userData.shell=true;const W=x1-x0,Dz=z1-z0,cx=(x0+x1)/2,cz=(z0+z1)/2;
   const brick=(len)=>{const t=toTex(bt,len/1.76,H/1.5);return mat({map:t,bumpMap:toTex(bt,len/1.76,H/1.5,false),bumpScale:0.8,roughness:0.88});};
   const bl=brick(W),bs=brick(Dz);
   // voorgevel in delen met deuropeningen (0,45–3,0 m); de baksteentextuur loopt door over de delen
