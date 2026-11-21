@@ -53,6 +53,12 @@ Spoor C bouwt op A en B; spoor F verdiept A; spoor D maakt A, B, C, E en F eenvo
 | F10 | Wat-als-berekening en N-1-controle | operator | middel | ⏳ gepland |
 | F11 | Beperkte ploegen en piketdienst | beide | middel | ⏳ gepland |
 | F12 | Externe communicatie volgens protocol | operator | middel | ⏳ gepland |
+| F13 | SCADA als los venster (tweede scherm) | operator | klein | ⏳ gepland |
+| F14 | Trendgrafieken per meetwaarde | operator | klein | ⏳ gepland |
+| F15 | Kortsluitmelders in de MS-stations | operator | middel | ⏳ gepland |
+| F16 | Verzoeken van TenneT: afschakelen en blindvermogen | operator | middel | ⏳ gepland |
+| F17 | Dienstplanning: gepland werk, onderhoud en weerswaarschuwingen | operator | middel | ⏳ gepland |
+| F18 | Topologiekleuring in SCADA | operator | klein | ⏳ gepland |
 
 ---
 
@@ -364,6 +370,33 @@ Er zijn maar 2–3 storingsploegen. Overdag zijn ze snel ter plaatse; 's nachts 
 #### F12. Externe communicatie volgens protocol
 
 Gesprekken met **TenneT** (110 kV), **Netbeheer Noord** (OS Meppel), de **gemeente** en de **brandweer** volgens vaste afspraken: wie belt wie, wat moet je melden, welke toestemming heb je nodig. Afspraken niet nakomen heeft gevolgen.
+
+*Voorgestelde volgorde voor de bedrijfsvoerder: eerst alarmbeheer (F8), de wat-als-berekening (F10) en SCADA als los venster (F13), daarna de kortsluitmelders (F15) en werkvergunningen met read-back en het vier-ogenprincipe (A4, F6, F7).*
+
+#### F13. SCADA als los venster
+
+Het schema openen in een apart browservenster, bijvoorbeeld op een tweede scherm, met de 3D-wereld op het eerste. Zo werkt een meldkamer echt. Beide vensters blijven gelijk lopen: schakelen, selecteren en alarmen werken in allebei.
+
+#### F14. Trendgrafieken per meetwaarde
+
+Klik op een meetwaarde (stroom, spanning, olietemperatuur, kabeltemperatuur, belasting van een distributietrafo) en zie het verloop van de afgelopen uren, met de grenswaarden erin. Zo zie je een oplopende temperatuur aankomen voordat het een alarm wordt. Bouwt voort op de tijdlijn die er al is.
+
+#### F15. Kortsluitmelders in de MS-stations
+
+Na een kabelfout in een ring lichten de kortsluitmelders op tot aan de fout. In SCADA (en in het MS-station zelf) zie je welke stations de foutstroom zagen. Zo lees je af in welk ringdeel de fout zit, in plaats van op goed geluk te schakelen. Een melder kan defect zijn of niet terugvallen. Sluit aan op FLISR (A2), maar werkt ook zonder automatisering.
+
+#### F16. Verzoeken van TenneT: afschakelen en blindvermogen
+
+- **Afschakelverzoek** bij een tekort in het landelijke net: "schakel binnen 15 minuten 8 MW af". Je kiest welke velden, volgens het afschakelplan. Prioritaire klanten zoals het ziekenhuis blijven aan. Daarna weer gefaseerd inschakelen op aanwijzing van TenneT.
+- **Spanning en blindvermogen:** een verzoek om de 110 kV-spanning te ondersteunen of het blindvermogen binnen een band te houden, met de trappenschakelaars en de omvormers van het zonnepark.
+
+#### F17. Dienstplanning
+
+Bij de start van een dienst een overzicht met het geplande werk (vrijgaven, onderhoud), verwachte pieken en weerswaarschuwingen (bijvoorbeeld KNMI code oranje voor storm of onweer). Daarin zitten conflicten die je moet oplossen, zoals werk aan een ring precies tijdens de avondpiek, of twee vrijgaven die samen het net niet meer N-1-veilig laten.
+
+#### F18. Topologiekleuring in SCADA
+
+Een knop in SCADA die per netdeel laat zien welke transformator het voedt (T1, T2 of T3, of OS Meppel via de koppelkabel). Na een paar omschakelingen zie je zo direct waar de normaal-open punten staan, welke delen nog maar van één kant gevoed worden en waar parallel geschakeld is.
 
 ---
 
